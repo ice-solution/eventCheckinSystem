@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用戶列表</title>
+    <!-- 引入 DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .checkin-true {
+            background-color: #d4edda !important; /* 綠色背景 */
+        }
+        .checkin-false {
+            background-color: #fff3cd !important; /* 黃色背景 */
+        }
+    </style>
+</head>
+<body>
+    <div id="alertContainer"></div>
+    <h1>用戶列表</h1>
+    <div>
+        <img src="/img/prudential.png" alt="Logo" style="max-width: 100px; margin-bottom: 20px;"> <!-- 添加圖片 -->
+        <a href="/users" class="btn btn-primary">用戶列表</a>
+        <a href="/scan" class="btn btn-success">掃描 QR 碼</a>
+        <a href="/logout" class="btn btn-danger">登出</a>
+    </div>
+    <div id="userStats" class="mb-3">
+        <% 
+            const totalUsers = users.length; 
+            const checkedInUsers = users.filter(user => user.isCheckIn).length; 
+            const checkInRate = totalUsers > 0 ? ((checkedInUsers / totalUsers) * 100).toFixed(2) : 0; 
+        %>
+        <p style="padding:10px 0; border:1px solid blue">登入人數: <span class="checkin-true"><%= checkedInUsers %></span> / 全部人數: <%= totalUsers %> <span style="border-radius: 50px; padding:10px; background-color: yellow;">(比率: <%= checkInRate %>%)</span></p>
+    </div>
+
+    <!-- Alert 區域 -->
+    
+
+    <table id="usersTable" class="display">
+        <thead>
+            <tr>
+                <th>UID</th>
+                <!-- <th>Email</th> -->
+                <th>Name</th>
+                <th>Broker Name</th>
+                <th>已登記進場</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% users.forEach(user => { %>
+                <tr class="<%= user.isCheckIn ? 'checkin-true' : 'checkin-false' %>">
+                    <td><%= user.uid %></td>
+                    <!-- <td><%= user.email %></td> -->
+                    <td><%= user.name %></td>
+                    <td><%= user.broker_name %></td>
+                    <td>
+                        <input type="checkbox" class="checkin-toggle" data-uid="<%= user.uid %>" <%= user.isCheckIn ? 'checked' : '' %> />
+                    </td>
+                </tr>
+            <% }) %>
+        </tbody>
+    </table>
+
+    <!-- 引入 jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- 引入 DataTables JS -->
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            const table = $('#usersTable').DataTable({
+                "pageLength": 50 // 設置每頁顯示 50 條數據
+            }); // 初始化 DataTable
+
+            // 使用事件委託來監聽 checkbox 的變化
+            $('#usersTable tbody').on('change', '.checkin-toggle', function() {
+                const uid = $(this).data('uid');
+                const isCheckIn = $(this).is(':checked');
+
+                // 發送 AJAX 請求更新 isCheckIn
+                $.ajax({
+                    url: `/users/${uid}`,
+                    type: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ isCheckIn: isCheckIn }),
+                    success: function(response) {
+                        // 更新行的顏色
+                        const row = $(this).closest('tr');
+                        if (isCheckIn) {
+                            row.removeClass('checkin-false').addClass('checkin-true');
+                        } else {
+                            row.removeClass('checkin-true').addClass('checkin-false');
+                        }
+
+                        // 顯示成功的 alert
+                        const alertHtml = `
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                更新成功！
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        `;
+                        $('#alertContainer').append(alertHtml);
+                        // 自動隱藏 alert
+                        setTimeout(() => {
+                            $('.alert').alert('close');
+                        }, 1500);
+                    }.bind(this),
+                    error: function(xhr, status, error) {
+                        console.error('Error updating user:', error);
+                        alert('更新失敗，請稍後再試。');
+                    }
+                });
+            });
+        });
+    </script>
+
+    <!-- 引入 Bootstrap JS -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+// model/Auth.js
+const mongoose = require('mongoose');
+
+const authSchema = new mongoose.Schema({
+    username: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    created_at: { type: Date, default: Date.now },
+    modified_at: { type: Date, default: Date.now }
+});
+
+// 在保存之前加密密碼
+authSchema.pre('save', async function(next) {
+    if (this.isModified('password')) {
+        const bcrypt = require('bcrypt');
+        const salt = await bcrypt.genSalt(10);
+        this.password = await bcrypt.hash(this.password, salt);
+    }
+    next();
+});
+
+const Auth = mongoose.model('Auth', authSchema);
+
+module.exports = Auth;
