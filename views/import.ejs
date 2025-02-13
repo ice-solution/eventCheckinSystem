@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>導入用戶</title>
+    <!-- 引入 DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="alertContainer"></div>
+    <h1>導入用戶</h1>
+    <div>
+        <img src="/img/prudential.png" alt="Logo" style="max-width: 100px; margin-bottom: 20px;"> <!-- 添加圖片 -->
+        <a href="/users" class="btn btn-primary">用戶列表</a>
+        <a href="/scan" class="btn btn-success">掃描 QR 碼</a>
+        <a href="/import" class="btn btn-warning">滙入資料</a>
+        <a href="/logout" class="btn btn-danger">登出</a>
+    </div>
+
+    <div class="mt-4">
+        <form action="/users/import" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="file">上傳 Excel 文件 (.xlsx):</label>
+                <input type="file" class="form-control-file" id="file" name="file" accept=".xlsx" required>
+            </div>
+            <button type="submit" class="btn btn-primary">上傳</button>
+        </form>
+    </div>
+    <div class="mt-4">
+        <a href="/sample_user.xlsx" class="btn btn-info" download>下載範本用戶文件</a>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

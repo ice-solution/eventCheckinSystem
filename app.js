@@ -3,13 +3,14 @@ const express = require('express');
 const mongoose = require('mongoose');
 const session = require('express-session'); // 引入 session
 const usersRouter = require('./routes/users');
+const eventsRouter = require('./routes/events');
 const Auth = require('./model/Auth'); // 引入 Auth 模型
 const path = require('path'); // 引入 path 模組
 const bcrypt = require('bcrypt');
 const { render } = require('ejs');
 
 const app = express();
-const PORT = process.env.PORT || 9000;
+const PORT = process.env.PORT || 3377;
 
 // 中間件
 app.use(express.json()); // 解析 JSON 請求主體
@@ -26,7 +27,7 @@ app.use(express.static(path.join(__dirname, 'public'))); // 提供 public 文件
 
 
 // 連接到 MongoDB
-mongoose.connect('mongodb+srv://icesolution19:jLuZY1Lbi5UQNtyz@cluster0.nky9l.mongodb.net/prud', {
+mongoose.connect('mongodb+srv://icesolution19:jLuZY1Lbi5UQNtyz@cluster0.nky9l.mongodb.net/events', {
     useNewUrlParser: true,
     useUnifiedTopology: true
 })
@@ -71,11 +72,11 @@ const isAuthenticated = (req, res, next) => {
     if (req.session.user) {
         return next(); // 已登入，繼續
     }
-    res.redirect('login'); // 未登入，重定向到登入頁
+    res.redirect('/login'); // 未登入，重定向到登入頁
 };
 
 // 設置路由
-
+app.use('/events', eventsRouter);
 app.use('/users',isAuthenticated, usersRouter);
 app.get('/scan',isAuthenticated,async function (req, res){
     try {

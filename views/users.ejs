@@ -27,6 +27,7 @@
         <img src="/img/prudential.png" alt="Logo" style="max-width: 100px; margin-bottom: 20px;"> <!-- 添加圖片 -->
         <a href="/users" class="btn btn-primary">用戶列表</a>
         <a href="/scan" class="btn btn-success">掃描 QR 碼</a>
+        <a href="/users/import" class="btn btn-warning">滙入資料</a>
         <a href="/logout" class="btn btn-danger">登出</a>
     </div>
     <div id="userStats" class="mb-3">
@@ -44,22 +45,22 @@
     <table id="usersTable" class="display">
         <thead>
             <tr>
-                <th>UID</th>
-                <!-- <th>Email</th> -->
+                <th>Email</th>
                 <th>Name</th>
-                <th>Broker Name</th>
+                <th>Company</th>
+                <th>Phone</th>
                 <th>已登記進場</th>
             </tr>
         </thead>
         <tbody>
             <% users.forEach(user => { %>
                 <tr class="<%= user.isCheckIn ? 'checkin-true' : 'checkin-false' %>">
-                    <td><%= user.uid %></td>
-                    <!-- <td><%= user.email %></td> -->
+                    <td><%= user.email %></td>
                     <td><%= user.name %></td>
-                    <td><%= user.broker_name %></td>
+                    <td><%= user.company %></td>
+                    <td><%= user.phone %></td>
                     <td>
-                        <input type="checkbox" class="checkin-toggle" data-uid="<%= user.uid %>" <%= user.isCheckIn ? 'checked' : '' %> />
+                        <input type="checkbox" class="checkin-toggle" data-_id="<%= user._id %>" <%= user.isCheckIn ? 'checked' : '' %> />
                     </td>
                 </tr>
             <% }) %>
@@ -78,12 +79,12 @@
 
             // 使用事件委託來監聽 checkbox 的變化
             $('#usersTable tbody').on('change', '.checkin-toggle', function() {
-                const uid = $(this).data('uid');
+                const _id = $(this).data('_id');
                 const isCheckIn = $(this).is(':checked');
 
                 // 發送 AJAX 請求更新 isCheckIn
                 $.ajax({
-                    url: `/users/${uid}`,
+                    url: `/users/${_id}`,
                     type: 'PUT',
                     contentType: 'application/json',
                     data: JSON.stringify({ isCheckIn: isCheckIn }),
