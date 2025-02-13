@@ -6,19 +6,18 @@ const QRCode = require('qrcode');
 const nodemailer = require('nodemailer');
 
 // Twilio 配置
-// const accountSid = 'ACde8882055e49e02c2e3d57f7591d644f'; // 替換為您的 Twilio Account SID
-// const authToken = '8db06efb9a3faea7531ada9386ff9347'; // 替換為您的 Twilio Auth Token
+
 // testing 
-const accountSid = 'ACcd2283e35535710c9f18a321e960f56c'; // 替換為您的 Twilio Account SID
-const authToken = '17e57d1fb95e974587588a1b1c30e611'; // 替換為您的 Twilio Auth Token
+const accountSid = process.env.twiliosid; // 替換為您的 Twilio Account SID
+const authToken = process.env.twilioauthtoken; // 替換為您的 Twilio Auth Token
 const client = twilio(accountSid, authToken);
 
 // Nodemailer 配置
 const transporter = nodemailer.createTransport({
     service: 'Gmail', // 使用 Gmail 作為郵件服務
     auth: {
-        user: 'icesolution0321@gmail.com', // 替換為您的電子郵件地址
-        pass: 'sjxornmikstzjzxa' // 替換為您的電子郵件密碼或應用程式密碼
+        user: process.env.gmail_ac, // 替換為您的電子郵件地址
+        pass: process.env.gmail_pw // 替換為您的電子郵件密碼或應用程式密碼
     }
 });
 
