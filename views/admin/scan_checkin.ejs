@@ -19,11 +19,9 @@
     </style>
 </head>
 <body>
+    <h2><%= event.name %></h2>
     <h2>來賓登記系統</h2>
     <div>
-        <img src="/img/prudential.png" alt="Logo" style="max-width: 100px; margin-bottom: 20px;"> <!-- 添加圖片 -->
-        <a href="/users" class="btn btn-primary">用戶列表</a>
-        <a href="/scan" class="btn btn-success">掃描 QR 碼</a>
     </div>
     <div id="reader" style="width: 100%; margin: auto;"></div>
     <h4 id="result"></h4>
@@ -47,7 +45,7 @@
                     if (scanning) { // 只有在掃描狀態為 true 時才處理掃描結果
                         scanning = false; // 停止掃描
                         html5QrCode.stop(); // 停止掃描
-                        fetch(`/users/${decodedText}`)
+                        fetch(`/events/<%= event._id%>/users/${decodedText}`)
                             .then(response => response.json())
                             .then(user => {
                                 const resultDiv = document.getElementById('result');

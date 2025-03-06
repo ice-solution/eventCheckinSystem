@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>添加用戶</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>添加新用戶</h1>
+        <form id="addUserForm">
+            <div class="form-group">
+                <label for="username">用戶名</label>
+                <input type="text" class="form-control" id="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">密碼</label>
+                <input type="password" class="form-control" id="password" required>
+            </div>
+            <div class="form-group">
+                <label for="role">角色</label>
+                <select class="form-control" id="role" required>
+                    <option value="user">用戶</option>
+                    <option value="admin">管理員</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">添加用戶</button>
+            <a href="/admin" class="btn btn-secondary">返回管理頁面</a>
+        </form>
+        <div id="alertContainer" class="mt-3"></div>
+    </div>
+
+    <!-- 引入 jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#addUserForm').on('submit', function(e) {
+                e.preventDefault(); // 防止表單默認提交
+
+                const newUser = {
+                    username: $('#username').val(),
+                    password: $('#password').val(),
+                    role: $('#role').val()
+                };
+
+                // 發送 AJAX 請求添加用戶
+                $.ajax({
+                    url: '/auth/add', // 假設您有一個用戶添加的路由
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(newUser),
+                    success: function(response) {
+                        // 顯示成功的 alert
+                        const alertHtml = `
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                用戶添加成功！
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        `;
+                        $('#alertContainer').append(alertHtml);
+                        // 自動隱藏 alert
+                        setTimeout(() => {
+                            $('.alert').alert('close');
+                        }, 1500);
+                        // 清空表單
+                        $('#addUserForm')[0].reset();
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error adding user:', error);
+                        const alertHtml = `
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                添加用戶失敗，請稍後再試。
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        `;
+                        $('#alertContainer').append(alertHtml);
+                    }
+                });
+            });
+        });
+    </script>
+
+    <!-- 引入 Bootstrap JS -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

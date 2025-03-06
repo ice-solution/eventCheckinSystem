@@ -1,21 +1,31 @@
 const multer = require('multer');
 const XLSX = require('xlsx');
-const User = require('../model/User'); // 確保引入 User 模型
+const Event = require('../model/Event'); // 確保引入 User 模型
 
 // 設置 multer 以處理文件上傳
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage }).single('file');
 
 exports.getImportUserPage = async (req, res) => {
+    const { eventId } = req.params; // 從請求參數中獲取 eventId
+
     try {
-        console.log('test');
-        res.render('import');
+        // 查詢事件以檢查是否存在
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('找不到活動 ID'); // 如果事件不存在，返回 404 錯誤
+        }
+
+        res.render('admin/import', { event }); // 將 eventId 傳遞給視圖
     } catch (error) {
-        res.status(400).send(error);
+        console.error('Error fetching event:', error);
+        res.status(500).send('伺服器錯誤'); // 返回伺服器錯誤
     }
 };
 
 exports.importUsers = async (req, res) => {
+    const { eventId } = req.params; // 從請求參數中獲取 eventId
+
     try {
         // 確保 req.file 存在
         if (!req.file) {
@@ -28,17 +38,33 @@ exports.importUsers = async (req, res) => {
         const sheet = workbook.Sheets[sheetName];
         const data = XLSX.utils.sheet_to_json(sheet);
 
-        // 將數據導入到數據庫
+        // 查詢事件以確保存在
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('找不到該事件 ID'); // 如果事件不存在，返回 404 錯誤
+        }
+
+        // 將數據導入到事件的 users 陣列中
         for (const row of data) {
-            const user = new User({
+            const user = {
                 email: row.email,
                 name: row.name,
                 phone_code: row.phone_code,
                 phone: row.phone,
-                company: row.company
-            });
-            await user.save();
+                company: row.company,
+                isCheckIn: false, // 默認值
+                create_at: Date.now(),
+                modified_at: Date.now()
+            };
+
+            // 檢查用戶是否已存在
+            const userExists = event.users.find(u => u.email === user.email);
+            if (!userExists) {
+                event.users.push(user); // 將用戶添加到事件的 users 陣列中
+            }
         }
+
+        await event.save(); // 保存事件
 
         res.status(201).send('用戶導入成功！');
     } catch (error) {

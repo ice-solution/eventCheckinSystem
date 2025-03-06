@@ -1,16 +1,23 @@
 // app.js
 const express = require('express');
 const mongoose = require('mongoose');
+const http = require('http');
 const session = require('express-session'); // 引入 session
 const usersRouter = require('./routes/users');
 const eventsRouter = require('./routes/events');
+const awardsRouter = require('./routes/awards'); // 引入新的路由
+const authRoutes = require('./routes/auth'); // 引入 auth 路由
+
 const Auth = require('./model/Auth'); // 引入 Auth 模型
 const path = require('path'); // 引入 path 模組
 const bcrypt = require('bcrypt');
 const { render } = require('ejs');
+const { initSocket } = require('./socket'); // 引入 socket.js
 
 const app = express();
 const PORT = process.env.PORT || 3377;
+const server = http.createServer(app);
+const io = initSocket(server); // 初始化 Socket.IO
 
 // 中間件
 app.use(express.json()); // 解析 JSON 請求主體
@@ -29,17 +36,20 @@ app.use(express.static(path.join(__dirname, 'public'))); // 提供 public 文件
 // 連接到 MongoDB
 mongoose.connect('mongodb+srv://icesolution19:jLuZY1Lbi5UQNtyz@cluster0.nky9l.mongodb.net/events', {
     useNewUrlParser: true,
-    useUnifiedTopology: true
+    useUnifiedTopology: true,
 })
 .then(() => {
     createAdminUser(); // 創建 admin 用戶
     console.log('MongoDB 連接成功')
 })
 .catch(err => console.error('MongoDB 連接失敗:', err));
-
+mongoose.set('debug', true);
 // 登入路由
+app.get('/homepage', async (req, res) => {
+    res.render('pages/index');
+});
 app.get('/login', async (req, res) => {
-    res.render('login');
+    res.render('admin/login');
 });
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
@@ -52,7 +62,7 @@ app.post('/login', async (req, res) => {
         }
         const isMatch = await bcrypt.compare(password, user.password);
         if (isMatch) {
-            req.session.user = { username }; // 設置 session
+            req.session.user = user; // 設置 session
             return res.status(200).send(); // 登入成功
         } else {
             return res.status(401).send(); // 密碼不正確
@@ -64,7 +74,7 @@ app.post('/login', async (req, res) => {
 });
 app.get('/logout', (req, res) => {
     req.session.destroy(); // 銷毀 session
-    res.redirect('/login'); // 重定向到登入頁面
+    res.redirect('admin/login'); // 重定向到登入頁面
 });
 
 // 中間件：檢查是否登入
@@ -72,25 +82,37 @@ const isAuthenticated = (req, res, next) => {
     if (req.session.user) {
         return next(); // 已登入，繼續
     }
-    res.redirect('/login'); // 未登入，重定向到登入頁
+    res.redirect('login'); // 未登入，重定向到登入頁
 };
 
 // 設置路由
 app.use('/events', eventsRouter);
 app.use('/users',isAuthenticated, usersRouter);
-app.get('/scan',isAuthenticated,async function (req, res){
-    try {
-        res.render('scan'); // 傳遞用戶資料到 EJS 頁面
-    } catch (error) {
-        console.log(error)
-        res.status(500).send(error);
-    }
-});
+app.use('/awards', awardsRouter);
+app.use('/auth', authRoutes); // 使用 auth 路由
+
+// app.get('/scan',isAuthenticated,async function (req, res){
+//     try {
+//         res.render('admin/scan'); // 傳遞用戶資料到 EJS 頁面
+//     } catch (error) {
+//         console.log(error)
+//         res.status(500).send(error);
+//     }
+// });
 app.get('/',isAuthenticated, async function (req, res){
-    res.render('home');
+    res.render('admin/home');
 });
 // 啟動伺服器
-app.listen(PORT, () => {
+
+io.on('connection', (socket) => {
+    console.log('A user connected');
+
+    socket.on('start_draw', async (numOfUsers) => {
+        const awardsController = require('./controllers/awardsController');
+        await awardsController.startDraw(numOfUsers); // 調用控制器中的 startDraw 方法
+    });
+});
+server.listen(PORT, () => {
     console.log(`伺服器正在運行於 http://localhost:${PORT}`);
 });
 
@@ -100,7 +122,8 @@ async function createAdminUser() {
         // const hashedPassword = await bcrypt.hash('admin_password', 10); // 將 'admin_password' 替換為你想要的密碼
         const adminUser = new Auth({
             username: 'admin',
-            password: 'admin_password'
+            password: 'admin_password',
+            role: 'admin'
         });
         await adminUser.save();
         console.log('Admin user created');

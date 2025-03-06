@@ -5,7 +5,12 @@ const authSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     created_at: { type: Date, default: Date.now },
-    modified_at: { type: Date, default: Date.now }
+    modified_at: { type: Date, default: Date.now },
+    role: {
+        type: String,
+        enum: ['admin', 'staff', 'reception', 'user'], // 限制角色的值
+        default: 'user' // 設置默認角色為 user
+    }
 });
 
 // 在保存之前加密密碼

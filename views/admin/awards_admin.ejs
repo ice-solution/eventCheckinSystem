@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>抽獎管理</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>抽獎管理</h1>
+        <div class="form-group">
+            <label for="numOfUsers">選擇隨機抽中用戶人數:</label>
+            <input type="number" class="form-control" id="numOfUsers" min="1" required>
+        </div>
+        <button id="startDraw" class="btn btn-primary">開始抽獎</button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        document.getElementById('startDraw').onclick = function() {
+            const numOfUsers = document.getElementById('numOfUsers').value;
+            socket.emit('start_draw', numOfUsers);
+        };
+    </script>
+</body>
+</html>

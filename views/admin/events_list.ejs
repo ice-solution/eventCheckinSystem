@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>事件列表</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>我的事件列表</h1>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>事件名稱</th>
+                    <th>開始時間</th>
+                    <th>結束時間</th>
+                    <th>創建時間</th>
+                    <th>用戶數</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% if (events.length > 0) { %>
+                    <% events.forEach(event => { %>
+                        <tr>
+                            <td><a href="/events/<%= event._id %>"><%= event.name %></a></td>
+                            <td><%= new Date(event.from).toLocaleString() %></td>
+                            <td><%= new Date(event.to).toLocaleString() %></td>
+                            <td><%= new Date(event.created_at).toLocaleString() %></td>
+                            <td><%= event.users.length %></td>
+                        </tr>
+                    <% }); %>
+                <% } else { %>
+                    <tr>
+                        <td colspan="5" class="text-center">沒有找到事件</td>
+                    </tr>
+                <% } %>
+            </tbody>
+        </table>
+        <a href="/admin" class="btn btn-primary">返回管理頁面</a>
+    </div>
+</body>
+</html>

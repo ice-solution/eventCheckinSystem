@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>用戶列表</title>
+    <title><%= event.name %> 的用戶列表</title>
     <!-- 引入 DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
@@ -22,18 +22,18 @@
 </head>
 <body>
     <div id="alertContainer"></div>
-    <h1>用戶列表</h1>
+    <h1><%= event.name %> 的用戶列表</h1>
     <div>
         <img src="/img/prudential.png" alt="Logo" style="max-width: 100px; margin-bottom: 20px;"> <!-- 添加圖片 -->
-        <a href="/users" class="btn btn-primary">用戶列表</a>
-        <a href="/scan" class="btn btn-success">掃描 QR 碼</a>
-        <a href="/users/import" class="btn btn-warning">滙入資料</a>
+        <a href="/events/<%= event._id %>" class="btn btn-primary">用戶列表</a>
+        <a href="/events/<%= event._id%>/scan" class="btn btn-success">掃描 QR 碼</a>
+        <a href="/events/<%= event._id%>/import" class="btn btn-warning">滙入資料</a>
         <a href="/logout" class="btn btn-danger">登出</a>
     </div>
     <div id="userStats" class="mb-3">
         <% 
-            const totalUsers = users.length; 
-            const checkedInUsers = users.filter(user => user.isCheckIn).length; 
+            const totalUsers = event.users.length; 
+            const checkedInUsers = event.users.filter(user => user.isCheckIn).length; 
             const checkInRate = totalUsers > 0 ? ((checkedInUsers / totalUsers) * 100).toFixed(2) : 0; 
         %>
         <p style="padding:10px 0; border:1px solid blue">登入人數: <span class="checkin-true"><%= checkedInUsers %></span> / 全部人數: <%= totalUsers %> <span style="border-radius: 50px; padding:10px; background-color: yellow;">(比率: <%= checkInRate %>%)</span></p>
@@ -53,8 +53,9 @@
             </tr>
         </thead>
         <tbody>
-            <% users.forEach(user => { %>
+            <% event.users.forEach(user => { %>
                 <tr class="<%= user.isCheckIn ? 'checkin-true' : 'checkin-false' %>">
+                    <!-- <td><%= user._id %></td> -->
                     <td><%= user.email %></td>
                     <td><%= user.name %></td>
                     <td><%= user.company %></td>
@@ -79,12 +80,14 @@
 
             // 使用事件委託來監聽 checkbox 的變化
             $('#usersTable tbody').on('change', '.checkin-toggle', function() {
+
                 const _id = $(this).data('_id');
                 const isCheckIn = $(this).is(':checked');
+                const event_id = '<%= event._id %>';
 
                 // 發送 AJAX 請求更新 isCheckIn
                 $.ajax({
-                    url: `/users/${_id}`,
+                    url: `/events/${event_id}/users/${_id}`,
                     type: 'PUT',
                     contentType: 'application/json',
                     data: JSON.stringify({ isCheckIn: isCheckIn }),

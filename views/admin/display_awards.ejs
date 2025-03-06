@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>顯示抽獎結果</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>抽獎結果</h1>
+        <div id="resultContainer">
+            <p id="noDraw" class="text-danger">抽獎還沒開始</p>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        socket.on('draw_result', function(selectedUsers) {
+            document.getElementById('noDraw').style.display = 'none'; // 隱藏未開始的消息
+            const resultContainer = document.getElementById('resultContainer');
+            const resultList = document.createElement('ul');
+
+            selectedUsers.forEach(user => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `用戶: ${user.name} (Email: ${user.email})`;
+                resultList.appendChild(listItem);
+            });
+
+            resultContainer.appendChild(resultList);
+        });
+    </script>
+</body>
+</html>

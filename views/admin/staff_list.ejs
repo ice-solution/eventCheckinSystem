@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <title>User List and Details</title>
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            display: flex;
+            margin-top: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .user-list {
+            width: 30%;
+            border-right: 1px solid #dee2e6;
+            padding: 20px; /* 增加內邊距 */
+            background-color: #ffffff;
+            border-radius: 10px 0 0 10px;
+        }
+        .user-details {
+            width: 70%;
+            padding: 20px; /* 增加內邊距 */
+            background-color: #ffffff;
+            border-radius: 0 10px 10px 0;
+        }
+        .list-group-item {
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .list-group-item:hover {
+            background-color: #f1f1f1;
+        }
+        h4 {
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="user-list">
+        <h4>用戶列表</h4>
+        <ul class="list-group" id="userList">
+            <li class="list-group-item" onclick="showDetails('用戶 1', '用戶 1 的詳細信息')">用戶 1</li>
+            <li class="list-group-item" onclick="showDetails('用戶 2', '用戶 2 的詳細信息')">用戶 2</li>
+            <li class="list-group-item" onclick="showDetails('用戶 3', '用戶 3 的詳細信息')">用戶 3</li>
+            <li class="list-group-item" onclick="showDetails('用戶 4', '用戶 4 的詳細信息')">用戶 4</li>
+            <li class="list-group-item" onclick="showDetails('用戶 5', '用戶 5 的詳細信息')">用戶 5</li>
+        </ul>
+    </div>
+    <div class="user-details" id="userDetails">
+        <h4>用戶詳細信息</h4>
+        <p>選擇一個用戶以查看詳細信息。</p>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script>
+    function showDetails(username, details) {
+        document.getElementById('userDetails').innerHTML = `
+            <h4>${username}</h4>
+            <p>${details}</p>
+        `;
+    }
+</script>
+</body>
+</html>
