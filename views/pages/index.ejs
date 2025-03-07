@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
-  <title>Index - Moderna Bootstrap Template</title>
+  <title>尖山共融障礙嘉年華 2025</title>
   <meta name="description" content="">
   <meta name="keywords" content="">
 
@@ -41,7 +41,7 @@
   <header id="header" class="header d-flex align-items-center fixed-top">
     <div class="container-fluid container-xl position-relative d-flex align-items-center justify-content-between">
 
-      <a href="index.html" class="logo d-flex align-items-center">
+      <a href="/homepage" class="logo d-flex align-items-center">
         <!-- Uncomment the line below if you also wish to use an image logo -->
         <!-- <img src="/pages/assets/img/logo.png" alt=""> -->
         <h1 class="sitename">尖山共融障礙嘉年華 2025</h1>
@@ -49,10 +49,10 @@
 
       <nav id="navmenu" class="navmenu">
         <ul>
-          <li><a href="index.html" class="active">首頁</a></li>
-          <li><a href="about.html">關於我們</a></li>
-          <li><a href="services.html">籌款目的</a></li>
-          <li><a href="contact.html">立即加入</a></li>
+          <li><a href="/homepage" class="active">首頁</a></li>
+          <li><a href="#about">關於我們</a></li>
+          <li><a href="#service">籌款目的</a></li>
+          <li><a href="#contact">立即加入</a></li>
         </ul>
         <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
       </nav>
@@ -79,13 +79,13 @@
             </div>
           </div><!-- End Carousel Item -->
 
-          <div class="carousel-item">
+          <!-- <div class="carousel-item">
             <div class="carousel-container">
               <h2>Lorem Ipsum Dolor</h2>
               <p>Ut velit est quam dolor ad a aliquid qui aliquid. Sequi ea ut et est quaerat sequi nihil ut aliquam. Occaecati alias dolorem mollitia ut. Similique ea voluptatem. Esse doloremque accusamus repellendus deleniti vel. Minus et tempore modi architecto.</p>
               <a href="#about" class="btn-get-started">Read More</a>
             </div>
-          </div><!-- End Carousel Item -->
+          </div>
 
           <div class="carousel-item">
             <div class="carousel-container">
@@ -93,7 +93,8 @@
               <p>Ut velit est quam dolor ad a aliquid qui aliquid. Sequi ea ut et est quaerat sequi nihil ut aliquam. Occaecati alias dolorem mollitia ut. Similique ea voluptatem. Esse doloremque accusamus repellendus deleniti vel. Minus et tempore modi architecto.</p>
               <a href="#about" class="btn-get-started">Read More</a>
             </div>
-          </div><!-- End Carousel Item -->
+          </div> -->
+          <!-- End Carousel Item -->
 
           <a class="carousel-control-prev" href="#hero-carousel" role="button" data-bs-slide="prev">
             <span class="carousel-control-prev-icon bi bi-chevron-left" aria-hidden="true"></span>
@@ -125,7 +126,7 @@
               <div class="icon">
                 <i class="bi bi-person-walking"></i>
               </div>
-              <a href="service-details.html" class="stretched-link">
+              <a href="#" class="stretched-link">
                 <h3>刺激障礙賽道</h3>
               </a>
               <p>測試您的極限，享受我們為初學者和經驗豐富的冒險家設計的刺激障礙賽道</p>
@@ -137,7 +138,7 @@
               <div class="icon">
                 <i class="bi bi-cup-straw"></i>
               </div>
-              <a href="service-details.html" class="stretched-link">
+              <a href="#" class="stretched-link">
                 <h3>手工啤酒節</h3>
               </a>
               <p>探索 10 個提供多種手工啤酒和其他攤位。</p>
@@ -149,11 +150,11 @@
               <div class="icon">
                 <i class="bi bi-shop-window"></i>
               </div>
-              <a href="service-details.html" class="stretched-link">
+              <a href="#" class="stretched-link">
                 <h3>障礙體驗攤位</h3>
               </a>
               <p>發現 7 個提供獨特體驗的迷你攤位，讓您感到啟發和娛樂。</p>
-              <a href="service-details.html" class="stretched-link"></a>
+              <a href="#" class="stretched-link"></a>
             </div>
           </div><!-- End Service Item -->
         </div>
@@ -299,35 +300,47 @@
             </div>
   
             <div class="col-lg-6">
-              <form action="forms/contact.php" method="post" class="php-email-form" data-aos="fade-up" data-aos-delay="500">
-                <div class="row gy-4">
-  
-                  <div class="col-md-6">
-                    <input type="text" name="name" class="form-control" placeholder="Your Name" required="">
-                  </div>
-  
-                  <div class="col-md-6 ">
-                    <input type="email" class="form-control" name="email" placeholder="Your Email" required="">
-                  </div>
-  
-                  <div class="col-md-12">
-                    <input type="text" class="form-control" name="subject" placeholder="Subject" required="">
-                  </div>
-  
-                  <div class="col-md-12">
-                    <textarea class="form-control" name="message" rows="4" placeholder="Message" required=""></textarea>
-                  </div>
-  
-                  <div class="col-md-12 text-center">
-                    <div class="loading">Loading</div>
-                    <div class="error-message"></div>
-                    <div class="sent-message">Your message has been sent. Thank you!</div>
-  
-                    <button type="submit">Send Message</button>
-                  </div>
-  
+              <form id="userForm" method="POST" class="php-email-form">
+                <div class="form-group">
+                    <label for="email">電子郵件:</label>
+                    <input type="email" class="form-control" id="email" name="email" required>
                 </div>
-              </form>
+    
+                <div class="form-group">
+                    <label for="name">姓名:</label>
+                    <input type="text" class="form-control" id="name" name="name" required>
+                </div>
+    
+                <div class="form-group">
+                    <label for="phone_code">電話區號:</label>
+                    <select class="form-control" id="phone_code" name="phone_code">
+                        <option value="+852">香港 (+852)</option>
+                        <option value="+1">加拿大 (+1)</option>
+                        <option value="+86">中國 (+86)</option>
+                        <option value="+81">日本 (+81)</option>
+                        <option value="+82">韓國 (+82)</option>
+                        <option value="+65">新加坡 (+65)</option>
+                        <option value="+60">馬來西亞 (+60)</option>
+                        <option value="+63">菲律賓 (+63)</option>
+                        <option value="+84">越南 (+84)</option>
+                        <option value="+66">泰國 (+66)</option>
+                    </select>
+                </div>
+    
+                <div class="form-group">
+                    <label for="phone">電話:</label>
+                    <input type="text" class="form-control" id="phone" name="phone" required>
+                </div>
+    
+                <div class="form-group">
+                    <label for="company">公司:</label>
+                    <input type="text" class="form-control" id="company" name="company" required>
+                </div>
+    
+                <button type="submit" class="btn btn-primary">創建用戶</button>
+            </form>
+            <div id="successMessage"></div> <!-- 成功消息顯示區域 -->
+            <div id="errorMessage"></div> <!-- 錯誤消息顯示區域 -->
             </div><!-- End Contact Form -->
   
           </div>
@@ -343,65 +356,46 @@
 
   <footer id="footer" class="footer dark-background">
 
-    <div class="footer-newsletter">
-      <div class="container">
-        <div class="row justify-content-center text-center">
-          <div class="col-lg-6">
-            <h4>Join Our Newsletter</h4>
-            <p>Subscribe to our newsletter and receive the latest news about our products and services!</p>
-            <form action="forms/newsletter.php" method="post" class="php-email-form">
-              <div class="newsletter-form"><input type="email" name="email"><input type="submit" value="Subscribe"></div>
-              <div class="loading">Loading</div>
-              <div class="error-message"></div>
-              <div class="sent-message">Your subscription request has been sent. Thank you!</div>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <div class="container footer-top">
       <div class="row gy-4">
         <div class="col-lg-4 col-md-6 footer-about">
-          <a href="index.html" class="d-flex align-items-center">
-            <span class="sitename">Moderna</span>
+          <a href="/homepage" class="d-flex align-items-center">
+            <span class="sitename">國際獅子會中國港澳三0三區</span>
           </a>
           <div class="footer-contact pt-3">
-            <p>A108 Adam Street</p>
-            <p>New York, NY 535022</p>
-            <p class="mt-3"><strong>Phone:</strong> <span>+1 5589 55488 55</span></p>
-            <p><strong>Email:</strong> <span>info@example.com</span></p>
+            <p>香港尖山獅子會</p>
+            <p>尖山共融障礙嘉年華 2025</p>
+            <p class="mt-3"><strong>2025年4月27日(星期日)</strong> <span>上午11時 - 下午4時</span></p>
+            
           </div>
         </div>
 
         <div class="col-lg-2 col-md-3 footer-links">
-          <h4>Useful Links</h4>
+          <h4></h4>
           <ul>
-            <li><i class="bi bi-chevron-right"></i> <a href="#">Home</a></li>
+            <!-- <li><i class="bi bi-chevron-right"></i> <a href="#"></a></li>
             <li><i class="bi bi-chevron-right"></i> <a href="#">About us</a></li>
             <li><i class="bi bi-chevron-right"></i> <a href="#">Services</a></li>
-            <li><i class="bi bi-chevron-right"></i> <a href="#">Terms of service</a></li>
+            <li><i class="bi bi-chevron-right"></i> <a href="#">Terms of service</a></li> -->
           </ul>
         </div>
 
         <div class="col-lg-2 col-md-3 footer-links">
-          <h4>Our Services</h4>
+          <!-- <h4>Our Services</h4>
           <ul>
             <li><i class="bi bi-chevron-right"></i> <a href="#">Web Design</a></li>
             <li><i class="bi bi-chevron-right"></i> <a href="#">Web Development</a></li>
             <li><i class="bi bi-chevron-right"></i> <a href="#">Product Management</a></li>
             <li><i class="bi bi-chevron-right"></i> <a href="#">Marketing</a></li>
-          </ul>
+          </ul> -->
         </div>
 
         <div class="col-lg-4 col-md-12">
-          <h4>Follow Us</h4>
-          <p>Cras fermentum odio eu feugiat lide par naso tierra videa magna derita valies</p>
+          <h4>追踪我們</h4>
+          <p>追踪我們以獲得更多活動詳情</p>
           <div class="social-links d-flex">
-            <a href=""><i class="bi bi-twitter-x"></i></a>
             <a href=""><i class="bi bi-facebook"></i></a>
             <a href=""><i class="bi bi-instagram"></i></a>
-            <a href=""><i class="bi bi-linkedin"></i></a>
           </div>
         </div>
 
@@ -409,13 +403,9 @@
     </div>
 
     <div class="container copyright text-center mt-4">
-      <p>© <span>Copyright</span> <strong class="px-1 sitename">Moderna</strong> <span>All Rights Reserved</span></p>
+      <p></p>
       <div class="credits">
-        <!-- All the links in the footer should remain intact. -->
-        <!-- You can delete the links only if you've purchased the pro version. -->
-        <!-- Licensing information: https://bootstrapmade.com/license/ -->
-        <!-- Purchase the pro version with working PHP/AJAX contact form: [buy-url] -->
-        Designed by <a href="https://bootstrapmade.com/">BootstrapMade</a>
+        
       </div>
     </div>
 
