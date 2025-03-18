@@ -1,76 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 
-<head>
-  <meta charset="utf-8">
-  <meta content="width=device-width, initial-scale=1.0" name="viewport">
-  <title>尖山共融障礙嘉年華 2025</title>
-  <meta name="description" content="">
-  <meta name="keywords" content="">
-
-  <!-- Favicons -->
-  <link href="/pages/assets/img/favicon.png" rel="icon">
-  <link href="/pages/assets/img/apple-touch-icon.png" rel="apple-touch-icon">
-
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com" rel="preconnect">
-  <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Raleway:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
-
-  <!-- Vendor CSS Files -->
-  <link href="/pages/assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-  <link href="/pages/assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
-  <link href="/pages/assets/vendor/aos/aos.css" rel="stylesheet">
-  <link href="/pages/assets/vendor/glightbox/css/glightbox.min.css" rel="stylesheet">
-  <link href="/pages/assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
-
-  <!-- Main CSS File -->
-  <link href="/pages/assets/css/main.css" rel="stylesheet">
-
-  <!-- =======================================================
-  * Template Name: Moderna
-  * Template URL: https://bootstrapmade.com/free-bootstrap-template-corporate-moderna/
-  * Updated: Aug 07 2024 with Bootstrap v5.3.3
-  * Author: BootstrapMade.com
-  * License: https://bootstrapmade.com/license/
-  ======================================================== -->
-  <style>
-    .btn-cus-color{
-      background-color:var(--accent-color);
-      color:#FFF;
-    }
-    .btn-cus-color:hover{
-      background-color:var(--accent-color);
-      color:#000;
-    }
-  </style>
-</head>
+<%- include ("components/header") %>
 
 <body class="index-page">
 
-  <header id="header" class="header d-flex align-items-center fixed-top">
-    
-    <div class="container-fluid container-xl position-relative d-flex align-items-center justify-content-between">
-      
-      <a href="/homepage" class="logo d-flex align-items-center">
-        <img src="/pages/assets/img/logo.png" alt="">  
-        <!-- Uncomment the line below if you also wish to use an image logo -->
-        
-        <h1 class="sitename">尖山共融障礙嘉年華 2025</h1>
-      </a>
-
-      <nav id="navmenu" class="navmenu">
-        <ul>
-          <li><a href="/homepage" class="active">首頁</a></li>
-          <li><a href="#about">關於我們</a></li>
-          <li><a href="#service">籌款目的</a></li>
-          <li><a href="#contact">立即加入</a></li>
-        </ul>
-        <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
-      </nav>
-
-    </div>
-  </header>
+  <%- include ("components/menu") %>
+  
 
   <main class="main">
 
@@ -382,83 +318,8 @@
       </section>
   </main>
 
-  <footer id="footer" class="footer dark-background">
-
-    <div class="container footer-top">
-      <div class="row gy-4">
-        <div class="col-lg-4 col-md-6 footer-about">
-          <a href="/homepage" class="d-flex align-items-center">
-            <span class="sitename">國際獅子會中國港澳三0三區</span>
-          </a>
-          <div class="footer-contact pt-3">
-            <p>香港尖山獅子會</p>
-            <p>尖山共融障礙嘉年華 2025</p>
-            <p class="mt-3"><strong>2025年4月27日(星期日)</strong> <span>上午11時 - 下午4時</span></p>
-            
-          </div>
-        </div>
-
-        <div class="col-lg-2 col-md-3 footer-links">
-          <h4></h4>
-          <ul>
-            <!-- <li><i class="bi bi-chevron-right"></i> <a href="#"></a></li>
-            <li><i class="bi bi-chevron-right"></i> <a href="#">About us</a></li>
-            <li><i class="bi bi-chevron-right"></i> <a href="#">Services</a></li>
-            <li><i class="bi bi-chevron-right"></i> <a href="#">Terms of service</a></li> -->
-          </ul>
-        </div>
-
-        <div class="col-lg-2 col-md-3 footer-links">
-          <!-- <h4>Our Services</h4>
-          <ul>
-            <li><i class="bi bi-chevron-right"></i> <a href="#">Web Design</a></li>
-            <li><i class="bi bi-chevron-right"></i> <a href="#">Web Development</a></li>
-            <li><i class="bi bi-chevron-right"></i> <a href="#">Product Management</a></li>
-            <li><i class="bi bi-chevron-right"></i> <a href="#">Marketing</a></li>
-          </ul> -->
-        </div>
-
-        <div class="col-lg-4 col-md-12">
-          <h4>追踪我們</h4>
-          <p>追踪我們以獲得更多活動詳情</p>
-          <div class="social-links d-flex">
-            <a href=""><i class="bi bi-facebook"></i></a>
-            <a href=""><i class="bi bi-instagram"></i></a>
-          </div>
-        </div>
-
-      </div>
-    </div>
-
-    <div class="container copyright text-center mt-4">
-      <p></p>
-      <div class="credits">
-        
-      </div>
-    </div>
-
-  </footer>
-
-  <!-- Scroll Top -->
-  <a href="#" id="scroll-top" class="scroll-top d-flex align-items-center justify-content-center"><i class="bi bi-arrow-up-short"></i></a>
-
-  <!-- Preloader -->
-  <div id="preloader"></div>
-
-  <!-- Vendor JS Files -->
-  <script src="/pages/assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-  <script src="/pages/assets/vendor/php-email-form/validate.js"></script>
-  <script src="/pages/assets/vendor/aos/aos.js"></script>
-  <script src="/pages/assets/vendor/glightbox/js/glightbox.min.js"></script>
-  <script src="/pages/assets/vendor/purecounter/purecounter_vanilla.js"></script>
-  <script src="/pages/assets/vendor/swiper/swiper-bundle.min.js"></script>
-  <script src="/pages/assets/vendor/waypoints/noframework.waypoints.js"></script>
-  <script src="/pages/assets/vendor/imagesloaded/imagesloaded.pkgd.min.js"></script>
-  <script src="/pages/assets/vendor/isotope-layout/isotope.pkgd.min.js"></script>
-
-  <!-- Main JS File -->
-  <script src="/pages/assets/js/main.js"></script>
-
+  <%- include ("components/footer") %>
+  
 </body>
 
 </html>

@@ -48,6 +48,15 @@ mongoose.set('debug', true);
 app.get('/homepage', async (req, res) => {
     res.render('pages/index');
 });
+app.get('/event-details', async (req, res) => {
+    res.render('pages/event-details');
+});
+app.get('/tc', async (req, res) => {
+    res.render('pages/tc');
+});
+app.get('/rules', async (req, res) => {
+    res.render('pages/rules');
+});
 app.get('/login', async (req, res) => {
     res.render('admin/login');
 });
