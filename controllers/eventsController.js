@@ -16,6 +16,7 @@ exports.createEvent = async (req, res) => {
             
         });
 
+        console.log(newEvent);
         await newEvent.save(); // 保存事件
         res.status(201).json(newEvent); // 返回創建的事件
     } catch (error) {
@@ -139,6 +140,14 @@ exports.removeUserFromEvent = async (req, res) => {
     }
 };
 
+exports.renderCreateEventPage = async (req, res) => {
+    try {
+        res.render('admin/create_event'); // 渲染事件列表視圖
+    } catch (error) {
+        console.error('Error fetching events:', error);
+        res.status(500).json({ message: 'Error fetching events' });
+    }
+};
 // 獲取當前用戶的事件並渲染事件列表視圖
 exports.renderEventsList = async (req, res) => {
     try {

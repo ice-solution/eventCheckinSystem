@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>事件列表</title>
+    <title>活動列表</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
 <body>
     <div class="container mt-5">
-        <h1>我的事件列表</h1>
+        <h1>我的活動列表</h1>
         <table class="table table-bordered">
             <thead>
                 <tr>
@@ -32,11 +32,12 @@
                     <% }); %>
                 <% } else { %>
                     <tr>
-                        <td colspan="5" class="text-center">沒有找到事件</td>
+                        <td colspan="5" class="text-center">沒有找到活動</td>
                     </tr>
                 <% } %>
             </tbody>
         </table>
+        <a href="/events/create" class="btn btn-primary">創建活動</a>
         <a href="/admin" class="btn btn-primary">返回管理頁面</a>
     </div>
 </body>

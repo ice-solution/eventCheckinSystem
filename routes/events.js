@@ -19,8 +19,11 @@ const upload = multer({ storage: storage }).single('file');
 
 // 創建事件
 router.post('/create', eventsController.createEvent);
+router.get('/create', eventsController.renderCreateEventPage); // 創建事件
 router.get('/', eventsController.getUserEvents);
 router.get('/list', eventsController.renderEventsList);
+
+
 
 router.get('/:eventId', eventsController.getEventUsersByEventID);
 router.get('/:eventId/import', importController.getImportUserPage);

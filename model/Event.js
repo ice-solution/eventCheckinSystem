@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
     point: {type:Number, default:0},
-    email: { type: String, required: true, unique: true },
+    email: { type: String, required: true },
     name: { type: String, required: true },
     phone_code: { type: String }, // 電話區號
     phone: { type: String }, // 電話
