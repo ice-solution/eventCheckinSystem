@@ -6,6 +6,7 @@
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <title>參展商點數列表</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 
@@ -17,8 +18,9 @@
     <table class="table table-bordered">
         <thead>
             <tr>
-                <th>促銷代碼名稱</th>
+                <th>積分代碼名稱</th>
                 <th>點數</th>
+                <th>QR 碼</th>
             </tr>
         </thead>
         <tbody id="attendeePointList">
@@ -26,6 +28,16 @@
                 <tr>
                     <td><%= promo.code_name %></td>
                     <td><%= promo.point %></td>
+                    <td>
+                        <div id="qrcode-<%= promo._id %>" class="qrcode"></div>
+                        <script>
+                            const qrcode = new QRCode(document.getElementById("qrcode-<%= promo._id %>"), {
+                                text: `eventId=<%= eventId %>&attendeeId=<%= attendee._id %>&promo_code_id=<%= promo._id %>`,
+                                width: 100,
+                                height: 100,
+                            });
+                        </script>
+                    </td>
                 </tr>
             <% }) %>
         </tbody>

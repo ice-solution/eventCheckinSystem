@@ -137,12 +137,19 @@
                 },
                 (decodedText, decodedResult) => {
                     if (scanning) {
-                        const [eventId, attendeeId, promo_code_id] = decodedText.split(',');
+                        const params = new URLSearchParams(decodedText);
+
+                        // 将查询参数转换为普通对象
+                        const paramsObject = {};
+                        params.forEach((value, key) => {
+                            paramsObject[key] = value;
+                        });
+                        // const [eventId, attendeeId, promo_code_id] = decodedText.split(',');
                         $.ajax({
-                            url: `/events/${eventId}/gain`,
+                            url: `/events/${paramsObject.eventId}/gain`,
                             method: 'POST',
                             contentType: 'application/json',
-                            data: JSON.stringify({ userId: _uid, attendeeId: attendeeId, promo_code_id: promo_code_id }),
+                            data: JSON.stringify({ userId: _uid, attendeeId: paramsObject.attendeeId, promo_code_id: paramsObject.promo_code_id }),
                             success: function(response) {
                                 alert(response.message);
                                 $('#scannerLightbox').hide();
