@@ -22,10 +22,11 @@ const sendWelcomeEmail = async (event, user) => {
         // 構建郵件內容
         const messageBody = `
             <h1>歡迎您參加 ${event.name}！</h1>
-            <p>這是您的 QR 碼：</p>
-            <img src="${qrCodeUrl}" alt="QR Code" />
+            <p>點擊此處查看您的 QR 碼：</p>
+            <a href="${qrCodeUrl}">查看 QR 碼</a>
             <p>請於到場現出示此QRcode以作入場。</p>
         `;
+        console.log(messageBody);
         const mailOptions = {
             from: process.env.gmail_ac, // 替換為您的電子郵件地址
             to: user.email, // 確保用戶的電子郵件地址是有效的
