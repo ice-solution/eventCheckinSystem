@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const emailTemplateSchema = require('./EmailTemplate'); // 引入 EmailTemplate 模型
 
 const userSchema = new mongoose.Schema({
     point: {type:Number, default:0},
@@ -9,7 +10,20 @@ const userSchema = new mongoose.Schema({
     company: { type: String, required: true },
     isCheckIn: { type: Boolean, default: false }, // 是否簽到
     create_at: { type: Date, default: Date.now }, // 創建時間
-    modified_at: { type: Date, default: Date.now } // 修改時間
+    modified_at: { type: Date, default: Date.now }, // 修改時間
+    promos: [{ // 添加 promos 字段
+        event_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Event' },
+        attendee_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Attendee' },
+        promo_code_id: { type: mongoose.Schema.Types.ObjectId, ref: 'PromoCode' }
+    }]
+});
+
+const attendeeSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    location: { type: String, required: true },
+    phone: { type: String, required: true },
+    email: { type: String, required: true },
+    promo_codes: [{ code_name: String, point: Number }]
 });
 
 const eventSchema = new mongoose.Schema({
@@ -19,7 +33,9 @@ const eventSchema = new mongoose.Schema({
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'Auth', required: true },
     created_at: { type: Date, default: Date.now }, // 創建時間
     modified_at: { type: Date, default: Date.now }, // 修改時間
-    users:[userSchema]
+    emailTemplate: { type: mongoose.Schema.Types.ObjectId, ref: 'EmailTemplate' }, // 引用 EmailTemplate
+    users:[userSchema],
+    attendees: [attendeeSchema] // 添加參展商參數
 });
 
 // 在保存之前更新 modified_at 字段

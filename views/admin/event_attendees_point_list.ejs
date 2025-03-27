@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <title>參展商點數列表</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+<%- include("components/header") %>
+<%- include("components/menu", { eventId: eventId }) %>
+
+<div class="container mt-5">
+    <h2><%= attendee.name %> 的促銷代碼列表</h2>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>促銷代碼名稱</th>
+                <th>點數</th>
+            </tr>
+        </thead>
+        <tbody id="attendeePointList">
+            <% attendee.promo_codes.forEach(promo => { %>
+                <tr>
+                    <td><%= promo.code_name %></td>
+                    <td><%= promo.point %></td>
+                </tr>
+            <% }) %>
+        </tbody>
+    </table>
+    <div id="result" class="mt-3"></div>
+</div>
+
+<%- include("components/footer") %>
+
+</body>
+</html>

@@ -1,33 +1,13 @@
 <!-- views/home.ejs -->
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>首頁</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh; /* 使內容垂直居中 */
-            text-align: center;
-        }
-        .btn {
-            margin: 10px; /* 按鈕之間的間距 */
-        }
-    </style>
-</head>
+<%- include ("components/header") %>
 <body>
-    <div>
+    <%- include ("components/menu") %>
+    <div id="right-panel" class="right-panel">
+        <%- include ("components/rightpanel_header") %>
         <h2>歡迎使用活動登錄系統</h2>
         <a href="/events/list" class="btn btn-primary">活動列表</a>
         <a href="/logout" class="btn btn-danger">登出</a>
     </div>
 
     <!-- 引入 Bootstrap JS -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+    <%- include ("components/footer") %>

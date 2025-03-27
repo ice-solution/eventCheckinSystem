@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <title>參展商列表</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+<%- include("components/header") %>
+<%- include("components/menu", { eventId: eventId }) %>
+
+<div class="container mt-5">
+    <h2>參展商列表</h2>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>姓名</th>
+                <th>地點</th>
+                <th>電話號碼</th>
+                <th>電子郵件</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="attendeesList">
+            <% attendees.forEach(attendee => { %>
+                <tr>
+                    <td><%= attendee.name %></td>
+                    <td><%= attendee.location %></td>
+                    <td><%= attendee.phone %></td>
+                    <td><%= attendee.email %></td>
+                    <td>
+                        <a href="/events/<%= eventId %>/attendees/<%= attendee._id %>/points" class="btn btn-info btn-sm">查看</a>
+                        <a href="/events/<%= eventId %>/attendees/<%= attendee._id %>/promote" class="btn btn-warning btn-sm">Add promote</a>
+                    </td>
+                </tr>
+            <% }) %>
+        </tbody>
+    </table>
+    <div id="result" class="mt-3"></div>
+</div>
+
+<%- include("components/footer") %>
+
+</body>
+</html>

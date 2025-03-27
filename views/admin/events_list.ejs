@@ -1,44 +1,70 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>活動列表</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-</head>
-<body>
-    <div class="container mt-5">
-        <h1>我的活動列表</h1>
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>事件名稱</th>
-                    <th>開始時間</th>
-                    <th>結束時間</th>
-                    <th>創建時間</th>
-                    <th>用戶數</th>
-                </tr>
-            </thead>
-            <tbody>
-                <% if (events.length > 0) { %>
-                    <% events.forEach(event => { %>
-                        <tr>
-                            <td><a href="/events/<%= event._id %>"><%= event.name %></a></td>
-                            <td><%= new Date(event.from).toLocaleString() %></td>
-                            <td><%= new Date(event.to).toLocaleString() %></td>
-                            <td><%= new Date(event.created_at).toLocaleString() %></td>
-                            <td><%= event.users.length %></td>
-                        </tr>
-                    <% }); %>
-                <% } else { %>
-                    <tr>
-                        <td colspan="5" class="text-center">沒有找到活動</td>
-                    </tr>
-                <% } %>
-            </tbody>
-        </table>
-        <a href="/events/create" class="btn btn-primary">創建活動</a>
-        <a href="/admin" class="btn btn-primary">返回管理頁面</a>
+<%- include ("components/header") %>
+<%- include ("components/menu", {eventId: ''})  %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+    <div id="right-panel" class="right-panel">
+        <%- include ("components/rightpanel_header") %>
+        <div class="content">
+            <div class="animated fadeIn">
+                <div class="row">
+
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <strong class="card-title">我的活動列表</strong>
+                            </div>
+                            <div class="card-body">
+                                <table id="bootstrap-data-table" class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>事件名稱</th>
+                                            <th>開始時間</th>
+                                            <th>結束時間</th>
+                                            <th>創建時間</th>
+                                            <th>用戶數</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% if (events.length > 0) { %>
+                                            <% events.forEach(event => { %>
+                                                <tr>
+                                                    <td><a href="/events/<%= event._id %>"><%= event.name %></a></td>
+                                                    <td><%= new Date(event.from).toLocaleString() %></td>
+                                                    <td><%= new Date(event.to).toLocaleString() %></td>
+                                                    <td><%= new Date(event.created_at).toLocaleString() %></td>
+                                                    <td><%= event.users.length %></td>
+                                                </tr>
+                                            <% }); %>
+                                        <% } else { %>
+                                            <tr>
+                                                <td colspan="5" class="text-center">沒有找到活動</td>
+                                            </tr>
+                                        <% } %>
+                                    </tbody>
+                                </table>
+                                <a href="/events/create" class="btn btn-primary">創建活動</a>
+                                <a href="/admin" class="btn btn-primary">返回管理頁面</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-</body>
-</html>
+    <%- include ("components/footer") %>
+    <script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
+    <script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
+    <script src="/admin/assets/js/lib/data-table/dataTables.buttons.min.js"></script>
+    <script src="/admin/assets/js/lib/data-table/buttons.bootstrap.min.js"></script>
+    <script src="/admin/assets/js/lib/data-table/jszip.min.js"></script>
+    <script src="/admin/assets/js/lib/data-table/vfs_fonts.js"></script>
+    <script src="/admin/assets/js/lib/data-table/buttons.html5.min.js"></script>
+    <script src="/admin/assets/js/lib/data-table/buttons.print.min.js"></script>
+    <script src="/admin/assets/js/lib/data-table/buttons.colVis.min.js"></script>
+    <script src="/admin/assets/js/init/datatables-init.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function() {
+          $('#bootstrap-data-table-export').DataTable();
+      } );
+  </script>

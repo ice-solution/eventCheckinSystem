@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <title>添加參展商</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+<%- include("components/header") %>
+<%- include("components/menu", { eventId: eventId }) %>
+
+<div class="container mt-5">
+    <h2>添加參展商</h2>
+    <form id="attendeeForm">
+        <input type="hidden" id="eventId" value="<%= eventId %>"> <!-- 隱藏的事件 ID -->
+        <div class="form-group">
+            <label for="name">姓名</label>
+            <input type="text" class="form-control" id="name" placeholder="輸入姓名" required>
+        </div>
+        <div class="form-group">
+            <label for="location">地點</label>
+            <input type="text" class="form-control" id="location" placeholder="輸入地點" required>
+        </div>
+        <div class="form-group">
+            <label for="phone">電話號碼</label>
+            <input type="text" class="form-control" id="phone" placeholder="輸入電話號碼" required>
+        </div>
+        <div class="form-group">
+            <label for="email">電子郵件</label>
+            <input type="email" class="form-control" id="email" placeholder="輸入電子郵件" required>
+        </div>
+        <button type="submit" class="btn btn-primary">添加參展商</button>
+    </form>
+    <div id="result" class="mt-3"></div>
+</div>
+
+<%- include("components/footer") %>
+
+<script>
+    $(document).ready(function() {
+        $('#attendeeForm').on('submit', function(e) {
+            e.preventDefault(); // 防止表單默認提交
+            const eventId = $('#eventId').val();
+            const name = $('#name').val();
+            const location = $('#location').val();
+            const phone = $('#phone').val();
+            const email = $('#email').val();
+
+            $.ajax({
+                url: `/events/${eventId}/attendees`,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ name, location, phone, email }),
+                success: function(response) {
+                    $('#result').html(`<div class="alert alert-success">${response.message}</div>`);
+                    $('#attendeeForm')[0].reset(); // 重置表單
+                },
+                error: function(xhr) {
+                    $('#result').html(`<div class="alert alert-danger">${xhr.responseJSON.message}</div>`);
+                }
+            });
+        });
+    });
+</script>
+
+</body>
+</html>

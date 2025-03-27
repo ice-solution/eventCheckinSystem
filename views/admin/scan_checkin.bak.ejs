@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>來賓登記系統</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            text-align: center;
+        }
+        #result {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h2><%= event.name %></h2>
+    <h2>來賓登記系統</h2>
+    <div>
+    </div>
+    <div id="reader" style="width: 100%; margin: auto;"></div>
+    <h4 id="result"></h4>
+    <h5 id="company"></h5>
+    <button id="nextButton" class="btn btn-primary btn-lg btn-block" style="display: none;">下一位</button>
+
+    <script>
+        const html5QrCode = new Html5Qrcode("reader");
+        let scanning = false; // 用於跟踪掃描狀態
+
+        // 開始掃描
+        const startScanning = () => {
+            scanning = true; // 設置掃描狀態為 true
+            html5QrCode.start(
+                { facingMode: "environment" }, // 使用後置相機
+                {
+                    fps: 10, // 每秒幀數
+                    qrbox: 250 // QR 碼框的大小
+                },
+                (decodedText, decodedResult) => {
+                    if (scanning) { // 只有在掃描狀態為 true 時才處理掃描結果
+                        scanning = false; // 停止掃描
+                        html5QrCode.stop(); // 停止掃描
+                        fetch(`/events/<%= event._id%>/users/${decodedText}`)
+                            .then(response => response.json())
+                            .then(user => {
+                                const resultDiv = document.getElementById('result');
+                                const companyDiv = document.getElementById('company');
+                                const nextButton = document.getElementById('nextButton');
+                                if (user) {
+                                    if (user.isCheckIn === false) {
+					                    resultDiv.innerHTML = `歡迎來臨！！ ${user.name}`;
+                                        resultDiv.classList.add('btn')
+                                        resultDiv.classList.add('btn-success')
+                                    } else {
+					                    resultDiv.innerHTML = `閣下已登記 ${user.name}`;
+                                        resultDiv.classList.add('btn')
+                                        resultDiv.classList.add('btn-warning')
+                                    }
+                                    companyDiv.innerHTML = `${user.company}`;  
+                                    resultDiv.style.display = 'inline-block'; // 顯示 "下一位" 按鈕
+                                    nextButton.style.display = 'block'; // 顯示 "下一位" 按鈕
+                                } else {
+                                    resultDiv.innerHTML = '對不起，找不到用戶';
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error fetching user:', error);
+                                document.getElementById('result').innerHTML = '對不起，找不到用戶';
+                            });
+                    }
+                },
+                (errorMessage) => {
+                    // 當掃描失敗時
+                    console.warn(`QR Code scan error: ${errorMessage}`);
+                }
+            ).catch(err => {
+                console.error('Unable to start scanning:', err);
+            });
+        };
+
+        // 開始掃描
+        startScanning();
+
+        // "下一位" 按鈕的事件處理
+        document.getElementById('nextButton').addEventListener('click', () => {
+            document.getElementById('result').innerHTML = '';
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('company').innerHTML = ''; // 清空結果
+            document.getElementById('nextButton').style.display = 'none'; // 隱藏按鈕
+            scanning = false; // 設置掃描狀態為 false
+            startScanning(); // 重新開始掃描
+        });
+    </script>
+
+    <!-- 引入 Bootstrap JS 和 jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

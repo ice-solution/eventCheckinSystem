@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <title>添加促銷代碼</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+<%- include("components/header") %>
+<%- include("components/menu", { eventId: eventId }) %>
+
+<div class="container mt-5">
+    <h2>為參展商添加促銷代碼</h2>
+    <form id="promoCodeForm">
+        <input type="hidden" id="eventId" value="<%= eventId %>"> <!-- 隱藏的事件 ID -->
+        <input type="hidden" id="attendeeId" value="<%= attendeeId %>"> <!-- 隱藏的參展商 ID -->
+        
+        <div class="form-group">
+            <label for="code_name">促銷代碼名稱</label>
+            <input type="text" class="form-control" id="code_name" placeholder="輸入促銷代碼名稱" required>
+        </div>
+        <div class="form-group">
+            <label for="point">點數</label>
+            <input type="number" class="form-control" id="point" placeholder="輸入點數" required>
+        </div>
+        <button type="submit" class="btn btn-primary">添加促銷代碼</button>
+    </form>
+    <div id="result" class="mt-3"></div>
+</div>
+
+<%- include("components/footer") %>
+
+<script>
+    $(document).ready(function() {
+        $('#promoCodeForm').on('submit', function(e) {
+            e.preventDefault(); // 防止表單默認提交
+            const eventId = $('#eventId').val();
+            const attendeeId = $('#attendeeId').val();
+            const code_name = $('#code_name').val();
+            const point = $('#point').val();
+
+            $.ajax({
+                url: `/events/${eventId}/attendees/${attendeeId}/promote`,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ code_name, point }),
+                success: function(response) {
+                    $('#result').html(`<div class="alert alert-success">${response.message}</div>`);
+                    $('#promoCodeForm')[0].reset(); // 重置表單
+                },
+                error: function(xhr) {
+                    $('#result').html(`<div class="alert alert-danger">${xhr.responseJSON.message}</div>`);
+                }
+            });
+        });
+    });
+</script>
+
+</body>
+</html>

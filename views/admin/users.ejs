@@ -1,76 +1,145 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= event.name %> 的用戶列表</title>
-    <!-- 引入 DataTables CSS -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        .checkin-true {
-            background-color: #d4edda !important; /* 綠色背景 */
-        }
-        .checkin-false {
-            background-color: #fff3cd !important; /* 黃色背景 */
-        }
-    </style>
-</head>
-<body>
-    <div id="alertContainer"></div>
-    <h1><%= event.name %> 的用戶列表</h1>
-    <div>
-        <a href="/events/<%= event._id %>" class="btn btn-primary">用戶列表</a>
-        <a href="/events/<%= event._id%>/scan" class="btn btn-success">掃描 QR 碼</a>
-        <a href="/events/<%= event._id%>/import" class="btn btn-warning">滙入資料</a>
-        <a href="/logout" class="btn btn-danger">登出</a>
-    </div>
-    <div id="userStats" class="mb-3">
-        <% 
-            const totalUsers = event.users.length; 
-            const checkedInUsers = event.users.filter(user => user.isCheckIn).length; 
-            const checkInRate = totalUsers > 0 ? ((checkedInUsers / totalUsers) * 100).toFixed(2) : 0; 
-        %>
-        <p style="padding:10px 0; border:1px solid blue">登入人數: <span class="checkin-true"><%= checkedInUsers %></span> / 全部人數: <%= totalUsers %> <span style="border-radius: 50px; padding:10px; background-color: yellow;">(比率: <%= checkInRate %>%)</span></p>
-    </div>
+<%- include ("components/header") %>
+<%- include ("components/menu", { eventId: event._id }) %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+    }
+    .checkin-true {
+        background-color: #d4edda !important; /* 綠色背景 */
+    }
+    .checkin-false {
+        background-color: #fff3cd !important; /* 黃色背景 */
+    }
+</style>
+    <div id="right-panel" class="right-panel">
+        <%- include ("components/rightpanel_header") %>
+        <div class="content">
+            <div class="animated fadeIn">
+                <div id="alertContainer"></div>
+                <div class="row">
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card">
+                            <% 
+                                const totalUsers = event.users.length; 
+                                const checkedInUsers = event.users.filter(user => user.isCheckIn).length; 
+                                const checkInRate = totalUsers > 0 ? ((checkedInUsers / totalUsers) * 100).toFixed(2) : 0; 
+                            %>
+                            <div class="card-body">
+                                <div class="stat-widget-five">
+                                    <div class="stat-icon dib flat-color-1">
+                                        <i class="pe-7s-user"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="text-left dib">
+                                            <div class="stat-text"><span class="count"><%= checkedInUsers %></span></div>
+                                            <div class="stat-heading">登入人數</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-    <!-- Alert 區域 -->
-    
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="stat-widget-five">
+                                    <div class="stat-icon dib flat-color-2">
+                                        <i class="pe-7s-users"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="text-left dib">
+                                            <div class="stat-text"><span class="count"><%= totalUsers %></span></div>
+                                            <div class="stat-heading">全部人數</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-    <table id="usersTable" class="display">
-        <thead>
-            <tr>
-                <th>Email</th>
-                <th>Name</th>
-                <th>Company</th>
-                <th>Phone</th>
-                <th>已登記進場</th>
-            </tr>
-        </thead>
-        <tbody>
-            <% event.users.forEach(user => { %>
-                <tr class="<%= user.isCheckIn ? 'checkin-true' : 'checkin-false' %>">
-                    <!-- <td><%= user._id %></td> -->
-                    <td><%= user.email %></td>
-                    <td><%= user.name %></td>
-                    <td><%= user.company %></td>
-                    <td><%= user.phone %></td>
-                    <td>
-                        <input type="checkbox" class="checkin-toggle" data-_id="<%= user._id %>" <%= user.isCheckIn ? 'checked' : '' %> />
-                    </td>
-                </tr>
-            <% }) %>
-        </tbody>
-    </table>
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="stat-widget-five">
+                                    <div class="stat-icon dib flat-color-3">
+                                        <i class="pe-7s-calculator"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="text-left dib">
+                                            <div class="stat-text"><span class="count"><%= checkInRate %></span>%</div>
+                                            <div class="stat-heading">比率</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-    <!-- 引入 jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- 引入 DataTables JS -->
-    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+                    
+                </div>
+                <div class="row">
+                    <div class="col-lg-12 col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <strong class="card-title"><%= event.name %> 的用戶列表</strong>
+                            </div>
+                            <div class="card-body">
+                                <div>
+                                    <a href="/events/<%= event._id %>" class="btn btn-primary">用戶列表</a>
+                                    <a href="/events/<%= event._id%>/scan" class="btn btn-success">掃描 QR 碼</a>
+                                    <a href="/events/<%= event._id%>/import" class="btn btn-warning">滙入資料</a>
+                                    <a href="/logout" class="btn btn-danger">登出</a>
+                                </div>
+                                
+                                <table id="usersTable" class="display">
+                                    <thead>
+                                        <tr>
+                                            <th>Email</th>
+                                            <th>Name</th>
+                                            <th>Company</th>
+                                            <th>Phone</th>
+                                            <th>已登記進場</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% event.users.forEach(user => { %>
+                                            <tr class="<%= user.isCheckIn ? 'checkin-true' : 'checkin-false' %>">
+                                                <!-- <td><%= user._id %></td> -->
+                                                <td><%= user.email %></td>
+                                                <td><%= user.name %></td>
+                                                <td><%= user.company %></td>
+                                                <td><%= user.phone %></td>
+                                                <td>
+                                                    <input type="checkbox" class="checkin-toggle" data-_id="<%= user._id %>" <%= user.isCheckIn ? 'checked' : '' %> />
+                                                </td>
+                                            </tr>
+                                        <% }) %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <%- include ("components/footer") %>
+    <script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
+    <script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
+    <script src="/admin/assets/js/lib/data-table/dataTables.buttons.min.js"></script>
+    <script src="/admin/assets/js/lib/data-table/buttons.bootstrap.min.js"></script>
+    <script src="/admin/assets/js/lib/data-table/jszip.min.js"></script>
+    <script src="/admin/assets/js/lib/data-table/vfs_fonts.js"></script>
+    <script src="/admin/assets/js/lib/data-table/buttons.html5.min.js"></script>
+    <script src="/admin/assets/js/lib/data-table/buttons.print.min.js"></script>
+    <script src="/admin/assets/js/lib/data-table/buttons.colVis.min.js"></script>
+    <script src="/admin/assets/js/init/datatables-init.js"></script>
     <script>
         $(document).ready(function() {
             const table = $('#usersTable').DataTable({
@@ -122,8 +191,3 @@
             });
         });
     </script>
-
-    <!-- 引入 Bootstrap JS -->
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>

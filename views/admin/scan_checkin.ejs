@@ -1,104 +1,232 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>來賓登記系統</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <title>嘉賓掃描登記</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            text-align: center;
+            background-color: #f8f9fa;
         }
-        #result {
+        .container {
+            display: flex;
             margin-top: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .user-list {
+            width: 70%;
+            border-right: 1px solid #dee2e6;
+            padding: 20px; /* 增加內邊距 */
+            background-color: #ffffff;
+            border-radius: 10px 0 0 10px;
+        }
+        .user-details {
+            width: 30%;
+            padding: 20px; /* 增加內邊距 */
+            background-color: #ffffff;
+            border-radius: 0 10px 10px 0;
+        }
+        h4 {
+            margin-top: 0;
+        }
+        /* Lightbox樣式 */
+        .lightbox {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+        }
+        .lightbox-content {
+            position: relative;
+            width: 80%;
+            max-width: 600px;
         }
     </style>
 </head>
 <body>
-    <h2><%= event.name %></h2>
-    <h2>來賓登記系統</h2>
-    <div>
+
+<div class="container">
+    <div class="user-list">
+        <h4>嘉賓列表</h4>
+        <input type="text" id="searchInput" class="form-control mb-3" placeholder="搜索用戶..." onkeyup="searchUsers()">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>姓名</th>
+                    <th>公司</th>
+                    <th>電話</th>
+                    <th>狀態</th>
+                </tr>
+            </thead>
+            <tbody id="userList">
+                <% event.users.forEach(user => { %>
+                    <tr onclick="showDetails('<%= user.name %>', '<%= user.company %>', '<%= user.phone %>', <%= user.isCheckIn %>)">
+                        <td><%= user.name %></td>
+                        <td><%= user.company %></td>
+                        <td><%= user.phone %></td>
+                        <td>
+                            <button class="btn <%= user.isCheckIn ? 'btn-primary' : 'btn' %>">
+                                <%= user.isCheckIn ? 'Checked In' : 'Check In' %>
+                            </button>
+                        </td>
+                    </tr>
+                <% }); %>
+            </tbody>
+        </table>
+        <button id="scanButton" class="btn btn-primary mt-3" onclick="openLightbox()">掃描 QR 碼</button>
     </div>
-    <div id="reader" style="width: 100%; margin: auto;"></div>
-    <h4 id="result"></h4>
-    <h5 id="company"></h5>
-    <button id="nextButton" class="btn btn-primary btn-lg btn-block" style="display: none;">下一位</button>
+    <div class="user-details" id="userDetails">
+        <h4>嘉賓詳細信息</h4>
+        <p>選擇一個嘉賓以查看詳細信息。</p>
+        <div id="detailsContent"></div>
+        <button id="checkInButton" class="btn btn-primary mt-3" onclick="checkInUser()">Check In</button>
+        <button id="printButton" class="btn btn-secondary mt-3" onclick="printDetails()">打印</button>
+    </div>
+</div>
 
-    <script>
-        const html5QrCode = new Html5Qrcode("reader");
-        let scanning = false; // 用於跟踪掃描狀態
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <div class="lightbox-content">
+        <div id="reader" style="width: 100%; margin: auto;"></div>
+    </div>
+</div>
 
-        // 開始掃描
-        const startScanning = () => {
-            scanning = true; // 設置掃描狀態為 true
-            html5QrCode.start(
-                { facingMode: "environment" }, // 使用後置相機
-                {
-                    fps: 10, // 每秒幀數
-                    qrbox: 250 // QR 碼框的大小
-                },
-                (decodedText, decodedResult) => {
-                    if (scanning) { // 只有在掃描狀態為 true 時才處理掃描結果
-                        scanning = false; // 停止掃描
-                        html5QrCode.stop(); // 停止掃描
-                        fetch(`/events/<%= event._id%>/users/${decodedText}`)
-                            .then(response => response.json())
-                            .then(user => {
-                                const resultDiv = document.getElementById('result');
-                                const companyDiv = document.getElementById('company');
-                                const nextButton = document.getElementById('nextButton');
-                                if (user) {
-                                    if (user.isCheckIn === false) {
-					                    resultDiv.innerHTML = `歡迎來臨！！ ${user.name}`;
-                                        resultDiv.classList.add('btn')
-                                        resultDiv.classList.add('btn-success')
-                                    } else {
-					                    resultDiv.innerHTML = `閣下已登記 ${user.name}`;
-                                        resultDiv.classList.add('btn')
-                                        resultDiv.classList.add('btn-warning')
-                                    }
-                                    companyDiv.innerHTML = `${user.company}`;  
-                                    resultDiv.style.display = 'inline-block'; // 顯示 "下一位" 按鈕
-                                    nextButton.style.display = 'block'; // 顯示 "下一位" 按鈕
-                                } else {
-                                    resultDiv.innerHTML = '對不起，找不到用戶';
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error fetching user:', error);
-                                document.getElementById('result').innerHTML = '對不起，找不到用戶';
-                            });
-                    }
-                },
-                (errorMessage) => {
-                    // 當掃描失敗時
-                    console.warn(`QR Code scan error: ${errorMessage}`);
-                }
-            ).catch(err => {
-                console.error('Unable to start scanning:', err);
-            });
-        };
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script>
+    const eventId = "<%= event._id %>"; // 從後端獲取事件 ID
+    const html5QrCode = new Html5Qrcode("reader");
+    let scanning = false;
 
-        // 開始掃描
-        startScanning();
-
-        // "下一位" 按鈕的事件處理
-        document.getElementById('nextButton').addEventListener('click', () => {
-            document.getElementById('result').innerHTML = '';
-            document.getElementById('result').style.display = 'none';
-            document.getElementById('company').innerHTML = ''; // 清空結果
-            document.getElementById('nextButton').style.display = 'none'; // 隱藏按鈕
-            scanning = false; // 設置掃描狀態為 false
-            startScanning(); // 重新開始掃描
+    // 獲取用戶資料
+    function fetchUsers() {
+        $.ajax({
+            url: `/events/${eventId}/users`, // 獲取用戶資料的 API
+            method: 'GET',
+            success: function(users) {
+                const userList = $('#userList');
+                userList.empty(); // 清空用戶列表
+                users.forEach(user => {
+                    userList.append(`
+                        <tr onclick="showDetails('${user.name}', '${user.company}', '${user.phone}', ${user.isCheckIn})">
+                            <td>${user.name}</td>
+                            <td>${user.company}</td>
+                            <td>${user.phone}</td>
+                            <td>
+                                <button class="btn ${user.isCheckIn ? 'btn-primary' : 'btn'}">
+                                    ${user.isCheckIn ? 'Checked In' : 'Check In'}
+                                </button>
+                            </td>
+                        </tr>
+                    `);
+                });
+            },
+            error: function(err) {
+                console.error('Error fetching users:', err);
+            }
         });
-    </script>
+    }
 
-    <!-- 引入 Bootstrap JS 和 jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    // 顯示用戶詳細信息
+    function showDetails(name, company, phone, isCheckIn) {
+        document.getElementById('detailsContent').innerHTML = `
+            <h4>${name}</h4>
+            <p>公司: ${company}</p>
+            <p>電話: ${phone}</p>
+            <p>已登記: ${isCheckIn ? '是' : '否'}</p>
+        `;
+        document.getElementById('checkInButton').style.display = isCheckIn ? 'none' : 'inline-block'; // 根據是否已登記顯示按鈕
+    }
+
+    // 搜索用戶
+    function searchUsers() {
+        const input = document.getElementById('searchInput').value.toLowerCase();
+        const rows = document.querySelectorAll('#userList tr');
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(input) ? '' : 'none';
+        });
+    }
+
+    // 開啟 Lightbox
+    function openLightbox() {
+        document.getElementById('lightbox').style.display = 'flex';
+        startScanning(); // 開始掃描
+    }
+
+    // 關閉 Lightbox
+    function closeLightbox() {
+        document.getElementById('lightbox').style.display = 'none';
+        if (scanning) {
+            html5QrCode.stop(); // 停止掃描
+            scanning = false;
+        }
+    }
+
+    // 開始掃描 QR 碼
+    function startScanning() {
+        if (scanning) return; // 如果已經在掃描中，則不再啟動
+        scanning = true;
+        html5QrCode.start(
+            { facingMode: "environment" }, // 使用後置相機
+            {
+                fps: 10, // 每秒幀數
+                qrbox: 250 // QR 碼框的大小
+            },
+            (decodedText, decodedResult) => {
+                // 當掃描到 QR 碼時
+                scanning = false; // 停止掃描
+                html5QrCode.stop(); // 停止掃描
+                // 假設 QR 碼包含用戶 ID
+                const userId = decodedText.split('=')[1];
+                fetch(`/events/${eventId}/users/${userId}`)
+                    .then(response => response.json())
+                    .then(user => {
+                        if (user) {
+                            showDetails(user.name, user.company, user.phone, user.isCheckIn);
+                        } else {
+                            alert('找不到用戶');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching user:', error);
+                        alert('找不到用戶');
+                    });
+                closeLightbox(); // 關閉 Lightbox
+            },
+            (errorMessage) => {
+                // 當掃描失敗時
+                console.warn(`QR Code scan error: ${errorMessage}`);
+            }
+        ).catch(err => {
+            console.error('Unable to start scanning:', err);
+        });
+    }
+
+    // 打印用戶詳細信息
+    function printDetails() {
+        const detailsContent = document.getElementById('detailsContent').innerHTML;
+        const printWindow = window.open('', '', 'height=600,width=800');
+        printWindow.document.write('<html><head><title>打印用戶詳細信息</title>');
+        printWindow.document.write('</head><body>');
+        printWindow.document.write(detailsContent);
+        printWindow.document.write('</body></html>');
+        printWindow.document.close();
+        printWindow.print();
+    }
+
+    // 初始化用戶資料
+    $(document).ready(function() {
+        fetchUsers(); // 獲取用戶資料
+    });
+</script>
+
 </body>
 </html>

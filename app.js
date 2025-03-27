@@ -1,12 +1,17 @@
 // app.js
+require('dotenv').config(); // 加載環境變量
+const QRCode = require('qrcode');
+
 const express = require('express');
 const mongoose = require('mongoose');
 const http = require('http');
+
 const session = require('express-session'); // 引入 session
 const usersRouter = require('./routes/users');
 const eventsRouter = require('./routes/events');
 const awardsRouter = require('./routes/awards'); // 引入新的路由
 const authRoutes = require('./routes/auth'); // 引入 auth 路由
+const emailTemplateRoutes = require('./routes/emailTemplate'); // 引入 emailTemplate 路由
 
 const Auth = require('./model/Auth'); // 引入 Auth 模型
 const path = require('path'); // 引入 path 模組
@@ -105,17 +110,54 @@ app.use('/events', eventsRouter);
 app.use('/users',isAuthenticated, usersRouter);
 app.use('/awards', awardsRouter);
 app.use('/auth', authRoutes); // 使用 auth 路由
+app.use('/email_template', emailTemplateRoutes); // 使用 emailTemplate 路由
 
-// app.get('/scan',isAuthenticated,async function (req, res){
-//     try {
-//         res.render('admin/scan'); // 傳遞用戶資料到 EJS 頁面
-//     } catch (error) {
-//         console.log(error)
-//         res.status(500).send(error);
-//     }
-// });
+app.get('/demo_website',async function (req, res){
+    try {
+        res.render('demo_website/index'); // 傳遞用戶資料到 EJS 頁面
+    } catch (error) {
+        console.log(error)
+        res.status(500).send(error);
+    }
+});
+app.get('/demo_website/success',async function (req, res){
+    try {
+        res.render('demo_website/success'); // 傳遞用戶資料到 EJS 頁面
+    } catch (error) {
+        console.log(error)
+        res.status(500).send(error);
+    }
+});
+
+app.get('/qrcode', async (req, res) => {
+    const { userId } = req.query; // 獲取查詢參數
+
+    if (!userId) {
+        return res.status(400).send('缺少必要的查詢參數： userId');
+    }
+
+    try {
+        // 生成 QR 碼的數據
+        const qrCodeData = `userId=${userId}`;
+        
+        // 生成 QR 碼
+        const qrCodeUrl = await QRCode.toDataURL(qrCodeData);
+
+        // 返回 QR 碼的 HTML
+        res.send(`
+            <img src="${qrCodeUrl}" alt="QR Code" />
+        `);
+    } catch (error) {
+        console.error('生成 QR 碼時出錯:', error);
+        res.status(500).send('生成 QR 碼時出錯');
+    }
+});
+
+
 app.get('/',isAuthenticated, async function (req, res){
-    res.render('admin/home');
+    // res.render('admin/home');
+
+    res.redirect('events/list');
 });
 // 啟動伺服器
 
@@ -146,3 +188,4 @@ async function createAdminUser() {
         console.log('Admin user already exists');
     }
 }
+
