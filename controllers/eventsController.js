@@ -3,6 +3,8 @@ const Auth = require('../model/Auth'); // 引入 Auth 模型
 const sendWhatsAppMessage = require('./components/sendWhatsAppMessage'); // 使用相對路徑
 const sendWelcomeEmail = require('./components/sendWelcomeEmail'); // 引入發送郵件的函數
 const mongoose = require('mongoose');
+
+
 // 創建事件
 exports.createEvent = async (req, res) => {
     const { name, from, to } = req.body;
@@ -520,6 +522,129 @@ exports.gainPoint = async (req, res) => {
         res.status(200).json({ message: '點數增加成功', points: user.point });
     } catch (error) {
         console.error('Error gaining points:', error);
+        res.status(500).json({ message: '伺服器錯誤' });
+    }
+};
+
+// 參展商登入頁面
+exports.attendeeLoginPage = async (req, res) => {
+    const { eventId } = req.params; // 獲取事件 ID
+    const event = await Event.findById(eventId)
+    res.render('events/attendee_login', { event }); // 渲染參展商登入頁面
+};
+
+// 參展商登入
+exports.attendeeLogin = async (req, res) => {
+    const { eventId } = req.params; // 獲取事件 ID
+    const { phone } = req.body; // 獲取電話號碼
+
+    if (!phone) {
+        return res.status(400).json({ message: '請提供電話號碼' });
+    }
+
+    try {
+        // 查找事件
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: '找不到該事件' });
+        }
+
+        // 查找參展商
+        const attendee = event.attendees.find(attendee => attendee.phone === phone);
+        if (attendee) {
+            // 將參展商資料放入 session
+            req.session.attendee = {
+                _id: attendee._id,
+                name: attendee.name,
+                phone: attendee.phone,
+                company: attendee.company,
+                // 可以根據需要添加其他字段
+            };
+            return res.status(200).json({ message: '登入成功', attendee });
+        } else {
+            return res.status(404).json({ message: '找不到該參展商' });
+        }
+    } catch (error) {
+        console.error('登入時出錯:', error);
+        res.status(500).json({ message: '伺服器錯誤' });
+    }
+};
+
+// 參展商個人資料頁面
+exports.attendeeProfilePage = (req, res) => {
+    const { attendee } = req.session; // 從 session 中獲取用戶資料
+    const eventId = req.params.eventId; // 獲取事件 ID
+    if (!attendee) {
+        return res.redirect(`/events/${eventId}/attendees/login`); // 如果用戶未登入，重定向到登入頁面
+    }
+    res.render('events/attendee_profile', { attendee, eventId }); // 渲染用戶資料頁面，並傳遞用戶資料和事件 ID
+};
+// exports.attendeeProfilePage = (req, res) => {
+//     const { eventId, attendeeId } = req.params; // 獲取事件 ID 和參展商 ID
+//     res.render('attendee_profile', { eventId, attendeeId }); // 渲染參展商個人資料頁面
+// };
+
+exports.addPoints = async (req, res) => {
+    const { eventId, attendeeId } = req.params; // 獲取事件 ID 和參展商 ID
+    const { userId, points } = req.body; // 獲取用戶 ID 和分數
+
+    try {
+        const event = await Event.findById(eventId); // 查找事件
+        if (!event) {
+            return res.status(404).json({ message: '找不到該事件' });
+        }
+
+        // 查找用戶
+        const user = event.users.find(user => user._id.toString() === userId);
+        if (!user) {
+            return res.status(404).json({ message: '找不到該用戶' });
+        }
+
+        // 查找參展商
+        const attendee = event.attendees.find(attendee => attendee._id.toString() === attendeeId);
+        if (!attendee) {
+            return res.status(404).json({ message: '找不到該參展商' });
+        }
+
+        // 更新分數
+        if (!user.points) {
+            user.points = []; // 如果沒有分數數組，則初始化
+        }
+        user.points.push({ attendee_id: attendeeId, point: points }); // 添加分數
+
+        await event.save(); // 保存事件
+
+        res.status(200).json({ message: '分數已成功添加' });
+    } catch (error) {
+        console.error('Error adding points:', error);
+        res.status(500).json({ message: '伺服器錯誤' });
+    }
+};
+
+exports.getLeaderboard = async (req, res) => {
+    const { eventId } = req.params; // 獲取事件 ID
+
+    try {
+        const event = await Event.findById(eventId).populate('users'); // 查找事件並填充用戶信息
+        if (!event) {
+            return res.status(404).json({ message: '找不到該事件' });
+        }
+
+        // 計算每個用戶的總分數
+        const usersWithPoints = event.users.map(user => {
+            const totalPoints = user.points.reduce((acc, point) => acc + point.point, 0); // 計算總分數
+            return {
+                name: user.name,
+                totalPoints: totalPoints
+            };
+        });
+
+        // 按分數排序
+        usersWithPoints.sort((a, b) => b.totalPoints - a.totalPoints);
+
+        res.render('events/leaderboard', {event, users: usersWithPoints }); // 渲染排行榜頁面
+    } catch (error) {
+        console.error('Error fetching leaderboard:', error);
         res.status(500).json({ message: '伺服器錯誤' });
     }
 };

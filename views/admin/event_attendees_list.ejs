@@ -6,6 +6,17 @@
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <title>參展商列表</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        /* 添加樣式以美化表單 */
+        .add-attendee-form {
+            display: none; /* 初始隱藏 */
+            margin-top: 20px;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+    </style>
 </head>
 <body>
 
@@ -14,6 +25,32 @@
 
 <div class="container mt-5">
     <h2>參展商列表</h2>
+    <button id="addAttendeeBtn" class="btn btn-primary mb-3">添加參展商</button>
+
+    <div class="add-attendee-form" id="addAttendeeForm">
+        <h4>填入參展商資料</h4>
+        <form id="attendeeForm">
+            <div class="form-group">
+                <label for="name">姓名</label>
+                <input type="text" class="form-control" id="name" required>
+            </div>
+            <div class="form-group">
+                <label for="location">地點</label>
+                <input type="text" class="form-control" id="location" required>
+            </div>
+            <div class="form-group">
+                <label for="phone">電話號碼</label>
+                <input type="text" class="form-control" id="phone" required>
+            </div>
+            <div class="form-group">
+                <label for="email">電子郵件</label>
+                <input type="email" class="form-control" id="email" required>
+            </div>
+            <button type="submit" class="btn btn-success">提交</button>
+            <button type="button" class="btn btn-danger" id="cancelBtn">取消</button>
+        </form>
+    </div>
+
     <table class="table table-bordered">
         <thead>
             <tr>
@@ -21,7 +58,7 @@
                 <th>地點</th>
                 <th>電話號碼</th>
                 <th>電子郵件</th>
-                <th>操作</th>
+                <!-- <th>操作</th> -->
             </tr>
         </thead>
         <tbody id="attendeesList">
@@ -31,10 +68,10 @@
                     <td><%= attendee.location %></td>
                     <td><%= attendee.phone %></td>
                     <td><%= attendee.email %></td>
-                    <td>
+                    <!-- <td>
                         <a href="/events/<%= eventId %>/attendees/<%= attendee._id %>/points" class="btn btn-info btn-sm">查看</a>
                         <a href="/events/<%= eventId %>/attendees/<%= attendee._id %>/promote" class="btn btn-warning btn-sm">Add promote</a>
-                    </td>
+                    </td> -->
                 </tr>
             <% }) %>
         </tbody>
@@ -43,6 +80,56 @@
 </div>
 
 <%- include("components/footer") %>
+
+<script>
+    $(document).ready(function() {
+        // 顯示添加參展商表單
+        $('#addAttendeeBtn').on('click', function() {
+            $('#addAttendeeForm').toggle(); // 切換顯示
+        });
+
+        // 提交表單
+        $('#attendeeForm').on('submit', function(event) {
+            event.preventDefault(); // 防止默認提交
+
+            const newAttendee = {
+                name: $('#name').val(),
+                location: $('#location').val(),
+                phone: $('#phone').val(),
+                email: $('#email').val()
+            };
+
+            // AJAX 請求以添加參展商
+            $.ajax({
+                url: `/events/<%= eventId %>/attendees`, // 假設添加參展商的路由
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(newAttendee),
+                success: function(response) {
+                    // 更新參展商列表
+                    $('#attendeesList').append(`
+                        <tr>
+                            <td>${response.attendee.name}</td>
+                            <td>${response.attendee.location}</td>
+                            <td>${response.attendee.phone}</td>
+                            <td>${response.attendee.email}</td>
+                        </tr>
+                    `);
+                    $('#addAttendeeForm').hide(); // 隱藏表單
+                    $('#attendeeForm')[0].reset(); // 重置表單
+                },
+                error: function(xhr) {
+                    alert(xhr.responseJSON.message);
+                }
+            });
+        });
+
+        // 取消按鈕
+        $('#cancelBtn').on('click', function() {
+            $('#addAttendeeForm').hide(); // 隱藏表單
+        });
+    });
+</script>
 
 </body>
 </html>

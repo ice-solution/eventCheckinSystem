@@ -15,6 +15,10 @@ const userSchema = new mongoose.Schema({
         event_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Event' },
         attendee_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Attendee' },
         promo_code_id: { type: mongoose.Schema.Types.ObjectId, ref: 'PromoCode' }
+    }],
+    points: [{ // 新增 points 字段
+        attendee_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Attendee' }, // 參展商 ID
+        point: { type: Number, default: 0 } // 點數
     }]
 });
 
@@ -35,7 +39,8 @@ const eventSchema = new mongoose.Schema({
     modified_at: { type: Date, default: Date.now }, // 修改時間
     emailTemplate: { type: mongoose.Schema.Types.ObjectId, ref: 'EmailTemplate' }, // 引用 EmailTemplate
     users:[userSchema],
-    attendees: [attendeeSchema] // 添加參展商參數
+    attendees: [attendeeSchema], // 添加參展商參數
+
 });
 
 // 在保存之前更新 modified_at 字段

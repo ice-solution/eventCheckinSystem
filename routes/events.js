@@ -57,6 +57,18 @@ router.get('/:eventId/attendees', eventsController.renderAttendeesListPage); // 
 // 添加參展商
 router.post('/:eventId/attendees', eventsController.addAttendee);
 
+// 參展商登入頁面
+router.get('/:eventId/attendees/login', eventsController.attendeeLoginPage);
+
+// 參展商登入路由
+router.post('/:eventId/attendees/login', eventsController.attendeeLogin);
+
+// 參展商個人資料頁面
+router.get('/:eventId/attendees/:attendeeId/profile', eventsController.attendeeProfilePage);
+
+// 添加分數路由
+router.post('/:eventId/attendees/:attendeeId/addPoints', eventsController.addPoints);
+
 // 獲取參展商
 router.get('/:eventId/attendees/:attendeeId', eventsController.getAttendee);
 
@@ -71,5 +83,8 @@ router.get('/:eventId/attendees/:attendeeId/points', eventsController.renderAtte
 
 // 增加用戶點數的路由
 router.post('/:eventId/gain', eventsController.gainPoint); // 新增的路由
+
+// 獲取排行榜
+router.get('/:eventId/leaderboard', eventsController.getLeaderboard);
 
 module.exports = router;
