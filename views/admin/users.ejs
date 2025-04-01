@@ -16,6 +16,14 @@
     .checkin-false {
         background-color: #fff3cd !important; /* 黃色背景 */
     }
+    .add-user-form {
+        display: none; /* 初始隱藏 */
+        margin-top: 20px;
+        padding: 20px;
+        background-color: rgba(255, 255, 255, 0.9);
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
 </style>
     <div id="right-panel" class="right-panel">
         <%- include ("components/rightpanel_header") %>
@@ -95,9 +103,34 @@
                                     <a href="/events/<%= event._id %>" class="btn btn-primary">用戶列表</a>
                                     <a href="/events/<%= event._id%>/scan" class="btn btn-success">掃描 QR 碼</a>
                                     <a href="/events/<%= event._id%>/import" class="btn btn-warning">滙入資料</a>
-                                    <a href="/logout" class="btn btn-danger">登出</a>
+                                    
+                                    <button id="addUserBtn" class="btn btn-info">添加用戶</button>
                                 </div>
                                 
+                                <div class="add-user-form" id="addUserForm">
+                                    <h4>填入用戶資料</h4>
+                                    <form id="userForm">
+                                        <div class="form-group">
+                                            <label for="email">電子郵件</label>
+                                            <input type="email" class="form-control" id="email" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="name">姓名</label>
+                                            <input type="text" class="form-control" id="name" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="company">公司</label>
+                                            <input type="text" class="form-control" id="company" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="phone">電話</label>
+                                            <input type="text" class="form-control" id="phone" required>
+                                        </div>
+                                        <button type="submit" class="btn btn-success">提交</button>
+                                        <button type="button" class="btn btn-danger" id="cancelBtn">取消</button>
+                                    </form>
+                                </div>
+
                                 <table id="usersTable" class="display">
                                     <thead>
                                         <tr>
@@ -188,6 +221,55 @@
                         alert('更新失敗，請稍後再試。');
                     }
                 });
+            });
+
+            // 顯示添加用戶表單
+            $('#addUserBtn').on('click', function() {
+                $('#addUserForm').toggle(); // 切換顯示
+            });
+
+            // 提交表單
+            $('#userForm').on('submit', function(event) {
+                event.preventDefault(); // 防止默認提交
+
+                const newUser = {
+                    email: $('#email').val(),
+                    name: $('#name').val(),
+                    company: $('#company').val(),
+                    phone: $('#phone').val()
+                };
+
+                // AJAX 請求以添加用戶
+                $.ajax({
+                    url: `/events/<%= event._id %>/users`, // 假設添加用戶的路由
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(newUser),
+                    success: function(response) {
+                        // 更新用戶列表
+                        $('#usersTable tbody').append(`
+                            <tr class="checkin-false">
+                                <td>${response.attendee.email}</td>
+                                <td>${response.attendee.name}</td>
+                                <td>${response.attendee.company}</td>
+                                <td>${response.attendee.phone}</td>
+                                <td>
+                                    <input type="checkbox" class="checkin-toggle" data-_id="${response.attendee._id}" />
+                                </td>
+                            </tr>
+                        `);
+                        $('#addUserForm').hide(); // 隱藏表單
+                        $('#userForm')[0].reset(); // 重置表單
+                    },
+                    error: function(xhr) {
+                        alert(xhr.responseJSON.message);
+                    }
+                });
+            });
+
+            // 取消按鈕
+            $('#cancelBtn').on('click', function() {
+                $('#addUserForm').hide(); // 隱藏表單
             });
         });
     </script>

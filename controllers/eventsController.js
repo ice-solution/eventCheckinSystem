@@ -63,32 +63,27 @@ exports.addUserToEvent = async (req, res) => {
     const { email, name, phone_code, phone, company } = req.body; // 從請求中獲取用戶信息
 
     try {
-        const event = await Event.findById(eventId); // 根據事件 ID 查詢事件
+        const event = await Event.findById(eventId); // 查找事件
         if (!event) {
             return res.status(404).json({ message: 'Event not found' });
         }
 
-        // 檢查用戶是否已存在
-        const userExists = event.users.find(user => user.email === email);
-        if (userExists) {
-            return res.status(400).json({ message: 'User already exists in this event' });
-        }
+        // 創建新的用戶
+        const newUser = {
+            email,
+            name,
+            company,
+            phone,
+            isCheckIn: false // 默認為未登記進場
+        };
 
-        // 添加用戶到事件
-        const newUser = { email, name, phone_code, phone, company, _id: new mongoose.Types.ObjectId() }; // 假設您使用 mongoose 生成 _id
-        event.users.push(newUser);
+        event.users.push(newUser); // 將用戶添加到事件中
         await event.save(); // 保存事件
 
-        // 發送 WhatsApp 消息
-        // await sendWhatsAppMessage(phone, newUser._id.toString()); // 發送消息到用戶的 WhatsApp
-
-        // 發送歡迎電子郵件
-        await sendWelcomeEmail(event, newUser); // 調用發送郵件的函數
-
-        res.status(201).json(event);
+        res.status(201).json({ attendee: newUser }); // 返回新用戶資料
     } catch (error) {
-        console.error('Error adding user to event:', error);
-        res.status(500).json({ message: 'Error adding user to event' });
+        console.error('Error adding user:', error);
+        res.status(500).json({ message: '伺服器錯誤' });
     }
 };
 
