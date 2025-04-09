@@ -19,7 +19,13 @@ const userSchema = new mongoose.Schema({
     points: [{ // 新增 points 字段
         attendee_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Attendee' }, // 參展商 ID
         point: { type: Number, default: 0 } // 點數
-    }]
+    }],
+    role: { type: String, default: 'guests' }, // 角色，默認為 'guests'
+    saluation: { type: String }, // 稱謂
+    industry: { type: String }, // 行業
+    transport: { type: String }, // 交通方式
+    meal: { type: String }, // 餐飲選擇
+    remarks: { type: String } // 備註
 });
 
 const attendeeSchema = new mongoose.Schema({

@@ -52,7 +52,12 @@ exports.importUsers = async (req, res) => {
                 phone_code: row.phone_code,
                 phone: row.phone,
                 company: row.company,
-                isCheckIn: false, // 默認值
+                saluation: row.saluation,
+                industry: row.industry,
+                transport: row.transport,
+                meal: row.meal,
+                remarks: row.remarks,
+                isCheckIn: false,
                 create_at: Date.now(),
                 modified_at: Date.now()
             };

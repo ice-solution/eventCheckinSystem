@@ -126,6 +126,41 @@
                                             <label for="phone">電話</label>
                                             <input type="text" class="form-control" id="phone" required>
                                         </div>
+                                        <div class="form-group">
+                                            <label for="role">Role</label>
+                                            <select class="form-control" id="role">
+                                                <option value="guests" selected>Guests</option>
+                                                <option value="vip">VIP</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="saluation">稱謂</label>
+                                            <select class="form-control" id="saluation">
+                                                <option value="Mr">Mr</option>
+                                                <option value="Mrs">Mrs</option>
+                                                <option value="Miss">Miss</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="industry">行業</label>
+                                            <input type="text" class="form-control" id="industry">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="transport">交通方式</label>
+                                            <input type="text" class="form-control" id="transport">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="meal">餐飲選擇</label>
+                                            <select class="form-control" id="meal">
+                                                <option value="A">A</option>
+                                                <option value="B">B</option>
+                                                <option value="C">C</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="remarks">備註</label>
+                                            <textarea class="form-control" id="remarks" rows="3"></textarea>
+                                        </div>
                                         <button type="submit" class="btn btn-success">提交</button>
                                         <button type="button" class="btn btn-danger" id="cancelBtn">取消</button>
                                     </form>
@@ -138,6 +173,12 @@
                                             <th>Name</th>
                                             <th>Company</th>
                                             <th>Phone</th>
+                                            <th>Role</th>
+                                            <th>稱謂</th>
+                                            <th>行業</th>
+                                            <th>交通方式</th>
+                                            <th>餐飲選擇</th>
+                                            <th>備註</th>
                                             <th>已登記進場</th>
                                         </tr>
                                     </thead>
@@ -149,6 +190,12 @@
                                                 <td><%= user.name %></td>
                                                 <td><%= user.company %></td>
                                                 <td><%= user.phone %></td>
+                                                <td><%= user.role %></td>
+                                                <td><%= user.saluation %></td>
+                                                <td><%= user.industry %></td>
+                                                <td><%= user.transport %></td>
+                                                <td><%= user.meal %></td>
+                                                <td><%= user.remarks %></td>
                                                 <td>
                                                     <input type="checkbox" class="checkin-toggle" data-_id="<%= user._id %>" <%= user.isCheckIn ? 'checked' : '' %> />
                                                 </td>
@@ -236,7 +283,13 @@
                     email: $('#email').val(),
                     name: $('#name').val(),
                     company: $('#company').val(),
-                    phone: $('#phone').val()
+                    role: $('#role').val(),
+                    phone: $('#phone').val(),
+                    saluation: $('#saluation').val(),
+                    industry: $('#industry').val(),
+                    transport: $('#transport').val(),
+                    meal: $('#meal').val(),
+                    remarks: $('#remarks').val()
                 };
 
                 // AJAX 請求以添加用戶
@@ -253,6 +306,12 @@
                                 <td>${response.attendee.name}</td>
                                 <td>${response.attendee.company}</td>
                                 <td>${response.attendee.phone}</td>
+                                <td>${response.attendee.role}</td>
+                                <td>${response.attendee.saluation}</td>
+                                <td>${response.attendee.industry}</td>
+                                <td>${response.attendee.transport}</td>
+                                <td>${response.attendee.meal}</td>
+                                <td>${response.attendee.remarks}</td>
                                 <td>
                                     <input type="checkbox" class="checkin-toggle" data-_id="${response.attendee._id}" />
                                 </td>

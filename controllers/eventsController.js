@@ -59,8 +59,8 @@ exports.getEventUsersByEventID = async (req, res) => {
 
 // 向事件中添加用戶
 exports.addUserToEvent = async (req, res) => {
-    const { eventId } = req.params; // 從請求參數中獲取事件 ID
-    const { email, name, phone_code, phone, company } = req.body; // 從請求中獲取用戶信息
+    const { eventId } = req.params; // 獲取事件 ID
+    const { email, name, company, phone, role, saluation, industry, transport, meal, remarks } = req.body; // 獲取用戶資料
 
     try {
         const event = await Event.findById(eventId); // 查找事件
@@ -74,6 +74,12 @@ exports.addUserToEvent = async (req, res) => {
             name,
             company,
             phone,
+            role, // 添加角色
+            saluation, // 添加稱謂
+            industry, // 添加行業
+            transport, // 添加交通方式
+            meal, // 添加餐飲選擇
+            remarks, // 添加備註
             isCheckIn: false // 默認為未登記進場
         };
 
