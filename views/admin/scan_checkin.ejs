@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <title>嘉賓掃描登記</title>
+    <title>Guest Check-in</title>
     <style>
         body {
             background-color: #f8f9fa;
@@ -18,20 +18,20 @@
         .user-list {
             width: 70%;
             border-right: 1px solid #dee2e6;
-            padding: 20px; /* 增加內邊距 */
+            padding: 20px; /* Increased padding */
             background-color: #ffffff;
             border-radius: 10px 0 0 10px;
         }
         .user-details {
             width: 30%;
-            padding: 20px; /* 增加內邊距 */
+            padding: 20px; /* Increased padding */
             background-color: #ffffff;
             border-radius: 0 10px 10px 0;
         }
         h4 {
             margin-top: 0;
         }
-        /* Lightbox樣式 */
+        /* Lightbox styles */
         .lightbox {
             display: none;
             position: fixed;
@@ -54,40 +54,40 @@
 
 <div class="container">
     <div class="user-list">
-        <h4>嘉賓列表</h4>
-        <input type="text" id="searchInput" class="form-control mb-3" placeholder="搜索用戶..." onkeyup="searchUsers()">
+        <h4>Guest List</h4>
+        <input type="text" id="searchInput" class="form-control mb-3" placeholder="Search Users..." onkeyup="searchUsers()">
         <table class="table">
             <thead>
                 <tr>
-                    <th>姓名</th>
-                    <th>公司</th>
-                    <th>電話</th>
-                    <th>狀態</th>
+                    <th>Name</th>
+                    <th>Company</th>
+                    <th>Phone</th>
+                    <th>Status</th>
                 </tr>
             </thead>
             <tbody id="userList">
                 <% event.users.forEach(user => { %>
-                    <tr onclick="showDetails('<%= user.name %>', '<%= user.company %>', '<%= user.phone %>', <%= user.isCheckIn %>)">
+                    <tr onclick="showDetails('<%= user.name %>', '<%= user.company %>', '<%= user.phone %>', <%= user.isCheckIn %>, '<%= user._id %>')">
                         <td><%= user.name %></td>
                         <td><%= user.company %></td>
                         <td><%= user.phone %></td>
                         <td>
-                            <button class="btn <%= user.isCheckIn ? 'btn-primary' : 'btn' %>">
+                            <span class="<%= user.isCheckIn ? 'text-primary' : 'text-secondary' %>">
                                 <%= user.isCheckIn ? 'Checked In' : 'Check In' %>
-                            </button>
+                            </span>
                         </td>
                     </tr>
                 <% }); %>
             </tbody>
         </table>
-        <button id="scanButton" class="btn btn-primary mt-3" onclick="openLightbox()">掃描 QR 碼</button>
+        <button id="scanButton" class="btn btn-primary mt-3" onclick="openLightbox()">Scan QR Code</button>
     </div>
     <div class="user-details" id="userDetails">
-        <h4>嘉賓詳細信息</h4>
-        <p>選擇一個嘉賓以查看詳細信息。</p>
+        <h4>Guest Details</h4>
+        <p>Select a guest to view details.</p>
         <div id="detailsContent"></div>
         <button id="checkInButton" class="btn btn-primary mt-3" onclick="checkInUser()">Check In</button>
-        <button id="printButton" class="btn btn-secondary mt-3" onclick="printDetails()">打印</button>
+        <button id="printButton" class="btn btn-secondary mt-3" onclick="printDetails()">Print</button>
     </div>
 </div>
 
@@ -98,31 +98,32 @@
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script>
-    const eventId = "<%= event._id %>"; // 從後端獲取事件 ID
+    const eventId = "<%= event._id %>"; // Get event ID from backend
     const html5QrCode = new Html5Qrcode("reader");
     let scanning = false;
+    let currentUserId = null; // Store current user ID for check-in
 
-    // 獲取用戶資料
+    // Fetch user data
     function fetchUsers() {
         $.ajax({
-            url: `/events/${eventId}/users`, // 獲取用戶資料的 API
+            url: `/events/${eventId}/users/data`, // API to fetch user data
             method: 'GET',
             success: function(users) {
                 const userList = $('#userList');
-                userList.empty(); // 清空用戶列表
+                userList.empty(); // Clear user list
                 users.forEach(user => {
                     userList.append(`
-                        <tr onclick="showDetails('${user.name}', '${user.company}', '${user.phone}', ${user.isCheckIn})">
+                        <tr onclick="showDetails('${user.name}', '${user.company}', '${user.phone}', ${user.isCheckIn}, '${user._id}')">
                             <td>${user.name}</td>
                             <td>${user.company}</td>
                             <td>${user.phone}</td>
                             <td>
-                                <button class="btn ${user.isCheckIn ? 'btn-primary' : 'btn'}">
+                                <span class="${user.isCheckIn ? 'text-primary' : 'text-secondary'}">
                                     ${user.isCheckIn ? 'Checked In' : 'Check In'}
-                                </button>
+                                </span>
                             </td>
                         </tr>
                     `);
@@ -134,18 +135,41 @@
         });
     }
 
-    // 顯示用戶詳細信息
-    function showDetails(name, company, phone, isCheckIn) {
+    // Show user details
+    function showDetails(name, company, phone, isCheckIn, userId) {
         document.getElementById('detailsContent').innerHTML = `
             <h4>${name}</h4>
-            <p>公司: ${company}</p>
-            <p>電話: ${phone}</p>
-            <p>已登記: ${isCheckIn ? '是' : '否'}</p>
+            <p>Company: ${company}</p>
+            <p>Phone: ${phone}</p>
+            <p>Checked In: ${isCheckIn ? 'Yes' : 'No'}</p>
         `;
-        document.getElementById('checkInButton').style.display = isCheckIn ? 'none' : 'inline-block'; // 根據是否已登記顯示按鈕
+        document.getElementById('checkInButton').style.display = isCheckIn ? 'none' : 'inline-block'; // Show button based on check-in status
+        currentUserId = userId; // Store the current user ID for check-in
     }
 
-    // 搜索用戶
+    // Check in user
+    function checkInUser() {
+        if (!currentUserId) {
+            alert('No user selected for check-in.');
+            return;
+        }
+        $.ajax({
+            url: `/events/${eventId}/users/${currentUserId}`, // Correct URL for check-in
+            method: 'PUT', // Using PUT method for check-in
+            contentType: 'application/json',
+            data: JSON.stringify({ isCheckIn: true }), // Add isCheckIn: true
+            success: function(response) {
+                alert('User checked in successfully!');
+                fetchUsers(); // Refresh user list
+            },
+            error: function(err) {
+                console.error('Error checking in user:', err);
+                alert('Failed to check in user.');
+            }
+        });
+    }
+
+    // Search users
     function searchUsers() {
         const input = document.getElementById('searchInput').value.toLowerCase();
         const rows = document.querySelectorAll('#userList tr');
@@ -155,54 +179,54 @@
         });
     }
 
-    // 開啟 Lightbox
+    // Open Lightbox
     function openLightbox() {
         document.getElementById('lightbox').style.display = 'flex';
-        startScanning(); // 開始掃描
+        startScanning(); // Start scanning
     }
 
-    // 關閉 Lightbox
+    // Close Lightbox
     function closeLightbox() {
         document.getElementById('lightbox').style.display = 'none';
         if (scanning) {
-            html5QrCode.stop(); // 停止掃描
+            html5QrCode.stop(); // Stop scanning
             scanning = false;
         }
     }
 
-    // 開始掃描 QR 碼
+    // Start scanning QR code
     function startScanning() {
-        if (scanning) return; // 如果已經在掃描中，則不再啟動
+        if (scanning) return; // If already scanning, do not start again
         scanning = true;
         html5QrCode.start(
-            { facingMode: "environment" }, // 使用後置相機
+            { facingMode: "environment" }, // Use rear camera
             {
-                fps: 10, // 每秒幀數
-                qrbox: 250 // QR 碼框的大小
+                fps: 10, // Frames per second
+                qrbox: 250 // Size of QR code box
             },
             (decodedText, decodedResult) => {
-                // 當掃描到 QR 碼時
-                scanning = false; // 停止掃描
-                html5QrCode.stop(); // 停止掃描
-                // 假設 QR 碼包含用戶 ID
+                // When QR code is scanned
+                scanning = false; // Stop scanning
+                html5QrCode.stop(); // Stop scanning
+                // Assume QR code contains user ID
                 const userId = decodedText.split('=')[1];
                 fetch(`/events/${eventId}/users/${userId}`)
                     .then(response => response.json())
                     .then(user => {
                         if (user) {
-                            showDetails(user.name, user.company, user.phone, user.isCheckIn);
+                            showDetails(user.name, user.company, user.phone, user.isCheckIn, user._id);
                         } else {
-                            alert('找不到用戶');
+                            alert('User not found');
                         }
                     })
                     .catch(error => {
                         console.error('Error fetching user:', error);
-                        alert('找不到用戶');
+                        alert('User not found');
                     });
-                closeLightbox(); // 關閉 Lightbox
+                closeLightbox(); // Close Lightbox
             },
             (errorMessage) => {
-                // 當掃描失敗時
+                // When scan fails
                 console.warn(`QR Code scan error: ${errorMessage}`);
             }
         ).catch(err => {
@@ -210,11 +234,11 @@
         });
     }
 
-    // 打印用戶詳細信息
+    // Print user details
     function printDetails() {
         const detailsContent = document.getElementById('detailsContent').innerHTML;
         const printWindow = window.open('', '', 'height=600,width=800');
-        printWindow.document.write('<html><head><title>打印用戶詳細信息</title>');
+        printWindow.document.write('<html><head><title>Print User Details</title>');
         printWindow.document.write('</head><body>');
         printWindow.document.write(detailsContent);
         printWindow.document.write('</body></html>');
@@ -222,9 +246,9 @@
         printWindow.print();
     }
 
-    // 初始化用戶資料
+    // Initialize user data
     $(document).ready(function() {
-        fetchUsers(); // 獲取用戶資料
+        fetchUsers(); // Fetch user data
     });
 </script>
 

@@ -20,7 +20,6 @@ exports.createEvent = async (req, res) => {
             
         });
 
-        console.log(newEvent);
         await newEvent.save(); // 保存事件
         res.status(201).json(newEvent); // 返回創建的事件
     } catch (error) {
@@ -43,19 +42,25 @@ exports.getUserEvents = async (req, res) => {
 // 獲取事件詳細信息
 exports.getEventUsersByEventID = async (req, res) => {
     const { eventId } = req.params; // 從請求參數中獲取事件 ID
-
+    
     try {
         const event = await Event.findById(eventId).populate('users'); // 根據事件 ID 查詢事件並填充用戶信息
         if (!event) {
             return res.status(404).json({ message: 'Event not found' });
         }
-        console.log(event);
         res.render('admin/users', { event }); // 渲染用戶頁面，傳遞事件信息
     } catch (error) {
         console.error('Error fetching event:', error);
         res.status(500).json({ message: 'Error fetching event' });
     }
 };
+
+exports.fetchUsersByEvent = async (req, res) => {
+    const { eventId } = req.params;
+    const event = await Event.findById(eventId).populate('users'); // 獲取用戶數據
+    res.json(event.users);
+};
+
 
 // 向事件中添加用戶
 exports.addUserToEvent = async (req, res) => {
@@ -238,7 +243,7 @@ exports.getUserById = async (req, res) => {
 };
 exports.updateUser = async (req, res) => {
     const { eventId, userId } = req.params; // 從請求參數中獲取事件 ID 和用戶的 _id
-    const { name, phone_code, phone, company,isCheckIn } = req.body; // 從請求中獲取更新的用戶信息
+    const { name, phone_code, phone, company, isCheckIn } = req.body; // 從請求中獲取更新的用戶信息
 
     try {
         // 查詢事件以確保存在
@@ -257,9 +262,9 @@ exports.updateUser = async (req, res) => {
         user.phone_code = phone_code || user.phone_code;
         user.phone = phone || user.phone;
         user.company = company || user.company;
-        user.email = email || user.email;
-        user.point = point || user.point;
-        user._id = _id || user._id;
+        // user.email = email || user.email;
+        // user.point = point || user.point;
+        // user._id = _id || user._id;
         user.isCheckIn = isCheckIn;
         user.modified_at = Date.now(); // 更新修改時間
         await event.save(); // 保存事件以更新用戶資料

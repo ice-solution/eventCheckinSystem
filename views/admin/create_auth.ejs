@@ -1,0 +1,34 @@
+<%- include("components/header") %>
+<%- include ("components/menu", {eventId: ''})  %>
+
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+    <div id="right-panel" class="right-panel">
+        <%- include ("components/rightpanel_header") %>
+        <div class="content">
+            <h2>Create Login User</h2>
+            <form id="createUserForm" action="/auth/create" method="POST">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" class="form-control" id="username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" class="form-control" id="password" name="password" required>
+                </div>
+                <div class="form-group">
+                    <label for="role">Role</label>
+                    <select class="form-control" id="role" name="role" required>
+                        <option value="admin">Admin</option>
+                        <option value="reception">Reception</option>
+                        <option value="staff">Staff</option>
+                        <option value="user">User</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Create User</button>
+            </form>
+        </div>
+    </div>
+
+    <%- include ("components/footer") %>

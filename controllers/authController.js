@@ -1,4 +1,5 @@
 const Auth = require('../model/Auth'); // 引入 Auth 模型
+const bcrypt = require('bcrypt');
 
 // 添加用戶
 exports.addUser = async (req, res) => {
@@ -21,5 +22,32 @@ exports.addUser = async (req, res) => {
     } catch (error) {
         console.error('Error adding user:', error);
         res.status(500).send('添加用戶時出現錯誤！');
+    }
+};
+
+// 添加用戶頁面
+exports.addUserPage = (req, res) => {
+    res.render('admin/create_auth'); // 渲染創建用戶頁面
+};
+
+exports.createUser = async (req, res) => {
+    const { username, password, role } = req.body;
+
+    try {
+        // 哈希密碼
+        const hashedPassword = await bcrypt.hash(password, 10);
+        
+        // 創建新用戶
+        const newUser = new Auth({
+            username,
+            password: hashedPassword,
+            role
+        });
+
+        await newUser.save(); // 保存用戶到數據庫
+        res.status(201).send('User created successfully!'); // 返回成功消息
+    } catch (error) {
+        console.error('Error creating user:', error);
+        res.status(500).send('Error creating user.');
     }
 };

@@ -1,334 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <title>User List</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .checkin-true {
+            background-color: #d4edda !important; /* Green background */
+        }
+        .checkin-false {
+            background-color: #fff3cd !important; /* Yellow background */
+        }
+        .add-user-form {
+            display: none; /* Initially hidden */
+            margin-top: 20px;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+
 <%- include ("components/header") %>
 <%- include ("components/menu", { eventId: event._id }) %>
 <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
 <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
-<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 <link rel="stylesheet" href="/admin/assets/css/style.css">
-<style>
-    body {
-        font-family: Arial, sans-serif;
-        margin: 20px;
-    }
-    .checkin-true {
-        background-color: #d4edda !important; /* 綠色背景 */
-    }
-    .checkin-false {
-        background-color: #fff3cd !important; /* 黃色背景 */
-    }
-    .add-user-form {
-        display: none; /* 初始隱藏 */
-        margin-top: 20px;
-        padding: 20px;
-        background-color: rgba(255, 255, 255, 0.9);
-        border-radius: 10px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    }
-</style>
-    <div id="right-panel" class="right-panel">
-        <%- include ("components/rightpanel_header") %>
-        <div class="content">
-            <div class="animated fadeIn">
-                <div id="alertContainer"></div>
-                <div class="row">
-                    <div class="col-lg-4 col-md-6">
-                        <div class="card">
-                            <% 
-                                const totalUsers = event.users.length; 
-                                const checkedInUsers = event.users.filter(user => user.isCheckIn).length; 
-                                const checkInRate = totalUsers > 0 ? ((checkedInUsers / totalUsers) * 100).toFixed(2) : 0; 
-                            %>
-                            <div class="card-body">
-                                <div class="stat-widget-five">
-                                    <div class="stat-icon dib flat-color-1">
-                                        <i class="pe-7s-user"></i>
-                                    </div>
-                                    <div class="stat-content">
-                                        <div class="text-left dib">
-                                            <div class="stat-text"><span class="count"><%= checkedInUsers %></span></div>
-                                            <div class="stat-heading">登入人數</div>
-                                        </div>
+
+<div id="right-panel" class="right-panel">
+    <%- include ("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div id="alertContainer"></div>
+            <div class="row">
+                <div class="col-lg-4 col-md-6">
+                    <div class="card">
+                        <% 
+                            const totalUsers = event.users.length; 
+                            const checkedInUsers = event.users.filter(user => user.isCheckIn).length; 
+                            const checkInRate = totalUsers > 0 ? ((checkedInUsers / totalUsers) * 100).toFixed(2) : 0; 
+                        %>
+                        <div class="card-body">
+                            <div class="stat-widget-five">
+                                <div class="stat-icon dib flat-color-1">
+                                    <i class="pe-7s-user"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="text-left dib">
+                                        <div class="stat-text"><span class="count"><%= checkedInUsers %></span></div>
+                                        <div class="stat-heading">Checked In Users</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <div class="col-lg-4 col-md-6">
-                        <div class="card">
-                            <div class="card-body">
-                                <div class="stat-widget-five">
-                                    <div class="stat-icon dib flat-color-2">
-                                        <i class="pe-7s-users"></i>
-                                    </div>
-                                    <div class="stat-content">
-                                        <div class="text-left dib">
-                                            <div class="stat-text"><span class="count"><%= totalUsers %></span></div>
-                                            <div class="stat-heading">全部人數</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-lg-4 col-md-6">
-                        <div class="card">
-                            <div class="card-body">
-                                <div class="stat-widget-five">
-                                    <div class="stat-icon dib flat-color-3">
-                                        <i class="pe-7s-calculator"></i>
-                                    </div>
-                                    <div class="stat-content">
-                                        <div class="text-left dib">
-                                            <div class="stat-text"><span class="count"><%= checkInRate %></span>%</div>
-                                            <div class="stat-heading">比率</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    
                 </div>
-                <div class="row">
-                    <div class="col-lg-12 col-md-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <strong class="card-title"><%= event.name %> 的用戶列表</strong>
-                            </div>
-                            <div class="card-body">
-                                <div>
-                                    <a href="/events/<%= event._id %>" class="btn btn-primary">用戶列表</a>
-                                    <a href="/events/<%= event._id%>/scan" class="btn btn-success">掃描 QR 碼</a>
-                                    <a href="/events/<%= event._id%>/import" class="btn btn-warning">滙入資料</a>
-                                    
-                                    <button id="addUserBtn" class="btn btn-info">添加用戶</button>
-                                </div>
-                                
-                                <div class="add-user-form" id="addUserForm">
-                                    <h4>填入用戶資料</h4>
-                                    <form id="userForm">
-                                        <div class="form-group">
-                                            <label for="email">電子郵件</label>
-                                            <input type="email" class="form-control" id="email" required>
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="name">姓名</label>
-                                            <input type="text" class="form-control" id="name" required>
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="company">公司</label>
-                                            <input type="text" class="form-control" id="company" required>
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="phone">電話</label>
-                                            <input type="text" class="form-control" id="phone" required>
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="role">Role</label>
-                                            <select class="form-control" id="role">
-                                                <option value="guests" selected>Guests</option>
-                                                <option value="vip">VIP</option>
-                                            </select>
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="saluation">稱謂</label>
-                                            <select class="form-control" id="saluation">
-                                                <option value="Mr">Mr</option>
-                                                <option value="Mrs">Mrs</option>
-                                                <option value="Miss">Miss</option>
-                                            </select>
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="industry">行業</label>
-                                            <input type="text" class="form-control" id="industry">
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="transport">交通方式</label>
-                                            <input type="text" class="form-control" id="transport">
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="meal">餐飲選擇</label>
-                                            <select class="form-control" id="meal">
-                                                <option value="A">A</option>
-                                                <option value="B">B</option>
-                                                <option value="C">C</option>
-                                            </select>
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="remarks">備註</label>
-                                            <textarea class="form-control" id="remarks" rows="3"></textarea>
-                                        </div>
-                                        <button type="submit" class="btn btn-success">提交</button>
-                                        <button type="button" class="btn btn-danger" id="cancelBtn">取消</button>
-                                    </form>
-                                </div>
 
-                                <table id="usersTable" class="display">
-                                    <thead>
-                                        <tr>
-                                            <th>Email</th>
-                                            <th>Name</th>
-                                            <th>Company</th>
-                                            <th>Phone</th>
-                                            <th>Role</th>
-                                            <th>稱謂</th>
-                                            <th>行業</th>
-                                            <th>交通方式</th>
-                                            <th>餐飲選擇</th>
-                                            <th>備註</th>
-                                            <th>已登記進場</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <% event.users.forEach(user => { %>
-                                            <tr class="<%= user.isCheckIn ? 'checkin-true' : 'checkin-false' %>">
-                                                <!-- <td><%= user._id %></td> -->
-                                                <td><%= user.email %></td>
-                                                <td><%= user.name %></td>
-                                                <td><%= user.company %></td>
-                                                <td><%= user.phone %></td>
-                                                <td><%= user.role %></td>
-                                                <td><%= user.saluation %></td>
-                                                <td><%= user.industry %></td>
-                                                <td><%= user.transport %></td>
-                                                <td><%= user.meal %></td>
-                                                <td><%= user.remarks %></td>
-                                                <td>
-                                                    <input type="checkbox" class="checkin-toggle" data-_id="<%= user._id %>" <%= user.isCheckIn ? 'checked' : '' %> />
-                                                </td>
-                                            </tr>
-                                        <% }) %>
-                                    </tbody>
-                                </table>
+                <div class="col-lg-4 col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="stat-widget-five">
+                                <div class="stat-icon dib flat-color-2">
+                                    <i class="pe-7s-users"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="text-left dib">
+                                        <div class="stat-text"><span class="count"><%= totalUsers %></span></div>
+                                        <div class="stat-heading">Total Users</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="stat-widget-five">
+                                <div class="stat-icon dib flat-color-3">
+                                    <i class="pe-7s-calculator"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="text-left dib">
+                                        <div class="stat-text"><span class="count"><%= checkInRate %></span>%</div>
+                                        <div class="stat-heading">Check-in Rate</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    <%- include ("components/footer") %>
-    <script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
-    <script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
-    <script src="/admin/assets/js/lib/data-table/dataTables.buttons.min.js"></script>
-    <script src="/admin/assets/js/lib/data-table/buttons.bootstrap.min.js"></script>
-    <script src="/admin/assets/js/lib/data-table/jszip.min.js"></script>
-    <script src="/admin/assets/js/lib/data-table/vfs_fonts.js"></script>
-    <script src="/admin/assets/js/lib/data-table/buttons.html5.min.js"></script>
-    <script src="/admin/assets/js/lib/data-table/buttons.print.min.js"></script>
-    <script src="/admin/assets/js/lib/data-table/buttons.colVis.min.js"></script>
-    <script src="/admin/assets/js/init/datatables-init.js"></script>
-    <script>
-        $(document).ready(function() {
-            const table = $('#usersTable').DataTable({
-                "pageLength": 50 // 設置每頁顯示 50 條數據
-            }); // 初始化 DataTable
 
-            // 使用事件委託來監聽 checkbox 的變化
-            $('#usersTable tbody').on('change', '.checkin-toggle', function() {
-
-                const _id = $(this).data('_id');
-                const isCheckIn = $(this).is(':checked');
-                const event_id = '<%= event._id %>';
-
-                // 發送 AJAX 請求更新 isCheckIn
-                $.ajax({
-                    url: `/events/${event_id}/users/${_id}`,
-                    type: 'PUT',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ isCheckIn: isCheckIn }),
-                    success: function(response) {
-                        // 更新行的顏色
-                        const row = $(this).closest('tr');
-                        if (isCheckIn) {
-                            row.removeClass('checkin-false').addClass('checkin-true');
-                        } else {
-                            row.removeClass('checkin-true').addClass('checkin-false');
-                        }
-
-                        // 顯示成功的 alert
-                        const alertHtml = `
-                            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                                更新成功！
-                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
+            <div class="row">
+                <div class="col-lg-12 col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title"><%= event.name %> User List</strong>
+                        </div>
+                        <div class="card-body">
+                            <div>
+                                <a href="/events/<%= event._id %>" class="btn btn-primary">User List</a>
+                                <a href="/events/<%= event._id%>/scan" class="btn btn-success">Scan QR Code</a>
+                                <a href="/events/<%= event._id%>/import" class="btn btn-warning">Import Data</a>
+                                <a href="/logout" class="btn btn-danger">Logout</a>
+                                <button id="addUserBtn" class="btn btn-info">Add User</button>
                             </div>
-                        `;
-                        $('#alertContainer').append(alertHtml);
-                        // 自動隱藏 alert
-                        setTimeout(() => {
-                            $('.alert').alert('close');
-                        }, 1500);
-                    }.bind(this),
-                    error: function(xhr, status, error) {
-                        console.error('Error updating user:', error);
-                        alert('更新失敗，請稍後再試。');
+
+                            <div class="add-user-form" id="addUserForm">
+                                <h4>Fill in User Information</h4>
+                                <form id="userForm">
+                                    <div class="form-group">
+                                        <label for="email">Email</label>
+                                        <input type="email" class="form-control" id="email" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="name">Name</label>
+                                        <input type="text" class="form-control" id="name" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="company">Company</label>
+                                        <input type="text" class="form-control" id="company" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="phone">Phone</label>
+                                        <input type="text" class="form-control" id="phone" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="role">Role</label>
+                                        <select class="form-control" id="role">
+                                            <option value="guests" selected>Guests</option>
+                                            <option value="vip">VIP</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="saluation">Salutation</label>
+                                        <select class="form-control" id="saluation">
+                                            <option value="Mr">Mr</option>
+                                            <option value="Mrs">Mrs</option>
+                                            <option value="Miss">Miss</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="industry">Industry</label>
+                                        <input type="text" class="form-control" id="industry">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="transport">Transport</label>
+                                        <input type="text" class="form-control" id="transport">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="meal">Meal Choice</label>
+                                        <select class="form-control" id="meal">
+                                            <option value="A">A</option>
+                                            <option value="B">B</option>
+                                            <option value="C">C</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="remarks">Remarks</label>
+                                        <textarea class="form-control" id="remarks" rows="3"></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-success">Submit</button>
+                                    <button type="button" class="btn btn-danger" id="cancelBtn">Cancel</button>
+                                </form>
+                            </div>
+
+                            <table id="usersTable" class="display">
+                                <thead>
+                                    <tr>
+                                        <th>Email</th>
+                                        <th>Name</th>
+                                        <th>Company</th>
+                                        <th>Phone</th>
+                                        <th>Role</th>
+                                        <th>Salutation</th>
+                                        <th>Industry</th>
+                                        <th>Transport</th>
+                                        <th>Meal Choice</th>
+                                        <th>Remarks</th>
+                                        <th>Checked In</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% event.users.forEach(user => { %>
+                                        <tr class="<%= user.isCheckIn ? 'checkin-true' : 'checkin-false' %>">
+                                            <td><%= user.email %></td>
+                                            <td><%= user.name %></td>
+                                            <td><%= user.company %></td>
+                                            <td><%= user.phone %></td>
+                                            <td><%= user.role %></td>
+                                            <td><%= user.saluation %></td>
+                                            <td><%= user.industry %></td>
+                                            <td><%= user.transport %></td>
+                                            <td><%= user.meal %></td>
+                                            <td><%= user.remarks %></td>
+                                            <td>
+                                                <input type="checkbox" class="checkin-toggle" data-_id="<%= user._id %>" <%= user.isCheckIn ? 'checked' : '' %> />
+                                            </td>
+                                        </tr>
+                                    <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include ("components/footer") %>
+<script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/dataTables.buttons.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/buttons.bootstrap.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/jszip.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/vfs_fonts.js"></script>
+<script src="/admin/assets/js/lib/data-table/buttons.html5.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/buttons.print.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/buttons.colVis.min.js"></script>
+<script src="/admin/assets/js/init/datatables-init.js"></script>
+<script>
+    $(document).ready(function() {
+        const table = $('#usersTable').DataTable({
+            "pageLength": 50 // Set number of entries per page
+        }); // Initialize DataTable
+
+        // Use event delegation to listen for checkbox changes
+        $('#usersTable tbody').on('change', '.checkin-toggle', function() {
+            const _id = $(this).data('_id');
+            const isCheckIn = $(this).is(':checked');
+            const event_id = '<%= event._id %>';
+
+            // Send AJAX request to update isCheckIn
+            $.ajax({
+                url: `/events/${event_id}/users/${_id}`,
+                type: 'PUT',
+                contentType: 'application/json',
+                data: JSON.stringify({ isCheckIn: isCheckIn }),
+                success: function(response) {
+                    // Update row color
+                    const row = $(this).closest('tr');
+                    if (isCheckIn) {
+                        row.removeClass('checkin-false').addClass('checkin-true');
+                    } else {
+                        row.removeClass('checkin-true').addClass('checkin-false');
                     }
-                });
-            });
 
-            // 顯示添加用戶表單
-            $('#addUserBtn').on('click', function() {
-                $('#addUserForm').toggle(); // 切換顯示
-            });
-
-            // 提交表單
-            $('#userForm').on('submit', function(event) {
-                event.preventDefault(); // 防止默認提交
-
-                const newUser = {
-                    email: $('#email').val(),
-                    name: $('#name').val(),
-                    company: $('#company').val(),
-                    role: $('#role').val(),
-                    phone: $('#phone').val(),
-                    saluation: $('#saluation').val(),
-                    industry: $('#industry').val(),
-                    transport: $('#transport').val(),
-                    meal: $('#meal').val(),
-                    remarks: $('#remarks').val()
-                };
-
-                // AJAX 請求以添加用戶
-                $.ajax({
-                    url: `/events/<%= event._id %>/users`, // 假設添加用戶的路由
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify(newUser),
-                    success: function(response) {
-                        // 更新用戶列表
-                        $('#usersTable tbody').append(`
-                            <tr class="checkin-false">
-                                <td>${response.attendee.email}</td>
-                                <td>${response.attendee.name}</td>
-                                <td>${response.attendee.company}</td>
-                                <td>${response.attendee.phone}</td>
-                                <td>${response.attendee.role}</td>
-                                <td>${response.attendee.saluation}</td>
-                                <td>${response.attendee.industry}</td>
-                                <td>${response.attendee.transport}</td>
-                                <td>${response.attendee.meal}</td>
-                                <td>${response.attendee.remarks}</td>
-                                <td>
-                                    <input type="checkbox" class="checkin-toggle" data-_id="${response.attendee._id}" />
-                                </td>
-                            </tr>
-                        `);
-                        $('#addUserForm').hide(); // 隱藏表單
-                        $('#userForm')[0].reset(); // 重置表單
-                    },
-                    error: function(xhr) {
-                        alert(xhr.responseJSON.message);
-                    }
-                });
-            });
-
-            // 取消按鈕
-            $('#cancelBtn').on('click', function() {
-                $('#addUserForm').hide(); // 隱藏表單
+                    // Show success alert
+                    const alertHtml = `
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            Update successful!
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    `;
+                    $('#alertContainer').append(alertHtml);
+                    // Auto-hide alert
+                    setTimeout(() => {
+                        $('.alert').alert('close');
+                    }, 1500);
+                }.bind(this),
+                error: function(xhr, status, error) {
+                    console.error('Error updating user:', error);
+                    alert('Update failed, please try again later.');
+                }
             });
         });
-    </script>
+
+        // Show add user form
+        $('#addUserBtn').on('click', function() {
+            $('#addUserForm').toggle(); // Toggle visibility
+        });
+
+        // Submit form
+        $('#userForm').on('submit', function(event) {
+            event.preventDefault(); // Prevent default submission
+
+            const newUser = {
+                email: $('#email').val(),
+                name: $('#name').val(),
+                company: $('#company').val(),
+                phone: $('#phone').val(),
+                role: $('#role').val(), // Get role
+                saluation: $('#saluation').val(), // Get salutation
+                industry: $('#industry').val(), // Get industry
+                transport: $('#transport').val(), // Get transport
+                meal: $('#meal').val(), // Get meal choice
+                remarks: $('#remarks').val() // Get remarks
+            };
+
+            // AJAX request to add user
+            $.ajax({
+                url: `/events/<%= event._id %>/users`, // Assume route to add user
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(newUser),
+                success: function(response) {
+                    // Update user list
+                    $('#usersTable tbody').append(`
+                        <tr class="checkin-false">
+                            <td>${response.attendee.email}</td>
+                            <td>${response.attendee.name}</td>
+                            <td>${response.attendee.company}</td>
+                            <td>${response.attendee.phone}</td>
+                            <td>${response.attendee.role}</td>
+                            <td>${response.attendee.saluation}</td>
+                            <td>${response.attendee.industry}</td>
+                            <td>${response.attendee.transport}</td>
+                            <td>${response.attendee.meal}</td>
+                            <td>${response.attendee.remarks}</td>
+                            <td>
+                                <input type="checkbox" class="checkin-toggle" data-_id="${response.attendee._id}" />
+                            </td>
+                        </tr>
+                    `);
+                    $('#addUserForm').hide(); // Hide form
+                    $('#userForm')[0].reset(); // Reset form
+                },
+                error: function(xhr) {
+                    alert(xhr.responseJSON.message);
+                }
+            });
+        });
+
+        // Cancel button
+        $('#cancelBtn').on('click', function() {
+            $('#addUserForm').hide(); // Hide form
+        });
+    });
+</script>
+
+</body>
+</html>

@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>導入用戶</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <title>Import Users</title>
     <!-- 引入 DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -16,26 +16,26 @@
 </head>
 <body>
     <div id="alertContainer"></div>
-    <h1>導入用戶</h1>
+    <h1>Import Users</h1>
     <div>
-        <a href="/users" class="btn btn-primary">用戶列表</a>
-        <a href="/scan" class="btn btn-success">掃描 QR 碼</a>
-        <a href="/import" class="btn btn-warning">滙入資料</a>
-        <a href="/logout" class="btn btn-danger">登出</a>
+        <a href="/users" class="btn btn-primary">User List</a>
+        <a href="/scan" class="btn btn-success">Scan QR Code</a>
+        <a href="/import" class="btn btn-warning">Import Data</a>
+        <a href="/logout" class="btn btn-danger">Logout</a>
     </div>
 
     <div class="mt-4">
         <form action="/events/<%= event._id %>/import" method="POST" enctype="multipart/form-data">
             <div class="form-group">
-                <label for="file">上傳 Excel 文件 (.xlsx):</label>
+                <label for="file">Upload Excel File (.xlsx):</label>
                 <input type="hidden" name="_id" value="<%= event._id %>">
                 <input type="file" class="form-control-file" id="file" name="file" accept=".xlsx" required>
             </div>
-            <button type="submit" class="btn btn-primary">上傳</button>
+            <button type="submit" class="btn btn-primary">Upload</button>
         </form>
     </div>
     <div class="mt-4">
-        <a href="/sample_user.xlsx" class="btn btn-info" download>下載範本用戶文件</a>
+        <a href="/sample_user.xlsx" class="btn btn-info" download>Download Sample User File</a>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
