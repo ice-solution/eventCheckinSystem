@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>QR 碼登錄</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: rgb(0, 46, 93);
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        img {
+            width: 500px; /* 限制 QR 碼的最大寬度 */
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div>
+        <h1>掃描 QR 碼以登錄</h1>
+        <img src="<%= qrCodeImage %>" alt="QR Code for Event ID: <%= eventId %>">
+        <p>事件 ID: <%= eventId %></p>
+    </div>
+
+</body>
+</html>

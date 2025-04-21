@@ -3,6 +3,7 @@ const Auth = require('../model/Auth'); // 引入 Auth 模型
 const sendWhatsAppMessage = require('./components/sendWhatsAppMessage'); // 使用相對路徑
 const sendWelcomeEmail = require('./components/sendWelcomeEmail'); // 引入發送郵件的函數
 const mongoose = require('mongoose');
+const QRCode = require('qrcode'); // 引入 QRCode 庫
 
 
 // 創建事件
@@ -652,5 +653,194 @@ exports.getLeaderboard = async (req, res) => {
     } catch (error) {
         console.error('Error fetching leaderboard:', error);
         res.status(500).json({ message: '伺服器錯誤' });
+    }
+};
+
+// 創建新的 points
+exports.createPoint = async (req, res) => {
+    const { eventId } = req.params;
+    const { point } = req.body;
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+
+        const newPoint = { point };
+        event.points.push(newPoint);
+        await event.save();
+        res.status(201).json(newPoint);
+    } catch (error) {
+        console.error('Error creating point:', error);
+        res.status(500).send('Error creating point.');
+    }
+};
+
+// 獲取所有 points
+exports.getPoints = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+        res.status(200).json(event.points);
+    } catch (error) {
+        console.error('Error fetching points:', error);
+        res.status(500).send('Error fetching points.');
+    }
+};
+
+// 獲取單個 point
+exports.getPointById = async (req, res) => {
+    const { eventId, pointId } = req.params;
+    console.log('hihi');
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+
+        const point = event.points.id(pointId);
+        if (!point) {
+            return res.status(404).send('Point not found.');
+        }
+        res.status(200).json(point);
+    } catch (error) {
+        console.error('Error fetching point:', error);
+        res.status(500).send('Error fetching point.');
+    }
+};
+
+// 更新 point
+exports.updatePoint = async (req, res) => {
+    const { eventId, pointId } = req.params;
+    const { point } = req.body;
+
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+
+        const pointToUpdate = event.points.id(pointId);
+        if (!pointToUpdate) {
+            return res.status(404).send('Point not found.');
+        }
+
+        pointToUpdate.point = point;
+        await event.save();
+        res.status(200).json(pointToUpdate);
+    } catch (error) {
+        console.error('Error updating point:', error);
+        res.status(500).send('Error updating point.');
+    }
+};
+
+// 刪除中獎者
+exports.removeLuckydrawUser = async (req, res) => {
+    const { _id } = req.body; // 獲取要刪除的中獎者 ID
+    try {
+        const event = await Event.findById(req.params.eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+
+        // 使用 mongoose.Types.ObjectId 進行比較
+        const winnerIndex = event.winners.findIndex(winner => 
+            winner._id.equals(new mongoose.Types.ObjectId(_id)) // 使用 new 來實例化 ObjectId
+        );
+
+        if (winnerIndex === -1) {
+            return res.status(404).send('Winner not found.');
+        }
+
+        // 刪除中獎者
+        event.winners.splice(winnerIndex, 1);
+        await event.save(); // 保存更改
+
+        res.status(200).send({ message: 'Winner deleted successfully.' });
+    } catch (error) {
+        console.error('Error deleting winner:', error);
+        res.status(500).send('Error deleting winner.');
+    }
+};
+
+// 新增中獎者
+exports.addLuckydrawUser = async (req, res) => {
+    const { _id, name, company } = req.body; // 獲取中獎者資料
+    const winner = { _id, name, company }; // 創建 winner 對象
+    try {
+        const event = await Event.findById(req.params.eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+
+        // 將中獎者存儲在 event 的 winners 陣列中
+        event.winners.push(winner);
+        await event.save(); // 保存更改
+
+        res.status(201).send({ message: 'Winner added successfully.', winner });
+    } catch (error) {
+        console.error('Error adding winner:', error);
+        res.status(500).send('Error adding winner.');
+    }
+};
+
+// 渲染抽獎頁面
+exports.renderLuckydrawPage = async (req, res) => {
+    const { eventId } = req.params; // 獲取 eventId
+    try {
+        const event = await Event.findById(eventId).populate('users'); // 獲取事件並填充用戶信息
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+
+        // 獲取 checkin = true 的用戶
+        const users = event.users.filter(user => user.isCheckIn === true);
+        console.log(users);
+        // 渲染 luckydraw.ejs 頁面，並傳遞符合條件的用戶
+        res.render('events/luckydraw', { users, eventId });
+    } catch (error) {
+        console.error('Error rendering luckydraw page:', error);
+        res.status(500).send('Error rendering luckydraw page.');
+    }
+};
+
+// 渲染管理中獎者頁面
+exports.renderAdminLuckydrawPage = async (req, res) => {
+    const { eventId } = req.params; // 獲取 eventId
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+
+        // 獲取中獎者列表
+        const winners = event.winners;
+
+        // 渲染 admin/luckydraw.ejs 頁面，並傳遞中獎者
+        res.render('admin/luckydraw', { winners, eventId });
+    } catch (error) {
+        console.error('Error rendering admin luckydraw page:', error);
+        res.status(500).send('Error rendering admin luckydraw page.');
+    }
+};
+
+// 渲染 QR 碼登錄頁面
+exports.renderQRCodeLoginPage = async (req, res) => {
+    const { eventId } = req.params; // 獲取 eventId
+    try {
+        // 生成 QR 碼的數據，這裡直接使用 eventId
+        const qrCodeData = eventId;
+
+        // 生成 QR 碼圖像
+        const qrCodeImage = await QRCode.toDataURL(qrCodeData);
+
+        // 渲染 qrcodeLogin.ejs 頁面，並傳遞 QR 碼圖像
+        res.render('admin/qrcodeLogin', { qrCodeImage, eventId });
+    } catch (error) {
+        console.error('Error rendering QR code login page:', error);
+        res.status(500).send('Error rendering QR code login page.');
     }
 };

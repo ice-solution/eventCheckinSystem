@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>中獎者列表</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: rgb(0, 46, 93);
+            color: white;
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #fff;
+            text-align: left;
+        }
+        th {
+            background-color: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+
+<%- include("components/header") %>
+<%- include("components/menu", { eventId: eventId }) %>
+
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+
+<div id="right-panel" class="right-panel">
+    <%- include("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title">中獎者列表 - 事件 ID: <%= eventId %></strong>
+                        </div>
+                        <div class="card-body">
+                            <table id="winners-table" class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>用戶 ID</th>
+                                        <th>名稱</th>
+                                        <th>公司</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% winners.forEach(winner => { %>
+                                        <tr>
+                                            <td><%= winner._id %></td>
+                                            <td><%= winner.name %></td>
+                                            <td><%= winner.company %></td>
+                                        </tr>
+                                    <% }) %>
+                                </tbody>
+                            </table>
+                            <div class="button-container" style="margin-top: 20px; text-align: center;">
+                                <a href="/events/<%= eventId %>" class="btn btn-primary">返回事件列表</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include("components/footer") %>
+
+<script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
+<script src="/admin/assets/js/init/datatables-init.js"></script>
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#winners-table').DataTable(); // 初始化 DataTable
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <title>List Points</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-qrcode/1.0/jquery.qrcode.min.js"></script>
+</head>
+<body>
+<%- include("../components/header") %>
+<%- include("../components/menu") %>
+
+<div class="container mt-5">
+    <h2>Points List</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Points</th>
+                <th>Created At</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% points.forEach(point => { %>
+                <tr>
+                    <td><%= point._id %></td>
+                    <td><%= point.point %></td>
+                    <td><%= point.created_at.toISOString().slice(0, 10) %></td>
+                    <td>
+                        <a href="/events/<%= eventId %>/points/edit/<%= point._id %>" class="btn btn-warning">Edit</a>
+                        <a href="/events/<%= eventId %>/points/<%= point._id %>" class="btn btn-info generate-qrcode">Click to open QRcode</a>
+                    </td>
+                </tr>
+            <% }); %>
+        </tbody>
+    </table>
+</div>
+
+
+
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

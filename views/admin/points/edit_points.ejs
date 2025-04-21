@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <title>Edit Points</title>
+</head>
+<body>
+<%- include("../components/header") %>
+<%- include("../components/menu") %>
+
+<div class="container mt-5">
+    <h2>Edit Points</h2>
+    <form id="editPointForm">
+        <div class="form-group">
+            <label for="point">Points</label>
+            <input type="number" class="form-control" id="point" name="point" value="<%= point.point %>" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Update Point</button>
+    </form>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script>
+    $('#editPointForm').on('submit', function(e) {
+        e.preventDefault(); // 防止表單的默認提交行為
+
+        const pointValue = $('#point').val();
+        const eventId = '<%= eventId %>';
+        const pointId = '<%= point._id %>';
+
+        $.ajax({
+            url: `/events/${eventId}/points/${pointId}`,
+            method: 'PUT', // 使用 PUT 方法
+            contentType: 'application/json',
+            data: JSON.stringify({ point: pointValue }),
+            success: function(response) {
+                alert('Point updated successfully!');
+                window.location.href = `/events/${eventId}/points/list`; // 重定向到點數列表頁面
+                // 可以在這裡添加重定向或其他操作
+            },
+            error: function(err) {
+                console.error('Error updating point:', err);
+                alert('Failed to update point.');
+            }
+        });
+    });
+</script>
+</body>
+</html>

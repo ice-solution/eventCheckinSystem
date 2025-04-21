@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const eventsController = require('../controllers/eventsController');
 const importController = require('../controllers/importController');
+const Event = require('../model/Event'); // 引入 Event 模型
 
 const multer = require('multer');
 
@@ -27,6 +28,7 @@ router.get('/list', eventsController.renderEventsList);
 
 router.get('/:eventId/users/data', eventsController.fetchUsersByEvent);
 router.get('/:eventId', eventsController.getEventUsersByEventID);
+router.get('/:eventId/luckydraw', eventsController.renderLuckydrawPage); // 使用控制器函數
 router.get('/:eventId/import', importController.getImportUserPage);
 router.post('/:eventId/import', upload, importController.importUsers);
 
@@ -87,5 +89,73 @@ router.post('/:eventId/gain', eventsController.gainPoint); // 新增的路由
 
 // 獲取排行榜
 router.get('/:eventId/leaderboard', eventsController.getLeaderboard);
+
+// Points 路由
+
+// 渲染創建點數的頁面
+router.get('/:eventId/points/create', (req, res) => {
+    const { eventId } = req.params; // 獲取 eventId
+    res.render('admin/points/create_points', { eventId }); // 傳遞 eventId
+});
+// 渲染點數列表的頁面
+router.get('/:eventId/points/list', async (req, res) => {
+    const { eventId } = req.params; // 獲取 eventId
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+        res.render('admin/points/list_points', { eventId, points: event.points }); // 傳遞 eventId 和 points
+    } catch (error) {
+        console.error('Error fetching points list:', error);
+        res.status(500).send('Error fetching points.');
+    }
+});
+
+// 創建新的 points
+router.post('/:eventId/points', eventsController.createPoint);
+
+// 獲取所有 points
+router.get('/:eventId/points', eventsController.getPoints);
+
+// 獲取單個 point
+// 生成 QRCode 的路由
+router.get('/:eventId/points/:pointId', (req, res) => {
+    const { pointId } = req.params; // 獲取 pointId
+    res.render('admin/points/qrcode', { pointId }); // 渲染 QRCode 頁面
+});
+
+// 更新 point
+router.put('/:eventId/points/:pointId', eventsController.updatePoint);
+
+
+
+// 渲染編輯點數的頁面
+router.get('/:eventId/points/edit/:pointId', async (req, res) => {
+    const { eventId, pointId } = req.params; // 獲取 eventId 和 pointId
+    try {
+        const event = await Event.findById(eventId);
+        const point = event.points.id(pointId);
+        if (!point) {
+            return res.status(404).send('Point not found.');
+        }
+        res.render('admin/points/edit_points', { eventId, point }); // 傳遞 eventId 和 point
+    } catch (error) {
+        console.error('Error fetching point for edit:', error);
+        res.status(500).send('Error fetching point.');
+    }
+});
+
+// 刪除中獎者
+router.delete('/:eventId/luckydraw', eventsController.removeLuckydrawUser); // 使用控制器函數
+
+// 新增中獎者
+router.post('/:eventId/luckydraw', eventsController.addLuckydrawUser); // 使用控制器函數
+
+// 添加路由以顯示中獎者列表
+router.get('/:eventId/luckydraw/list', eventsController.renderAdminLuckydrawPage); // 使用控制器函數
+
+// 添加路由以顯示 QR 碼登錄頁面
+router.get('/:eventId/qrcodeLogin', eventsController.renderQRCodeLoginPage); // 使用控制器函數
 
 module.exports = router;

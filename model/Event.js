@@ -1,6 +1,16 @@
 const mongoose = require('mongoose');
 const emailTemplateSchema = require('./EmailTemplate'); // 引入 EmailTemplate 模型
 
+const pointSchema = new mongoose.Schema({
+    point: {
+        type: Number,
+        required: true
+    },
+    created_at: {
+        type: Date,
+        default: Date.now
+    },
+});
 const userSchema = new mongoose.Schema({
     point: {type:Number, default:0},
     email: { type: String, required: true },
@@ -36,6 +46,12 @@ const attendeeSchema = new mongoose.Schema({
     promo_codes: [{ code_name: String, point: Number }]
 });
 
+const winnerSchema = new mongoose.Schema({
+    _id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // 用戶 ID
+    name: { type: String, required: true }, // 用戶名稱
+    company: { type: String, required: true } // 用戶公司
+});
+
 const eventSchema = new mongoose.Schema({
     name: { type: String, required: true }, // 事件名稱
     from: { type: Date, required: true },   // 事件開始時間
@@ -46,7 +62,8 @@ const eventSchema = new mongoose.Schema({
     emailTemplate: { type: mongoose.Schema.Types.ObjectId, ref: 'EmailTemplate' }, // 引用 EmailTemplate
     users:[userSchema],
     attendees: [attendeeSchema], // 添加參展商參數
-
+    points: [pointSchema],
+    winners: [winnerSchema] // 新增 winners 字段
 });
 
 // 在保存之前更新 modified_at 字段

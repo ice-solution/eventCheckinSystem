@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>互動抽獎</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: rgb(0, 46, 93);
+      padding: 30px;
+    }
+
+    .container {
+      display: flex;
+      align-items: flex-start;
+      gap: 30px;
+    }
+
+    #result {
+      display: flex;
+      flex-wrap: wrap;
+      width: 75%;
+      gap: 10px;
+    }
+
+    .card {
+      width: 19%;
+      background-color: #ffeeba;
+      border-radius: 6px;
+      padding: 12px;
+      cursor: pointer;
+      box-shadow: 0 0 4px rgba(0,0,0,0.1);
+      transition: 0.3s;
+    }
+
+    .card:hover {
+      background-color: #ffe08a;
+    }
+
+    .name {
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    .company {
+      font-size: 13px;
+      color: #555;
+      margin-top: 3px;
+    }
+
+    #control {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    #startBtn {
+      padding: 15px 20px;
+      font-size: 16px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    #startBtn:disabled {
+      background-color: #aaa;
+      cursor: not-allowed;
+    }
+
+    #spinner {
+      width: 60px;
+      height: 60px;
+      border: 6px solid #ccc;
+      border-top: 6px solid #28a745;
+      border-radius: 50%;
+      animation: spin 0.4s linear infinite;
+      display: none;
+      margin: 0 auto;
+    }
+    h1{
+        color:#FFF;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>互動抽獎系統</h1>
+  <div class="container">
+    <div id="result"></div>
+
+    <div id="control">
+      <button id="startBtn">抽出一位</button>
+      <div id="spinner"></div>
+    </div>
+  </div>
+
+  <script>
+    const allPeople = <%- JSON.stringify(users) %>; // 將 users 轉換為 JSON 格式
+    const eventId = '<%=eventId%>';
+
+    let availablePeople = [...allPeople];
+    const drawnPeople = [];
+    
+    const resultDiv = document.getElementById('result');
+    const startBtn = document.getElementById('startBtn');
+    const spinner = document.getElementById('spinner');
+
+    startBtn.addEventListener('click', () => {
+      if (availablePeople.length === 0) {
+        alert("所有人都已抽出！");
+        return;
+      }
+
+      spinner.style.display = 'block';
+      startBtn.disabled = true;
+
+      setTimeout(() => {
+        spinner.style.display = 'none';
+        startBtn.disabled = false;
+
+        const index = Math.floor(Math.random() * availablePeople.length);
+        const person = availablePeople.splice(index, 1)[0];
+        drawnPeople.push(person);
+
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.dataset.id = person._id;
+        card.innerHTML = `<div class="name">${person.name}</div><div class="company">${person.company}</div>`;
+        resultDiv.appendChild(card);
+
+        // 點擊卡片 → 刪除確認
+        card.addEventListener('click', () => {
+          if (confirm(`確定要取消 ${person.name} 的中獎結果？`)) {
+            resultDiv.removeChild(card);
+            drawnPeople.splice(drawnPeople.findIndex(p => p._id === person._id), 1);
+            availablePeople.push(person);
+
+            // DELETE API
+            fetch(`/events/${eventId}/luckydraw`, { // 使用 eventId
+              method: 'DELETE',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ _id: person._id })
+            })
+            .then(res => {
+              if (res.ok) {
+                console.log("已刪除", person);
+              } else {
+                console.error("刪除失敗", res.statusText);
+              }
+            })
+            .catch(err => console.error("刪除失敗", err));
+          }
+        });
+
+        // POST 該人資料
+        fetch(`/events/${eventId}/luckydraw`, { // 使用 eventId
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(person)
+        })
+        .then(res => {
+          if (res.ok) {
+            console.log("已送出", person);
+          } else {
+            console.error("送出失敗", res.statusText);
+          }
+        })
+        .catch(err => console.error("送出失敗", err));
+      }, 800);
+    });
+  </script>
+
+</body>
+</html>

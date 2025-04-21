@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QRCode for Point ID: <%= pointId %></title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.qrcode/1.0/jquery.qrcode.min.js"></script>
+</head>
+<body>
+    <h2>QRCode for Point ID: <%= pointId %> Please download to print the QRcode.</h2>
+    <div id="qrcode"></div>
+    <script>
+        $(document).ready(function() {
+            const pointId = '<%= pointId %>';
+            $('#qrcode').qrcode(pointId); // 生成 QRCode，內容為 pointId
+        });
+    </script>
+</body>
+</html>
