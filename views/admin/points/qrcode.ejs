@@ -1,20 +1,46 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QRCode for Point ID: <%= pointId %></title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <title>QR 碼</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.qrcode/1.0/jquery.qrcode.min.js"></script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: rgb(0, 46, 93);
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        #qrcode {
+            text-align: center;
+        }
+        img {
+            max-width: 300px; /* 限制 QR 碼的最大寬度 */
+            height: auto;
+        }
+    </style>
 </head>
 <body>
-    <h2>QRCode for Point ID: <%= pointId %> Please download to print the QRcode.</h2>
-    <div id="qrcode"></div>
+
+    <div id="qrcode">
+        <h1>掃描 QR 碼 拿到點數</h1>
+        <div id="qrcodeImage"></div>
+    </div>
+
     <script>
         $(document).ready(function() {
-            const pointId = '<%= pointId %>';
-            $('#qrcode').qrcode(pointId); // 生成 QRCode，內容為 pointId
+            const qrCodeData = "<%= eventId %>,<%= pointId %>"; // 格式為 eventId,pointId
+            $('#qrcodeImage').qrcode({
+                text: qrCodeData,
+                width: 256,
+                height: 256
+            });
         });
     </script>
+
 </body>
 </html>

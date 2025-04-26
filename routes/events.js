@@ -121,8 +121,8 @@ router.get('/:eventId/points', eventsController.getPoints);
 // 獲取單個 point
 // 生成 QRCode 的路由
 router.get('/:eventId/points/:pointId', (req, res) => {
-    const { pointId } = req.params; // 獲取 pointId
-    res.render('admin/points/qrcode', { pointId }); // 渲染 QRCode 頁面
+    const { eventId, pointId } = req.params; // 獲取 eventId 和 pointId
+    res.render('admin/points/qrcode', { eventId, pointId }); // 渲染 QRCode 頁面
 });
 
 // 更新 point
