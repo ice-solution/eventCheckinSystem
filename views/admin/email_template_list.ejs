@@ -1,0 +1,73 @@
+<%- include ("components/header") %>
+    <%- include ("components/menu", {eventId: '' }) %>
+        <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+        <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
+        <link rel="stylesheet" href="/admin/assets/css/style.css">
+        <div id="right-panel" class="right-panel">
+            <%- include ("components/rightpanel_header") %>
+                <div class="content">
+                    <div class="animated fadeIn">
+                        <div class="row">
+
+                            <div class="col-md-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <strong class="card-title"></strong>
+                                    </div>
+                                    <div class="card-body">
+                                        <table id="bootstrap-data-table" class="table table-bordered">
+                                            <thead>
+                                                <tr>
+                                                    <th>Subject</th>
+                                                    <th>Created At</th>
+                                                    <th>Modified At</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <% if (emailTemplates.length> 0) { %>
+                                                    <% emailTemplates.forEach(t=> { %>
+                                                        <tr>
+                                                            <td><a href="/emailTemplate/<%= t._id %>">
+                                                                    <%= t.subject %>
+                                                                </a></td>
+                                                            <td>
+                                                                <%= t.created_at%>
+                                                            </td>
+                                                            <td>
+                                                                <%= t.modified_at%>
+                                                            </td>
+                                                        </tr>
+                                                        <% }); %>
+                                                            <% } else { %>
+                                                                <tr>
+                                                                    <td colspan="5" class="text-center">No Result</td>
+                                                                </tr>
+                                                                <% } %>
+                                            </tbody>
+                                        </table>
+                                        <a href="/emailTemplate/create" class="btn btn-primary">創建</a>
+                                        <a href="/admin" class="btn btn-primary">返回管理頁面</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </div>
+
+        <%- include ("./components/footer") %>
+            <script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
+            <script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
+            <script src="/admin/assets/js/lib/data-table/dataTables.buttons.min.js"></script>
+            <script src="/admin/assets/js/lib/data-table/buttons.bootstrap.min.js"></script>
+            <script src="/admin/assets/js/lib/data-table/jszip.min.js"></script>
+            <script src="/admin/assets/js/lib/data-table/vfs_fonts.js"></script>
+            <script src="/admin/assets/js/lib/data-table/buttons.html5.min.js"></script>
+            <script src="/admin/assets/js/lib/data-table/buttons.print.min.js"></script>
+            <script src="/admin/assets/js/lib/data-table/buttons.colVis.min.js"></script>
+            <script src="/admin/assets/js/init/datatables-init.js"></script>
+            <script type="text/javascript">
+                $(document).ready(function () {
+                    $('#bootstrap-data-table-export').DataTable();
+                });
+            </script>
