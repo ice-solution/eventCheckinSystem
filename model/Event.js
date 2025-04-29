@@ -13,11 +13,11 @@ const pointSchema = new mongoose.Schema({
 });
 const userSchema = new mongoose.Schema({
     point: {type:Number, default:0},
-    email: { type: String, required: true },
+    email: { type: String },
     name: { type: String, required: true },
     phone_code: { type: String }, // 電話區號
     phone: { type: String }, // 電話
-    company: { type: String, required: true },
+    company: { type: String },
     isCheckIn: { type: Boolean, default: false }, // 是否簽到
     create_at: { type: Date, default: Date.now }, // 創建時間
     modified_at: { type: Date, default: Date.now }, // 修改時間

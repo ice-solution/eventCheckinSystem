@@ -17,12 +17,16 @@
             padding: 20px;
             border-radius: 10px;
             background: white;
+            /* background-image:url('/admin/img/ticket_bg.png'); */
+            background-size:cover;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
         .profile-header {
             display: flex;
             align-items: center;
-            margin-bottom: 30px;
+            margin-bottom: 100px;
+            justify-content:center;
+            margin-top:120px;
         }
         .profile-header img {
             border-radius: 50%;
@@ -44,6 +48,7 @@
             display: flex;
             justify-content: center; /* 置中 QR 碼 */
             margin-bottom: 20px; /* 增加下邊距 */
+            margin-left:30px;
         }
         /* Lightbox樣式 */
         .lightbox {
@@ -71,11 +76,14 @@
     <div class="row justify-content-center">
         <div class="col-md-8 profile-container">
             <div class="profile-header">
-                <img src="https://picsum.photos/200" alt="用户头像">
+                <!-- <img src="https://picsum.photos/200" alt="用户头像"> -->
                 <div>
                     <h2><%= user.name %></h2>
                     <p class="text-muted">Email: <%= user.email %></p>
+                    <p class="text-muted"><%= user.isCheckIn ? '已 Check-in' : '未 Check-in' %>
+                    </p>
                 </div>
+                <div id="qrcode" class="mb-4"></div>
             </div>
             <h4>個人訊息</h4>
             <ul class="list-group mb-4">
@@ -84,9 +92,9 @@
                 <li class="list-group-item">Point: <span class="float-right"><%= user.point %></span></li>
             </ul>
             <h4>QR Code</h4>
-            <div id="qrcode" class="mb-4"></div>
-            <button id="loginQRCode" class="btn btn-primary mb-4">掃描 QR 碼 登入</button>
-            <button id="scanPointQRCode" class="btn btn-secondary mb-4">掃描 QR 碼 獲取點數</button>
+            
+            <!-- <button id="loginQRCode" class="btn btn-primary mb-4">掃描 QR 碼 登入</button>
+            <button id="scanPointQRCode" class="btn btn-secondary mb-4">掃描 QR 碼 獲取點數</button> -->
             
             <!-- Lightbox -->
             <div class="lightbox" id="scannerLightbox">

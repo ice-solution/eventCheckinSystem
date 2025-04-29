@@ -48,6 +48,9 @@
             width: 80%;
             max-width: 600px;
         }
+        #checkInButton, #printButton {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -55,7 +58,9 @@
 <div class="container">
     <div class="user-list">
         <h4>Guest List</h4>
+        
         <input type="text" id="searchInput" class="form-control mb-3" placeholder="Search Users..." onkeyup="searchUsers()">
+        <button id="scanButton" class="btn btn-primary mt-3" onclick="openLightbox()">Scan QR Code</button>
         <table class="table">
             <thead>
                 <tr>
@@ -69,7 +74,8 @@
                 <% event.users.forEach(user => { %>
                     <tr onclick="showDetails('<%= user.name %>', '<%= user.company %>', '<%= user.phone %>', <%= user.isCheckIn %>, '<%= user._id %>')">
                         <td><%= user.name %></td>
-                        <td><%= user.company %></td>
+                        <td><%= typeof user.company !== 'undefined' ? user.company : '' %>
+                        </td>
                         <td><%= user.phone %></td>
                         <td>
                             <span class="<%= user.isCheckIn ? 'text-primary' : 'text-secondary' %>">
@@ -80,7 +86,7 @@
                 <% }); %>
             </tbody>
         </table>
-        <button id="scanButton" class="btn btn-primary mt-3" onclick="openLightbox()">Scan QR Code</button>
+        
     </div>
     <div class="user-details" id="userDetails">
         <h4>Guest Details</h4>
@@ -115,11 +121,14 @@
                 const userList = $('#userList');
                 userList.empty(); // Clear user list
                 users.forEach(user => {
+                    const company = user.company || '';
+                    const phone = user.phone || '';
+
                     userList.append(`
                         <tr onclick="showDetails('${user.name}', '${user.company}', '${user.phone}', ${user.isCheckIn}, '${user._id}')">
                             <td>${user.name}</td>
-                            <td>${user.company}</td>
-                            <td>${user.phone}</td>
+                            <td>${company}</td>
+                            <td>${phone}</td>
                             <td>
                                 <span class="${user.isCheckIn ? 'text-primary' : 'text-secondary'}">
                                     ${user.isCheckIn ? 'Checked In' : 'Check In'}
@@ -144,6 +153,7 @@
             <p>Checked In: ${isCheckIn ? 'Yes' : 'No'}</p>
         `;
         document.getElementById('checkInButton').style.display = isCheckIn ? 'none' : 'inline-block'; // Show button based on check-in status
+        document.getElementById('printButton').style.display = isCheckIn ? 'inline-block' : 'none';
         currentUserId = userId; // Store the current user ID for check-in
     }
 
@@ -209,12 +219,14 @@
                 scanning = false; // Stop scanning
                 html5QrCode.stop(); // Stop scanning
                 // Assume QR code contains user ID
-                const userId = decodedText.split('=')[1];
+                const userId = decodedText.split(',')[1];
                 fetch(`/events/${eventId}/users/${userId}`)
                     .then(response => response.json())
                     .then(user => {
                         if (user) {
                             showDetails(user.name, user.company, user.phone, user.isCheckIn, user._id);
+                            alert('User checked in successfully!');
+                            fetchUsers();
                         } else {
                             alert('User not found');
                         }
@@ -243,9 +255,17 @@
         printWindow.document.write(detailsContent);
         printWindow.document.write('</body></html>');
         printWindow.document.close();
-        printWindow.print();
+        
+        // printWindow.print();
+        printLabel();
     }
-
+    function printLabel() {
+        const labelTemplateUrl = '你的模板文件路徑';
+        const mediaSettingsUrl = '你的媒介設置文件路徑';
+        const printUrl = `brotherwebprint://print?filename=rsvp_label.lbx&size=62x100.bin&copies=1&name=keith&qrcode=12345&company=icesolution`;
+        
+        window.location.href = printUrl; // 使用 URL scheme 發送列印請求
+    }
     // Initialize user data
     $(document).ready(function() {
         fetchUsers(); // Fetch user data

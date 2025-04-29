@@ -63,10 +63,11 @@ exports.importUsers = async (req, res) => {
             };
 
             // 檢查用戶是否已存在
-            const userExists = event.users.find(u => u.email === user.email);
-            if (!userExists) {
+            // temp off email check
+            // const userExists = event.users.find(u => u.email === user.email);
+            // if (!userExists) {
                 event.users.push(user); // 將用戶添加到事件的 users 陣列中
-            }
+            // }
         }
 
         await event.save(); // 保存事件
