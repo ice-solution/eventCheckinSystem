@@ -73,7 +73,6 @@ exports.addUserToEvent = async (req, res) => {
         if (!event) {
             return res.status(404).json({ message: 'Event not found' });
         }
-
         // 創建新的用戶
         const newUser = {
             email,
@@ -88,7 +87,6 @@ exports.addUserToEvent = async (req, res) => {
             remarks, // 添加備註
             isCheckIn: false // 默認為未登記進場
         };
-
         event.users.push(newUser); // 將用戶添加到事件中
         await event.save(); // 保存事件
 

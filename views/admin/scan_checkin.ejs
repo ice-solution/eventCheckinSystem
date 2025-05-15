@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css">
     <title>Guest Check-in</title>
     <style>
         body {
@@ -59,9 +60,10 @@
     <div class="user-list">
         <h4>Guest List</h4>
         
-        <input type="text" id="searchInput" class="form-control mb-3" placeholder="Search Users..." onkeyup="searchUsers()">
+        <!-- <input type="text" id="searchInput" class="form-control mb-3" placeholder="Search Users..." onkeyup="searchUsers()"> -->
         <button id="scanButton" class="btn btn-primary mt-3" onclick="openLightbox()">Scan QR Code</button>
-        <table class="table">
+        
+        <table id="userTable" class="table table-striped table-bordered">
             <thead>
                 <tr>
                     <th>Name</th>
@@ -74,8 +76,7 @@
                 <% event.users.forEach(user => { %>
                     <tr onclick="showDetails('<%= user.name %>', '<%= user.company %>', '<%= user.phone %>', <%= user.isCheckIn %>, '<%= user._id %>')">
                         <td><%= user.name %></td>
-                        <td><%= typeof user.company !== 'undefined' ? user.company : '' %>
-                        </td>
+                        <td><%= typeof user.company !== 'undefined' ? user.company : '' %></td>
                         <td><%= user.phone %></td>
                         <td>
                             <span class="<%= user.isCheckIn ? 'text-primary' : 'text-secondary' %>">
@@ -106,6 +107,7 @@
 
 <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
 <script>
     const eventId = "<%= event._id %>"; // Get event ID from backend
     const html5QrCode = new Html5Qrcode("reader");
@@ -137,6 +139,10 @@
                         </tr>
                     `);
                 });
+                // Initialize DataTable after populating the user list
+                $('#userTable').DataTable();
+                // location.reload();
+
             },
             error: function(err) {
                 console.error('Error fetching users:', err);

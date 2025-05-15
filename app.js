@@ -8,6 +8,7 @@ const http = require('http');
 
 const session = require('express-session'); // 引入 session
 const usersRouter = require('./routes/users');
+const websiteRouter = require('./routes/websites');
 const eventsRouter = require('./routes/events');
 const awardsRouter = require('./routes/awards'); // 引入新的路由
 const authRoutes = require('./routes/auth'); // 引入 auth 路由
@@ -50,6 +51,7 @@ mongoose.connect('mongodb+srv://icesolution19:jLuZY1Lbi5UQNtyz@cluster0.nky9l.mo
 .catch(err => console.error('MongoDB 連接失敗:', err));
 mongoose.set('debug', true);
 // 登入路由
+
 app.get('/homepage', async (req, res) => {
     res.render('pages/index');
 });
@@ -106,6 +108,7 @@ const isAuthenticated = (req, res, next) => {
 };
 
 // 設置路由
+app.use('/web', websiteRouter);
 app.use('/events', eventsRouter);
 app.use('/users',isAuthenticated, usersRouter);
 app.use('/awards', awardsRouter);
