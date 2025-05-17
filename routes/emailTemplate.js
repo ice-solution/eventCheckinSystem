@@ -10,10 +10,11 @@ router.route("/create")
     .get(emailTemplateController.renderCreateEmailTemplatePage)
     .post(emailTemplateController.createEmailTemplate) 
 
+  router.route("/:id/send")
+    .post(emailTemplateController.sendEmailById)
+
 router.route("/:id")
     .get(emailTemplateController.renderEmailTemplateDetail)
     .put(emailTemplateController.updateEmailTemplate)
-
-
 
 module.exports = router
