@@ -141,10 +141,10 @@ exports.sendEmail = async (user,event) => {
       font-size: 14px;
     }
     body {
-      color: #002e5d;
+      color: #000;
     }
     body a {
-      color: #42ee99;
+      color: blue;
       text-decoration: none;
     }
     p { margin: 0; padding: 0; }
@@ -234,9 +234,9 @@ exports.sendEmail = async (user,event) => {
     <body>
       <center class="wrapper" data-link-color="#42ee99" data-body-style="font-size:14px; font-family:arial,helvetica,sans-serif; color:#002e5d; background-color:#FFF;">
         <div class="webkit">
-          <table cellpadding="0" cellspacing="0" border="0" width="100%" class="wrapper" bgcolor="#002e5d">
+          <table cellpadding="0" cellspacing="0" border="0" width="100%" class="wrapper" bgcolor="#FFF">
             <tr>
-              <td valign="top" bgcolor="#002e5d" width="100%">
+              <td valign="top" bgcolor="#FFF" width="100%">
                 <table width="100%" role="content-container" class="outer" align="center" cellpadding="0" cellspacing="0" border="0">
                   <tr>
                     <td width="100%">
@@ -274,9 +274,6 @@ exports.sendEmail = async (user,event) => {
                     To revisit the memorable moments, we're excited to share a collection of highlight photos from the event, available at
                     <br>
                     <br>
-                    Additionally, your feedback is valuable to us. We would greatly appreciate it if you could share your thoughts on the "Uniquely HK: Shaping Retail's Future Together" event. Your insights will assist us in enhancing future events and ensuring that we address topics of utmost importance to you.
-                    <br>
-                    <br> 
                     <center><img height="200" src="${qrCodeUrl}" style="width:200px;height:200px" width="200" class="CToWUd a6T" data-bit="iit" tabindex="0"><div class="a6S" dir="ltr" style="opacity: 0.01; left: 644.469px; top: 1572.08px;"><span data-is-tooltip-wrapper="true" class="a5q" jsaction="JIbuQc:.CLIENT"><button class="VYBDae-JX-I VYBDae-JX-I-ql-ay5-ays CgzRE" jscontroller="PIVayb" jsaction="click:h5M12e; clickmod:h5M12e;pointerdown:FEiYhc;pointerup:mF5Elf;pointerenter:EX0mI;pointerleave:vpvbp;pointercancel:xyn4sd;contextmenu:xexox;focus:h06R8; blur:zjh6rb;mlnRJb:fLiPzd;" data-idom-class="CgzRE" data-use-native-focus-logic="true" jsname="hRZeKc" aria-label="Download attachment " data-tooltip-enabled="true" data-tooltip-id="tt-c14" data-tooltip-classes="AZPksf" id="" jslog="91252; u014N:cOuCgd,Kr2w4b,xr6bB; 4:WyIjbXNnLWY6MTgzMjgyOTEyNjYyNjM0NDQ3MiJd; 43:WyJpbWFnZS9qcGVnIl0."><span class="OiePBf-zPjgPe VYBDae-JX-UHGRz"></span><span class="bHC-Q" jscontroller="LBaJxb" jsname="m9ZlFb" soy-skip="" ssk="6:RWVI5c"></span><span class="VYBDae-JX-ank-Rtc0Jf" jsname="S5tZuc" aria-hidden="true"><span class="notranslate bzc-ank" aria-hidden="true"><svg viewBox="0 -960 960 960" height="20" width="20" focusable="false" class=" aoH"><path d="M480-336L288-528l51-51L444-474V-816h72v342L621-579l51,51L480-336ZM263.72-192Q234-192 213-213.15T192-264v-72h72v72H696v-72h72v72q0,29.7-21.16,50.85T695.96-192H263.72Z"></path></svg></span></span><div class="VYBDae-JX-ano"></div></button><div class="ne2Ple-oshW8e-J9" id="tt-c14" role="tooltip" aria-hidden="true">Download</div></span></div></center>
                     <br>
                     <br>
