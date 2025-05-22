@@ -18,7 +18,10 @@ exports.renderEmailTemplateDetail = async (req, res) => {
 
   try {
     const template = await EmailTemplate.findById(id)
-    const emailRecords = await EmailRecord.find({ emailTemplate: id }) || []
+    const emailRecords =
+      (await EmailRecord.find({ emailTemplate: id }).sort({
+        created_at: -1,
+      })) || []
     if (!template) {
       return res.status(404).send("電子郵件模板未找到！")
     }
@@ -86,8 +89,6 @@ exports.sendEmailById = async (req, res) => {
   const { recipient } = req.body
 
   const to = recipient.split(",").map((email) => email.trim())
-  console.log("to", to)
-  console.log("id", id)
 
   if (!!to && to.length > 0) {
     try {
@@ -100,21 +101,21 @@ exports.sendEmailById = async (req, res) => {
       const body = template.content
 
       // send email
-      const results =  await Promise.all(
+      const results = await Promise.all(
         to.map((email) => {
           // send email
-          return sendGrid.sendEmail(email, subject, body)          
+          return sendGrid.sendEmail(email, subject, body)
         })
       )
 
-      // save email record with status 
+      // save email record with status
       const emailRecords = results.map((result, index) => {
-        console.log(result)
+        let emailRecord = result[0]
         return new EmailRecord({
           recipient: to[index],
           emailTemplate: id,
-          status: result.code === 200 ? "成功" : "失敗",
-          errorMessage: result.code === 200? "" : result.response.body.errors.map((error) => error.message).join(", "),
+          status: emailRecord.statusCode === 202 ? "成功" : "失敗",
+          errorLog: emailRecord.statusCode === 202 ? "" : `${result}`,
           created_at: Date.now(),
         })
       })

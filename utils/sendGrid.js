@@ -21,7 +21,7 @@ exports.sendEmail = async (to, subject, body) => {
       to: {email: "mark.hyng@gmail.com"},
       from: EMAIL_SENDER,
       subject: subject,
-      text: body,
+      html: body,
     })
   } catch (error) {
     console.error("Error sending email:", error)
