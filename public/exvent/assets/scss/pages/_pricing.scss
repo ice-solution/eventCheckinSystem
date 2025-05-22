@@ -1,0 +1,286 @@
+/*--
+/*  08 - Pricing CSS
+/*----------------------------------------*/
+
+.pricing-area{
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;
+    position: relative;
+    z-index: 1;
+    & .pricing-shape-1{
+        position: absolute;
+        width: 100%;
+        height: 130px;
+        right: 0;
+        left: 0px;
+        top: 0px;
+        background: #ffffff;
+        transform: skewY(-3deg);
+        transform-origin: 0;
+        z-index: 2;
+    }
+    @media #{$tablet-device}{
+        padding-bottom: 70px;
+    }
+
+    &::after{
+        position: absolute;
+        content: '';
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;    
+        background: linear-gradient(to right, rgba(28, 0, 135, 1.0), rgba(154, 0, 176, 1.0));
+        opacity: 0.9;
+        z-index: 1;
+    }
+
+    & .pricing-wrapper{
+        position: relative;
+        z-index: 2;
+
+        & .section-title-wrap{
+            margin-bottom: 55px;
+        }
+    }
+
+    & .price-card{
+        position: relative;
+        background-color: $white;
+        padding-bottom: 60px;
+        z-index: 1;
+        
+        @media #{$tablet-device}{
+            margin-bottom: 50px;
+        }
+
+        
+        & .price-header{
+            background-color: $primary-3;
+            padding: 55px 0;
+            padding-bottom: 30px;
+            color: $white;
+            
+            &.pink-bg{
+                background-color: $primary;
+            }
+            &.yellow-bg{
+                background-color: $primary-2;
+            }
+            &.orange-bg{
+                background-color: $primary-orange;
+            }
+            &.purple-bg{
+                background-color: $purple-3;
+            }
+
+            & .price-plan{
+                font-size: 20px;
+                font-weight: 700;
+                text-transform: capitalize;
+                display: block;
+                
+            }
+
+            & .price-ammount{
+                color: $white;
+                font-size: 60px;
+                font-weight: 700;
+
+                & sup{
+                    font-size: 18px;
+                    font-weight: 600;
+                    position: relative;
+                    top: -35px;
+                    left: 0px;
+                }
+            }
+        }
+
+        & .price-body{
+            padding: 40px 0;
+            padding-bottom: 20px;
+
+            & .price-desc{
+                & li{
+                    font-size: 16px;
+                    margin-bottom: 10px;
+                    color: $para-color;
+                }
+            }
+        }
+        
+        & .price-footer{
+            & .price-btn{
+                &::before{
+                    border: 1px solid #000;
+                }
+            }
+        }
+    }
+}
+
+// pricing area for homepage 2
+.pricing-area-2{
+    
+    &::after{   
+        background: #030127;
+        opacity: 0.7;
+        z-index: -1;
+    }
+
+    & .pricing-wrapper{
+        & .section-title-wrap{
+            margin-bottom: 95px;
+        }
+    }
+
+    & .price-card{
+        background-color: transparent;
+        padding-bottom: 0;
+        z-index: 1;
+        
+
+        
+        & .price-header{
+            padding: 40px 0;
+            padding-bottom: 40px;
+            margin-bottom: 15px;
+            position: relative;
+            
+            & .price-header-shape{
+                position: absolute;
+                right: 0;
+                top: 0;
+                opacity: 0.7;
+            }
+        }
+
+        & .price-body{
+            padding: 60px 0;
+            padding-bottom: 40px;
+            background-color: $white;
+        }
+        
+        & .price-footer{
+            background-color: $white;
+            padding-bottom: 70px;
+            position: relative;
+            z-index: 1;
+            & .price-btn{
+                &::before{
+                    border: 1px solid #000;
+                }
+            }
+        }
+    }
+}
+
+//
+
+.pricing-area-3{
+    padding-top: 100px;
+    padding-bottom: 250px;
+    & .price-shape-3{
+        position: absolute;
+        bottom: 0;
+        z-index: 1;
+    }
+    &::after{   
+        background-color: #160329;
+        opacity: 0.8;
+        z-index: -1;
+    }
+}
+
+.pricing-area-4{
+    position: relative;
+    padding-bottom: 250px;
+    z-index: 1;
+    & .section-shape-bottom{
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        z-index: 1;
+    }
+    &::after{
+        opacity: 0.8;
+        background: linear-gradient(to right, rgba(253, 92, 91, 1.0), rgba(255, 197, 125, 1.0));
+        z-index: -1;
+    }
+
+    & .price-card{
+        position: relative;
+        & .price-card-shape{
+            position: absolute;
+            bottom: 0;
+            left: 0;
+        }
+
+        & .price-header{
+            position: relative;
+            background-color: transparent;
+            border-bottom: 1px solid $ash;
+            padding: 55px 0;
+            padding-bottom: 30px;
+            color: $heading-color;
+            font-family: $heading-font;
+            font-weight: 700;
+
+            & .price-plan{
+                font-size: 24px;
+                text-transform: capitalize;
+                display: block;
+                
+            }
+
+            & .price-ammount{
+                color: $white;
+                font-size: 60px;
+                font-weight: 700;
+
+                &.pink-text{
+                    color: $primary;
+                }
+                &.blue-text{
+                    color: $primary-3;
+                }
+                &.orange-text{
+                    color: $primary-orange;
+                }
+                &.purple-text{
+                    color: $purple-3;
+                }
+                & sup{
+                    font-size: 18px;
+                    font-weight: 600;
+                    position: relative;
+                    top: -35px;
+                    left: 0px;
+                }
+            }
+        }
+
+        & .price-body{
+            padding: 60px 0;
+            padding-bottom: 30px;
+
+            & .price-desc{
+                & li{
+                    font-size: 16px;
+                    margin-bottom: 10px;
+                    color: $para-color;
+                }
+            }
+        }
+        
+        & .price-footer{
+            & .price-btn{
+                &::before{
+                    border: 1px solid #000;
+                }
+            }
+        }
+    }
+}

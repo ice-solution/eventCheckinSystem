@@ -1,0 +1,84 @@
+/*--
+/*  17 - Pricing CSS
+/*----------------------------------------*/
+
+.faq-area{
+    position: relative;
+    & .bg-map{
+        position: absolute;
+        left: 0;
+        top: 155px;
+        bottom: 0;
+        right: 0;
+        margin: auto;
+        z-index: -1;
+    }
+    & .section-title-wrap{
+        margin-bottom: 90px;
+    }
+    & .accordion{
+        
+        & .accordion-item{
+            border: none;
+            background: transparent;
+
+            &:first-child{
+                & .accordion-header{
+                    & .accordion-button{
+                        
+
+                        
+                    }
+                }
+            }            
+            & .accordion-header{
+                & .accordion-button{
+                    border-bottom: 1px solid #ddd;
+                    font-size: 20px;
+                    font-weight: 600;
+                    color: $heading-color;
+                    padding-bottom: 25px;
+                    background: transparent;
+
+                    &::after{
+                        content: "\f106";
+                        font-family: $fontawesome;
+                        background-image: none;
+                    }
+                    
+                    &:not(.collapsed){
+                        border-bottom: 1px solid #ddd;
+                        font-size: 20px;
+                        font-weight: 600;
+                        color: $primary-orange;
+                        background: none;
+                        box-shadow: none;
+                        &::after{
+                            content: "\f107";
+                            font-family: $fontawesome;
+                            background-image: none;
+                            transform: none;
+                        }
+                    }
+                    &:focus{
+                        color: $primary-orange;
+                        outline: none;
+                        box-shadow: none;
+                        background: none;
+
+                    }
+                }
+            }
+
+            & .accordion-collapse{
+                
+                & .accordion-body{
+                    & p{
+                        font-size: 16px;
+                        line-height: 36px;
+                    }
+                }
+            }
+        }
+    }
+}

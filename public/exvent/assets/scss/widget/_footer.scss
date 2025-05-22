@@ -1,0 +1,306 @@
+/*--
+/*  25.1 - Footer Widget CSS
+/*----------------------------------------*/
+
+// Footer Widget Area
+.footer-widget-wrap {
+    padding-top: 70px;
+    padding-bottom: 75px;
+}
+
+// Footer Widget
+.footer-widget {
+    margin-top: 30px;
+}
+
+// Widget Info
+.widget-info {
+    padding-top: 20px;
+
+    &  ul {
+        
+
+        & li {
+            display: flex;
+            align-items: center;
+            flex-wrap: nowrap;
+            margin-top: 10px;
+    
+            & .info-icon {
+    
+                & i {
+                    display: inline-block;
+                    color: $primary;
+                    font-size: 18px;
+                    margin-right: 10px;
+                    margin-top: 2px;
+                }
+            }
+    
+            & .info-text {
+                font-size: 16px;
+                line-height: 20px;
+                font-family: $heading-font;
+                font-weight: 600;
+                color: #c4c5c7;
+            }
+        }
+    }
+}
+
+.footer-widget-about {
+    margin-top: 15px;
+    & p {
+        font-size: 14px;
+        line-height: 30px;
+        color: $white;
+        padding-right: 110px;
+        margin-top: 20px;
+    }
+}
+ 
+// Widget Social
+.footer-social {
+
+    & .social {
+        margin-top: 25px;
+        & li {
+            display: inline-block;
+
+            & + li {
+                margin-left: 5px;
+            }
+            
+            & a {
+                width: 35px;
+                height: 35px;
+                line-height: 37px;
+                text-align: center;
+                border-radius: 50%;
+                font-size: 16px;
+                background: $white;
+                color: $primary;
+
+                &:hover {
+                    color: $primary;
+                }
+            }
+        }
+    }
+}
+ 
+// Widget Title
+.footer-widget {
+   & .footer-widget-title{
+        font-size: 20px;
+        font-family: $heading-font;
+        font-weight: 600;
+        color: $white;
+    }
+}
+
+
+// Widget About
+.widget-about{
+    
+}
+
+// Widget Link
+.widget-link{
+    padding-top: 22px;
+
+    & .link{
+        & li{
+            margin-top: 7px;
+
+            & a{
+                font-size: 14px;
+                color: $footer-text;
+                transition: $transition-default;
+             
+                &:hover {  
+                    color: $primary;
+                    padding-left: 10px;
+                }
+            }
+        }
+    }
+}
+
+// Home Style Two
+
+.footer-section-02 {
+    
+    & .footer-social {
+
+        & .social {
+
+            & li {
+
+                
+                & a {
+                    color: $primary-2;
+    
+                    &:hover {
+                        color: $primary-2;
+                    }
+                }
+            }
+        }
+    }
+
+    & .widget-link{
+        padding-top: 22px;
+    
+        & .link{
+            & li{
+    
+                & a{
+                 
+                    &:hover {  
+                        color: $primary-2;
+                    }
+                }
+            }
+        }
+    }
+
+    & .widget-info {
+    
+        &  ul {
+            
+            & li {
+        
+                & .info-icon {
+        
+                    & i {
+                        color: $primary-2;
+                    }
+                }
+
+                & .info-text {
+                    
+                    & a {
+
+                        &:hover {
+                            color: $primary-2;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Home Style Four
+
+.footer-section-04 {
+
+    & .footer-widget-about {
+
+        & p {
+            color: $heading-color;
+        }
+    }
+
+    & .footer-widget {
+        & .footer-widget-title{
+            color: $heading-color;
+        }
+     }
+
+    & .widget-link{
+        padding-top: 22px;
+    
+        & .link{
+            & li{
+    
+                & a{
+                    color: $heading-color;
+
+                    &:hover {  
+                        color: $primary;
+                    }
+                }
+            }
+        }
+    }
+
+    & .widget-info {
+    
+        &  ul {
+            
+            & li {
+
+                & .info-text {
+                    color: $heading-color;
+                }
+            }
+        }
+    }
+}
+
+// Home Style Two
+
+.footer-section-05 {
+    
+    & .footer-social {
+
+        & .social {
+
+            & li {
+
+                
+                & a {
+                    color: $primary-3;
+    
+                    &:hover {
+                        color: $primary-3;
+                    }
+                }
+            }
+        }
+    }
+
+    & .widget-link{
+        padding-top: 22px;
+    
+        & .link{
+            & li{
+    
+                & a{
+                 
+                    &:hover {  
+                        color: $primary-3;
+                    }
+                }
+            }
+        }
+    }
+
+    & .widget-info {
+    
+        &  ul {
+            
+            & li {
+        
+                & .info-icon {
+        
+                    & i {
+                        color: $primary-3;
+                    }
+                }
+
+                & .info-text {
+                    
+                    & a {
+
+                        &:hover {
+                            color: $primary-3;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

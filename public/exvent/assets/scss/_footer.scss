@@ -1,0 +1,578 @@
+/*--
+/*  25. Footer CSS
+/*----------------------------------------*/
+
+// Exvent Footer Section
+.footer-section {
+    background: #010717;
+    padding-top: 110px;
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center center;
+    position: relative;
+    z-index: 1;
+
+    &::after{
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #120525;
+        opacity: .8;
+        z-index: -1;
+        
+    }
+}
+
+// Footer Logo
+.footer-logo {
+    max-width: 170px;
+}
+
+// Footer Newsletter
+.footer-newsletter{
+    background: linear-gradient(to right, rgba(28, 0, 135, 1.0), rgba(154, 0, 176, 1.0));
+    padding: 75px 90px;
+    border-radius: 10px;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 80px;
+
+    &::after{
+        content: '';
+        position: absolute;
+        height: 100%;
+        width: 100%;
+        top: 0;
+        left: 0;
+        background-image: url('../images/shape/footer_contact_object.png');
+        background-repeat: no-repeat;
+        background-size: contain;
+        z-index: -1;
+    }
+
+    .footer-title{
+        padding-right: 20px;
+
+        @media #{$desktop-device}{
+            padding: 0;
+        }
+    }
+    .footer-title span {
+        color: $white;
+        display: block;
+        margin-bottom: 10px;
+    }
+    .footer-title h4 {
+        color: $white;
+        font-size: 30px;
+
+    }
+
+    @media #{$small-mobile}{
+        padding: 75px 30px;
+    }
+}
+// Footer Newsletter Form
+.footer-newsletter-form {
+    max-width: 750px;
+    margin: 18px auto 0;
+    position: relative;
+
+    & input:not([type="submit"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]){
+        width: 100%;
+        height: 60px;
+        font-size: 18px;
+        font-weight: 400;
+        color: #93a1a2;
+        padding: 0 30px;
+        padding-right: 195px;
+        background-color: $white;
+        border: 0;
+        border-radius: 0;
+
+        @media #{$small-mobile}{
+            height: 50px;
+            padding: 0 25px;
+            font-size: 16px;
+        }
+    }
+    & .btn{
+        position: absolute;
+        top: 0;
+        right: 0;
+        height: 60px;
+        line-height: 60px;
+        min-width: 165px;
+
+        &:hover{
+            background-color: $purple;
+        }
+
+        &::before{
+            display: none;
+        }
+
+        @media #{$large-mobile}{
+            min-width: 120px;
+        }
+
+        @media #{$small-mobile}{
+            position: relative;
+            width: 100%;
+            height: 50px;
+            line-height: 50px;
+            margin-top: 10px;
+        }
+    }
+}
+
+// Footer Social 
+.footer-widget-social{
+    & .social-title{
+        & .title{
+            color: $white;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+    }
+
+    & .social-list{
+        margin-bottom: 75px;
+        & li{
+            display: inline-block;
+            
+            & + li{
+                margin-left: 20px;
+
+                @media #{$extra-small-mobile}{
+                    margin-left: 14px;
+                }
+            }
+
+            & a{
+                color: $white;
+                width: 60px;
+                height: 60px;
+                line-height: 60px;
+                text-align: center;
+                font-size: 24px;
+                background-color: rgba(255, 255, 255, 0.2);
+                border-radius: 50%;
+                &:hover{
+                    background-color: $primary;
+                }
+            }
+            
+        }
+    }
+}
+
+// Footer Navigation
+.footer-widget-navigation{
+    & .footer-navigation{
+        margin-bottom: 60px;
+        & ul{
+            & li{
+                display: inline-block;
+                margin-right: 40px;
+                margin-bottom: 10px;
+
+                &:last-child{
+                    margin-right: 0;
+                }
+                @media #{$large-mobile}{
+                    margin-right: 20px;
+                }
+                & a{
+                    color: $white;
+                    font-size: 16px;
+                    text-transform: capitalize;
+                    &:hover{
+                        color: $primary;
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+// Footer Copyright
+.footer-copyright-area {
+    
+    & .footer-copyright-wrap{
+        padding-top: 40px;
+        padding-bottom: 50px;
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+        
+    }
+
+}
+
+
+// Footer Copyright Text
+.copyright-text {
+    @media #{$large-mobile}{
+        text-align: center;
+    }
+
+    & p {
+        font-size: 14px;
+        color: $footer-text;
+        font-family: $heading-font;
+        opacity: .6;
+    }
+}
+
+
+// Back Button
+.progress-wrap {
+    position: fixed;
+    right: 50px;
+    bottom: 50px;
+    height: 45px;
+    width: 45px;
+    cursor: pointer;
+    display: block;
+    border-radius: 50px;
+    box-shadow: inset 0 0 0 2px rgba(0, 93, 224,0.2);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(130%);
+    z-index: 99;
+    transition: all 200ms linear;
+
+    &::after {
+        position: absolute;
+        content: "\f108";
+        font-family: flaticon !important;
+        text-align: center;
+        line-height: 45px;
+        font-size: 18px;
+        color: $primary;
+        left: 0;
+        top: 0;
+        height: 46px;
+        width: 46px;
+        transform: rotate(90deg);
+        cursor: pointer;
+        display: block;
+        z-index: 1;
+    }
+
+    & svg {
+
+        & path {
+            fill: none;
+        }
+
+        &.progress-circle {
+
+            & path {
+                stroke: $primary;
+                stroke-width: 4;
+                box-sizing: border-box;
+            }
+        }
+    }
+
+    &.active-progress {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(0);
+    }
+}
+
+// Exvent Footer 2
+.footer-section-02{
+    position: relative;
+    
+    & .footer-shape-1{
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        opacity: 0.6;
+    }
+    & .footer-shape-2{
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        z-index: 1;
+        opacity: 0.6;
+        animation: bounce-animate 3s linear infinite;
+    }
+    .footer-shape-3{
+        position: absolute;
+        top: 70px;
+        left: 200px;
+        opacity: 0.6;
+        animation: round-01 3s linear infinite;
+    }
+
+    & .footer-widget{
+        position: relative;
+        z-index: 3;
+        margin-top: 0;
+
+        @media #{$tablet-device}{
+           
+        }
+        & .footer-widget-address{
+            & .widget-title{
+                color: $white;
+                font-size: 20px;
+                margin-bottom: 20px;
+
+            }
+
+            & .widget-content{
+                & .vanue-date{
+                    color: $primary-orange;
+                    margin-bottom: 5px;
+                }
+                & .vanue-location{
+                    color: $white;
+                    line-height: 30px;
+                }
+            }
+        }
+
+        & .footer-logo{
+            margin-bottom: 20px;
+            margin-top: 20px;
+        }
+
+        & .footer-social-2{
+            & .social-title-2{
+                & h4{
+                    margin-top: 20px;
+                    font-size: 20px;
+                    color: $white;
+
+                    @media #{$tablet-device}{
+                        margin-top: 50px;
+                    }
+                }
+            }
+            & .social-list{
+                margin-top: 30px;
+                & li{
+                    display: inline-block;
+                    & + li{
+                        margin-left: 15px;
+                        @media #{$extra-small-mobile}{
+                            margin-left: 10px;
+                            margin-bottom: 10px;
+                        }
+                    }
+                    & a{
+                        color: $white;
+                        width: 40px;
+                        height: 40px;
+                        line-height: 40px;
+                        text-align: center;
+                        font-size: 16px;
+                        background-color: rgba(255, 255, 255, 0.2);
+                        border-radius: 50%;
+                        &:hover{
+                            background-color: $primary;
+                        }
+                    }
+                    
+                }
+            }
+        }
+    }
+}
+
+// Exvent Footer 3
+
+.footer-section-3{
+    background-color: #120525;
+    position: relative;
+    z-index: 3;
+    & .footer-shape{
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
+    }
+
+    & .footer-widget-social{
+        position: relative;
+        z-index: 5;
+        & .social-title{
+            & .title{
+                color: $white;
+                font-size: 24px;
+                font-weight: 600;
+                margin-bottom: 20px;
+            }
+        }
+    
+        & .social-list{
+            margin-bottom: 75px;
+            & li{
+                display: inline-block;
+                
+                & a{
+                    color: $white;
+                    
+                }
+                &:nth-child(1){
+                    & a{
+                        background-color: $purple-3;
+                        &:hover{
+                            background-color: $facebook;
+                        }
+                    }
+                }
+                &:nth-child(2){
+                    & a{
+                        background-color: $primary;
+                        &:hover{
+                            background-color: $twitter;
+                        }
+                    }
+                }
+                &:nth-child(3){
+                    & a{
+                        background-color: $primary-orange;
+                        &:hover{
+                            background-color: $whatsapp;
+                        }
+                    }
+                }
+                &:nth-child(4){
+                    & a{
+                        background-color: $primary-3;
+                        &:hover{
+                            background-color: $facebook
+                        }
+                    }
+                }
+                
+            }
+        }
+    }
+    & .footer-widget-navigation{
+        position: relative;
+        z-index: 5;
+    }
+    & .footer-copyright-area {
+        position: relative;
+        z-index: 5;
+    
+    }
+}
+
+// Back Button-3
+.progress-wrap-3 {
+    box-shadow: inset 0 0 0 2px rgba($primary-2, 0.2);
+    &::after {
+        color: $primary-2;
+    }
+
+    & svg {
+
+        &.progress-circle {
+
+            & path {
+                stroke: $primary-2;
+            }
+        }
+    }
+}
+
+// Exvent Footer 4
+
+.footer-section-4{
+    position: relative;
+    z-index: 2;
+    & .footer-shape-1{
+        position: absolute;
+        left: 0;
+        z-index: 1;
+    }
+    & .footer-shape-2{
+        position: absolute;
+        right: 0;
+        z-index: 1;
+    }
+    & .footer-newsletter{
+        margin-bottom: 50px;
+        background: linear-gradient(to right, rgba(253, 82, 81, 1.0), rgba(255, 173, 75, 1.0));
+        
+        &::after{
+            display: none;
+        }
+    }
+
+    & .footer-newsletter-form{
+        & .btn{
+            background-color: $purple;
+            &:hover{
+                background-color: $primary;
+            }
+    
+            &::before{
+                display: none;
+            }
+        }
+    }
+
+    & .footer-widgets-area{
+        margin-bottom: 60px;
+
+        & .footer-widget{
+            & .widget-title{
+                font-size: 18px;
+                color: $white;
+                margin-bottom: 25px;
+            }
+
+            & .widget-content{
+                color: $white;
+                font-size: 14px;
+                // line-height: 30px;
+                & .event-date,
+                & .event-address{
+                    color: inherit;
+                    &:hover{
+                        color: $primary-orange;
+                    }
+                }
+                & .event-date{
+                    margin-bottom: 10px;
+                }
+
+                & .event-meta{
+                    display: block;
+                    margin-bottom: 5px;
+                    &:hover{
+                        color: $primary-orange;
+                    }
+                    & span{
+                        
+                        font-size: 18px;
+                        margin-right: 15px;
+                        color: $primary-orange;
+                    }
+                }
+
+                & .footer-nav-item{
+                    display: block;
+                    margin-bottom: 10px;
+
+                    &:hover{
+                        color: $primary-orange;
+                    }
+                }
+            }
+        }
+    }
+}

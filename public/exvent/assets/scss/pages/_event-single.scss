@@ -1,0 +1,36 @@
+/*--
+/*  16.2 - Event Single CSS
+/*----------------------------------------*/
+
+.event-single-page{
+    & .event-title{
+        font-size: 24px;
+        line-height: 30px;
+        margin-bottom: 30px;
+    }
+    & .single-event{
+        & .event-thumbnail{
+            margin-bottom: 40px;
+        }
+        & .event-body{
+            margin-bottom: 60px;
+            & .text{
+                font-size: 16px;
+                color: #666666;
+            }
+        }
+    }
+    
+    & .event-sponsor-wrapper{
+        margin-bottom: 50px;
+        & .brand-item{
+            padding: 25px 0;
+        }
+    }
+
+    & .event-speaker-wrapper{
+        & .speaker-col{
+            margin-top: 35px;
+        }
+    }
+}

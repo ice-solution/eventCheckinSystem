@@ -89,7 +89,7 @@ exports.addUserToEvent = async (req, res) => {
         };
         event.users.push(newUser); // 將用戶添加到事件中
         await event.save(); // 保存事件
-        this.sendEmail(newUser);
+        this.sendEmail(newUser,event);
         res.status(201).json({ attendee: newUser }); // 返回新用戶資料
     } catch (error) {
         console.error('Error adding user:', error);
@@ -104,7 +104,7 @@ const transporter = nodemailer.createTransport({
         pass: process.env.gmail_pw // 替換為您的電子郵件密碼或應用程式密碼
     }
 });
-exports.sendEmail = async (user) => {
+exports.sendEmail = async (user,event) => {
     // 生成 QR 碼
         //https://api.qrserver.com/v1/create-qr-code/?data=67ae345f10b42c96a3ce3c17&size=250x250
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`; // 替換為您的 QR 碼內容
@@ -232,7 +232,7 @@ exports.sendEmail = async (user) => {
      <!--End Head user entered-->
     </head>
     <body>
-      <center class="wrapper" data-link-color="#42ee99" data-body-style="font-size:14px; font-family:arial,helvetica,sans-serif; color:#002e5d; background-color:#002e5d;">
+      <center class="wrapper" data-link-color="#42ee99" data-body-style="font-size:14px; font-family:arial,helvetica,sans-serif; color:#002e5d; background-color:#FFF;">
         <div class="webkit">
           <table cellpadding="0" cellspacing="0" border="0" width="100%" class="wrapper" bgcolor="#002e5d">
             <tr>
@@ -245,107 +245,46 @@ exports.sendEmail = async (user) => {
                           <td>
                             <!--[if mso]>
     <center>
-    <table><tr><td width="600">
-  <![endif]-->
-                                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; max-width:600px;" align="center">
-                                      <tr>
-                                        <td role="modules-container" style="padding:0px 0px 0px 0px; color:#002e5d; text-align:left;" bgcolor="#FFFFFF" width="100%" align="left"><table class="module preheader preheader-hide" role="module" data-type="preheader" border="0" cellpadding="0" cellspacing="0" width="100%" style="display: none !important; mso-hide: all; visibility: hidden; opacity: 0; color: transparent; height: 0; width: 0;">
-    <tr>
-      <td role="module-content">
-        <p>Show What You Know!</p>
-      </td>
-    </tr>
-  </table><table class="module" role="module" data-type="spacer" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed;" data-muid="vB9TDziyvx65CC2nx3oyRH">
-      <tbody><tr>
-        <td style="padding:0px 0px 20px 0px;" role="module-content" bgcolor="#002e5d">
-        </td>
-      </tr>
-    </tbody></table><table class="module" role="module" data-type="text" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed;" data-muid="9c6b060b-bce8-45e0-bd65-ff3e0047b94d" data-mc-module-version="2019-10-22">
-    <tbody>
-      <tr>
-        <td style="padding:18px 0px 18px 0px; line-height:22px; text-align:inherit; background-color:#002e5d;" height="100%" valign="top" bgcolor="#002e5d" role="module-content"><div><div style="font-family: inherit; text-align: right"><span style="box-sizing: border-box; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; font-style: inherit; font-variant-ligatures: inherit; font-variant-caps: inherit; font-variant-numeric: inherit; font-variant-east-asian: inherit; font-weight: inherit; font-stretch: inherit; line-height: inherit; font-size: 10px; vertical-align: baseline; border-top-width: 0px; border-right-width: 0px; border-bottom-width: 0px; border-left-width: 0px; border-top-style: initial; border-right-style: initial; border-bottom-style: initial; border-left-style: initial; border-top-color: initial; border-right-color: initial; border-bottom-color: initial; border-left-color: initial; border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; letter-spacing: normal; orphans: 2; text-align: right; text-indent: 0px; text-transform: none; white-space: pre-wrap; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial; font-family: arial, helvetica, sans-serif; color: #ffffff">Email not displaying correctly? </span><a href="{{Weblink}}"><span style="box-sizing: border-box; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; font-style: inherit; font-variant-ligatures: inherit; font-variant-caps: inherit; font-variant-numeric: inherit; font-variant-east-asian: inherit; font-weight: inherit; font-stretch: inherit; line-height: inherit; font-size: 10px; vertical-align: baseline; border-top-width: 0px; border-right-width: 0px; border-bottom-width: 0px; border-left-width: 0px; border-top-style: initial; border-right-style: initial; border-bottom-style: initial; border-left-style: initial; border-top-color: initial; border-right-color: initial; border-bottom-color: initial; border-left-color: initial; border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; outline-color: initial; outline-style: none; outline-width: initial; text-decoration-line: none; text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial; transition-duration: 0.3s; transition-timing-function: ease; transition-delay: 0s; transition-property: color; letter-spacing: normal; orphans: 2; text-align: right; text-indent: 0px; text-transform: none; white-space: pre-wrap; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; font-family: arial, helvetica, sans-serif; color: #ffffff">View it</span></a><span style="box-sizing: border-box; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; font-style: inherit; font-variant-ligatures: inherit; font-variant-caps: inherit; font-variant-numeric: inherit; font-variant-east-asian: inherit; font-weight: inherit; font-stretch: inherit; line-height: inherit; font-size: 10px; vertical-align: baseline; border-top-width: 0px; border-right-width: 0px; border-bottom-width: 0px; border-left-width: 0px; border-top-style: initial; border-right-style: initial; border-bottom-style: initial; border-left-style: initial; border-top-color: initial; border-right-color: initial; border-bottom-color: initial; border-left-color: initial; border-image-source: initial; border-image-slice: initial; border-image-width: initial; border-image-outset: initial; border-image-repeat: initial; letter-spacing: normal; orphans: 2; text-align: right; text-indent: 0px; text-transform: none; white-space: pre-wrap; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial; font-family: arial, helvetica, sans-serif; color: #ffffff"> in your browser.</span></div><div></div></div></td>
-      </tr>
-    </tbody>
-  </table><table class="wrapper" role="module" data-type="image" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed;" data-muid="uXsDxMnn1bRMmDcX8NB6rW">
-      <tbody><tr>
-        <td style="font-size:6px; line-height:10px; padding:30px 0px 30px 0px;" bgcolor="#002e5d" valign="top" align="center"></td>
-      </tr>
-    </tbody></table><table class="module" role="module" data-type="text" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed;" data-muid="hL6wjQ2qknNd5qDwT1p7Up" data-mc-module-version="2019-10-22">
-      <tbody><tr>
-        <td style="background-color:#002e5d; padding:10px 20px 10px 20px; line-height:40px; text-align:justify;" height="100%" valign="top" bgcolor="#002e5d"><div><h1 style="text-align: center"><span style="color: #ffffff; font-size: 28px; font-family: verdana, geneva, sans-serif"><strong>Thank you to join us</strong></span></h1><div></div></div></td>
-      </tr>
-    </tbody></table><table class="wrapper" role="module" data-type="image" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed;" data-muid="37c1DUYE1TN31PTwSNoaE7">
-      <tbody><tr>
-        <td style="font-size:6px; line-height:10px; padding:0px 0px 0px 0px; background-color:#002e5d;" valign="top" align="center"></td>
-      </tr>
-    </tbody></table><table class="module" role="module" data-type="text" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed;" data-muid="qk51Jjn4bm3rn2Yb31Dxzb" data-mc-module-version="2019-10-22">
-      <tbody><tr>
-        <td style="background-color:#ffffff; padding:50px 50px 10px 50px; line-height:22px; text-align:center;" height="100%" valign="top" bgcolor="#ffffff"><div><div style="font-family: inherit; text-align: left"><span style="font-size: 24px; font-family: verdana, geneva, sans-serif"><strong>YOU'VE JOINED A Event</strong></span></div><div></div></div></td>
-        
-      </tr>
-      
-    </tbody></table><table class="module" role="module" data-type="text" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed;" data-muid="iTBXe9c6QUCujvmJs8hYKr" data-mc-module-version="2019-10-22">
-      <tbody><tr>
-        <td style="background-color:#ffffff; padding:40px 40px 40px 40px; line-height:22px; text-align:inherit;" height="100%" valign="top" bgcolor="#ffffff"><div><div style="font-family: inherit; text-align: inherit"><span style="font-size: 16px; font-family: verdana, geneva, sans-serif">Hi, ${user.name} <br> Please Use the QRcode for check-in to enjoy your event!</span></div>
-<div style="font-family: inherit; text-align: inherit">&nbsp;</div>
-<div style="font-family: inherit; text-align: inherit">
-    </tbody></table><table border="0" cellpadding="0" cellspacing="0" class="module" data-role="module-button" data-type="button" role="module" style="table-layout:fixed" width="100%" data-muid="qY8ouFUf6bFVP8tHkQ5gq7"><tbody><tr><td align="center" bgcolor="#ffffff" class="outer-td" style="padding:20px 20px 60px 20px; background-color:#ffffff;"><table border="0" cellpadding="0" cellspacing="0" class="button-css__deep-table___2OZyb wrapper-mobile" style="text-align:center"><tbody><tr><td align="center" bgcolor="#00dc73" class="inner-td" style="border-radius:6px; font-size:16px; text-align:center; background-color:inherit;"><a style="background-color:#002e5d; border:0px solid #08b65d; border-color:#08b65d; border-radius:0px; border-width:0px; color:#ffffff; display:inline-block; font-family:verdana,geneva,sans-serif; font-size:16px; font-weight:normal; letter-spacing:3px; line-height:30px; padding:12px 18px 12px 18px; text-align:center; text-decoration:none; border-style:solid;" href="{{Weblink}}" target="_blank">Let's Go!</a></td></tr></tbody></table></td></tr></tbody></table><table class="wrapper" role="module" data-type="image" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed;" data-muid="3Aagmop5AhcW2BFjGgfLGu">
-      <tbody><tr>
-        <td style="font-size:6px; line-height:10px; padding:0px 0px 0px 0px;" valign="top" align="center"><img class="max-width" border="0" style="display:block; color:#002e5d; text-decoration:none; font-family:Helvetica, arial, sans-serif; font-size:16px; max-width:100% !important; width:100%; height:auto !important;" src="${qrCodeUrl}" alt="" width="600" data-responsive="true" data-proportionally-constrained="false"></td>
-      </tr>
-    </tbody></table><table class="module" role="module" data-type="spacer" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed;" data-muid="2ga5f7koD5ApvUfnqUK6aT">
-      <tbody><tr>
-        <td style="padding:0px 0px 30px 0px;" role="module-content" bgcolor="#002e5d">
-        </td>
-      </tr>
-    </tbody></table><table class="module" role="module" data-type="divider" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed;" data-muid="c3nRrjMndqXf1snYDFPSF9">
-      <tbody><tr>
-        <td style="padding:0px 0px 0px 0px;" role="module-content" height="100%" valign="top" bgcolor="#002e5d">
-          <table border="0" cellpadding="0" cellspacing="0" align="center" width="100%" height="3px" style="line-height:3px; font-size:3px;">
-            <tbody><tr>
-              <td style="padding:0px 0px 3px 0px;" bgcolor="#42ee99"></td>
-            </tr>
-          </tbody></table>
-        </td>
-      </tr>
-    </tbody></table><table class="module" role="module" data-type="spacer" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed;" data-muid="pa9PeYjCEFyByuP5878Sd2">
-      <tbody><tr>
-        <td style="padding:0px 0px 30px 0px;" role="module-content" bgcolor="#002e5d">
-        </td>
-      </tr>
-    </tbody></table><table class="module" role="module" data-type="spacer" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed;" data-muid="vHVg85Rtcz7gagZZquA4Bw">
-      <tbody><tr>
-        <td style="padding:0px 0px 30px 0px;" role="module-content" bgcolor="#002e5d">
-        </td>
-      </tr>
-    </tbody></table>
-      <tbody><tr>
-        <td style="padding:0px 0px 30px 0px;" role="module-content" bgcolor="#002e5d">
-        </td>
-      </tr>
-    </tbody></table><table class="module" role="module" data-type="spacer" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed;" data-muid="35xFa9abxGTBYt9yR9BeQ2">
-      <tbody><tr>
-        <td style="padding:0px 0px 30px 0px;" role="module-content" bgcolor="#002e5d">
-        </td>
-      </tr>
-    </tbody></table></td>
-                                      </tr>
-                                    </table>
-                                    <!--[if mso]>
-                                  </td>
-                                </tr>
-                              </table>
-                            </center>
-                            <![endif]-->
-                          </td>
-                        </tr>
-                      </table>
+    <table style="width:680px;font-family:'DengXian',sans-serif" width="680">
+            <tbody>
+                <tr>
+                    <td style="width:680px;font-size:15px;font-family:'DengXian',sans-serif;text-align:left" width="680">
+                        <center>
+                            If you cannot read the following message, please click <a href="#" target="_blank" data-saferedirecturl="#">here</a>.
+                        </center>
+                        <br>
+                        <img alt="banner" src="https://demo.brandactivation.hk/exvent/banner.jpg" style="width:680px" width="680" class="CToWUd a6T" data-bit="iit" tabindex="0"><div class="a6S" dir="ltr" style="opacity: 0.01; left: 884.5px; top: 568.5px;"><span data-is-tooltip-wrapper="true" class="a5q" jsaction="JIbuQc:.CLIENT"><button class="VYBDae-JX-I VYBDae-JX-I-ql-ay5-ays CgzRE" jscontroller="PIVayb" jsaction="click:h5M12e; clickmod:h5M12e;pointerdown:FEiYhc;pointerup:mF5Elf;pointerenter:EX0mI;pointerleave:vpvbp;pointercancel:xyn4sd;contextmenu:xexox;focus:h06R8; blur:zjh6rb;mlnRJb:fLiPzd;" data-idom-class="CgzRE" data-use-native-focus-logic="true" jsname="hRZeKc" aria-label="Download attachment " data-tooltip-enabled="true" data-tooltip-id="tt-c15" data-tooltip-classes="AZPksf" id="" jslog="91252; u014N:cOuCgd,Kr2w4b,xr6bB; 4:WyIjbXNnLWY6MTgzMjgyOTEyNjYyNjM0NDQ3MiJd; 43:WyJpbWFnZS9qcGVnIl0."><span class="OiePBf-zPjgPe VYBDae-JX-UHGRz"></span><span class="bHC-Q" jscontroller="LBaJxb" jsname="m9ZlFb" soy-skip="" ssk="6:RWVI5c"></span><span class="VYBDae-JX-ank-Rtc0Jf" jsname="S5tZuc" aria-hidden="true"><span class="notranslate bzc-ank" aria-hidden="true"><svg viewBox="0 -960 960 960" height="20" width="20" focusable="false" class=" aoH"><path d="M480-336L288-528l51-51L444-474V-816h72v342L621-579l51,51L480-336ZM263.72-192Q234-192 213-213.15T192-264v-72h72v72H696v-72h72v72q0,29.7-21.16,50.85T695.96-192H263.72Z"></path></svg></span></span><div class="VYBDae-JX-ano"></div></button><div class="ne2Ple-oshW8e-J9" id="tt-c15" role="tooltip" aria-hidden="true">Download</div></span></div>  
                     </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-          </table>
+                </tr>
+                <tr>
+                    <td style="font-size:15px;line-height:25px;font-family:'DengXian',sans-serif">
+                        Dear ${user.name}
+                        <br>
+                        <br>
+                    </td>
+                </tr> 
+                <tr>
+                    <td style="font-size:15px;line-height:24px;vertical-align:top;font-family:'DengXian',sans-serif">
+                    Thank you for attending "${event.name}" event. Your participation and enthusiasm truly signified the beginning of an exciting journey ahead.
+                    <br>
+                    <br>
+                    We hope the event offered valuable insights and sparked opportunities for future collaborations, enabling us to better serve our customers and achieve collective success.
+                    <br>
+                    <br>
+                    To revisit the memorable moments, we're excited to share a collection of highlight photos from the event, available at
+                    <br>
+                    <br>
+                    Additionally, your feedback is valuable to us. We would greatly appreciate it if you could share your thoughts on the "Uniquely HK: Shaping Retail's Future Together" event. Your insights will assist us in enhancing future events and ensuring that we address topics of utmost importance to you.
+                    <br>
+                    <br> 
+                    <center><img height="200" src="${qrCodeUrl}" style="width:200px;height:200px" width="200" class="CToWUd a6T" data-bit="iit" tabindex="0"><div class="a6S" dir="ltr" style="opacity: 0.01; left: 644.469px; top: 1572.08px;"><span data-is-tooltip-wrapper="true" class="a5q" jsaction="JIbuQc:.CLIENT"><button class="VYBDae-JX-I VYBDae-JX-I-ql-ay5-ays CgzRE" jscontroller="PIVayb" jsaction="click:h5M12e; clickmod:h5M12e;pointerdown:FEiYhc;pointerup:mF5Elf;pointerenter:EX0mI;pointerleave:vpvbp;pointercancel:xyn4sd;contextmenu:xexox;focus:h06R8; blur:zjh6rb;mlnRJb:fLiPzd;" data-idom-class="CgzRE" data-use-native-focus-logic="true" jsname="hRZeKc" aria-label="Download attachment " data-tooltip-enabled="true" data-tooltip-id="tt-c14" data-tooltip-classes="AZPksf" id="" jslog="91252; u014N:cOuCgd,Kr2w4b,xr6bB; 4:WyIjbXNnLWY6MTgzMjgyOTEyNjYyNjM0NDQ3MiJd; 43:WyJpbWFnZS9qcGVnIl0."><span class="OiePBf-zPjgPe VYBDae-JX-UHGRz"></span><span class="bHC-Q" jscontroller="LBaJxb" jsname="m9ZlFb" soy-skip="" ssk="6:RWVI5c"></span><span class="VYBDae-JX-ank-Rtc0Jf" jsname="S5tZuc" aria-hidden="true"><span class="notranslate bzc-ank" aria-hidden="true"><svg viewBox="0 -960 960 960" height="20" width="20" focusable="false" class=" aoH"><path d="M480-336L288-528l51-51L444-474V-816h72v342L621-579l51,51L480-336ZM263.72-192Q234-192 213-213.15T192-264v-72h72v72H696v-72h72v72q0,29.7-21.16,50.85T695.96-192H263.72Z"></path></svg></span></span><div class="VYBDae-JX-ano"></div></button><div class="ne2Ple-oshW8e-J9" id="tt-c14" role="tooltip" aria-hidden="true">Download</div></span></div></center>
+                    <br>
+                    <br>
+                    We look forward to the exciting possibilities ahead and the continued success that awaits us.
+                    </td>
+                </tr> 
+            </tbody>
+        </table>
         </div>
       </center>
     </body>

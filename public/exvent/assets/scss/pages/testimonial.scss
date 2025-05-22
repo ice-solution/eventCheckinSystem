@@ -1,0 +1,109 @@
+/*--
+/*  12 - Testimonial CSS
+/*----------------------------------------*/
+
+.testimonial-area{
+    & .section-title-wrap{
+        margin-bottom: 70px;
+    }
+    & .testimonial-wrap{
+        display: flex;
+        & .testimonial-content{
+            flex: 1;
+            width: 50%;
+        }
+        & .testimonial-quote-shape{
+            margin-bottom: 15px;
+        }
+        & .testimonial-author{
+            width: 50%;
+            position: relative;
+            & .testimonial-author-wrap{
+                width: 100%;  
+                & .testimonial-shape-1{
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                }
+                & .testimonial-shape-2{
+                    position: absolute;
+                    bottom: 0;
+                    right: 60px;
+                }
+            }
+        }
+
+        & .single-testimonial-content{
+            & p{
+                font-size: 30px;
+                color: $para-color;
+                line-height: 48px;
+                margin-bottom: 40px;
+            }
+
+            & .author-details{
+                & .name{
+                    font-size: 18px;
+                }
+                & .designation{
+                    color: $span-color;
+                    font-size: 16px;
+                }
+            }
+            
+        }
+
+    }
+}
+
+// Responsive
+.testimonial-area{
+    @media #{$desktop-device}{
+        & .testimonial-wrap{
+            & .testimonial-author{
+                & .testimonial-author-wrap{
+                    & .testimonial-shape-2{
+                        right: 20px;
+                    }
+                }
+            }
+        }
+    }
+    @media #{$tablet-device}{
+        & .testimonial-wrap{
+            display: block;
+            text-align: center;
+            & .testimonial-content{
+                width: 100%;
+            }
+            & .testimonial-author{
+                width: 100%;
+                & .testimonial-author-wrap{
+                    margin-bottom: 50px;
+    
+                    & .testimonial-shape-1{
+                        left: 70px;
+                    }
+                    & .testimonial-shape-2{
+                        right: 100px;
+                    }
+                }
+            }
+        }
+    }
+    @media #{$large-mobile}{
+        & .testimonial-wrap{
+            & .testimonial-author{
+                & .testimonial-author-wrap{
+                    & .testimonial-shape-1{
+                        left: 0;
+                    }
+                    & .testimonial-shape-2{
+                        right: 0;
+                    }
+                }
+            }
+        }
+    }
+}
+

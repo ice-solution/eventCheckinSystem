@@ -1,0 +1,1005 @@
+/*--
+/*  03 - Hero CSS
+/*----------------------------------------*/
+
+.exvent-hero-section {
+    overflow: hidden;
+    position: relative;
+    padding-top: 85px;
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;
+    height: 1020px;
+    z-index: 1;
+
+    @media #{$desktop-device} {
+        height: 860px;
+    }
+
+    @media #{$tablet-device} {
+        height: auto;
+    }
+
+    &::after{
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(to right, rgba(28, 0, 135, 1.0), rgba(154, 0, 176, 1.0));
+        opacity: 0.9;
+        z-index: -1;
+    }
+    & .shape-1 {
+        position: absolute;
+        top: 0;
+        right: 0%;
+        z-index: 1;
+        -webkit-user-drag: none;
+        -khtml-user-drag: none;
+        -moz-user-drag: none;
+        -o-user-drag: none;
+        user-drag: none;
+        -webkit-user-select: none; 
+        -ms-user-select: none; 
+        user-select: none; 
+    }
+
+    & .shape-2 {
+        position: absolute;
+        bottom: -180px;
+        left: -430px;
+        -webkit-user-drag: none;
+        -khtml-user-drag: none;
+        -moz-user-drag: none;
+        -o-user-drag: none;
+        user-drag: none;
+        -webkit-user-select: none; 
+        -ms-user-select: none; 
+        user-select: none; 
+    }
+    & .exvent-hero-row{
+        @media #{$tablet-device} {
+            margin-top: 80px;
+        }
+    }
+    & .hero-content {
+        position: relative;
+        z-index: 1;
+        padding-left: 45px;
+        padding-top: 65px;
+
+        @media #{$tablet-device} {
+            padding-top: 70px;
+        }
+
+        @media #{$large-mobile}{
+            border: 3px solid #fff;
+            padding-bottom: 30px;
+        }
+        @media #{$extra-small-mobile}{
+            padding: 30px;
+        }
+
+        & .shape-3{
+            position: absolute;
+            left: 0;
+            top: -10px;
+            z-index: -1;
+
+            @media #{$large-mobile}{
+                display: none;
+            }
+        }
+        & .sub-title {
+            font-size: 30px;
+            line-height: 32px;
+            font-family: $heading-font;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: $white;
+            margin-bottom: 30px;
+
+            @media #{$large-mobile}{
+                font-size: 24px;
+            }
+
+            @media #{$extra-small-mobile}{
+                font-size: 16px;
+                margin-bottom: 15px;
+            }
+            
+        }
+
+        & .title {
+            font-size: 76px;
+            line-height: 86px;
+            color: $white;
+            margin-top: 15px;
+            text-transform: uppercase;
+
+            @media #{$large-mobile}{
+                font-size: 56px;
+                line-height: 68px;
+            }
+
+            @media #{$extra-small-mobile}{
+                font-size: 36px;
+                line-height: 46px;
+            }
+        }
+        & .event-address{
+            background-color: $white;
+            display: inline-block;
+            padding: 10px 30px;
+            margin-top: 25px;
+            @media #{$extra-small-mobile}{
+                padding: 5px 15px;
+            }
+            & h5{
+                color: $black;
+                font-size: 18px;
+                font-weight: 700;
+                @media #{$extra-small-mobile}{
+                    font-size: 12px;
+                }
+            }
+        }
+
+        & .btn-hero{
+            position: relative;
+            margin-top: 45px;
+
+            &::after{
+                position: absolute;
+                content: '';
+                height: 2px;
+                width: 0%;
+                background: $primary;
+                bottom: 0;
+                left: 0;
+                right: auto;
+                transition: width .6s cubic-bezier(.25,.8,.25,1) 0s;
+            }
+            &:hover:after{
+                left: auto;
+                right: 0;
+                width: 100%;
+            }
+            &::before{
+                position: absolute;
+                content: '';
+                height: 2px;
+                width: 100%;
+                background: $primary;
+                bottom: 0;
+                left: 0;
+                transition: .9s;
+                
+            }
+            &:hover:before{
+                opacity: 0;
+                visibility: hidden;
+                width: 0%;
+            }
+
+        }
+    }
+
+    & .hero-images {
+        position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 50%;
+            z-index: 2;
+
+            @media #{$tablet-device}{
+                position: relative;
+                width: 100%;
+                margin-top: 90px;
+            }
+            @media #{$extra-small-mobile}{
+                margin-top: 50px;
+            }
+
+        & .images {
+            @media #{$tablet-device}{
+                padding: 0 130px;
+                text-align: center;
+            }
+            @media #{$large-mobile}{
+                padding: 0 90px;
+            }
+            @media #{$extra-small-mobile}{
+                padding: 0 50px;
+            }
+        }
+        
+    }
+}
+
+
+// Homepage 2 Hero Section
+
+.exvent-hero-section-02 {
+    overflow: hidden;
+    position: relative;
+    padding-top: 85px;
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;
+    height: 1020px;
+    z-index: 1;
+
+    @media #{$desktop-device}{
+        height: auto;
+        padding-bottom: 100px;
+    }
+
+    &::after{
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #030127;
+        opacity: 0.7;
+        z-index: -1;
+    }
+    & .hero-shape-3{
+        position: absolute;
+        width: 100%;
+        height: 130px;
+        right: 0;
+        left: 0px;
+        bottom: -130px;
+        background: #ffffff;
+        transform: skewY(-3deg);
+        transform-origin: 0;
+        z-index: 2;
+    }
+    & .shape-1{
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        z-index: 1;
+        pointer-events: none;
+    }
+    & .shape-2{
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
+        pointer-events: none;
+    }
+
+    & .exvent-hero-title{
+        padding: 160px 0;
+        position: relative;
+        z-index: 3;
+        @media #{$desktop-device}{
+            padding: 120px 0;
+        }
+        @media #{$desktop-device}{
+            padding: 80px 0;
+        }
+        & .title{
+            color: $white;
+            text-transform: uppercase;
+            font-size: 130px;
+            line-height: 1;
+            @media #{$desktop-device}{
+                font-size: 110px;
+            }
+            @media #{$tablet-device}{
+                font-size: 80px;
+                line-height: 1.1;
+            }
+            @media #{$small-mobile}{
+                font-size: 52px;
+            }
+        }
+        & .sub-title{
+            color: $white;
+            text-transform: uppercase;
+            font-size: 36px;
+            font-weight: 200;
+            letter-spacing: 18px;
+            @media #{$desktop-device}{
+                font-size: 32px;
+            }
+            @media #{$tablet-device}{
+                margin-top: 20px;
+                font-size: 24px;
+                letter-spacing: 10px;
+            }
+            @media #{$small-mobile}{
+                font-size: 18px;
+                letter-spacing: 5px;
+            }
+        }
+        & .shape-3{
+            position: absolute;
+            left: -90px;
+            top: 80px;
+            pointer-events: none;
+            z-index: -1;
+            @media #{$tablet-device}{
+                top: 0;
+            }
+            @media #{$large-mobile}{
+                left: 0;
+            }
+        }
+    }
+
+    & .exvent-countdown{
+        & .single-countdown{
+            display: inline-block;
+            border: 5px solid $primary;
+            border-radius: 100%;
+            height: 170px;
+            width: 170px;
+            padding-top: 35px;
+            margin: 0 25px;
+            position: relative;
+            z-index: 3;
+
+            @media #{$desktop-device}{
+                height: 130px;
+                width: 130px;
+                padding-top: 25px;
+                margin: 0 10px;
+            }
+            @media #{$tablet-device}{
+                height: 100px;
+                width: 100px;
+                padding-top: 15px;
+                margin: 0 10px;
+            }
+            @media #{$small-mobile}{
+                margin: 0 20px;
+                margin-bottom: 30px;
+            }
+
+            &:nth-child(2){
+                border-color: $primary-2;
+            }
+            &:nth-child(3){
+                border-color: $primary-3;
+            }
+            &:nth-child(4){
+                border-color: $purple-3;
+            }
+
+            & .count{
+                font-size: 76px;
+                color: $white;
+                font-weight: 600;
+                line-height: 1;
+                @media #{$desktop-device}{
+                    font-size: 48px;
+                }
+                @media #{$tablet-device}{
+                    font-size: 38px;
+                }
+            }
+            & .value{
+                display: block;
+                font-size: 18px;
+                color: $white;
+                @media #{$tablet-device}{
+                    font-size: 14px;
+                }
+            }
+        }
+    }
+}
+
+// Homepage 3 Hero Section
+.exvent-hero-section-03 {
+    position: relative;
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;
+    height: 1160px;
+    z-index: 1;
+
+    @media #{$desktop-device}{
+        height: auto;
+        padding-bottom: 100px;
+    }
+    @media #{$large-mobile}{
+        padding-bottom: 50px;
+    }
+
+    &::after{
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: $purple-h3;
+        opacity: 0.9;
+        z-index: -1;
+    }
+    
+    & .shape-1{
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
+        pointer-events: none;
+        animation: round-01 5s linear infinite;
+        
+    }
+    & .shape-2{
+        position: absolute;
+        bottom: 100px;
+        left: 0;
+        z-index: 1;
+        pointer-events: none;
+        animation: bounce-animate 3s linear infinite;
+        
+        @media #{$large-mobile}{
+            display: none;
+        }
+    }
+    & .shape-3{
+        position: absolute;
+        top: 0px;
+        right: 0;
+        z-index: 1;
+        pointer-events: none;
+        
+    }
+    & .shape-4{
+        position: absolute;
+        top: 300px;
+        right: 500px;
+        z-index: 1;
+        pointer-events: none;
+        animation: bounce-animate-2 3s linear infinite;
+        @media #{$large-mobile}{
+            display: none;
+        }
+    }
+    & .shape-5{
+        position: absolute;
+        bottom: 0;
+    }
+
+    & .exvent-hero-title{
+        padding: 160px 0;
+        padding-top: 350px;
+        position: relative;
+        z-index: 3;
+
+            
+        @media #{$desktop-device}{
+            padding: 250px 0;
+            padding-top: 300px;
+        }
+        @media #{$large-mobile}{
+            padding: 200px 0;
+            padding-bottom: 200px;
+        }
+        & .title-bg-shape{
+            position: absolute;
+            bottom: 60px;
+            left: 0;
+            z-index: -1;
+            animation: bounce-animate 3s linear infinite;
+
+            @media #{$desktop-device}{
+                left: 100px;
+                bottom: 150px;
+            }
+            @media #{$tablet-device}{
+                left: 0;
+            }
+            
+        }
+        & .hero-title-wrapper{
+            display: inline-block;
+            background-color: $white;
+            padding: 50px 60px;
+            margin-left: 100px;
+
+            @media #{$desktop-device}{
+                margin: 0;
+                position: relative;
+                left: 50%;
+                transform: translateX(-50%);
+            }
+
+            
+            & .title{
+                color: $purple;
+                text-transform: capitalize;
+                font-size: 72px;
+                line-height: 1;
+                margin-bottom: 40px;
+                
+                @media #{$large-mobile}{
+                    font-size: 62px;
+                }
+                @media #{$extra-small-mobile}{
+                    font-size: 42px;
+                    & br{
+                        display: none;
+                    }
+                }
+            }
+            & .sub-title{
+                & .date,
+                & .year{
+                    color: $white;
+                    text-transform: capitalize;
+                    background-color: black;
+                    display: inline-block;
+                    padding: 0 5px;
+                    font-size: 30px;
+                    font-weight: 200;
+                    @media #{$extra-small-mobile}{
+                        font-size: 24px;
+                    }
+                }
+                & .year{
+                    margin-top: 3px;
+                }
+            }
+        }
+        & .shape-3{
+            position: absolute;
+            left: -90px;
+            top: 80px;
+            pointer-events: none;
+            z-index: -1;
+            @media #{$tablet-device}{
+                top: 0;
+            }
+            @media #{$large-mobile}{
+                left: 0;
+            }
+        }
+    }
+}
+
+// Homepage 4 Hero Section
+.exvent-hero-section-04{
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;
+    position: relative;
+    height: 1100px;
+    z-index: 1;
+    
+    &::after{
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(to right, rgba(253, 92, 91, 1.0), rgba(255, 197, 125, 1.0));
+        opacity: 0.8;
+        z-index: -1;
+    }
+    & .shape-5{
+        position: absolute;
+        bottom: 0;
+    }
+
+    & .exvent-hero-title{
+        padding: 160px 0;
+        padding-top: 250px;
+        position: relative;
+        z-index: 3;
+
+        & .title-date{
+            font-size: 18px;
+            color: $white;
+            border: 2px solid $white;
+            display: inline-block;
+            padding: 5px 10px;
+            margin-bottom: 25px;
+            margin-left: 5px;
+        }
+        & .main-title{
+            color: $white;
+            font-size: 94px;
+            line-height: 1;
+            text-transform: uppercase;
+            
+        }
+        & .title-year{
+            line-height: 1;
+            font-size: 150px;
+            line-height: 1.2;
+            color: transparent;
+            -webkit-text-stroke-width: 2px;
+            -webkit-text-stroke-color: $white;
+        }
+    }
+    
+
+    // Hero Style 4 Responsive
+    @media #{$desktop-device}{
+        & .exvent-hero-title{
+            & .main-title{
+                font-size: 75px;
+            }
+            & .title-year{
+                font-size: 100px;
+            }
+        }
+    }
+    @media #{$tablet-device}{
+        height: auto;
+        padding-bottom: 120px;
+        & .exvent-hero-title{
+            padding-top: 150px;
+            padding-bottom: 50px;
+            text-align: center;
+        }
+        & .hero-form{
+            margin-top: 0;
+        }
+    }
+    @media #{$extra-small-mobile}{
+        & .exvent-hero-title{
+            & .main-title{
+                font-size: 48px;
+            }
+            & .title-year{
+                font-size: 76px;
+            }
+        }
+        & .hero-form{
+            margin-top: 0;
+        }
+    }
+}
+
+// Homepage 5 Hero Section
+
+.exvent-hero-section-05{
+    position: relative;
+    padding-top: 85px;
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;
+    height: 920px;
+    padding: 250px 0 200px;
+    z-index: 1;
+
+    &::after{
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        opacity: 0.8;
+        z-index: -1;
+    }
+
+    & .hero-conent-wrapper{
+        & .top-title-date{
+            & span{
+                font-size: 30px;
+                font-weight: 500;
+                color: $primary-orange;
+                text-transform: capitalize;
+            }
+        }
+
+        & .main-title{
+            & h1{
+                font-size: 74px;
+                color: $white;
+                line-height: 90px;
+                margin-bottom: 30px;
+                font-weight: 700;
+            }
+        }
+
+        & .hero-meta{
+            margin-bottom: 40px;
+            & .meta-item{
+                display: inline-block;
+                & a{
+                    font-size: 20px;
+                    color: $white;
+                    margin: 0 10px;
+                    text-transform: uppercase;
+
+                    & i{
+                        color: $primary-orange;
+                    }
+
+                    &:hover{
+                        color: $primary-orange;
+                    }
+                }
+            }
+        }
+        
+    }
+    // Homepage 5 responsive
+
+    @media #{$desktop-device}{
+        
+    }
+    @media #{$tablet-device}{
+        & .hero-conent-wrapper{
+            & .top-title-date{
+                & span{
+                    font-size: 26px;
+                    display: block;
+                    margin-bottom: 15px;
+                }
+            }
+            & .main-title{
+                & h1{
+                    font-size: 56px;
+                    line-height: 70px;
+                }
+            }
+            & .hero-meta{
+                & .meta-item{
+                    & a{
+                        font-size: 18px;
+                        margin-bottom: 10px;
+                        & i{
+                            color: $primary-orange;
+                        }
+    
+                        &:hover{
+                            color: $primary-orange;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    @media #{$extra-small-mobile}{
+        & .hero-conent-wrapper{
+            & .top-title-date{
+                & span{
+                    font-size: 20px;
+                }
+            }
+            & .main-title{
+                & h1{
+                    font-size: 42px;
+                    line-height: 60px;
+                }
+            }
+            & .hero-meta{
+                & .meta-item{
+                    & a{
+                        font-size: 16px;
+                        margin-bottom: 10px;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Homepage 6 Hero Section
+.exvent-hero-section-06 {
+    overflow: hidden;
+    position: relative;
+    padding-top: 85px;
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;
+    height: 1020px;
+    z-index: 1;
+
+    @media #{$desktop-device}{
+        height: auto;
+        padding-bottom: 100px;
+    }
+
+    &::after{
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #030127;
+        opacity: 0.7;
+        z-index: -1;
+    }
+    & .hero-shape-3{
+        position: absolute;
+        width: 100%;
+        height: 130px;
+        right: 0;
+        left: 0px;
+        bottom: -130px;
+        background: #ffffff;
+        transform: skewY(-3deg);
+        transform-origin: 0;
+        z-index: 2;
+    }
+    & .shape-1{
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        z-index: 1;
+        pointer-events: none;
+    }
+    & .shape-2{
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
+        pointer-events: none;
+    }
+
+    & .exvent-hero-title{
+        padding: 160px 0;
+        position: relative;
+        z-index: 3;
+        @media #{$desktop-device}{
+            padding: 120px 0;
+        }
+        @media #{$desktop-device}{
+            padding: 80px 0;
+        }
+        & .title{
+            color: $white;
+            text-transform: uppercase;
+            font-size: 84px;
+            margin-bottom: 20px;
+            line-height: 1;
+            @media #{$desktop-device}{
+                font-size: 110px;
+            }
+            @media #{$tablet-device}{
+                font-size: 80px;
+                line-height: 1.1;
+            }
+            @media #{$small-mobile}{
+                font-size: 52px;
+            }
+        }
+        & .sub-title{
+            color: $white;
+            text-transform: uppercase;
+            font-size: 36px;
+            font-weight: 200;
+            letter-spacing: 18px;
+            @media #{$desktop-device}{
+                font-size: 32px;
+            }
+            @media #{$tablet-device}{
+                margin-top: 20px;
+                font-size: 24px;
+                letter-spacing: 10px;
+            }
+            @media #{$small-mobile}{
+                font-size: 18px;
+                letter-spacing: 5px;
+            }
+        }
+        & .shape-3{
+            position: absolute;
+            left: -90px;
+            top: 80px;
+            pointer-events: none;
+            z-index: -1;
+            @media #{$tablet-device}{
+                top: 0;
+            }
+            @media #{$large-mobile}{
+                left: 0;
+            }
+        }
+    }
+
+    & .exvent-countdown{
+        & .single-countdown{
+            display: inline-block;
+            border: 5px solid #fc097c;
+            border-radius: 100%;
+            height: 170px;
+            width: 170px;
+            padding-top: 35px;
+            margin: 0 25px;
+            position: relative;
+            z-index: 3;
+            backdrop-filter: blur(50px);
+            background: rgba(0, 0, 0, 0.2);
+
+            @media #{$desktop-device}{
+                height: 130px;
+                width: 130px;
+                padding-top: 25px;
+                margin: 0 10px;
+            }
+            @media #{$tablet-device}{
+                height: 100px;
+                width: 100px;
+                padding-top: 15px;
+                margin: 0 10px;
+            }
+            @media #{$small-mobile}{
+                margin: 0 20px;
+                margin-bottom: 30px;
+            }
+
+            &:nth-child(2){
+                border-color: $primary-2;
+            }
+            &:nth-child(3){
+                border-color: $primary-3;
+            }
+            &:nth-child(4){
+                border-color: $purple-3;
+            }
+
+            & .count{
+                font-size: 76px;
+                color: $white;
+                font-weight: 600;
+                line-height: 1;
+                @media #{$desktop-device}{
+                    font-size: 48px;
+                }
+                @media #{$tablet-device}{
+                    font-size: 38px;
+                }
+            }
+            & .value{
+                display: block;
+                font-size: 18px;
+                color: $white;
+                @media #{$tablet-device}{
+                    font-size: 14px;
+                }
+            }
+        }
+    }
+}
+
+// Inner Page Hero Section 
+
+.inner-page-hero{
+    height: 600px;
+    & .page-title{
+        position: relative;
+        z-index: 2;
+    }
+    @media #{$tablet-device}{
+        height: auto;
+    }
+    & .page-navigation{
+        position: relative;
+        z-index: 2;
+        margin-bottom: 80px;
+        & ol.breadcrumb{
+            color: $white;
+
+            & .breadcrumb-item{
+                & a{
+                    letter-spacing: 1px;
+                    font-weight: 400;
+                }
+                &::before{
+                    color: $white;
+                }
+            }
+        }
+    }
+}

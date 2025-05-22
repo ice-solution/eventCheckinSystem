@@ -1,0 +1,136 @@
+/*--
+/*  2.4 - Form CSS
+/*----------------------------------------*/
+
+label {
+	display: block;
+	line-height: 1;
+	margin-bottom: 10px;
+	font-weight: 400;
+	text-transform: capitalize;
+}
+
+/*Input Field & Select*/
+input:not([type="submit"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+textarea {
+	box-shadow: none;
+	border: 0;
+	margin-bottom: 0;
+	padding: 10px 25px;
+	max-width: 100%;
+	width: 100%;
+	font-size: 13px;
+	line-height: 30px;
+	font-weight: 600;
+	transition: $transition-default;
+	  
+
+	&:focus{
+		outline: none;
+	}
+
+	@include placeholder{
+		font-size: 12px;
+		color: #9d9d9d;
+		font-weight: 400;
+	}
+}
+
+.form-check{
+	& .form-check-input{
+		transition: .2s;
+		&:focus{
+			outline: none;
+			box-shadow: none;
+			border-color: rgba(0,0,0,.25);
+		}
+	}
+	& .form-check-label{
+		padding-top: 4px;
+	}
+}
+
+// Homepage 4 Form
+
+.hero-form,
+.login-register-form{
+	margin-top: 180px;
+	background-repeat: no-repeat;
+	background-position: center center;
+	background-size: cover;
+	padding: 0 40px;
+	padding-bottom: 60px;
+
+	& .form-title{
+		font-size: 30px;
+		color: $white;
+		padding: 40px 0;
+
+		&.black{
+			color: $black;
+		}
+	}
+	& .exvent-form{
+		& .single-input{
+			display: flex;
+			& input, 
+			& textarea{
+				border-radius: 0;
+				background-color: $ash;
+				font-size: 13px;
+				color: $black;
+				border: none;
+				outline: none;
+				&::placeholder{
+					font-size: 13px;
+					color: #9d9d9d;
+					font-weight: 400;
+				}
+				&:focus{
+					border: none;
+					outline: none;
+				}
+			}
+			& textarea{
+				height: 140px;
+			}
+			&.white-bg{
+				& input,
+				& textarea{
+					background-color: $white;
+				}
+			}
+		}
+	}
+}
+
+// Inner Page Comment Form
+
+.exvent-comment-section{
+	margin-top: 50px;
+	padding: 60px 25px;
+	background-color: #f9fafc;
+	
+	& .comment-title{
+		margin-bottom: 50px;
+		& .title{
+			font-size: 20px;
+			margin-bottom: 5px;
+		}
+		& .reuired-messege{
+			color: #686f7a;
+		}
+	}
+	& .comment-form{
+		& .comment-form-input{
+			border: 0;
+			color: $para-color;
+			font-size: 14px;
+			font-weight: 500;
+		}
+		& textarea.comment-form-input{
+		   height: 95px;
+		}
+	}
+}
+
