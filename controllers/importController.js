@@ -24,12 +24,12 @@ exports.getImportUserPage = async (req, res) => {
 };
 
 exports.importUsers = async (req, res) => {
-    const { eventId } = req.params; // 從請求參數中獲取 eventId
+    const { eventId } = req.params; // 獲取事件 ID
 
     try {
         // 確保 req.file 存在
         if (!req.file) {
-            return res.status(400).send('未上傳文件！');
+            return res.status(400).send('No file uploaded!');
         }
 
         // 解析 Excel 文件
@@ -41,7 +41,7 @@ exports.importUsers = async (req, res) => {
         // 查詢事件以確保存在
         const event = await Event.findById(eventId);
         if (!event) {
-            return res.status(404).send('找不到該事件 ID'); // 如果事件不存在，返回 404 錯誤
+            return res.status(404).send('Event not found');
         }
 
         // 將數據導入到事件的 users 陣列中
@@ -72,9 +72,22 @@ exports.importUsers = async (req, res) => {
 
         await event.save(); // 保存事件
 
-        res.status(201).send('用戶導入成功！');
+        // 返回導入成功的響應
+        res.status(201).send(`
+            <html>
+                <body>
+                    <h1>Import Successful!</h1>
+                    <p>Users have been imported successfully. Redirect in 2 sec...</p>
+                    <script>
+                        setTimeout(function() {
+                            window.location.href = '/events/${eventId}';
+                        }, 2000); // 5秒後重定向
+                    </script>
+                </body>
+            </html>
+        `);
     } catch (error) {
         console.error(error);
-        res.status(500).send('導入過程中出現錯誤！');
+        res.status(500).send('Error during import process!');
     }
 };

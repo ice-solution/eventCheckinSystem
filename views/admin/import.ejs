@@ -3,43 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+    <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
+    <link rel="stylesheet" href="/admin/assets/css/style.css">
     <title>Import Users</title>
-    <!-- 引入 DataTables CSS -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-    </style>
 </head>
 <body>
-    <div id="alertContainer"></div>
-    <h1>Import Users</h1>
-    <div>
-        <a href="/users" class="btn btn-primary">User List</a>
-        <a href="/scan" class="btn btn-success">Scan QR Code</a>
-        <a href="/import" class="btn btn-warning">Import Data</a>
-        <a href="/logout" class="btn btn-danger">Logout</a>
-    </div>
-
-    <div class="mt-4">
-        <form action="/events/<%= event._id %>/import" method="POST" enctype="multipart/form-data">
-            <div class="form-group">
-                <label for="file">Upload Excel File (.xlsx):</label>
-                <input type="hidden" name="_id" value="<%= event._id %>">
-                <input type="file" class="form-control-file" id="file" name="file" accept=".xlsx" required>
+    <%- include("components/header") %>
+    <%- include("components/menu", { eventId: event._id }) %>
+    
+    <div id="right-panel" class="right-panel">
+        <%- include("components/rightpanel_header") %>
+        <div class="content">
+            <div class="animated fadeIn">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <strong class="card-title">Import Users</strong>
+                            </div>
+                            <div class="card-body">
+                                <form action="/events/<%= event._id %>/import" method="POST" enctype="multipart/form-data">
+                                    <div class="form-group">
+                                        <label for="fileInput">Select xlsx File:</label>
+                                        <input type="file" class="form-control" id="fileInput" name="file" accept=".xlsx" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Import</button>
+                                    <a href="/events/<%= event._id%>" class="btn btn-secondary">Return to User List</a>
+                                    <a href="/sample_user.xlsx" class="btn btn-info">Download Sample File</a>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <button type="submit" class="btn btn-primary">Upload</button>
-        </form>
-    </div>
-    <div class="mt-4">
-        <a href="/sample_user.xlsx" class="btn btn-info" download>Download Sample User File</a>
+        </div>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    <%- include("components/footer") %>
+    <script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
+    <script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
+    <script src="/admin/assets/js/init/datatables-init.js"></script>
 </body>
 </html>
