@@ -87,9 +87,18 @@ exports.addUserToEvent = async (req, res) => {
             remarks, // 添加備註
             isCheckIn: false // 默認為未登記進場
         };
+
+        // 將用戶添加到事件中
         event.users.push(newUser); // 將用戶添加到事件中
         await event.save(); // 保存事件
-        this.sendEmail(newUser,event);
+
+        // 獲取新用戶的 _id
+        const savedUser = event.users[event.users.length - 1]; // 獲取剛剛添加的用戶
+        newUser._id = savedUser._id; // 將 _id 添加到 newUser 對象中
+
+        // 發送郵件
+        await this.sendEmail(newUser, event); // 傳遞 newUser（現在包含 _id）和事件
+
         res.status(201).json({ attendee: newUser }); // 返回新用戶資料
     } catch (error) {
         console.error('Error adding user:', error);
@@ -105,11 +114,13 @@ const transporter = nodemailer.createTransport({
     }
 });
 exports.sendEmail = async (user,event) => {
+    console.log(user);
     // 生成 QR 碼
         //https://api.qrserver.com/v1/create-qr-code/?data=67ae345f10b42c96a3ce3c17&size=250x250
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`; // 替換為您的 QR 碼內容
-        // const qrCodeUrl = await QRCode.toDataURL(qrCodeData);
-
+        //const qrCodeUrl = await QRCode.toDataURL(`userId=${user._id}`);
+        // const qrCodeUrl = process.env.domain+'qrcode?userId='+user._id;
+        console.log(qrCodeUrl);
         // 發送歡迎訊息和 QR 碼到電子郵件
         const messageBody = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html data-editor-version="2" class="sg-campaigns" xmlns="http://www.w3.org/1999/xhtml">

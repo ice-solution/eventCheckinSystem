@@ -14,5 +14,9 @@ router.get('/:event_id/register', (req, res) => {
     const { event_id } = req.params; // 獲取 event_id
     res.render('exvent/register', { event_id }); // 渲染 register.ejs，並傳遞 event_id
 });
-
+// 路由到註冊成功頁面
+router.get('/:event_id/register/success', (req, res) => {
+    const { event_id } = req.params; // 獲取 event_id
+    res.render('exvent/success', { event_id }); // 渲染註冊成功頁面
+});
 module.exports = router;

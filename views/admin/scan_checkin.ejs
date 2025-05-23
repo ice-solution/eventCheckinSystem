@@ -225,7 +225,7 @@
                 scanning = false; // Stop scanning
                 html5QrCode.stop(); // Stop scanning
                 // Assume QR code contains user ID
-                const userId = decodedText.split(',')[1];
+                const userId = decodedText.split(',')[0];
                 fetch(`/events/${eventId}/users/${userId}`)
                     .then(response => response.json())
                     .then(user => {

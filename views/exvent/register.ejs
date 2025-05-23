@@ -83,7 +83,8 @@
                 url: '/events/<%= event_id %>/users',
                 data: newUser,
                 success: function(response) {
-                  $('#successMessage').html('登記成功！請等候電郵'); // 清除成功消息
+                    window.location.href = `/web/<%= event_id %>/register/success`;
+                    // $('#successMessage').html('登記成功！請等候電郵'); // 清除成功消息
                 },
                 error: function(error) {
                     // 顯示錯誤消息
