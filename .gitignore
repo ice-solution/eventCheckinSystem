@@ -1,0 +1,11 @@
+# node
+node_modules/*
+
+# env
+.env
+
+# package
+package-lock.json
+
+# public images file
+public/uploads/*

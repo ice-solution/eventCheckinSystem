@@ -113,7 +113,7 @@ app.use('/events', eventsRouter);
 app.use('/users',isAuthenticated, usersRouter);
 app.use('/awards', awardsRouter);
 app.use('/auth', authRoutes); // 使用 auth 路由
-app.use('/email_template', emailTemplateRoutes); // 使用 emailTemplate 路由
+app.use('/emailTemplate', emailTemplateRoutes); // 使用 emailTemplate 路由
 
 app.get('/demo_website',async function (req, res){
     try {

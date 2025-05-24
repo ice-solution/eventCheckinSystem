@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>事件電子郵件模板</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
+    <script src="https://cdn.tiny.cloud/1/xdp8p8h9vpfy9o6jiqwtc12t3yj5qwvwc7o8esbqiupb6sam/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
     <script>
         tinymce.init({
-            selector: '#body', // WYSIWYG 編輯器的選擇器
+            selector: '#content', // WYSIWYG 編輯器的選擇器
             plugins: 'image code',
             toolbar: 'undo redo | styleselect | bold italic | alignleft aligncenter alignright | image | code',
             images_upload_url: '/upload/image', // 圖片上傳的路由
@@ -33,21 +34,23 @@
         });
     </script>
 </head>
+
 <body>
     <div class="container mt-5">
         <h1>事件電子郵件模板</h1>
         <form id="emailTemplateForm">
-            <input type="hidden" id="eventId" value="<%= eventId %>"> <!-- 隱藏的事件 ID -->
             <div class="form-group">
                 <label for="subject">電子郵件主題</label>
                 <input type="text" class="form-control" id="subject" required>
             </div>
             <div class="form-group">
                 <label for="body">電子郵件內容</label>
-                <textarea class="form-control" id="body" rows="10" required></textarea>
+                <textarea name="content" class="form-control" id="content" rows="10">
+                    <%= sampleEmailTemplate %>
+                </textarea>
             </div>
             <button type="submit" class="btn btn-primary">保存模板</button>
-            <a href="/admin" class="btn btn-secondary">返回管理頁面</a>
+            <a href="/emailTemplate" class="btn btn-secondary">返回管理頁面</a>
         </form>
         <div id="alertContainer" class="mt-3"></div>
     </div>
@@ -55,23 +58,22 @@
     <!-- 引入 jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        $(document).ready(function() {
-            $('#emailTemplateForm').on('submit', function(e) {
+        $(document).ready(function () {
+            $('#emailTemplateForm').on('submit', function (e) {
                 e.preventDefault(); // 防止表單默認提交
 
                 const emailTemplate = {
                     subject: $('#subject').val(),
-                    body: tinymce.get('body').getContent(), // 獲取 WYSIWYG 編輯器的內容
-                    eventId: $('#eventId').val() // 獲取事件 ID
+                    body: tinymce.get('content').getContent(), // 獲取 WYSIWYG 編輯器的內容
                 };
 
                 // 發送 AJAX 請求保存電子郵件模板
                 $.ajax({
-                    url: '/admin/email_template', // 假設您有一個保存模板的路由
+                    url: '/emailTemplate/create',
                     type: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify(emailTemplate),
-                    success: function(response) {
+                    success: function (response) {
                         // 顯示成功的 alert
                         const alertHtml = `
                             <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -88,9 +90,8 @@
                         }, 1500);
                         // 清空表單
                         $('#emailTemplateForm')[0].reset();
-                        tinymce.get('body').setContent(''); // 清空編輯器內容
                     },
-                    error: function(xhr, status, error) {
+                    error: function (xhr, status, error) {
                         console.error('Error saving email template:', error);
                         const alertHtml = `
                             <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -110,4 +111,5 @@
     <!-- 引入 Bootstrap JS -->
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
 </body>
+
 </html>
