@@ -3,6 +3,23 @@ const EmailTemplate = require("../model/EmailTemplate")
 const sendGrid = require("../utils/sendGrid")
 const EmailRecord = require("../model/EmailRecord")
 
+const {sampleHtmlTemplate} = require("../template/sample");
+
+const multer = require("multer")
+const upload = multer({
+  dest: "public/uploads/email_template_images/",
+  limits: {
+    fileSize: 1024 * 1024 * 5, // 5MB
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept images only
+    if (!file.mimetype.startsWith("image/")) {
+      return cb(new Error("只允許上傳圖片！"), false)
+    }
+    cb(null, true)
+  },
+})
+
 exports.renderEmailTemplateList = async (req, res) => {
   try {
     const emailTemplates = await EmailTemplate.find()
@@ -34,8 +51,9 @@ exports.renderEmailTemplateDetail = async (req, res) => {
 
 exports.renderCreateEmailTemplatePage = async (req, res) => {
   try {
-    const emailTemplates = await EmailTemplate.find()
-    res.render("admin/create_email_template")
+    res.render("admin/create_email_template", {
+      sampleHtmlTemplate,
+    })
   } catch (error) {
     console.error("Error fetching events:", error)
     res.status(500).json({ message: "Error fetching emailTemplates" })
@@ -128,4 +146,18 @@ exports.sendEmailById = async (req, res) => {
     }
   }
   return res.status(400).send("請提供有效的收件人電子郵件地址！")
+}
+
+exports.uploadEmailTemplateImage = async (req, res) => {
+  upload.single("file")(req, res, (err) => {
+    if (err) {
+      console.error("Error uploading image:", err)
+      return res.status(500).send("上傳圖片時出現錯誤！")
+    }
+    if (!req.file) {
+      return res.status(400).send("請選擇一個圖片文件！")
+    }
+    const imageUrl = `/uploads/email_template_images/${req.file.filename}`
+    res.status(200).json({ location: imageUrl })
+  })
 }

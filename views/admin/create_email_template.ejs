@@ -45,7 +45,9 @@
             </div>
             <div class="form-group">
                 <label for="body">電子郵件內容</label>
-                <textarea name="content" class="form-control" id="content" rows="10"></textarea>
+                <textarea name="content" class="form-control" id="content" rows="10">
+                    <%= sampleEmailTemplate %>
+                </textarea>
             </div>
             <button type="submit" class="btn btn-primary">保存模板</button>
             <a href="/emailTemplate" class="btn btn-secondary">返回管理頁面</a>

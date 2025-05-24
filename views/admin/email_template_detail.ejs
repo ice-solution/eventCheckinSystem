@@ -6,13 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>事件電子郵件模板</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+    <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
+    <link rel="stylesheet" href="/admin/assets/css/style.css">
     <script src="https://cdn.tiny.cloud/1/xdp8p8h9vpfy9o6jiqwtc12t3yj5qwvwc7o8esbqiupb6sam/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
     <script>
         tinymce.init({
             selector: '#content', // WYSIWYG 編輯器的選擇器
             plugins: 'image code',
             toolbar: 'undo redo | styleselect | bold italic | alignleft aligncenter alignright | image | code',
-            images_upload_url: '/upload/image', // 圖片上傳的路由
+            images_upload_url: '/emailTemplate/upload', // 圖片上傳的路由
             automatic_uploads: true,
             file_picker_types: 'image',
             file_picker_callback: function (callback, value, meta) {
@@ -64,26 +67,24 @@
             <button type="submit" class="btn btn-primary">發送電子郵件</button>
     </div>
     
-    <div> 
-        <h2>Email Record</h2>
-        <table class="table table-bordered">
-            <thead>
+    <table id="email-records-data-table" class="table table-bordered">
+        <thead>
+            <tr>
+                <th>發送時間</th>
+                <th>收件人</th>
+                <th>狀態</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% emailRecords.forEach(function(record) { %>
                 <tr>
-                    <th>發送時間</th>
-                    <th>收件人</th>
-                    <th>狀態</th>
+                    <td><%= new Date(record.created_at).toLocaleString("en-GB") %></td>
+                    <td><%= record.recipient %></td>
+                    <td><%= record.status %></td>
                 </tr>
-            </thead>
-            <tbody>
-                <% emailRecords.forEach(function(record) { %>
-                    <tr>
-                        <td><%= record.created_at %></td>
-                        <td><%= record.recipient %></td>
-                        <td><%= record.status %></td>
-                    </tr>
-                <% }); %>
-            </tbody>
-    </div>
+            <% }); %>
+        </tbody>
+    </table>
     
     <!-- 引入 jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -133,6 +134,9 @@
                         `;
                         $('#alertContainer').append(alertHtml);
                     }
+                }).done(function() {
+                    // page refresh
+                    location.reload();
                 });
             });
         });
@@ -169,6 +173,7 @@
                     }, 1500);
                     // 清空表單
                     $('#sendEmailForm')[0].reset();
+                    // 重新加載頁面以顯示最新的發送記錄
                 },
                 error: function (xhr, status, error) {
                     console.error('Error sending email:', error);
@@ -182,6 +187,9 @@
                     `;
                     $('#alertContainer').append(alertHtml);
                 }
+            }).done(function() {
+                // 重新加載頁面以顯示最新的發送記錄
+                location.reload();
             });
         });
     </script>
@@ -189,5 +197,26 @@
     <!-- 引入 Bootstrap JS -->
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
 </body>
+
+<script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/dataTables.buttons.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/buttons.bootstrap.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/jszip.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/vfs_fonts.js"></script>
+<script src="/admin/assets/js/lib/data-table/buttons.html5.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/buttons.print.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/buttons.colVis.min.js"></script>
+<script src="/admin/assets/js/init/datatables-init.js"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#email-records-data-table').DataTable({
+            "order": [[0, "desc"]], // 根據第一列（發送時間）降序排序   
+            "pageLength": 10, // 每頁顯示 10 條記錄
+            "lengthMenu": [5, 10, 25, 50], // 分頁選項
+        });
+        
+    });
+</script>
 
 </html>
