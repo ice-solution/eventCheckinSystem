@@ -18,7 +18,7 @@ exports.sendEmail = async (to, subject, body) => {
   console.log(  "Email sender:", EMAIL_SENDER)
   try {
     return await sendGrid.send({
-      to: {email: "mark.hyng@gmail.com"},
+      to: {email: to},
       from: EMAIL_SENDER,
       subject: subject,
       html: body,

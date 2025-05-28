@@ -5,6 +5,7 @@ const sendWelcomeEmail = require('./components/sendWelcomeEmail'); // 引入發�
 const mongoose = require('mongoose');
 const QRCode = require('qrcode'); // 引入 QRCode 庫
 const nodemailer = require('nodemailer');
+const sendGrid = require("../utils/sendGrid");
 
 // 創建事件
 exports.createEvent = async (req, res) => {
@@ -114,7 +115,6 @@ const transporter = nodemailer.createTransport({
     }
 });
 exports.sendEmail = async (user,event) => {
-    console.log(user);
     // 生成 QR 碼
         //https://api.qrserver.com/v1/create-qr-code/?data=67ae345f10b42c96a3ce3c17&size=250x250
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`; // 替換為您的 QR 碼內容
@@ -297,15 +297,16 @@ exports.sendEmail = async (user,event) => {
       </center>
     </body>
   </html>`;
+        /* update at 05282025, use sendgrid */ 
+        // const mailOptions = {
+        //     from: 'icesolution0321@gmail.com', // 替換為您的電子郵件地址
+        //     to: user.email, // 確保用戶的電子郵件地址是有效的
+        //     subject: '歡迎加入我們的活動',
+        //     html: messageBody
+        // };
 
-        const mailOptions = {
-            from: 'icesolution0321@gmail.com', // 替換為您的電子郵件地址
-            to: user.email, // 確保用戶的電子郵件地址是有效的
-            subject: '歡迎加入我們的活動',
-            html: messageBody
-        };
-
-        await transporter.sendMail(mailOptions);
+        // await transporter.sendMail(mailOptions);
+        sendGrid.sendEmail(user.email, '歡迎加入我們的活動', messageBody);
 
 }
 // 渲染用戶登入頁面
