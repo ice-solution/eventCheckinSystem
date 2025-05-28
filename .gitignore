@@ -1,0 +1,64 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# 環境變數文件
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 日誌文件
+logs
+*.log
+*.log.*
+
+# 其他
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Build output
+dist/
+build/
+out/
+coverage/
+public/
+
+# TypeScript
+*.tsbuildinfo
+
+# 其他 IDE 和編輯器
+*.swp
+*.swo
+*.tmp
+*.bak
+*.orig
+*.class
+*.jar
+*.war
+*.ear
+*.iml
+*.hprof
+*.pdb
+*.obj
+*.exe
+*.dll
+*.so
+*.dSYM/
+*.class
+
+# MacOS
+*.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
