@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>事件電子郵件模板</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+    <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
+    <link rel="stylesheet" href="/admin/assets/css/style.css">
+    <script src="https://cdn.tiny.cloud/1/xdp8p8h9vpfy9o6jiqwtc12t3yj5qwvwc7o8esbqiupb6sam/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
+    <script>
+        tinymce.init({
+            selector: '#content', // WYSIWYG 編輯器的選擇器
+            plugins: 'image code',
+            toolbar: 'undo redo | styleselect | bold italic | alignleft aligncenter alignright | image | code',
+            images_upload_url: '/emailTemplate/upload', // 圖片上傳的路由
+            automatic_uploads: true,
+            file_picker_types: 'image',
+            file_picker_callback: function (callback, value, meta) {
+                if (meta.filetype === 'image') {
+                    var input = document.createElement('input');
+                    input.setAttribute('type', 'file');
+                    input.setAttribute('accept', 'image/*');
+                    input.onchange = function () {
+                        var file = this.files[0];
+                        var reader = new FileReader();
+                        reader.onload = function () {
+                            callback(reader.result, { alt: file.name });
+                        };
+                        reader.readAsDataURL(file);
+                    };
+                    input.click();
+                }
+            },
+        });
+    </script>
+</head>
+
+<body>
+    <div class="container mt-5">
+        <h1>事件電子郵件模板</h1>
+        <form id="emailTemplateForm">
+            <div class="form-group">
+                <label for="subject">電子郵件主題</label>
+                <input type="text" class="form-control" id="subject" value="<%= template.subject %>"" required>
+            </div>
+            <div class="form-group">
+                <label for="body">電子郵件內容</label>
+                <textarea class="form-control" name="content" id="content" rows="10" >
+                    <%= template.content %>
+                </textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">保存模板</button>
+            <a href="/emailTemplate" class="btn btn-secondary">返回管理頁面</a>
+        </form>
+        <div id="alertContainer" class="mt-3"></div>
+    </div>
+
+    <div> 
+        <form id="sendEmailForm">
+            <div class="form-group">
+                <label for="recipient">收件人</label>
+                <textarea class="form-control" id="recipient" rows="3" placeholder="請輸入收件人電子郵件地址"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">發送電子郵件</button>
+    </div>
+    
+    <table id="email-records-data-table" class="table table-bordered">
+        <thead>
+            <tr>
+                <th>發送時間</th>
+                <th>收件人</th>
+                <th>狀態</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% emailRecords.forEach(function(record) { %>
+                <tr>
+                    <td><%= new Date(record.created_at).toLocaleString("en-GB") %></td>
+                    <td><%= record.recipient %></td>
+                    <td><%= record.status %></td>
+                </tr>
+            <% }); %>
+        </tbody>
+    </table>
+    
+    <!-- 引入 jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $('#emailTemplateForm').on('submit', function (e) {
+                e.preventDefault(); // 防止表單默認提交
+
+                const emailTemplate = {
+                    subject: $('#subject').val(),
+                    content: tinymce.get('content').getContent(), // 獲取 WYSIWYG 編輯器的內容
+                };
+
+                // 發送 AJAX 請求保存電子郵件模板
+                $.ajax({
+                    url: '/emailTemplate/<%= template._id %>', // 假設您有一個保存電子郵件模板的路由
+                    type: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify(emailTemplate),
+                    success: function (response) {
+                        // 顯示成功的 alert
+                        const alertHtml = `
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                電子郵件模板保存成功！
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        `;
+                        $('#alertContainer').append(alertHtml);
+                        // 自動隱藏 alert
+                        setTimeout(() => {
+                            $('.alert').alert('close');
+                        }, 1500);
+                        // 清空表單
+                        $('#emailTemplateForm')[0].reset();
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('Error saving email template:', error);
+                        const alertHtml = `
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                保存電子郵件模板失敗，請稍後再試。
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        `;
+                        $('#alertContainer').append(alertHtml);
+                    }
+                }).done(function() {
+                    // page refresh
+                    location.reload();
+                });
+            });
+        });
+
+        $('#sendEmailForm').on('submit', function (e) {
+            e.preventDefault(); // 防止表單默認提交
+
+            const emailData = {
+                recipient: $('#recipient').val(),
+                subject: $('#subject').val(),
+                content: tinymce.get('content').getContent(), // 獲取 WYSIWYG 編輯器的內容
+            };
+
+            // 發送 AJAX 請求發送電子郵件
+            $.ajax({
+                url: '/emailTemplate/<%= template._id %>/send', // 假設您有一個發送電子郵件的路由
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(emailData),
+                success: function (response) {
+                    // 顯示成功的 alert
+                    const alertHtml = `
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            電子郵件發送成功！
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    `;
+                    $('#alertContainer').append(alertHtml);
+                    // 自動隱藏 alert
+                    setTimeout(() => {
+                        $('.alert').alert('close');
+                    }, 1500);
+                    // 清空表單
+                    $('#sendEmailForm')[0].reset();
+                    // 重新加載頁面以顯示最新的發送記錄
+                },
+                error: function (xhr, status, error) {
+                    console.error('Error sending email:', error);
+                    const alertHtml = `
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            發送電子郵件失敗，請稍後再試。
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    `;
+                    $('#alertContainer').append(alertHtml);
+                }
+            }).done(function() {
+                // 重新加載頁面以顯示最新的發送記錄
+                location.reload();
+            });
+        });
+    </script>
+
+    <!-- 引入 Bootstrap JS -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+</body>
+
+<script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/dataTables.buttons.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/buttons.bootstrap.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/jszip.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/vfs_fonts.js"></script>
+<script src="/admin/assets/js/lib/data-table/buttons.html5.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/buttons.print.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/buttons.colVis.min.js"></script>
+<script src="/admin/assets/js/init/datatables-init.js"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#email-records-data-table').DataTable({
+            "order": [[0, "desc"]], // 根據第一列（發送時間）降序排序   
+            "pageLength": 10, // 每頁顯示 10 條記錄
+            "lengthMenu": [5, 10, 25, 50], // 分頁選項
+        });
+        
+    });
+</script>
+
+</html>
