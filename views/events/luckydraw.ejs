@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: rgb(0, 46, 93);
+      /* background: rgb(0, 46, 93); */
       padding: 30px;
     }
 
@@ -19,22 +19,36 @@
     #result {
       display: flex;
       flex-wrap: wrap;
-      width: 75%;
+      width: 90%;
       gap: 10px;
+      justify-content: center;
     }
 
-    .card {
-      width: 19%;
+    .rets {
+      display: flex;
+      align-items: center; /* 垂直居中 */
       background-color: #ffeeba;
       border-radius: 6px;
       padding: 12px;
       cursor: pointer;
       box-shadow: 0 0 4px rgba(0,0,0,0.1);
       transition: 0.3s;
+      width: calc(25% - 10px); /* 使其佔滿父容器，四個一行 */
     }
 
-    .card:hover {
+    .rets:hover {
       background-color: #ffe08a;
+    }
+
+    .number {
+      width: 30px; /* 控制序號的寬度 */
+      text-align: center;
+      font-weight: bold;
+      margin-right: 10px; /* 與卡片內容的間距 */
+    }
+
+    .card {
+      flex-grow: 1; /* 使卡片佔滿剩餘空間 */
     }
 
     .name {
@@ -54,7 +68,7 @@
       gap: 15px;
     }
 
-    #startBtn {
+    #startBtn, #draw5Btn, #draw10Btn {
       padding: 15px 20px;
       font-size: 16px;
       background-color: #28a745;
@@ -79,43 +93,95 @@
       display: none;
       margin: 0 auto;
     }
-    h1{
-        color:#FFF;
+
+    #current {
+      font-size: 36px;
+      font-weight: bold;
+      color: black; /* 文字顏色設置為黑色 */
+      text-align: center;
+      margin-top: 150px;
+      background-color: #ffeeba; /* 與 card 一致的背景 */
+      border-radius: 6px; /* 與 card 一致的圓角 */
+      padding: 50px; /* 與 card 一致的內邊距 */
+      width: 20%; /* 調整寬度 */
+      margin-left: auto; /* 居中 */
+      margin-right: auto; /* 居中 */
+      display: none; /* 初始隱藏 */
     }
+
+    h1 {
+      color: #000;
+    }
+
     @keyframes spin {
       to { transform: rotate(360deg); }
+    }
+
+    .animation {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1000;
+    }
+
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      z-index: 999;
     }
   </style>
 </head>
 <body>
 
-  <h1>互動抽獎系統</h1>
+  
   <div class="container">
     <div id="result"></div>
 
     <div id="control">
       <button id="startBtn">抽出一位</button>
+      <button id="draw5Btn">5連抽</button>
+      <button id="draw10Btn">10連抽</button>
       <div id="spinner"></div>
     </div>
   </div>
 
+  <div id="current"></div>
+  <div class="overlay" id="overlay"></div>
+  <div class="animation" id="animation">
+    <div id="spinnerAnimation" class="spinner"></div>
+  </div>
+
   <script>
     const allPeople = <%- JSON.stringify(users) %>; // 將 users 轉換為 JSON 格式
-    const eventId = '<%=eventId%>';
+    const eventId = '<%= eventId %>';
 
     let availablePeople = [...allPeople];
     const drawnPeople = [];
     
     const resultDiv = document.getElementById('result');
     const startBtn = document.getElementById('startBtn');
+    const draw5Btn = document.getElementById('draw5Btn');
+    const draw10Btn = document.getElementById('draw10Btn');
     const spinner = document.getElementById('spinner');
+    const currentDiv = document.getElementById('current');
+    const overlay = document.getElementById('overlay');
+    const animationDiv = document.getElementById('animation');
 
-    startBtn.addEventListener('click', () => {
+    function drawWinner() {
       if (availablePeople.length === 0) {
         alert("所有人都已抽出！");
         return;
       }
 
+      overlay.style.display = 'block';
+      animationDiv.style.display = 'block';
       spinner.style.display = 'block';
       startBtn.disabled = true;
 
@@ -127,16 +193,23 @@
         const person = availablePeople.splice(index, 1)[0];
         drawnPeople.push(person);
 
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.dataset.id = person._id;
-        card.innerHTML = `<div class="name">${person.name}</div><div class="company">${person.company}</div>`;
-        resultDiv.appendChild(card);
+        const rets = document.createElement('div');
+        rets.className = 'rets';
+        rets.dataset.id = person._id;
+
+        // 顯示中獎者的序號
+        const winnerIndex = drawnPeople.length; // 當前中獎者的序號
+        rets.innerHTML = `<div class="number">${winnerIndex}</div><div class="card"><div class="name">${person.name}</div><div class="company">${person.company}</div></div>`;
+        resultDiv.appendChild(rets);
+
+        // 顯示當前中獎者
+        currentDiv.innerHTML = ` ${person.name}<br>(${person.company})`; // 顯示公司名稱
+        currentDiv.style.display = 'block'; // 顯示 current
 
         // 點擊卡片 → 刪除確認
-        card.addEventListener('click', () => {
+        rets.addEventListener('click', () => {
           if (confirm(`確定要取消 ${person.name} 的中獎結果？`)) {
-            resultDiv.removeChild(card);
+            resultDiv.removeChild(rets);
             drawnPeople.splice(drawnPeople.findIndex(p => p._id === person._id), 1);
             availablePeople.push(person);
 
@@ -175,7 +248,26 @@
           }
         })
         .catch(err => console.error("送出失敗", err));
-      }, 800);
+
+        overlay.style.display = 'none';
+        animationDiv.style.display = 'none';
+      }, 3000); // 3秒後顯示結果
+    }
+
+    startBtn.addEventListener('click', drawWinner);
+
+    draw5Btn.addEventListener('click', () => {
+      const drawCount = Math.min(5, availablePeople.length); // 確保最多抽取可用人數
+      for (let i = 0; i < drawCount; i++) {
+        drawWinner();
+      }
+    });
+
+    draw10Btn.addEventListener('click', () => {
+      const drawCount = Math.min(10, availablePeople.length); // 確保最多抽取可用人數
+      for (let i = 0; i < drawCount; i++) {
+        drawWinner();
+      }
     });
   </script>
 
