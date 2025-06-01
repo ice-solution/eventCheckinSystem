@@ -22,8 +22,9 @@ const upload = multer({
 
 exports.renderEmailTemplateList = async (req, res) => {
   try {
-    const emailTemplates = await EmailTemplate.find()
-    res.render("admin/email_template_list", { emailTemplates })
+    const { eventId } = req.params
+    const emailTemplates = await EmailTemplate.find(eventId ? { eventId } : {})
+    res.render("admin/email_template_list", {emailTemplates, eventId })
   } catch (error) {
     console.error("Error fetching events:", error)
     res.status(500).json({ message: "Error fetching emailTemplates" })
@@ -31,7 +32,7 @@ exports.renderEmailTemplateList = async (req, res) => {
 }
 
 exports.renderEmailTemplateDetail = async (req, res) => {
-  const { id } = req.params
+  const { eventId, id } = req.params
 
   try {
     const template = await EmailTemplate.findById(id)
@@ -42,7 +43,7 @@ exports.renderEmailTemplateDetail = async (req, res) => {
     if (!template) {
       return res.status(404).send("電子郵件模板未找到！")
     }
-    res.render("admin/email_template_detail", { template, emailRecords })
+    res.render("admin/email_template_detail", { template, emailRecords, eventId })
   } catch (error) {
     console.error("Error fetching email template:", error)
     res.status(500).send("獲取電子郵件模板時出現錯誤！")
@@ -51,8 +52,10 @@ exports.renderEmailTemplateDetail = async (req, res) => {
 
 exports.renderCreateEmailTemplatePage = async (req, res) => {
   try {
+    const { eventId } = req.params
+    let sampleEmailTemplate = sampleHtmlTemplate
     res.render("admin/create_email_template", {
-      sampleHtmlTemplate,
+      sampleEmailTemplate, eventId
     })
   } catch (error) {
     console.error("Error fetching events:", error)
@@ -82,16 +85,20 @@ exports.updateEmailTemplate = async (req, res) => {
 }
 
 exports.createEmailTemplate = async (req, res) => {
-  const { subject, content } = req.body
+  const { eventId, subject, content } = req.body
+
+  const insertBody = {
+    subject,
+    content,
+  }
+
+  if (eventId) {
+    insertBody.eventId = eventId
+  }
 
   try {
     // 創建新的電子郵件模板
-    const newTemplate = new EmailTemplate({
-      subject,
-      content,
-      created_at: Date.now(),
-      modified_at: Date.now(),
-    })
+    const newTemplate = new EmailTemplate(insertBody)
 
     await newTemplate.save()
     res.status(201).send("電子郵件模板創建成功！")
@@ -132,7 +139,7 @@ exports.sendEmailById = async (req, res) => {
         return new EmailRecord({
           recipient: to[index],
           emailTemplate: id,
-          status: emailRecord.statusCode === 202 ? "成功" : "失敗",
+          status: emailRecord?.statusCode === 202 ? "成功" : "失敗",
           errorLog: emailRecord.statusCode === 202 ? "" : `${result}`,
           created_at: Date.now(),
         })
