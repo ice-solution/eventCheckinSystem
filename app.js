@@ -5,8 +5,8 @@ const QRCode = require('qrcode');
 const express = require('express');
 const mongoose = require('mongoose');
 const http = require('http');
-
-const session = require('express-session'); // 引入 session
+const session = require('express-session');
+const flash = require('connect-flash');
 const usersRouter = require('./routes/users');
 const websiteRouter = require('./routes/websites');
 const eventsRouter = require('./routes/events');
@@ -33,11 +33,18 @@ app.use(session({
     resave: false,
     saveUninitialized: true
 }));
+app.use(flash());
 app.set('view engine', 'ejs'); // 設置 EJS 作為模板引擎
 app.set('views', './views'); // 設置視圖文件夾
 
 app.use(express.static(path.join(__dirname, 'public'))); // 提供 public 文件夾中的靜態文件
 
+// 設置全局變量
+app.use((req, res, next) => {
+    res.locals.success_msg = req.flash('success_msg');
+    res.locals.error_msg = req.flash('error_msg');
+    next();
+});
 
 // 連接到 MongoDB
 mongoose.connect('mongodb+srv://icesolution19:jLuZY1Lbi5UQNtyz@cluster0.nky9l.mongodb.net/events', {

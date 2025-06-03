@@ -1,0 +1,77 @@
+<%- include("components/header") %>
+<%- include("components/menu", { eventId: eventId }) %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+
+<div id="right-panel" class="right-panel">
+    <%- include("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title">抽獎設定</strong>
+                        </div>
+                        <div class="card-body">
+                            <form id="uploadForm" enctype="multipart/form-data" action="/events/<%= eventId %>/luckydraw_setting/upload-background" method="POST">
+                                <div class="form-group">
+                                    <label for="backgroundImage">上傳背景圖片 (僅限 .jpg 格式):</label>
+                                    <input type="file" id="backgroundImage" name="backgroundImage" accept=".jpg, .jpeg" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">上傳</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 預覽區域 -->
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title">背景圖片預覽</strong>
+                        </div>
+                        <div class="card-body text-center">
+                            <img id="backgroundPreview" src="/luckydraw/img/<%= eventId %>.jpg" alt="背景圖片預覽" style="max-width: 100%; height: auto;">
+                            <div id="noImageMessage" style="display: none;">還沒有背景圖片</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include("components/footer") %>
+<script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/dataTables.buttons.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/buttons.bootstrap.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/jszip.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/vfs_fonts.js"></script>
+<script src="/admin/assets/js/lib/data-table/buttons.html5.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/buttons.print.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/buttons.colVis.min.js"></script>
+<script src="/admin/assets/js/init/datatables-init.js"></script>
+
+<script>
+    window.onload = function() {
+        // 檢查圖片是否存在
+        const img = document.getElementById('backgroundPreview');
+        const noImageMessage = document.getElementById('noImageMessage');
+
+        img.onload = function() {
+            // 圖片加載成功，隱藏提示信息
+            noImageMessage.style.display = 'none';
+        };
+
+        img.onerror = function() {
+            // 圖片加載失敗，顯示提示信息
+            img.style.display = 'none'; // 隱藏圖片
+            noImageMessage.style.display = 'block'; // 顯示提示信息
+        };
+    };
+</script>

@@ -128,6 +128,10 @@
                                         <input type="text" class="form-control" id="name" required>
                                     </div>
                                     <div class="form-group">
+                                        <label for="table">Table</label>
+                                        <input type="text" class="form-control" id="table" >
+                                    </div>
+                                    <div class="form-group">
                                         <label for="company">Company</label>
                                         <input type="text" class="form-control" id="company" required>
                                     </div>
@@ -180,6 +184,7 @@
                                     <tr>
                                         <th>Email</th>
                                         <th>Name</th>
+                                        <th>table</th>
                                         <th>Company</th>
                                         <th>Phone</th>
                                         <th>Role</th>
@@ -196,6 +201,7 @@
                                         <tr class="<%= user.isCheckIn ? 'checkin-true' : 'checkin-false' %>">
                                             <td><%= user.email %></td>
                                             <td><%= user.name %></td>
+                                            <td><%= user.table %></td>
                                             <td><%= user.company %></td>
                                             <td><%= user.phone %></td>
                                             <td><%= user.role %></td>
@@ -291,6 +297,7 @@
             const newUser = {
                 email: $('#email').val(),
                 name: $('#name').val(),
+                table: $('#table').val(),
                 company: $('#company').val(),
                 phone: $('#phone').val(),
                 role: $('#role').val(), // Get role
@@ -313,6 +320,7 @@
                         <tr class="checkin-false">
                             <td>${response.attendee.email}</td>
                             <td>${response.attendee.name}</td>
+                            <td>${response.attendee.table}</td>
                             <td>${response.attendee.company}</td>
                             <td>${response.attendee.phone}</td>
                             <td>${response.attendee.role}</td>

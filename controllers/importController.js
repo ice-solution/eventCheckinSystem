@@ -51,6 +51,7 @@ exports.importUsers = async (req, res) => {
                 name: row.name,
                 phone_code: row.phone_code,
                 phone: row.phone,
+                table: row.table,
                 company: row.company,
                 saluation: row.saluation,
                 industry: row.industry,

@@ -15,6 +15,7 @@ const userSchema = new mongoose.Schema({
     point: {type:Number, default:0},
     email: { type: String },
     name: { type: String, required: true },
+    table: { type: String }, // 新增的 table 字段
     phone_code: { type: String }, // 電話區號
     phone: { type: String }, // 電話
     company: { type: String },
@@ -43,6 +44,7 @@ const attendeeSchema = new mongoose.Schema({
     location: { type: String, required: true },
     phone: { type: String, required: true },
     email: { type: String, required: true },
+    description: { type: String, required: false },
     promo_codes: [{ code_name: String, point: Number }]
 });
 

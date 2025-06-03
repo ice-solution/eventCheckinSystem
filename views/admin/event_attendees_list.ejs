@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <title>參展商列表</title>
+    <title>Event Attendees List</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         /* 添加樣式以美化表單 */
@@ -24,7 +24,11 @@
 <%- include("components/menu", { eventId: eventId }) %>
 
 <div class="container mt-5">
-    <h2>參展商列表</h2>
+    <h1 class="mt-4">Event Attendees List</h1>
+    
+    <!-- 添加描述 -->
+    <p class="lead">這裡是參加者的列表，您可以查看所有參加此活動的來賓。</p>
+
     <button id="addAttendeeBtn" class="btn btn-primary mb-3">添加參展商</button>
 
     <div class="add-attendee-form" id="addAttendeeForm">
@@ -45,6 +49,10 @@
             <div class="form-group">
                 <label for="email">電子郵件</label>
                 <input type="email" class="form-control" id="email" required>
+            </div>
+            <div class="form-group">
+                <label for="description">描述</label>
+                <textarea class="form-control" id="description" rows="3" placeholder="請輸入參展商描述..."></textarea>
             </div>
             <button type="submit" class="btn btn-success">提交</button>
             <button type="button" class="btn btn-danger" id="cancelBtn">取消</button>
@@ -96,7 +104,8 @@
                 name: $('#name').val(),
                 location: $('#location').val(),
                 phone: $('#phone').val(),
-                email: $('#email').val()
+                email: $('#email').val(),
+                description: $('#description').val()
             };
 
             // AJAX 請求以添加參展商
@@ -113,7 +122,7 @@
                             <td>${response.attendee.location}</td>
                             <td>${response.attendee.phone}</td>
                             <td>${response.attendee.email}</td>
-                        </tr>
+                            <td>${response.attendee.description}</td>
                     `);
                     $('#addAttendeeForm').hide(); // 隱藏表單
                     $('#attendeeForm')[0].reset(); // 重置表單

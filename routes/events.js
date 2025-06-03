@@ -4,12 +4,27 @@ const router = express.Router();
 const eventsController = require('../controllers/eventsController');
 const importController = require('../controllers/importController');
 const Event = require('../model/Event'); // 引入 Event 模型
-
 const multer = require('multer');
+const path = require('path');
 
 // 設置 multer 以處理文件上傳
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage }).single('file');
+
+// 設定 multer 來處理文件上傳
+const uploadBackground = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'public/luckydraw/img/'); // 設定上傳路徑
+    },
+    filename: (req, file, cb) => {
+        const eventId = req.params.eventId; // 獲取 eventId
+        const ext = path.extname(file.originalname); // 獲取文件擴展名
+        cb(null, `${eventId}${ext}`); // 使用 eventId 作為文件名
+    }
+});
+
+const uploadBackgroundMulter = multer({ storage: uploadBackground }); // 使用自定義的 storage
+
 // 定義路由
 // router.post('/register', usersController.createUser);
 // router.get('/register', usersController.getCreateUserPage);
@@ -157,5 +172,14 @@ router.get('/:eventId/luckydraw/list', eventsController.renderAdminLuckydrawPage
 
 // 添加路由以顯示 QR 碼登錄頁面
 router.get('/:eventId/qrcodeLogin', eventsController.renderQRCodeLoginPage); // 使用控制器函數
+
+// 上傳背景圖片的路由
+router.post('/:eventId/luckydraw_setting/upload-background', uploadBackgroundMulter.single('backgroundImage'), eventsController.uploadBackground);
+
+// 渲染 luckydraw_setting.ejs 的 GET 路由
+router.get('/:eventId/luckydraw_setting', eventsController.renderLuckydrawSetting);
+
+// 新增的路由
+router.get('/:eventId/email/:userId', eventsController.renderEmailHtml);
 
 module.exports = router;
