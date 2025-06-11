@@ -6,8 +6,18 @@
   <style>
     body {
       font-family: Arial, sans-serif;
+      height:100vh;
+      overflow-y:scroll;
+      overflow-x:hidden;
+      margin: 0;
       /* background: rgb(0, 46, 93); */
-      padding: 30px;
+    }
+    .bg {
+      background-image: url('/luckydraw/img/<%= eventId %>.jpg'); /* 使用事件 ID 作為背景圖片 */
+      background-size: cover; /* 使背景圖片覆蓋整個畫面 */
+      background-position: center; /* 使背景圖片居中 */
+      padding: 120px;
+      height:100vh;
     }
 
     .container {
@@ -21,7 +31,7 @@
       flex-wrap: wrap;
       width: 100%;
       gap: 10px;
-      justify-content: center;
+      margin-top: 30px; /* 增加上邊距以向下移動 result */
     }
 
     .rets {
@@ -33,7 +43,7 @@
       cursor: pointer;
       box-shadow: 0 0 4px rgba(0,0,0,0.1);
       transition: 0.3s;
-      width: 15% /* 使其佔滿父容器，四個一行 */
+      width: calc(25% - 10px); /* 使其佔滿父容器，四個一行 */
     }
 
     .rets:hover {
@@ -139,30 +149,47 @@
       display: none;
       z-index: 999;
     }
+
+    .spinner {
+      width: 120px; /* 調整圖片大小為原來的兩倍 */
+      height: 120px; /* 調整圖片大小為原來的兩倍 */
+      animation: spin 0.5s linear infinite; /* 將動畫時間設置為 0.5 秒以加快速度 */
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      20% { transform: rotate(72deg); } /* 5個方向的第一個 */
+      40% { transform: rotate(144deg); } /* 5個方向的第二個 */
+      60% { transform: rotate(216deg); } /* 5個方向的第三個 */
+      80% { transform: rotate(288deg); } /* 5個方向的第四個 */
+      100% { transform: rotate(360deg); } /* 完整一圈 */
+    }
   </style>
+  <!-- <link rel="stylesheet" href="/admin/assets/css/luckydraw.css"> -->
 </head>
 <body>
 
-  
-  <div class="container">
-    <div id="result"></div>
+  <div class="bg">
+    <div class="js-container  container">
+      <div id="result"></div>
 
-    <div id="control">
-      <button id="startBtn">1</button>
-      <button id="draw5Btn">5</button>
-      <button id="draw10Btn">10</button>
-      <div id="spinner"></div>
+      <div id="control">
+        <button id="startBtn">1</button>
+        <!-- <button id="draw5Btn">5</button>
+        <button id="draw10Btn">10</button> -->
+        <div id="spinner"></div>
+      </div>
     </div>
-  </div>
 
-  <div id="current"></div>
-  <div class="overlay" id="overlay"></div>
-  <div class="animation" id="animation">
-    <div id="spinnerAnimation" class="spinner"></div>
-  </div>
+    <div id="current"></div>
+    <div class="overlay" id="overlay"></div>
+    <div class="animation" id="animation">
+      <img src="/admin/img/spin.png" alt="Loading..." class="spinner" id="spinnerImage">
+    </div>
+  </div> 
 
   <script>
-    const allPeople = <%- JSON.stringify(users) %>; // 將 users 轉換為 JSON 格式
+    const allPeople = <%- JSON.stringify(availablePeople) %>; // 將 users 轉換為 JSON 格式
     const eventId = '<%= eventId %>';
 
     let availablePeople = [...allPeople];
@@ -273,6 +300,6 @@
       }
     });
   </script>
-
+  <!-- <script src="/admin/assets/js/luckydraw.js"></script> -->
 </body>
 </html>

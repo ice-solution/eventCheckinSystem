@@ -42,25 +42,25 @@
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <strong class="card-title">中獎者列表 - 事件 ID: <%= eventId %></strong>
+                            <strong class="card-title">中獎者列表 - event : <%= eventId %></strong>
                         </div>
                         <div class="card-body">
                             <table id="winners-table" class="table table-bordered">
                                 <thead>
                                     <tr>
-                                        <th>用戶 ID</th>
-                                        <th>名稱</th>
+                                        <th>次序</th>
+                                        <th>姓名</th>
                                         <th>公司</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <% winners.forEach(winner => { %>
                                         <tr>
-                                            <td><%= winner._id %></td>
+                                            <td><%= winner.order %></td>
                                             <td><%= winner.name %></td>
                                             <td><%= winner.company %></td>
                                         </tr>
-                                    <% }) %>
+                                    <% }); %>
                                 </tbody>
                             </table>
                             <div class="button-container" style="margin-top: 20px; text-align: center;">

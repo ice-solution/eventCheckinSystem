@@ -6,6 +6,8 @@ const mongoose = require('mongoose');
 const QRCode = require('qrcode'); // 引入 QRCode 庫
 const nodemailer = require('nodemailer');
 const sendGrid = require("../utils/sendGrid");
+const path = require('path');
+const User = require('../model/User'); // 假設您有一個 User 模型
 
 // 創建事件
 exports.createEvent = async (req, res) => {
@@ -67,7 +69,7 @@ exports.fetchUsersByEvent = async (req, res) => {
 // 向事件中添加用戶
 exports.addUserToEvent = async (req, res) => {
     const { eventId } = req.params; // 獲取事件 ID
-    const { email, name, company, phone, role, saluation, industry, transport, meal, remarks } = req.body; // 獲取用戶資料
+    const { email, name, company, table, phone, role, saluation, industry, transport, meal, remarks, isCheckIn } = req.body; // 獲取用戶資料
 
     try {
         const event = await Event.findById(eventId); // 查找事件
@@ -78,6 +80,7 @@ exports.addUserToEvent = async (req, res) => {
         const newUser = {
             email,
             name,
+            table,
             company,
             phone,
             role, // 添加角色
@@ -86,7 +89,7 @@ exports.addUserToEvent = async (req, res) => {
             transport, // 添加交通方式
             meal, // 添加餐飲選擇
             remarks, // 添加備註
-            isCheckIn: false // 默認為未登記進場
+            isCheckIn // 默認為未登記進場
         };
 
         // 將用戶添加到事件中
@@ -98,8 +101,9 @@ exports.addUserToEvent = async (req, res) => {
         newUser._id = savedUser._id; // 將 _id 添加到 newUser 對象中
 
         // 發送郵件
-        await this.sendEmail(newUser, event); // 傳遞 newUser（現在包含 _id）和事件
-
+        if(newUser.role !== 'guest'){
+            await this.sendEmail(newUser, event); // 傳遞 newUser（現在包含 _id）和事件
+        }
         res.status(201).json({ attendee: newUser }); // 返回新用戶資料
     } catch (error) {
         console.error('Error adding user:', error);
@@ -254,14 +258,13 @@ exports.sendEmail = async (user,event) => {
                       <table width="100%" cellpadding="0" cellspacing="0" border="0">
                         <tr>
                           <td>
-                            <!--[if mso]>
     <center>
     <table style="width:680px;font-family:'DengXian',sans-serif" width="680">
             <tbody>
                 <tr>
                     <td style="width:680px;font-size:15px;font-family:'DengXian',sans-serif;text-align:left" width="680">
                         <center>
-                            
+                            If you cannot read the following message, please click <a href="https://activefathering.brandactivation.hk/events/${event._id}/email/${user._id}" target="_blank" data-saferedirecturl="#">here</a>.
                         </center>
                         <br>
                         <img alt="banner" src="https://activefathering.brandactivation.hk/exvent/email_banner.jpg" style="width:680px" width="680" class="CToWUd a6T" data-bit="iit" tabindex="0"><div class="a6S" dir="ltr" style="opacity: 0.01; left: 884.5px; top: 568.5px;"><span data-is-tooltip-wrapper="true" class="a5q" jsaction="JIbuQc:.CLIENT"><button class="VYBDae-JX-I VYBDae-JX-I-ql-ay5-ays CgzRE" jscontroller="PIVayb" jsaction="click:h5M12e; clickmod:h5M12e;pointerdown:FEiYhc;pointerup:mF5Elf;pointerenter:EX0mI;pointerleave:vpvbp;pointercancel:xyn4sd;contextmenu:xexox;focus:h06R8; blur:zjh6rb;mlnRJb:fLiPzd;" data-idom-class="CgzRE" data-use-native-focus-logic="true" jsname="hRZeKc" aria-label="Download attachment " data-tooltip-enabled="true" data-tooltip-id="tt-c15" data-tooltip-classes="AZPksf" id="" jslog="91252; u014N:cOuCgd,Kr2w4b,xr6bB; 4:WyIjbXNnLWY6MTgzMjgyOTEyNjYyNjM0NDQ3MiJd; 43:WyJpbWFnZS9qcGVnIl0."><span class="OiePBf-zPjgPe VYBDae-JX-UHGRz"></span><span class="bHC-Q" jscontroller="LBaJxb" jsname="m9ZlFb" soy-skip="" ssk="6:RWVI5c"></span><span class="VYBDae-JX-ank-Rtc0Jf" jsname="S5tZuc" aria-hidden="true"><span class="notranslate bzc-ank" aria-hidden="true"><svg viewBox="0 -960 960 960" height="20" width="20" focusable="false" class=" aoH"><path d="M480-336L288-528l51-51L444-474V-816h72v342L621-579l51,51L480-336ZM263.72-192Q234-192 213-213.15T192-264v-72h72v72H696v-72h72v72q0,29.7-21.16,50.85T695.96-192H263.72Z"></path></svg></span></span><div class="VYBDae-JX-ano"></div></button><div class="ne2Ple-oshW8e-J9" id="tt-c15" role="tooltip" aria-hidden="true">Download</div></span></div>  
@@ -291,7 +294,7 @@ exports.sendEmail = async (user,event) => {
                     nsights from our latest Fatherhood Mental Health Survey
                     <br>
                     <br>
-                    Your enthusiasm during the event reaffirms our mission - to champion every father’s role in building stronger families. Let’s continue this important work together!
+                    Your enthusiasm during the event reaffirms our mission - to champion every father's role in building stronger families. Let's continue this important work together!
                     <br>
                     <br>
                     <center><img height="200" src="${qrCodeUrl}" style="width:200px;height:200px" width="200" class="CToWUd a6T" data-bit="iit" tabindex="0"><div class="a6S" dir="ltr" style="opacity: 0.01; left: 644.469px; top: 1572.08px;"><span data-is-tooltip-wrapper="true" class="a5q" jsaction="JIbuQc:.CLIENT"><button class="VYBDae-JX-I VYBDae-JX-I-ql-ay5-ays CgzRE" jscontroller="PIVayb" jsaction="click:h5M12e; clickmod:h5M12e;pointerdown:FEiYhc;pointerup:mF5Elf;pointerenter:EX0mI;pointerleave:vpvbp;pointercancel:xyn4sd;contextmenu:xexox;focus:h06R8; blur:zjh6rb;mlnRJb:fLiPzd;" data-idom-class="CgzRE" data-use-native-focus-logic="true" jsname="hRZeKc" aria-label="Download attachment " data-tooltip-enabled="true" data-tooltip-id="tt-c14" data-tooltip-classes="AZPksf" id="" jslog="91252; u014N:cOuCgd,Kr2w4b,xr6bB; 4:WyIjbXNnLWY6MTgzMjgyOTEyNjYyNjM0NDQ3MiJd; 43:WyJpbWFnZS9qcGVnIl0."><span class="OiePBf-zPjgPe VYBDae-JX-UHGRz"></span><span class="bHC-Q" jscontroller="LBaJxb" jsname="m9ZlFb" soy-skip="" ssk="6:RWVI5c"></span><span class="VYBDae-JX-ank-Rtc0Jf" jsname="S5tZuc" aria-hidden="true"><span class="notranslate bzc-ank" aria-hidden="true"><svg viewBox="0 -960 960 960" height="20" width="20" focusable="false" class=" aoH"><path d="M480-336L288-528l51-51L444-474V-816h72v342L621-579l51,51L480-336ZM263.72-192Q234-192 213-213.15T192-264v-72h72v72H696v-72h72v72q0,29.7-21.16,50.85T695.96-192H263.72Z"></path></svg></span></span><div class="VYBDae-JX-ano"></div></button><div class="ne2Ple-oshW8e-J9" id="tt-c14" role="tooltip" aria-hidden="true">Download</div></span></div></center>
@@ -532,7 +535,7 @@ exports.renderProfilePage = (req, res) => {
 // 添加參展商
 exports.addAttendee = async (req, res) => {
     const { eventId } = req.params;
-    const { name, location, phone, email, promo_codes } = req.body;
+    const { name, location, phone, email, promo_codes, description } = req.body;
 
     try {
         const event = await Event.findById(eventId);
@@ -540,7 +543,7 @@ exports.addAttendee = async (req, res) => {
             return res.status(404).json({ message: '找不到該事件' });
         }
 
-        const newAttendee = { name, location, phone, email, promo_codes };
+        const newAttendee = { name, location, phone, email, promo_codes,description };
         event.attendees.push(newAttendee);
         await event.save();
 
@@ -997,6 +1000,12 @@ exports.addLuckydrawUser = async (req, res) => {
             return res.status(404).send('Event not found.');
         }
 
+        // 檢查中獎者是否已經存在
+        const alreadyWinner = event.winners.some(existingWinner => existingWinner._id.equals(_id));
+        if (alreadyWinner) {
+            return res.status(400).send('This user has already won.');
+        }
+
         // 將中獎者存儲在 event 的 winners 陣列中
         event.winners.push(winner);
         await event.save(); // 保存更改
@@ -1012,16 +1021,20 @@ exports.addLuckydrawUser = async (req, res) => {
 exports.renderLuckydrawPage = async (req, res) => {
     const { eventId } = req.params; // 獲取 eventId
     try {
-        const event = await Event.findById(eventId).populate('users'); // 獲取事件並填充用戶信息
+        const event = await Event.findById(eventId).populate('users'); // 獲取事件並填充用戶和中獎者
         if (!event) {
             return res.status(404).send('Event not found.');
         }
 
-        // 獲取 checkin = true 的用戶
-        const users = event.users.filter(user => user.isCheckIn === true);
-        console.log(users);
-        // 渲染 luckydraw.ejs 頁面，並傳遞符合條件的用戶
-        res.render('events/luckydraw', { users, eventId });
+        // 日誌輸出 winners 陣列
+        console.log('Winners:', event.winners);
+
+        // 獲取所有已經簽到且未中獎的用戶
+        const availablePeople = event.users.filter(user => 
+            user.isCheckIn === true && !event.winners.some(winner => winner._id && winner._id.equals(user._id)) // 確保 winner._id 存在
+        );
+
+        res.render('events/luckydraw', { eventId, availablePeople }); // 傳遞可用的參與者
     } catch (error) {
         console.error('Error rendering luckydraw page:', error);
         res.status(500).send('Error rendering luckydraw page.');
@@ -1037,8 +1050,13 @@ exports.renderAdminLuckydrawPage = async (req, res) => {
             return res.status(404).send('Event not found.');
         }
 
-        // 獲取中獎者列表
-        const winners = event.winners;
+        // 獲取中獎者列表，並添加次序
+        const winners = event.winners.map((winner, index) => ({
+            order: index + 1, // 次序從 1 開始
+            _id: winner._id,
+            name: winner.name,
+            company: winner.company
+        }));
 
         // 渲染 admin/luckydraw.ejs 頁面，並傳遞中獎者
         res.render('admin/luckydraw', { winners, eventId });
@@ -1063,5 +1081,47 @@ exports.renderQRCodeLoginPage = async (req, res) => {
     } catch (error) {
         console.error('Error rendering QR code login page:', error);
         res.status(500).send('Error rendering QR code login page.');
+    }
+};
+exports.renderLuckydrawSetting = (req, res) => {
+    const eventId = req.params.eventId;
+    res.render('admin/luckydraw_setting', { eventId }); // 渲染 luckydraw_setting.ejs
+};
+// 上傳背景圖片的控制器函數
+exports.uploadBackground = (req, res) => {
+    if (!req.file) {
+        req.flash('error_msg', '沒有上傳文件或文件格式不正確');
+        return res.redirect(`/events/${req.params.eventId}/luckydraw_setting`); // 返回到 luckydraw_setting 頁面
+    }
+    // 獲取上傳的文件路徑
+    const filePath = path.join('/luckydraw/img/', req.file.filename);
+
+    // 這裡可以將 filePath 存入數據庫或進行其他處理
+    console.log('上傳的背景圖片路徑:', filePath);
+
+    // 設置成功消息
+    req.flash('success_msg', '圖片上傳成功！');
+    res.redirect(`/events/${req.params.eventId}/luckydraw_setting`); // 返回到 luckydraw_setting 頁面
+};
+
+// 渲染 email_html.ejs 的控制器
+exports.renderEmailHtml = async (req, res) => {
+    const { eventId, userId } = req.params; // 獲取 eventId 和 userId
+    
+    try {
+        // 查詢事件和用戶信息
+        const event = await Event.findById(eventId); // 根據 eventId 查詢事件
+        // const user = await User.findById(userId); // 根據 userId 查詢用戶
+
+        if (!event) {
+            return res.status(404).send('事件或用戶未找到'); // 如果事件或用戶不存在，返回 404 錯誤
+        }
+
+        // 渲染 email_html.ejs，並傳遞事件和用戶信息
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${userId}&size=250x250`; // 替換為您的 QR 碼內容
+        res.render('email_html', { eventId, userId, qrCodeUrl });
+    } catch (error) {
+        console.error('Error fetching event or user:', error);
+        res.status(500).send('伺服器錯誤'); // 返回伺服器錯誤
     }
 };
