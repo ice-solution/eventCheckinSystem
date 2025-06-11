@@ -3,6 +3,8 @@ const express = require('express');
 const router = express.Router();
 const eventsController = require('../controllers/eventsController');
 const importController = require('../controllers/importController');
+const emailTemplateController = require("../controllers/emailTemplateController")
+
 const Event = require('../model/Event'); // 引入 Event 模型
 const multer = require('multer');
 const path = require('path');
@@ -172,6 +174,11 @@ router.get('/:eventId/luckydraw/list', eventsController.renderAdminLuckydrawPage
 
 // 添加路由以顯示 QR 碼登錄頁面
 router.get('/:eventId/qrcodeLogin', eventsController.renderQRCodeLoginPage); // 使用控制器函數
+
+// Email Template
+router.get('/:eventId/emailTemplate', emailTemplateController.renderEmailTemplateList); // 渲染電子郵件模板列表頁面
+router.get('/:eventId/emailTemplate/create', emailTemplateController.renderCreateEmailTemplatePage); // 渲染創建電子郵件模板頁面
+router.get('/:eventId/emailTemplate/:id', emailTemplateController.renderEmailTemplateDetail); // 渲染創建電子郵件模板頁面
 
 // 上傳背景圖片的路由
 router.post('/:eventId/luckydraw_setting/upload-background', uploadBackgroundMulter.single('backgroundImage'), eventsController.uploadBackground);
