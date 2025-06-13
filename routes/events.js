@@ -49,7 +49,7 @@ router.post('/:eventId/import', upload, importController.importUsers);
 
 router.post('/:eventId/users', eventsController.addUserToEvent);
 // router.put('/:eventId/users/:userEmail', eventsController.updateUserInEvent);
-// router.delete('/:eventId/users/:userEmail', eventsController.removeUserFromEvent);
+
 
 router.get('/:eventId/scan', eventsController.scanEventUsers);
 
@@ -59,6 +59,7 @@ router.post('/:eventId/login', eventsController.loginUser); // 登入請求
 //update user 
 router.get('/:eventId/users/:userId', eventsController.getUserById); // 根據事件 ID 和用戶 ID 獲取用戶
 router.put('/:eventId/users/:userId', eventsController.updateUser); // 更新事件中的用戶
+router.delete('/:eventId/users/:userId', eventsController.removeUserFromEvent);
 
 // 獲取事件的用戶列表
 

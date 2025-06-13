@@ -397,7 +397,7 @@ exports.updateUserInEvent = async (req, res) => {
 
 // 從事件中移除用戶
 exports.removeUserFromEvent = async (req, res) => {
-    const { eventId, userEmail } = req.params; // 從請求參數中獲取事件 ID 和用戶電子郵件
+    const { eventId, userId } = req.params; // 從請求參數中獲取事件 ID 和用戶 ID
 
     try {
         const event = await Event.findById(eventId); // 根據事件 ID 查詢事件
@@ -406,7 +406,7 @@ exports.removeUserFromEvent = async (req, res) => {
         }
 
         // 查找用戶的索引
-        const userIndex = event.users.findIndex(user => user.email === userEmail);
+        const userIndex = event.users.findIndex(user => user._id.toString() === userId);
         if (userIndex === -1) {
             return res.status(404).json({ message: 'User not found in this event' });
         }

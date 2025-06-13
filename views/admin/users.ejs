@@ -194,6 +194,7 @@
                                         <th>Meal Choice</th>
                                         <th>Remarks</th>
                                         <th>Checked In</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -212,6 +213,9 @@
                                             <td><%= user.remarks %></td>
                                             <td>
                                                 <input type="checkbox" class="checkin-toggle" data-_id="<%= user._id %>" <%= user.isCheckIn ? 'checked' : '' %> />
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-danger delete-user" data-_id="<%= user._id %>">Delete</button>
                                             </td>
                                         </tr>
                                     <% }) %>
@@ -332,6 +336,9 @@
                             <td>
                                 <input type="checkbox" class="checkin-toggle" data-_id="${response.attendee._id}" />
                             </td>
+                            <td>
+                                <button class="btn btn-danger delete-user" data-_id="${response.attendee._id}">Delete</button>
+                            </td>
                         </tr>
                     `);
                     $('#addUserForm').hide(); // Hide form
@@ -346,6 +353,43 @@
         // Cancel button
         $('#cancelBtn').on('click', function() {
             $('#addUserForm').hide(); // Hide form
+        });
+
+        // Delete user
+        $('#usersTable tbody').on('click', '.delete-user', function() {
+            const _id = $(this).data('_id');
+            const event_id = '<%= event._id %>';
+
+            // 確認是否刪除
+            if (confirm('確定要刪除這個用戶嗎？')) {
+                // 發送 AJAX 請求刪除用戶
+                $.ajax({
+                    url: `/events/${event_id}/users/${_id}`,
+                    type: 'DELETE',
+                    success: function(response) {
+                        // 從表格中移除該行
+                        $(this).closest('tr').remove();
+                        // 顯示成功提示
+                        const alertHtml = `
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                用戶刪除成功！
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        `;
+                        $('#alertContainer').append(alertHtml);
+                        // 自動隱藏提示
+                        setTimeout(() => {
+                            $('.alert').alert('close');
+                        }, 1500);
+                    }.bind(this),
+                    error: function(xhr, status, error) {
+                        console.error('Error deleting user:', error);
+                        alert('刪除失敗，請稍後再試。');
+                    }
+                });
+            }
         });
     });
 </script>
