@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const emailTemplateSchema = new mongoose.Schema({
+    eventId: { type: mongoose.Schema.Types.ObjectId, ref: 'Event'}, // 事件ID
     subject: { type: String, required: true }, // 電子郵件主題
     content: { type: String,  default: "", },    // 電子郵件內容
     created_at: { type: Date, default: Date.now }, // 創建時間
