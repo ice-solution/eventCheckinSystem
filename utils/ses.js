@@ -7,6 +7,10 @@ const sesClient = new ses({
 
 const EMAIL_SENDER = process.env.SENDER_EMAIL; // 替換為您的 SES 電子郵件地址
 exports.sendEmail = async (to, subject, body) => {
+  console.log("Sending email to:", to);
+  console.log("Email subject:", subject);
+  console.log("Email body:", body);
+  console.log("Email sender:", EMAIL_SENDER);
 
   const params = {
     Source: EMAIL_SENDER,
