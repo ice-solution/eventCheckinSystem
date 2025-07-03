@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const QRCode = require('qrcode'); // 引入 QRCode 庫
 const nodemailer = require('nodemailer');
 const sendGrid = require("../utils/sendGrid");
+const ses = require("../utils/ses");
 const path = require('path');
 const User = require('../model/User'); // 假設您有一個 User 模型
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
@@ -323,7 +324,8 @@ exports.sendEmail = async (user,event) => {
         // };
 
         // await transporter.sendMail(mailOptions);
-        sendGrid.sendEmail(user.email, '歡迎加入我們的活動', messageBody);
+        // sendGrid.sendEmail(user.email, '歡迎加入我們的活動', messageBody);
+        ses.sendEmail(user.email, '歡迎加入我們的活動', messageBody);
 
 }
 // 渲染用戶登入頁面

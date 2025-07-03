@@ -1,6 +1,7 @@
 const EmailTemplate = require("../model/EmailTemplate")
 
 const sendGrid = require("../utils/sendGrid")
+const ses = require("../utils/ses")
 const EmailRecord = require("../model/EmailRecord")
 
 const {sampleHtmlTemplate} = require("../template/sample");
@@ -122,7 +123,7 @@ exports.sendEmailById = async (req, res) => {
       const results = await Promise.all(
         to.map((email) => {
           // send email
-          return sendGrid.sendEmail(email, subject, body)
+          return ses.sendEmail(email, subject, body)
         })
       )
 
