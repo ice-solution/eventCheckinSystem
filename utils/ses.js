@@ -1,38 +1,46 @@
-const ses = require('aws-sdk/clients/ses');
-const sesClient = new ses({
+const { SESClient, SendEmailCommand } = require("@aws-sdk/client-ses");
+
+const sesClient = new SESClient({
   region: process.env.AWS_REGION,
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
 }); 
 
 const EMAIL_SENDER = process.env.SENDER_EMAIL; // 替換為您的 SES 電子郵件地址
-exports.sendEmail = async (to, subject, body) => {
-  console.log("Sending email to:", to);
-  console.log("Email subject:", subject);
-  console.log("Email body:", body);
-  console.log("Email sender:", EMAIL_SENDER);
 
-  const params = {
-    Source: EMAIL_SENDER,
-    Destination: {
-      ToAddresses: [to],
-    },
+const sendCommand = (userEmail, subject, html) => {
+  return new SendEmailCommand({
+	Destination: {
+		ToAddresses: Array.isArray(userEmail) ? userEmail : [ userEmail ]
+	},
     Message: {
-      Subject: {
-        Data: subject,
-      },
-      Body: {
-        Html: {
-          Data: body,
-        },
-      },
-    },
-  };
+	    Body: {
+	      Html: {
+	      	Data: html
+	      },
+	      Text: {
+	        Data: html
+	      }
+	    },
+	    Subject: {
+	      Data: subject
+	    }
+	},
+	Source: EMAIL_SENDER
+  });
+};
 
-  try {
-    return await sesClient.sendEmail(params).promise();
-  } catch (error) {
-    console.error("Error sending email:", error);
-    return error;
-  }
+exports.sendEmail = async (to, subject, body) => {
+  	try {
+		const sendEmailCommand = sendCommand(to, subject, body);
+		const result = await sesClient.send(sendEmailCommand);
+		console.log('sent: ', result);
+		return result;
+	} catch (err) {
+		if (err instanceof Error && err.name === "MessageRejected") {
+			return messageRejectedError;
+		}
+		throw err;
+	}
+
 };
