@@ -9,7 +9,8 @@ const userSchema = new mongoose.Schema({
     company: { type: String, required: true },
     isCheckIn: { type: Boolean, default: false }, // 新增的布林字段，默認值為 false
     create_at: { type: Date, default: Date.now }, // 新增的 create_at 字段
-    modified_at: { type: Date, default: Date.now } // 新增的 modified_at 字段
+    modified_at: { type: Date, default: Date.now }, // 新增的 modified_at 字段
+    paymentStatus: { type: String, enum: ['unpaid', 'pending', 'paid', 'failed'], default: 'unpaid' }, // 付款狀態
 });
 
 const User = mongoose.model('User', userSchema);

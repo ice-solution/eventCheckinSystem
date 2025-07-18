@@ -114,6 +114,11 @@
                                 <a href="/events/<%= event._id%>/scan" class="btn btn-outline-secondary">Scan QR Code</a>
                                 <a href="/events/<%= event._id%>/import" class="btn btn-outline-secondary">Import Data</a>
                                 <button id="addUserBtn" class="btn btn-outline-secondary">Add User</button>
+                                <a href="/events/<%= event._id %>/report" class="btn btn-outline-success ml-2">Download Report</a>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="paymentEvent">
+                                    <label class="form-check-label" for="paymentEvent">Payment Event</label>
+                                </div>
                             </div>
                             <div class="clearfix" style="margin-top:20px"></div>
                             <div class="add-user-form" id="addUserForm">
@@ -391,8 +396,107 @@
                 });
             }
         });
+
+        // 取得 eventId
+        const eventId = '<%= event._id %>';
+        // 初始化票券資料
+        let paymentTickets = <%- JSON.stringify(event.PaymentTickets || []) %>;
+        let isPaymentEvent = <%- event.isPaymentEvent ? 'true' : 'false' %>;
+
+        // Payment Event checkbox 狀態初始化
+        $('#paymentEvent').prop('checked', isPaymentEvent);
+        if(isPaymentEvent) showTicketFields();
+
+        // 動態顯示票券欄位
+        function showTicketFields() {
+            if($('#ticketFields').length) return;
+            const html = `
+                <form id="paymentEventForm" class="mt-3">
+                    <h5>票券設定</h5>
+                    <div id="ticketsList"></div>
+                    <button type="button" class="btn btn-primary btn-sm" id="addTicketBtn">新增票券</button>
+                    <button type="submit" class="btn btn-success btn-sm ml-2">儲存付費設定</button>
+                </form>
+            `;
+            $('#paymentEvent').closest('.form-check').after(html);
+            renderTickets();
+        }
+
+        // 渲染票券列表
+        function renderTickets() {
+            let html = '';
+            paymentTickets.forEach((ticket, idx) => {
+                html += `
+                    <div class="ticket-item mb-2" data-idx="${idx}">
+                        <input type="text" class="form-control d-inline-block w-auto mr-2 ticket-title" placeholder="票券名稱" value="${ticket.title || ''}" style="width:120px;">
+                        <input type="number" class="form-control d-inline-block w-auto mr-2 ticket-price" placeholder="價格" value="${ticket.price || ''}" style="width:100px;">
+                        <input type="datetime-local" class="form-control d-inline-block w-auto mr-2 ticket-datetime" value="${ticket.datetime ? new Date(ticket.datetime).toISOString().slice(0,16) : ''}" style="width:180px;">
+                        <button type="button" class="btn btn-danger btn-sm remove-ticket">刪除</button>
+                    </div>
+                `;
+            });
+            $('#ticketsList').html(html);
+        }
+
+        // 新增票券
+        $(document).on('click', '#addTicketBtn', function(e) {
+            e.preventDefault();
+            paymentTickets.push({ title: '', price: '', datetime: '' });
+            renderTickets();
+        });
+
+        // 刪除票券
+        $(document).on('click', '.remove-ticket', function() {
+            const idx = $(this).closest('.ticket-item').data('idx');
+            paymentTickets.splice(idx, 1);
+            renderTickets();
+        });
+
+        // 編輯票券
+        $(document).on('change', '.ticket-title, .ticket-price, .ticket-datetime', function() {
+            const idx = $(this).closest('.ticket-item').data('idx');
+            const row = $(this).closest('.ticket-item');
+            paymentTickets[idx].title = row.find('.ticket-title').val();
+            paymentTickets[idx].price = Number(row.find('.ticket-price').val());
+            paymentTickets[idx].datetime = row.find('.ticket-datetime').val();
+        });
+
+        // 提交 payment event form
+        $(document).on('submit', '#paymentEventForm', function(e) {
+            e.preventDefault();
+            const checked = $('#paymentEvent').is(':checked');
+            $.ajax({
+                url: `/events/${eventId}/paymentEvent`,
+                type: 'PATCH',
+                contentType: 'application/json',
+                data: JSON.stringify({ isPaymentEvent: checked, PaymentTickets: paymentTickets }),
+                success: function(res) {
+                    const alertHtml = `
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            付費活動設定已更新！
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    `;
+                    $('#alertContainer').append(alertHtml);
+                    setTimeout(() => { $('.alert').alert('close'); }, 1500);
+                }
+            });
+        });
+
+        // 監聽 Payment Event checkbox，顯示/隱藏票券欄位
+        $('#paymentEvent').on('change', function() {
+            const checked = $(this).is(':checked');
+            if(checked) {
+                showTicketFields();
+            } else {
+                $('#paymentEventForm').remove();
+            }
+        });
     });
 </script>
 
 </body>
 </html>
+

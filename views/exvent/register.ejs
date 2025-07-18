@@ -57,6 +57,22 @@
                 <input type="text" class="form-control" id="company" name="company" required>
             </div>
 
+            <% if (paymentTickets && paymentTickets.length > 0) { %>
+                <div class="form-group">
+                    <label for="ticketId">選擇購票</label>
+                    <select class="form-control" id="ticketId" name="ticketId" required>
+                        <option value="">請選擇票券</option>
+                        <% paymentTickets.forEach(function(ticket) { 
+                            const now = new Date();
+                            const ticketTime = ticket.datetime ? new Date(ticket.datetime) : null;
+                            if (!ticketTime || ticketTime >= now) { %>
+                                <option value="<%= ticket._id %>"><%= ticket.title %> - $<%= ticket.price %></option>
+                        <%  } 
+                        }); %>
+                    </select>
+                </div>
+            <% } %>
+
             <button type="submit" class="btn btn-primary">立即登記</button>
         </form>
         <div id="successMessage"></div> <!-- 成功消息顯示區域 -->
@@ -67,32 +83,60 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
+        // stripe public key
+        const STRIPE_PK = '<%= process.env.STRIPE_PK || "" %>';
+        let stripe;
+        if (STRIPE_PK) {
+            stripe = Stripe(STRIPE_PK);
+        }
 
         $('#userForm').on('submit', function(e) {
+            e.preventDefault(); // 防止表單默認提交
+            const ticketId = $('#ticketId').val();
             const newUser = {
                 email: $('#email').val(),
                 name: $('#name').val(),
                 company: $('#company').val(),
                 phone_code: $('#phone_code').val(),
-                phone: $('#phone').val()            
+                phone: $('#phone').val(),
+                ticketId: ticketId
             };
-            e.preventDefault(); // 防止表單默認提交
-            
-            $.ajax({
-                type: 'POST',
-                url: '/events/<%= event_id %>/users',
-                data: newUser,
-                success: function(response) {
-                    window.location.href = `/web/<%= event_id %>/register/success`;
-                    // $('#successMessage').html('登記成功！請等候電郵'); // 清除成功消息
-                },
-                error: function(error) {
-                    // 顯示錯誤消息
-                    var errMsg = error.responseJSON.message;
-                    $('#errorMessage').html('<div class="alert alert-danger">登記失敗！'+errMsg+'</div>');
-                    $('#successMessage').html(''); // 清除成功消息
-                }
-            });
+            if (ticketId) {
+                // Stripe checkout
+
+                $.ajax({
+                    type: 'POST',
+                    url: '/web/<%= event_id %>/stripe-checkout',
+                    contentType: 'application/json',
+                    data: JSON.stringify(newUser),
+                    success: function(response) {
+                        if (response.url) {
+                            window.location.href = response.url;
+                        } else {
+                            $('#errorMessage').html('<div class="alert alert-danger">無法跳轉到付款頁面</div>');
+                        }
+                    },
+                    error: function(error) {
+                        var errMsg = error.responseJSON && error.responseJSON.message ? error.responseJSON.message : '付款失敗';
+                        $('#errorMessage').html('<div class="alert alert-danger">'+errMsg+'</div>');
+                    }
+                });
+            } else {
+                // 無票券，直接註冊
+                $.ajax({
+                    type: 'POST',
+                    url: '/events/<%= event_id %>/users',
+                    data: newUser,
+                    success: function(response) {
+                        window.location.href = `/web/<%= event_id %>/register/success`;
+                    },
+                    error: function(error) {
+                        var errMsg = error.responseJSON.message;
+                        $('#errorMessage').html('<div class="alert alert-danger">登記失敗！'+errMsg+'</div>');
+                        $('#successMessage').html('');
+                    }
+                });
+            }
         });
     </script>
 </body>

@@ -22,6 +22,7 @@ const userSchema = new mongoose.Schema({
     isCheckIn: { type: Boolean, default: false }, // 是否簽到
     create_at: { type: Date, default: Date.now }, // 創建時間
     modified_at: { type: Date, default: Date.now }, // 修改時間
+    checkInAt: { type: Date }, // 簽到時間
     promos: [{ // 添加 promos 字段
         event_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Event' },
         attendee_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Attendee' },
@@ -36,7 +37,8 @@ const userSchema = new mongoose.Schema({
     industry: { type: String }, // 行業
     transport: { type: String }, // 交通方式
     meal: { type: String }, // 餐飲選擇
-    remarks: { type: String } // 備註
+    remarks: { type: String }, // 備註
+    paymentStatus: { type: String, enum: ['unpaid', 'pending', 'paid', 'failed'], default: 'unpaid' }, // 付款狀態
 });
 
 const attendeeSchema = new mongoose.Schema({
@@ -54,6 +56,12 @@ const winnerSchema = new mongoose.Schema({
     company: { type: String, required: true } // 用戶公司
 });
 
+const ticketSchema = new mongoose.Schema({
+    title: { type: String, required: true },
+    price: { type: Number, required: true },
+    datetime: { type: Date, required: true }
+});
+
 const eventSchema = new mongoose.Schema({
     name: { type: String, required: true }, // 事件名稱
     from: { type: Date, required: true },   // 事件開始時間
@@ -65,7 +73,9 @@ const eventSchema = new mongoose.Schema({
     users:[userSchema],
     attendees: [attendeeSchema], // 添加參展商參數
     points: [pointSchema],
-    winners: [winnerSchema] // 新增 winners 字段
+    winners: [winnerSchema], // 新增 winners 字段
+    isPaymentEvent: { type: Boolean, default: false }, // 是否為付費活動
+    PaymentTickets: [ticketSchema] // 票券陣列
 });
 
 // 在保存之前更新 modified_at 字段

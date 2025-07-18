@@ -14,6 +14,8 @@ const awardsRouter = require('./routes/awards'); // 引入新的路由
 const authRoutes = require('./routes/auth'); // 引入 auth 路由
 const emailTemplateRoutes = require('./routes/emailTemplate'); // 引入 emailTemplate 路由
 
+const eventsController = require('./controllers/eventsController');
+
 const Auth = require('./model/Auth'); // 引入 Auth 模型
 const path = require('path'); // 引入 path 模組
 const bcrypt = require('bcrypt');
@@ -26,6 +28,7 @@ const server = http.createServer(app);
 const io = initSocket(server); // 初始化 Socket.IO
 
 // 中間件
+app.post('/web/webhook/stripe', express.raw({type: 'application/json'}), eventsController.stripeWebhook);
 app.use(express.json()); // 解析 JSON 請求主體
 app.use(express.urlencoded({ extended: true }));
 app.use(session({

@@ -8,6 +8,9 @@ const nodemailer = require('nodemailer');
 const sendGrid = require("../utils/sendGrid");
 const path = require('path');
 const User = require('../model/User'); // 假設您有一個 User 模型
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const Transaction = require('../model/Transaction');
+const ExcelJS = require('exceljs');
 
 // 創建事件
 exports.createEvent = async (req, res) => {
@@ -457,7 +460,13 @@ exports.getUserById = async (req, res) => {
         }
 
         // 更新用戶的 isCheckIn 屬性
-        user.isCheckIn = true; // 將 isCheckIn 設置為 true
+        if (!user.isCheckIn && req.body.isCheckIn === true) {
+            user.isCheckIn = true;
+            user.checkInAt = new Date();
+        } else if (req.body.isCheckIn === false) {
+            user.isCheckIn = false;
+            user.checkInAt = undefined;
+        }
         await event.save(); // 保存事件以更新用戶資料
 
         res.status(200).send(user); // 返回更新後的用戶資料
@@ -483,6 +492,15 @@ exports.updateUser = async (req, res) => {
             return res.status(404).send('找不到該用戶'); // 如果用戶不存在，返回 404 錯誤
         }
         // 更新用戶信息
+        if (typeof isCheckIn !== 'undefined') {
+            if (!user.isCheckIn && isCheckIn === true) {
+                user.isCheckIn = true;
+                user.checkInAt = new Date();
+            } else if (isCheckIn === false) {
+                user.isCheckIn = false;
+                user.checkInAt = undefined;
+            }
+        }
         user.name = name || user.name;
         user.phone_code = phone_code || user.phone_code;
         user.phone = phone || user.phone;
@@ -490,7 +508,6 @@ exports.updateUser = async (req, res) => {
         // user.email = email || user.email;
         // user.point = point || user.point;
         // user._id = _id || user._id;
-        user.isCheckIn = isCheckIn;
         user.modified_at = Date.now(); // 更新修改時間
         await event.save(); // 保存事件以更新用戶資料
 
@@ -1123,5 +1140,164 @@ exports.renderEmailHtml = async (req, res) => {
     } catch (error) {
         console.error('Error fetching event or user:', error);
         res.status(500).send('伺服器錯誤'); // 返回伺服器錯誤
+    }
+};
+
+// 更新付費活動設定
+exports.updatePaymentEvent = async (req, res) => {
+    const { eventId } = req.params;
+    const { isPaymentEvent, PaymentTickets } = req.body;
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+        if (typeof isPaymentEvent !== 'undefined') event.isPaymentEvent = isPaymentEvent;
+        if (Array.isArray(PaymentTickets)) event.PaymentTickets = PaymentTickets;
+        await event.save();
+        res.status(200).json({ message: 'Payment event updated', event });
+    } catch (error) {
+        console.error('Error updating payment event:', error);
+        res.status(500).json({ message: 'Error updating payment event' });
+    }
+};
+
+// Stripe Checkout
+exports.stripeCheckout = async (req, res) => {
+    const { event_id } = req.params;
+    const { ticketId, email, name, company, phone_code, phone } = req.body;
+    try {
+        const event = await Event.findById(event_id);
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+        const ticket = event.PaymentTickets.id(ticketId);
+        if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+        // Stripe session
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            customer_email: email,
+            line_items: [
+                {
+                    price_data: {
+                        currency: 'hkd',
+                        product_data: {
+                            name: ticket.title,
+                        },
+                        unit_amount: ticket.price * 100,
+                    },
+                    quantity: 1,
+                },
+            ],
+            mode: 'payment',
+            success_url: `${req.protocol}://${req.get('host')}/web/${event_id}/register/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${req.protocol}://${req.get('host')}/web/${event_id}/register/fail?session_id={CHECKOUT_SESSION_ID}`,
+            metadata: {
+                event_id,
+                ticketId,
+                name,
+                company,
+                phone_code,
+                phone
+            }
+        });
+        // 新增 Transaction
+        await Transaction.create({
+            eventId: event_id,
+            userEmail: email,
+            userName: name,
+            ticketId: ticket._id,
+            ticketTitle: ticket.title,
+            ticketPrice: ticket.price,
+            stripeSessionId: session.id,
+            status: 'pending'
+        });
+        res.json({ url: session.url });
+    } catch (error) {
+        console.error('Stripe checkout error:', error);
+        res.status(500).json({ message: 'Stripe error' });
+    }
+};
+
+// Stripe Webhook
+exports.stripeWebhook = async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+      console.log('Webhook received:', req.body);
+    let event;
+    try {
+        event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+        
+    } catch (err) {
+        console.log(err.message);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+    // 處理事件
+    if (event.type === 'checkout.session.completed') {
+        const session = event.data.object;
+        // 更新 transaction 狀態
+        const transaction = await Transaction.findOneAndUpdate(
+            { stripeSessionId: session.id },
+            { status: 'paid' },
+            { new: true }
+        );
+        if (transaction) {
+            // 將用戶加入 event.users
+            const eventDoc = await Event.findById(transaction.eventId);
+            if (eventDoc) {
+                eventDoc.users.push({
+                    email: transaction.userEmail,
+                    name: transaction.userName,
+                    company: session.metadata.company,
+                    paymentStatus: 'paid'
+                });
+                await eventDoc.save();
+            }
+        }
+    } else if (event.type === 'checkout.session.expired' || event.type === 'checkout.session.payment_failed') {
+        const session = event.data.object;
+        await Transaction.findOneAndUpdate(
+            { stripeSessionId: session.id },
+            { status: 'failed' }
+        );
+    }
+    res.json({ received: true });
+};
+
+exports.outputReport = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).send('Event not found');
+        const users = event.users || [];
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Users');
+        worksheet.columns = [
+            { header: 'Email', key: 'email', width: 25 },
+            { header: 'Name', key: 'name', width: 20 },
+            { header: 'Table', key: 'table', width: 10 },
+            { header: 'Company', key: 'company', width: 20 },
+            { header: 'Phone', key: 'phone', width: 15 },
+            { header: 'Role', key: 'role', width: 10 },
+            { header: 'Industry', key: 'industry', width: 15 },
+            { header: 'CheckInAt', key: 'modified_at', width: 15 },
+            { header: '已簽到', key: 'isCheckIn', width: 10 }
+        ];
+        users.forEach(user => {
+            worksheet.addRow({
+                email: user.email,
+                name: user.name,
+                table: user.table,
+                company: user.company,
+                phone: user.phone,
+                role: user.role,
+                industry: user.industry,
+                isCheckIn: user.isCheckIn ? '✓' : ''
+            });
+        });
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename=event_users.xlsx');
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (err) {
+        console.error('Export report error:', err);
+        res.status(500).send('報表匯出失敗');
     }
 };

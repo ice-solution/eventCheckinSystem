@@ -183,4 +183,8 @@ router.get('/:eventId/luckydraw_setting', eventsController.renderLuckydrawSettin
 // 新增的路由
 router.get('/:eventId/email/:userId', eventsController.renderEmailHtml);
 
+router.patch('/:eventId/paymentEvent', eventsController.updatePaymentEvent);
+
+router.get('/:eventId/report', eventsController.outputReport);
+
 module.exports = router;
