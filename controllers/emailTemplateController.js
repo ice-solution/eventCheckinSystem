@@ -128,15 +128,36 @@ exports.sendEmailById = async (req, res) => {
       )
 
       // save email record with status
+      /**
+       * Result sent:  {
+          '$metadata': {
+            httpStatusCode: 200,
+            requestId: '7696f044-eb19-417d-a3ec-c9352343f23e',
+            extendedRequestId: undefined,
+            cfId: undefined,
+            attempts: 1,
+            totalRetryDelay: 0
+          },
+          MessageId: '010e019827c73c33-d88e5f97-b23e-494b-ac16-deda3d99c0c8-000000'
+        }
+       */
       const emailRecords = results.map((result, index) => {
-        let emailRecord = result[0]
-        return new EmailRecord({
-          recipient: to[index],
-          emailTemplate: id,
-          status: emailRecord.statusCode === 202 ? "成功" : "失敗",
-          errorLog: emailRecord.statusCode === 202 ? "" : `${result}`,
-          created_at: Date.now(),
-        })
+        if (result instanceof Error) {
+          return new EmailRecord({
+            recipient: to[index],
+            emailTemplate: id,
+            status: "失敗",
+            errorLog: result.message,
+            created_at: Date.now(),
+          })
+        }else{
+          return new EmailRecord({
+            recipient: to[index],
+            emailTemplate: id,
+            status: "成功",
+            created_at: Date.now(),
+          })
+        }
       })
       await EmailRecord.insertMany(emailRecords)
 

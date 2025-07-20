@@ -9,7 +9,8 @@
     <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
     <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
     <link rel="stylesheet" href="/admin/assets/css/style.css">
-    <script src="https://cdn.tiny.cloud/1/xdp8p8h9vpfy9o6jiqwtc12t3yj5qwvwc7o8esbqiupb6sam/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
+    <script src="https://cdn.tiny.cloud/1/xdp8p8h9vpfy9o6jiqwtc12t3yj5qwvwc7o8esbqiupb6sam/tinymce/7/tinymce.min.js"
+        referrerpolicy="origin"></script>
     <script>
         tinymce.init({
             selector: '#content', // WYSIWYG 編輯器的選擇器
@@ -46,9 +47,9 @@
                 <label for="subject">電子郵件主題</label>
                 <input type="text" class="form-control" id="subject" value="<%= template.subject %>"" required>
             </div>
-            <div class="form-group">
+            <div class=" form-group">
                 <label for="body">電子郵件內容</label>
-                <textarea class="form-control" name="content" id="content" rows="10" >
+                <textarea class="form-control" name="content" id="content" rows="10">
                     <%= template.content %>
                 </textarea>
             </div>
@@ -58,7 +59,7 @@
         <div id="alertContainer" class="mt-3"></div>
     </div>
 
-    <div> 
+    <div>
         <form id="sendEmailForm">
             <div class="form-group">
                 <label for="recipient">收件人</label>
@@ -66,7 +67,7 @@
             </div>
             <button type="submit" class="btn btn-primary">發送電子郵件</button>
     </div>
-    
+
     <table id="email-records-data-table" class="table table-bordered">
         <thead>
             <tr>
@@ -78,14 +79,20 @@
         <tbody>
             <% emailRecords.forEach(function(record) { %>
                 <tr>
-                    <td><%= new Date(record.created_at).toLocaleString("en-GB") %></td>
-                    <td><%= record.recipient %></td>
-                    <td><%= record.status %></td>
+                    <td>
+                        <%= new Date(record.created_at).toLocaleString("en-GB") %>
+                    </td>
+                    <td>
+                        <%= record.recipient %>
+                    </td>
+                    <td>
+                        <%= record.status %>
+                    </td>
                 </tr>
-            <% }); %>
+                <% }); %>
         </tbody>
     </table>
-    
+
     <!-- 引入 jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
@@ -134,7 +141,7 @@
                         `;
                         $('#alertContainer').append(alertHtml);
                     }
-                }).done(function() {
+                }).done(function () {
                     // page refresh
                     location.reload();
                 });
@@ -187,7 +194,7 @@
                     `;
                     $('#alertContainer').append(alertHtml);
                 }
-            }).done(function() {
+            }).done(function () {
                 // 重新加載頁面以顯示最新的發送記錄
                 location.reload();
             });
@@ -212,10 +219,13 @@
     $(document).ready(function () {
         $('#email-records-data-table').DataTable({
             "order": [[0, "desc"]], // 根據第一列（發送時間）降序排序   
+            "columnDefs": [
+                { "type": "date", "targets": 0 }//date column formatted like "03/23/2018 10:25:13 AM".
+            ],
             "pageLength": 10, // 每頁顯示 10 條記錄
             "lengthMenu": [5, 10, 25, 50], // 分頁選項
         });
-        
+
     });
 </script>
 
