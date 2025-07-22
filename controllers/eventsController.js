@@ -12,7 +12,7 @@ const User = require('../model/User'); // 假設您有一個 User 模型
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const Transaction = require('../model/Transaction');
 const ExcelJS = require('exceljs');
-const getWelcomeEmailTemplate = require('../template/welcomeEmail'); // 引入歡迎郵件模板
+const { getWelcomeEmailTemplate } = require('../template/welcomeEmail'); // 引入歡迎郵件模板
 
 // 創建事件
 exports.createEvent = async (req, res) => {
