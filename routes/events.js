@@ -3,6 +3,8 @@ const express = require('express');
 const router = express.Router();
 const eventsController = require('../controllers/eventsController');
 const importController = require('../controllers/importController');
+const emailTemplateController = require("../controllers/emailTemplateController")
+
 const Event = require('../model/Event'); // 引入 Event 模型
 const multer = require('multer');
 const path = require('path');
@@ -186,5 +188,9 @@ router.get('/:eventId/email/:userId', eventsController.renderEmailHtml);
 router.patch('/:eventId/paymentEvent', eventsController.updatePaymentEvent);
 
 router.get('/:eventId/report', eventsController.outputReport);
+// Email Template
+router.get('/:eventId/emailTemplate', emailTemplateController.renderEmailTemplateList); // 渲染電子郵件模板列表頁面
+router.get('/:eventId/emailTemplate/create', emailTemplateController.renderCreateEmailTemplatePage); // 渲染創建電子郵件模板頁面
+router.get('/:eventId/emailTemplate/:id', emailTemplateController.renderEmailTemplateDetail); // 渲染創建電子郵件模板頁面
 
 module.exports = router;

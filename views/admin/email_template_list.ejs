@@ -1,5 +1,5 @@
 <%- include ("components/header") %>
-    <%- include ("components/menu", {eventId: '' }) %>
+    <%- include ("components/menu", {eventId: eventId }) %>
         <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
         <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
         <link rel="stylesheet" href="/admin/assets/css/style.css">
@@ -24,29 +24,37 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <% if (emailTemplates.length> 0) { %>
-                                                    <% emailTemplates.forEach(t=> { %>
-                                                        <tr>
-                                                            <td><a href="/emailTemplate/<%= t._id %>">
+                                                <% emailTemplates.forEach(t=> { %>
+                                                    <tr>
+                                                        <td>
+                                                            <% if (t.eventId) { %>
+                                                                <a
+                                                                    href="/events/<%= t.eventId %>/emailTemplate/<%= t._id %>">
                                                                     <%= t.subject %>
-                                                                </a></td>
-                                                            <td>
-                                                                <%= t.created_at%>
-                                                            </td>
-                                                            <td>
-                                                                <%= t.modified_at%>
-                                                            </td>
-                                                        </tr>
-                                                        <% }); %>
-                                                            <% } else { %>
-                                                                <tr>
-                                                                    <td colspan="5" class="text-center">No Result</td>
-                                                                </tr>
-                                                                <% } %>
+                                                                </a>
+                                                                <% } else { %>
+                                                                    <a href="/emailTemplate/<%= t._id %>">
+                                                                        <%= t.subject %>
+                                                                    </a>
+                                                                    <% } %>
+                                                        </td>
+                                                        <td>
+                                                            <%= t.created_at%>
+                                                        </td>
+                                                        <td>
+                                                            <%= t.modified_at%>
+                                                        </td>
+                                                    </tr>
+                                                    <% }); %>
                                             </tbody>
                                         </table>
-                                        <a href="/emailTemplate/create" class="btn btn-primary">創建</a>
-                                        <a href="/admin" class="btn btn-primary">返回管理頁面</a>
+                                        <% if (eventId !=null) { %>
+                                            <a href="/events/<%= eventId %>/emailTemplate/create"
+                                                class="btn btn-primary">創建</a>
+                                            <% } else { %>
+                                                <a href="/emailTemplate/create" class="btn btn-primary">創建</a>
+                                                <% } %>
+                                                    <a href="/admin" class="btn btn-primary">返回管理頁面</a>
                                     </div>
                                 </div>
                             </div>
@@ -68,6 +76,6 @@
             <script src="/admin/assets/js/init/datatables-init.js"></script>
             <script type="text/javascript">
                 $(document).ready(function () {
-                    $('#bootstrap-data-table-export').DataTable();
+                    $('#bootstrap-data-table').DataTable();
                 });
             </script>

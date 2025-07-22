@@ -54,7 +54,11 @@
                 </textarea>
             </div>
             <button type="submit" class="btn btn-primary">保存模板</button>
+            <% if (eventId) { %>
+            <a href="/events/<%= eventId %>/emailTemplate" class="btn btn-secondary">返回事件電子郵件模板列表</a>
+            <% } else { %>
             <a href="/emailTemplate" class="btn btn-secondary">返回管理頁面</a>
+            <% } %>
         </form>
         <div id="alertContainer" class="mt-3"></div>
     </div>
