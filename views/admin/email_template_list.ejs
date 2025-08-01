@@ -19,6 +19,7 @@
                                             <thead>
                                                 <tr>
                                                     <th>Subject</th>
+                                                    <th>Type</th>
                                                     <th>Created At</th>
                                                     <th>Modified At</th>
                                                 </tr>
@@ -37,6 +38,9 @@
                                                                         <%= t.subject %>
                                                                     </a>
                                                                     <% } %>
+                                                        </td>
+                                                        <td>
+                                                            <%= t.type || 'welcome' %>
                                                         </td>
                                                         <td>
                                                             <%= t.created_at%>

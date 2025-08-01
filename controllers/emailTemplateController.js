@@ -66,11 +66,11 @@ exports.renderCreateEmailTemplatePage = async (req, res) => {
 
 exports.updateEmailTemplate = async (req, res) => {
   const { id } = req.params
-  const { subject, content } = req.body
+  const { subject, type, content } = req.body
   try {
     const updatedTemplate = await EmailTemplate.findByIdAndUpdate(
       id,
-      { subject, content, modified_at: Date.now() },
+      { subject, type, content, modified_at: Date.now() },
       { new: true }
     )
 
@@ -86,10 +86,11 @@ exports.updateEmailTemplate = async (req, res) => {
 }
 
 exports.createEmailTemplate = async (req, res) => {
-  const { eventId, subject, content } = req.body
+  const { eventId, subject, type, content } = req.body
 
   const insertBody = {
     subject,
+    type: type || 'welcome',
     content,
   }
 
@@ -108,7 +109,6 @@ exports.createEmailTemplate = async (req, res) => {
     res.status(500).send("創建電子郵件模板時出現錯誤！")
   }
 }
-
 // to is an array of email addresses
 exports.sendEmailById = async (req, res) => {
   const { id } = req.params
@@ -127,6 +127,7 @@ exports.sendEmailById = async (req, res) => {
       const body = template.content
 
       // send email
+      console.log("send my template");
       const results = await Promise.all(
         to.map((email) => {
           // send email

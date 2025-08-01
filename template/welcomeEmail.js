@@ -1,7 +1,15 @@
-module.exports.getWelcomeEmailTemplate = function (user, event, qrCodeUrl) {
+const EmailTemplate = require("../model/EmailTemplate")
+
+
+
+
+
+module.exports.getWelcomeEmailTemplate = async function (user, event, qrCodeUrl) {
   if (!user || !event || !qrCodeUrl) {
     throw new Error("Missing required parameters: user, event, or qrCodeUrl");
   }
+  const messageBody = await EmailTemplate.findById(event._id);
+  
   return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html data-editor-version="2" class="sg-campaigns" xmlns="http://www.w3.org/1999/xhtml">
     <head>

@@ -11,6 +11,7 @@ const pointSchema = new mongoose.Schema({
         default: Date.now
     },
 });
+
 const userSchema = new mongoose.Schema({
     point: {type:Number, default:0},
     email: { type: String },
@@ -23,15 +24,6 @@ const userSchema = new mongoose.Schema({
     create_at: { type: Date, default: Date.now }, // 創建時間
     modified_at: { type: Date, default: Date.now }, // 修改時間
     checkInAt: { type: Date }, // 簽到時間
-    promos: [{ // 添加 promos 字段
-        event_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Event' },
-        attendee_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Attendee' },
-        promo_code_id: { type: mongoose.Schema.Types.ObjectId, ref: 'PromoCode' }
-    }],
-    points: [{ // 新增 points 字段
-        attendee_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Attendee' }, // 參展商 ID
-        point: { type: Number, default: 0 } // 點數
-    }],
     role: { type: String, default: 'guests' }, // 角色，默認為 'guests'
     saluation: { type: String }, // 稱謂
     industry: { type: String }, // 行業
@@ -39,15 +31,6 @@ const userSchema = new mongoose.Schema({
     meal: { type: String }, // 餐飲選擇
     remarks: { type: String }, // 備註
     paymentStatus: { type: String, enum: ['unpaid', 'pending', 'paid', 'failed'], default: 'unpaid' }, // 付款狀態
-});
-
-const attendeeSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    location: { type: String, required: true },
-    phone: { type: String, required: true },
-    email: { type: String, required: true },
-    description: { type: String, required: false },
-    promo_codes: [{ code_name: String, point: Number }]
 });
 
 const winnerSchema = new mongoose.Schema({
@@ -71,7 +54,6 @@ const eventSchema = new mongoose.Schema({
     modified_at: { type: Date, default: Date.now }, // 修改時間
     emailTemplate: { type: mongoose.Schema.Types.ObjectId, ref: 'EmailTemplate' }, // 引用 EmailTemplate
     users:[userSchema],
-    attendees: [attendeeSchema], // 添加參展商參數
     points: [pointSchema],
     winners: [winnerSchema], // 新增 winners 字段
     isPaymentEvent: { type: Boolean, default: false }, // 是否為付費活動

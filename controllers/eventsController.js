@@ -13,6 +13,8 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const Transaction = require('../model/Transaction');
 const ExcelJS = require('exceljs');
 const { getWelcomeEmailTemplate } = require('../template/welcomeEmail'); // 引入歡迎郵件模板
+const emailTemplate = require('./emailTemplateController');
+const EmailTemplate = require('../model/EmailTemplate'); // 引入 EmailTemplate 模型
 
 // 創建事件
 exports.createEvent = async (req, res) => {
@@ -116,34 +118,49 @@ exports.addUserToEvent = async (req, res) => {
     }
 };
 
-const transporter = nodemailer.createTransport({
-    service: 'Gmail', // 使用 Gmail 作為郵件服務
-    auth: {
-        user: process.env.gmail_ac, // 替換為您的電子郵件地址
-        pass: process.env.gmail_pw // 替換為您的電子郵件密碼或應用程式密碼
-    }
-});
-exports.sendEmail = async (user,event) => {
-    // 生成 QR 碼
-        //https://api.qrserver.com/v1/create-qr-code/?data=67ae345f10b42c96a3ce3c17&size=250x250
-        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`; // 替換為您的 QR 碼內容
-        //const qrCodeUrl = await QRCode.toDataURL(`userId=${user._id}`);
-        // const qrCodeUrl = process.env.domain+'qrcode?userId='+user._id;
-        console.log(qrCodeUrl);
-        // 發送歡迎訊息和 QR 碼到電子郵件
-        const messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl); // 使用歡迎郵件模板生成 HTML 內容
-        /* update at 05282025, use sendgrid */ 
-        // const mailOptions = {
-        //     from: 'icesolution0321@gmail.com', // 替換為您的電子郵件地址
-        //     to: user.email, // 確保用戶的電子郵件地址是有效的
-        //     subject: '歡迎加入我們的活動',
-        //     html: messageBody
-        // };
-
-        // await transporter.sendMail(mailOptions);
-        // sendGrid.sendEmail(user.email, '歡迎加入我們的活動', messageBody);
+exports.sendEmail = async (user, event) => {
+    try {
+        // 生成 QR 碼
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
+        
+        // 查找對應事件的歡迎郵件模板
+        let emailTemplate = await EmailTemplate.findOne({ 
+            eventId: event._id, 
+            type: 'welcome' 
+        });
+        
+        // 如果沒有找到模板，使用默認的歡迎郵件模板
+        if (!emailTemplate) {
+            emailTemplate = await EmailTemplate.findOne({ 
+                eventId: null, 
+                type: 'welcome' 
+            });
+        }
+        
+        let subject = '歡迎加入我們的活動';
+        let messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl); // 使用默認模板
+        
+        // 如果找到了郵件模板，使用模板的內容
+        if (emailTemplate) {
+            subject = emailTemplate.subject;
+            messageBody = emailTemplate.content
+                .replace(/\{\{user\.name\}\}/g, user.name)
+                .replace(/\{\{user\.email\}\}/g, user.email)
+                .replace(/\{\{user\.company\}\}/g, user.company || '')
+                .replace(/\{\{event\.name\}\}/g, event.name)
+                .replace(/\{\{qrCodeUrl\}\}/g, qrCodeUrl);
+        }
+        
+        // 發送郵件
+        ses.sendEmail(user.email, subject, messageBody);
+        
+    } catch (error) {
+        console.error('Error sending welcome email:', error);
+        // 如果出現錯誤，使用默認的歡迎郵件
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
+        const messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl);
         ses.sendEmail(user.email, '歡迎加入我們的活動', messageBody);
-
+    }
 }
 // 渲染用戶登入頁面
 exports.renderLoginPage = async (req, res) => {

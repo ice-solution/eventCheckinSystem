@@ -16,30 +16,51 @@
             </div>
         </div>
     </div>
-    <div class="container mt-5">
-        <div class="row justify-content-center">
-            <div class="col-md-8">
-                <div class="card">
-                    <div class="card-header bg-success text-white">
-                        <h4 class="mb-0">付款成功</h4>
-                    </div>
-                    <div class="card-body">
-                        <h5 class="card-title">感謝您的購票！</h5>
-                        <p class="card-text">您的付款已成功，以下是您的交易紀錄：</p>
-                        <ul class="list-group list-group-flush">
-                            <li class="list-group-item">訂單編號：<%= transaction && transaction._id ? transaction._id : '' %></li>
-                            <li class="list-group-item">票券名稱：<%= transaction && transaction.ticketTitle ? transaction.ticketTitle : '' %></li>
-                            <li class="list-group-item">票券價格：$<%= transaction && transaction.ticketPrice ? transaction.ticketPrice : '' %></li>
-                            <li class="list-group-item">付款狀態：<%= transaction && transaction.status ? transaction.status : '' %></li>
-                        </ul>
-                        <div class="mt-4 text-center">
-                            <a href="/web/<%= event_id %>" class="btn btn-primary">返回主頁</a>
+    <% if (transaction) { %>
+        <div class="container mt-5">
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h4 class="mb-0">付款成功</h4>
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">感謝您的購票！</h5>
+                            <p class="card-text">您的付款已成功，以下是您的交易紀錄：</p>
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item">訂單編號：<%= transaction && transaction._id ? transaction._id : '' %></li>
+                                <li class="list-group-item">票券名稱：<%= transaction && transaction.ticketTitle ? transaction.ticketTitle : '' %></li>
+                                <li class="list-group-item">票券價格：$<%= transaction && transaction.ticketPrice ? transaction.ticketPrice : '' %></li>
+                                <li class="list-group-item">付款狀態：<%= transaction && transaction.status ? transaction.status : '' %></li>
+                            </ul>
+                            <div class="mt-4 text-center">
+                                <a href="/web/<%= event_id %>" class="btn btn-primary">返回主頁</a>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    <% } else { %>
+        <div class="container mt-5">
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h4 class="mb-0">登記成功</h4>
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">感謝你參加！</h5>
+                            <p class="card-text">我們會透過 Email 把資訊發送給你。</p>
+                            <div class="mt-4 text-center">
+                                <a href="/web/<%= event_id %>" class="btn btn-primary">返回主頁</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <% } %>
 
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>

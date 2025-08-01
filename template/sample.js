@@ -224,7 +224,7 @@ module.exports.sampleHtmlTemplate = `
                                                             <tr>
                                                                 <td
                                                                     style="font-size:15px;line-height:25px;font-family:'DengXian',sans-serif">
-                                                                    Dear Customer
+                                                                    Dear {{user.name}}
                                                                     <br>
                                                                     <br>
                                                                 </td>
@@ -232,7 +232,7 @@ module.exports.sampleHtmlTemplate = `
                                                             <tr>
                                                                 <td
                                                                     style="font-size:15px;line-height:24px;vertical-align:top;font-family:'DengXian',sans-serif">
-                                                                    Thank you for attending "Sample" event. Your
+                                                                    Thank you for attending "{{event.name}}" event. Your
                                                                     participation and enthusiasm truly signified the
                                                                     beginning of an exciting journey ahead.
                                                                     <br>
@@ -248,7 +248,7 @@ module.exports.sampleHtmlTemplate = `
                                                                     event, available at
                                                                     <br>
                                                                     <br>
-                                                                    <center><img height="200" src="url"
+                                                                    <center><img height="200" src="{{qrCodeUrl}}"
                                                                             style="width:200px;height:200px" width="200"
                                                                             class="CToWUd a6T" data-bit="iit"
                                                                             tabindex="0">
