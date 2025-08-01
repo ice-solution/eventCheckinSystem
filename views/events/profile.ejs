@@ -155,7 +155,7 @@
                         const scannedEventId = params[0];
 
                         if (action === 'login') {
-                            const scannedUserId = params[1];
+                            const scannedUserId = "<%= user._id %>"; // 使用當前頁面的用戶ID
 
                             // 檢查掃描的 eventId 是否與當前 eventId 匹配
                             if (scannedEventId === eventId) {
