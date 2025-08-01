@@ -52,6 +52,8 @@ router.post('/:eventId/import', upload, importController.importUsers);
 router.post('/:eventId/users', eventsController.addUserToEvent);
 // router.put('/:eventId/users/:userEmail', eventsController.updateUserInEvent);
 
+// Check-in 用戶
+router.put('/:eventId/users/:userId/checkin', eventsController.checkInUser);
 
 router.get('/:eventId/scan', eventsController.scanEventUsers);
 

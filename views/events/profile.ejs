@@ -159,21 +159,20 @@
 
                             // 檢查掃描的 eventId 是否與當前 eventId 匹配
                             if (scannedEventId === eventId) {
-                                // 發送 checkIn 請求
-                                $.ajax({
-                                    url: `/events/${scannedEventId}/users/${scannedUserId}`, // 使用新的 checkin URL
-                                    method: 'PUT', // 使用 PUT 方法
-                                    contentType: 'application/json',
-                                    data: JSON.stringify({ userId: scannedUserId }),
-                                    success: function(response) {
-                                        alert(response.message);
-                                        $('#scannerLightbox').hide();
-                                        stopScanner();
-                                    },
-                                    error: function(xhr) {
-                                        alert(xhr.responseJSON.message);
-                                    }
-                                });
+                                                            // 發送 checkIn 請求
+                            $.ajax({
+                                url: `/events/${scannedEventId}/users/${scannedUserId}/checkin`, // 使用新的 checkin URL
+                                method: 'PUT', // 使用 PUT 方法
+                                contentType: 'application/json',
+                                success: function(response) {
+                                    alert(response.message);
+                                    $('#scannerLightbox').hide();
+                                    stopScanner();
+                                },
+                                error: function(xhr) {
+                                    alert(xhr.responseJSON.message);
+                                }
+                            });
                             } else {
                                 alert("掃描的事件 ID 不匹配！");
                             }

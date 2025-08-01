@@ -1137,3 +1137,45 @@ exports.outputReport = async (req, res) => {
         res.status(500).send('報表匯出失敗');
     }
 };
+
+// Check-in 用戶
+exports.checkInUser = async (req, res) => {
+    const { eventId, userId } = req.params;
+    
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+        
+        // 查找用戶
+        const user = event.users.find(user => user._id.toString() === userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found in this event' });
+        }
+        
+        // 檢查用戶是否已經 check-in
+        if (user.isCheckIn) {
+            return res.status(400).json({ message: 'User has already checked in' });
+        }
+        
+        // 更新用戶的 check-in 狀態
+        user.isCheckIn = true;
+        user.checkInAt = new Date(); // 添加 check-in 時間
+        
+        await event.save();
+        
+        res.status(200).json({ 
+            message: 'Check-in successful',
+            user: {
+                name: user.name,
+                email: user.email,
+                checkInAt: user.checkInAt
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error checking in user:', error);
+        res.status(500).json({ message: 'Error checking in user' });
+    }
+};
