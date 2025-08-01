@@ -6,7 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>事件電子郵件模板</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <script src="https://cdn.tiny.cloud/1/xdp8p8h9vpfy9o6jiqwtc12t3yj5qwvwc7o8esbqiupb6sam/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
+    <script src="https://cdn.tiny.cloud/1/xdp8p8h9vpfy9o6jiqwtc12t3yj5qwvwc7o8esbqiupb6sam/tinymce/7/tinymce.min.js"
+        referrerpolicy="origin"></script>
     <script>
         tinymce.init({
             selector: '#content', // WYSIWYG 編輯器的選擇器
@@ -15,6 +16,7 @@
             images_upload_url: '/upload/image', // 圖片上傳的路由
             automatic_uploads: true,
             file_picker_types: 'image',
+
             file_picker_callback: function (callback, value, meta) {
                 if (meta.filetype === 'image') {
                     var input = document.createElement('input');
@@ -45,7 +47,7 @@
             </div>
             <div class="form-group">
                 <label for="body">電子郵件內容</label>
-                <textarea name="content" class="form-control" id="content" rows="10">
+                <textarea class="form-control" name="content" id="content" rows="10">
                     <%= sampleEmailTemplate %>
                 </textarea>
             </div>
@@ -64,8 +66,13 @@
 
                 const emailTemplate = {
                     subject: $('#subject').val(),
-                    body: tinymce.get('content').getContent(), // 獲取 WYSIWYG 編輯器的內容
+                    content: tinymce.get('content').getContent(), // 獲取 WYSIWYG 編輯器的內容
                 };
+
+                
+                if (`<%= eventId %>`) {
+                    emailTemplate.eventId = '<%= eventId %>'
+                }
 
                 // 發送 AJAX 請求保存電子郵件模板
                 $.ajax({
@@ -90,6 +97,13 @@
                         }, 1500);
                         // 清空表單
                         $('#emailTemplateForm')[0].reset();
+
+                        // route to the email template list page
+                        if (`<%= eventId %>`) {
+                            window.location.href = `/events/<%= eventId %>/emailTemplate`;
+                        } else {
+                            window.location.href = '/emailTemplate';
+                        }
                     },
                     error: function (xhr, status, error) {
                         console.error('Error saving email template:', error);
