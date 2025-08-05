@@ -174,6 +174,17 @@
       <div id="result"></div>
 
       <div id="control">
+        <div id="prizeSelector" style="margin-bottom: 15px;">
+          <label for="prizeSelect" style="color: white; font-weight: bold; display: block; margin-bottom: 5px;">選擇獎品：</label>
+          <select id="prizeSelect" style="width: 100%; padding: 8px; border-radius: 4px; margin-bottom: 10px;">
+            <option value="">隨機獎品</option>
+            <% prizes.forEach(prize => { %>
+              <% if (prize.unit > 0) { %>
+                <option value="<%= prize._id %>" data-name="<%= prize.name %>"><%= prize.name %> (剩餘: <%= prize.unit %>)</option>
+              <% } %>
+            <% }); %>
+          </select>
+        </div>
         <img id="startBtn" src="/admin/img/start.png" alt="start...">
         <!-- <button id="startBtn">1</button> -->
         <!-- <button id="draw5Btn">5</button>
@@ -263,17 +274,42 @@
           }
         });
 
+        // 獲取選擇的獎品
+        const prizeSelect = document.getElementById('prizeSelect');
+        const selectedPrizeId = prizeSelect.value;
+        const selectedPrizeName = prizeSelect.options[prizeSelect.selectedIndex].dataset.name || '';
+        
+        // 準備發送的數據
+        const postData = {
+          ...person,
+          prizeId: selectedPrizeId || null
+        };
+        
         // POST 該人資料
         fetch(`/events/${eventId}/luckydraw`, { // 使用 eventId
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(person)
+          body: JSON.stringify(postData)
         })
         .then(res => {
           if (res.ok) {
             console.log("已送出", person);
+            // 如果選擇了特定獎品，更新選項顯示
+            if (selectedPrizeId) {
+              const option = prizeSelect.options[prizeSelect.selectedIndex];
+              const currentText = option.text;
+              const match = currentText.match(/\(剩餘: (\d+)\)/);
+              if (match) {
+                const remaining = parseInt(match[1]) - 1;
+                if (remaining <= 0) {
+                  option.remove(); // 移除數量為0的選項
+                } else {
+                  option.text = option.text.replace(/\(剩餘: \d+\)/, `(剩餘: ${remaining})`);
+                }
+              }
+            }
           } else {
             console.error("送出失敗", res.statusText);
           }

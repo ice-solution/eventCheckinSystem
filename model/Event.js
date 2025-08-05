@@ -36,7 +36,10 @@ const userSchema = new mongoose.Schema({
 const winnerSchema = new mongoose.Schema({
     _id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // 用戶 ID
     name: { type: String, required: true }, // 用戶名稱
-    company: { type: String, required: true } // 用戶公司
+    company: { type: String, required: true }, // 用戶公司
+    prizeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Prize' }, // 獎品ID
+    prizeName: { type: String }, // 獎品名稱
+    wonAt: { type: Date, default: Date.now } // 中獎時間
 });
 
 const ticketSchema = new mongoose.Schema({

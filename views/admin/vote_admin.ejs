@@ -1,0 +1,291 @@
+<%- include ("components/header") %>
+<%- include ("components/menu", {eventId: eventId }) %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+<style>
+    .vote-option {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        background: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .vote-option img {
+        max-width: 200px;
+        max-height: 150px;
+        object-fit: cover;
+        border-radius: 4px;
+    }
+    .option-form {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .results-section {
+        background: #e9ecef;
+        padding: 20px;
+        border-radius: 8px;
+        margin-top: 20px;
+    }
+    .progress-bar {
+        height: 25px;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #e9ecef;
+    }
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(45deg, #007bff, #0056b3);
+        transition: width 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+    }
+</style>
+
+<div id="right-panel" class="right-panel">
+    <%- include ("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title">投票管理 - <%= event.name %></strong>
+                        </div>
+                        <div class="card-body">
+                            <!-- 投票設置 -->
+                            <div class="option-form">
+                                <h5>投票設置</h5>
+                                <form id="voteSettingsForm">
+                                    <div class="form-group">
+                                        <label for="title">投票標題</label>
+                                        <input type="text" class="form-control" id="title" value="<%= vote.title %>" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="description">投票描述</label>
+                                        <textarea class="form-control" id="description" rows="3"><%= vote.description %></textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <div class="custom-control custom-switch">
+                                            <input type="checkbox" class="custom-control-input" id="isActive" <%= vote.isActive ? 'checked' : '' %>>
+                                            <label class="custom-control-label" for="isActive">啟用投票</label>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">更新設置</button>
+                                </form>
+                            </div>
+
+                            <!-- 添加選項 -->
+                            <div class="option-form">
+                                <h5>添加投票選項</h5>
+                                <form id="addOptionForm">
+                                    <div class="form-group">
+                                        <label for="optionName">選項名稱</label>
+                                        <input type="text" class="form-control" id="optionName" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="optionDescription">選項描述</label>
+                                        <textarea class="form-control" id="optionDescription" rows="2"></textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="optionImage">選項圖片</label>
+                                        <input type="file" class="form-control-file" id="optionImage" accept="image/*">
+                                        <small class="form-text text-muted">支持 JPG, PNG, GIF 格式，最大 5MB</small>
+                                    </div>
+                                    <button type="submit" class="btn btn-success">添加選項</button>
+                                </form>
+                            </div>
+
+                            <!-- 投票選項列表 -->
+                            <h5>投票選項 (<span id="optionCount"><%= vote.options.length %></span>/5)</h5>
+                            <div id="optionsList">
+                                <% vote.options.forEach((option, index) => { %>
+                                    <div class="vote-option" data-id="<%= option._id %>">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <% if (option.image) { %>
+                                                    <img src="<%= option.image %>" alt="<%= option.name %>" class="img-fluid">
+                                                <% } else { %>
+                                                    <div class="bg-light text-center py-4">
+                                                        <i class="fa fa-image fa-3x text-muted"></i>
+                                                    </div>
+                                                <% } %>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h6><%= option.name %></h6>
+                                                <p class="text-muted"><%= option.description || '無描述' %></p>
+                                                <small class="text-muted">得票數: <%= option.votes %></small>
+                                            </div>
+                                            <div class="col-md-3 text-right">
+                                                <button class="btn btn-danger btn-sm" onclick="deleteOption('<%= option._id %>')">
+                                                    <i class="fa fa-trash"></i> 刪除
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <% }); %>
+                            </div>
+
+                            <!-- 投票結果 -->
+                            <div class="results-section">
+                                <h5>即時投票結果</h5>
+                                <div id="voteResults">
+                                    <% 
+                                    const totalVotes = vote.records.length;
+                                    vote.options.forEach(option => {
+                                        const percentage = totalVotes > 0 ? Math.round((option.votes / totalVotes) * 100) : 0;
+                                    %>
+                                        <div class="mb-3">
+                                            <div class="d-flex justify-content-between">
+                                                <span><%= option.name %></span>
+                                                <span><%= option.votes %> 票 (<%= percentage %>%)</span>
+                                            </div>
+                                            <div class="progress-bar">
+                                                <div class="progress-fill" style="width: <%= percentage %>%">
+                                                    <%= percentage %>%
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <% }); %>
+                                </div>
+                                <p class="text-muted">總投票數: <span id="totalVotes"><%= totalVotes %></span></p>
+                            </div>
+
+                            <div class="mt-3">
+                                <a href="/events/<%= eventId %>" class="btn btn-secondary">返回事件</a>
+                                <a href="/votes/<%= eventId %>" target="_blank" class="btn btn-info">查看投票頁面</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include ("./components/footer") %>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.js"></script>
+<script>
+    $(document).ready(function() {
+        // 更新投票設置
+        $('#voteSettingsForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                title: $('#title').val(),
+                description: $('#description').val(),
+                isActive: $('#isActive').is(':checked')
+            };
+            
+            fetch(`/votes/<%= eventId %>/settings`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('更新失敗');
+            });
+        });
+
+        // 添加投票選項
+        $('#addOptionForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('name', $('#optionName').val());
+            formData.append('description', $('#optionDescription').val());
+            
+            const imageFile = $('#optionImage')[0].files[0];
+            if (imageFile) {
+                formData.append('image', imageFile);
+            }
+            
+            fetch(`/votes/<%= eventId %>/options`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    alert(data.message);
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('添加失敗');
+            });
+        });
+    });
+
+    function deleteOption(optionId) {
+        if (confirm('確定要刪除這個選項嗎？')) {
+            fetch(`/votes/<%= eventId %>/options/${optionId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    alert(data.message);
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('刪除失敗');
+            });
+        }
+    }
+
+    // Socket.IO 實時更新
+    const socket = io();
+    
+    socket.on('vote_update', function(data) {
+        if (data.eventId === '<%= eventId %>') {
+            updateResults(data.results, data.totalVotes);
+        }
+    });
+
+    function updateResults(results, totalVotes) {
+        const resultsDiv = $('#voteResults');
+        resultsDiv.empty();
+        
+        results.forEach(option => {
+            const percentage = option.percentage;
+            const optionHtml = `
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>${option.name}</span>
+                        <span>${option.votes} 票 (${percentage}%)</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${percentage}%">
+                            ${percentage}%
+                        </div>
+                    </div>
+                </div>
+            `;
+            resultsDiv.append(optionHtml);
+        });
+        
+        $('#totalVotes').text(totalVotes);
+    }
+</script> 

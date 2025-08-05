@@ -845,8 +845,7 @@ exports.removeLuckydrawUser = async (req, res) => {
 
 // 新增中獎者
 exports.addLuckydrawUser = async (req, res) => {
-    const { _id, name, company } = req.body; // 獲取中獎者資料
-    const winner = { _id, name, company }; // 創建 winner 對象
+    const { _id, name, company, prizeId } = req.body; // 獲取中獎者資料和獎品ID
     try {
         const event = await Event.findById(req.params.eventId);
         if (!event) {
@@ -858,6 +857,28 @@ exports.addLuckydrawUser = async (req, res) => {
         if (alreadyWinner) {
             return res.status(400).send('This user has already won.');
         }
+
+        let prizeName = '隨機獎品';
+        // 如果指定了獎品，檢查獎品是否存在並更新數量
+        if (prizeId) {
+            const Prize = require('../model/Prize');
+            const prize = await Prize.findById(prizeId);
+            if (prize && prize.unit > 0) {
+                prize.unit -= 1;
+                prizeName = prize.name;
+                await prize.save();
+            }
+        }
+
+        // 創建 winner 對象，包含獎品信息
+        const winner = { 
+            _id, 
+            name, 
+            company, 
+            prizeId, 
+            prizeName,
+            wonAt: new Date()
+        };
 
         // 將中獎者存儲在 event 的 winners 陣列中
         event.winners.push(winner);
@@ -879,6 +900,10 @@ exports.renderLuckydrawPage = async (req, res) => {
             return res.status(404).send('Event not found.');
         }
 
+        // 獲取獎品列表
+        const Prize = require('../model/Prize');
+        const prizes = await Prize.find({ eventId });
+
         // 日誌輸出 winners 陣列
         console.log('Winners:', event.winners);
 
@@ -887,7 +912,7 @@ exports.renderLuckydrawPage = async (req, res) => {
             user.isCheckIn === true && !event.winners.some(winner => winner._id && winner._id.equals(user._id)) // 確保 winner._id 存在
         );
 
-        res.render('events/luckydraw', { eventId, availablePeople }); // 傳遞可用的參與者
+        res.render('events/luckydraw', { eventId, availablePeople, prizes }); // 傳遞可用的參與者和獎品列表
     } catch (error) {
         console.error('Error rendering luckydraw page:', error);
         res.status(500).send('Error rendering luckydraw page.');
@@ -908,8 +933,13 @@ exports.renderAdminLuckydrawPage = async (req, res) => {
             order: index + 1, // 次序從 1 開始
             _id: winner._id,
             name: winner.name,
-            company: winner.company
+            company: winner.company,
+            prizeName: winner.prizeName,
+            wonAt: winner.wonAt
         }));
+
+        // 添加調試日誌
+        console.log('Winners data:', winners);
 
         // 渲染 admin/luckydraw.ejs 頁面，並傳遞中獎者
         res.render('admin/luckydraw', { winners, eventId });

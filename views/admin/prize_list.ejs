@@ -1,0 +1,95 @@
+<%- include ("components/header") %>
+<%- include ("components/menu", {eventId: eventId }) %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+<div id="right-panel" class="right-panel">
+    <%- include ("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title">獎品管理 - <%= event.name %></strong>
+                        </div>
+                        <div class="card-body">
+                            <table id="bootstrap-data-table" class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>獎品名稱</th>
+                                        <th>圖片</th>
+                                        <th>數量</th>
+                                        <th>創建時間</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% prizes.forEach(prize => { %>
+                                        <tr>
+                                            <td><%= prize.name %></td>
+                                            <td>
+                                                <% if (prize.picture) { %>
+                                                    <img src="<%= prize.picture %>" alt="<%= prize.name %>" style="max-width: 50px; max-height: 50px; object-fit: cover; border-radius: 4px;">
+                                                <% } else { %>
+                                                    <span class="text-muted">無圖片</span>
+                                                <% } %>
+                                            </td>
+                                            <td><%= prize.unit %></td>
+                                            <td><%= new Date(prize.created_at).toLocaleString() %></td>
+                                            <td>
+                                                <a href="/prizes/<%= eventId %>/prizes/<%= prize._id %>/edit" class="btn btn-sm btn-primary">編輯</a>
+                                                <button class="btn btn-sm btn-danger" onclick="deletePrize('<%= prize._id %>')">刪除</button>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
+                            <a href="/prizes/<%= eventId %>/prizes/create" class="btn btn-primary">新增獎品</a>
+                            <a href="/events/<%= eventId %>" class="btn btn-secondary">返回事件</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include ("./components/footer") %>
+<script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/dataTables.buttons.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/buttons.bootstrap.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/jszip.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/vfs_fonts.js"></script>
+<script src="/admin/assets/js/lib/data-table/buttons.html5.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/buttons.print.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/buttons.colVis.min.js"></script>
+<script src="/admin/assets/js/init/datatables-init.js"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#bootstrap-data-table').DataTable();
+    });
+
+    function deletePrize(prizeId) {
+        if (confirm('確定要刪除這個獎品嗎？')) {
+            fetch(`/prizes/<%= eventId %>/prizes/${prizeId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    alert(data.message);
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('刪除失敗');
+            });
+        }
+    }
+</script> 

@@ -51,6 +51,8 @@
                                         <th>次序</th>
                                         <th>姓名</th>
                                         <th>公司</th>
+                                        <th>獎品</th>
+                                        <th>中獎時間</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -59,6 +61,8 @@
                                             <td><%= winner.order %></td>
                                             <td><%= winner.name %></td>
                                             <td><%= winner.company %></td>
+                                            <td><%= winner.prizeName || '隨機獎品' %></td>
+                                            <td><%= winner.wonAt ? new Date(winner.wonAt).toLocaleString('zh-TW') : '未記錄' %></td>
                                         </tr>
                                     <% }); %>
                                 </tbody>

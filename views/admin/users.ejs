@@ -34,6 +34,8 @@
 <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
 <!-- <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css"> -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/editor/2.0.2/css/editor.dataTables.min.css">
 <link rel="stylesheet" href="/admin/assets/css/style.css">
 
 <div id="right-panel" class="right-panel">
@@ -113,7 +115,7 @@
                                 <a href="/events/<%= event._id %>" class="btn btn-outline-secondary">User List</a>
                                 <a href="/events/<%= event._id%>/scan" class="btn btn-outline-secondary">Scan QR Code</a>
                                 <a href="/events/<%= event._id%>/import" class="btn btn-outline-secondary">Import Data</a>
-                                <button id="addUserBtn" class="btn btn-outline-secondary">Add User</button>
+
                                 <a href="/events/<%= event._id %>/report" class="btn btn-outline-success ml-2">Download Report</a>
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" role="switch" id="paymentEvent">
@@ -121,75 +123,14 @@
                                 </div>
                             </div>
                             <div class="clearfix" style="margin-top:20px"></div>
-                            <div class="add-user-form" id="addUserForm">
-                                <h4>Fill in User Information</h4>
-                                <form id="userForm">
-                                    <div class="form-group">
-                                        <label for="email">Email</label>
-                                        <input type="email" class="form-control" id="email" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="name">Name</label>
-                                        <input type="text" class="form-control" id="name" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="table">Table</label>
-                                        <input type="text" class="form-control" id="table" >
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="company">Company</label>
-                                        <input type="text" class="form-control" id="company" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="phone">Phone</label>
-                                        <input type="text" class="form-control" id="phone" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="role">Role</label>
-                                        <select class="form-control" id="role">
-                                            <option value="guests" selected>Guests</option>
-                                            <option value="vip">VIP</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="saluation">Salutation</label>
-                                        <select class="form-control" id="saluation">
-                                            <option value="Mr">Mr</option>
-                                            <option value="Mrs">Mrs</option>
-                                            <option value="Miss">Miss</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="industry">Industry</label>
-                                        <input type="text" class="form-control" id="industry">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="transport">Transport</label>
-                                        <input type="text" class="form-control" id="transport">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="meal">Meal Choice</label>
-                                        <select class="form-control" id="meal">
-                                            <option value="A">A</option>
-                                            <option value="B">B</option>
-                                            <option value="C">C</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="remarks">Remarks</label>
-                                        <textarea class="form-control" id="remarks" rows="3"></textarea>
-                                    </div>
-                                    <button type="submit" class="btn btn-success">Submit</button>
-                                    <button type="button" class="btn btn-danger" id="cancelBtn">Cancel</button>
-                                </form>
-                            </div>
+
 
                             <table id="usersTable" class="display">
                                 <thead>
                                     <tr>
                                         <th>Email</th>
                                         <th>Name</th>
-                                        <th>table</th>
+                                        <th>Table</th>
                                         <th>Company</th>
                                         <th>Phone</th>
                                         <th>Role</th>
@@ -199,12 +140,11 @@
                                         <th>Meal Choice</th>
                                         <th>Remarks</th>
                                         <th>Checked In</th>
-                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <% event.users.forEach(user => { %>
-                                        <tr class="<%= user.isCheckIn ? 'checkin-true' : 'checkin-false' %>">
+                                        <tr class="<%= user.isCheckIn ? 'checkin-true' : 'checkin-false' %>" data-id="<%= user._id %>">
                                             <td><%= user.email %></td>
                                             <td><%= user.name %></td>
                                             <td><%= user.table %></td>
@@ -219,9 +159,6 @@
                                             <td>
                                                 <input type="checkbox" class="checkin-toggle" data-_id="<%= user._id %>" <%= user.isCheckIn ? 'checked' : '' %> />
                                             </td>
-                                            <td>
-                                                <button class="btn btn-danger delete-user" data-_id="<%= user._id %>">Delete</button>
-                                            </td>
                                         </tr>
                                     <% }) %>
                                 </tbody>
@@ -235,25 +172,98 @@
 </div>
 
 <%- include ("components/footer") %>
-<script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
-<script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
-<script src="/admin/assets/js/lib/data-table/dataTables.buttons.min.js"></script>
-<script src="/admin/assets/js/lib/data-table/buttons.bootstrap.min.js"></script>
-<script src="/admin/assets/js/lib/data-table/jszip.min.js"></script>
-<script src="/admin/assets/js/lib/data-table/vfs_fonts.js"></script>
-<script src="/admin/assets/js/lib/data-table/buttons.html5.min.js"></script>
-<script src="/admin/assets/js/lib/data-table/buttons.print.min.js"></script>
-<script src="/admin/assets/js/lib/data-table/buttons.colVis.min.js"></script>
-<script src="/admin/assets/js/init/datatables-init.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/editor/2.0.2/js/dataTables.editor.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.print.min.js"></script>
 <script>
     $(document).ready(function() {
+        // Initialize DataTable with Editor
+        const editor = new $.fn.dataTable.Editor({
+            ajax: {
+                create: {
+                    url: `/events/<%= event._id %>/users`,
+                    type: 'POST'
+                },
+                edit: {
+                    url: `/events/<%= event._id %>/users/_id_`,
+                    type: 'PUT'
+                },
+                remove: {
+                    url: `/events/<%= event._id %>/users/_id_`,
+                    type: 'DELETE'
+                }
+            },
+            table: '#usersTable',
+            fields: [
+                { label: 'Email', name: 'email', type: 'text' },
+                { label: 'Name', name: 'name', type: 'text' },
+                { label: 'Table', name: 'table', type: 'text' },
+                { label: 'Company', name: 'company', type: 'text' },
+                { label: 'Phone', name: 'phone', type: 'text' },
+                { 
+                    label: 'Role', 
+                    name: 'role', 
+                    type: 'select',
+                    options: [
+                        { label: 'Guests', value: 'guests' },
+                        { label: 'VIP', value: 'vip' }
+                    ]
+                },
+                { 
+                    label: 'Salutation', 
+                    name: 'saluation', 
+                    type: 'select',
+                    options: [
+                        { label: 'Mr', value: 'Mr' },
+                        { label: 'Mrs', value: 'Mrs' },
+                        { label: 'Miss', value: 'Miss' }
+                    ]
+                },
+                { label: 'Industry', name: 'industry', type: 'text' },
+                { label: 'Transport', name: 'transport', type: 'text' },
+                { 
+                    label: 'Meal Choice', 
+                    name: 'meal', 
+                    type: 'select',
+                    options: [
+                        { label: 'A', value: 'A' },
+                        { label: 'B', value: 'B' },
+                        { label: 'C', value: 'C' }
+                    ]
+                },
+                { label: 'Remarks', name: 'remarks', type: 'textarea' }
+            ]
+        });
+
         const table = $('#usersTable').DataTable({
-            "pageLength": 50 // Set number of entries per page
-        }); // Initialize DataTable
+            pageLength: 50,
+            dom: 'Bfrtip',
+            buttons: [
+                { extend: 'create', editor: editor },
+                { extend: 'edit', editor: editor },
+                { extend: 'remove', editor: editor },
+                'copy', 'csv', 'excel', 'pdf', 'print'
+            ],
+            columnDefs: [
+                {
+                    targets: -1, // Last column (Checked In)
+                    orderable: false,
+                    searchable: false,
+                    data: null,
+                    defaultContent: '<input type="checkbox" class="checkin-toggle" />'
+                }
+            ]
+        });
 
         // Use event delegation to listen for checkbox changes
         $('#usersTable tbody').on('change', '.checkin-toggle', function() {
-            const _id = $(this).data('_id');
+            const row = $(this).closest('tr');
+            const _id = row.data('id');
             const isCheckIn = $(this).is(':checked');
             const event_id = '<%= event._id %>';
 
@@ -265,7 +275,6 @@
                 data: JSON.stringify({ isCheckIn: isCheckIn }),
                 success: function(response) {
                     // Update row color
-                    const row = $(this).closest('tr');
                     if (isCheckIn) {
                         row.removeClass('checkin-false').addClass('checkin-true');
                     } else {
@@ -286,7 +295,7 @@
                     setTimeout(() => {
                         $('.alert').alert('close');
                     }, 1500);
-                }.bind(this),
+                },
                 error: function(xhr, status, error) {
                     console.error('Error updating user:', error);
                     alert('Update failed, please try again later.');
@@ -294,108 +303,7 @@
             });
         });
 
-        // Show add user form
-        $('#addUserBtn').on('click', function() {
-            $('#addUserForm').toggle(); // Toggle visibility
-        });
 
-        // Submit form
-        $('#userForm').on('submit', function(event) {
-            event.preventDefault(); // Prevent default submission
-
-            const newUser = {
-                email: $('#email').val(),
-                name: $('#name').val(),
-                table: $('#table').val(),
-                company: $('#company').val(),
-                phone: $('#phone').val(),
-                role: $('#role').val(), // Get role
-                saluation: $('#saluation').val(), // Get salutation
-                industry: $('#industry').val(), // Get industry
-                transport: $('#transport').val(), // Get transport
-                meal: $('#meal').val(), // Get meal choice
-                remarks: $('#remarks').val() // Get remarks
-            };
-
-            // AJAX request to add user
-            $.ajax({
-                url: `/events/<%= event._id %>/users`, // Assume route to add user
-                method: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(newUser),
-                success: function(response) {
-                    // Update user list
-                    $('#usersTable tbody').append(`
-                        <tr class="checkin-false">
-                            <td>${response.attendee.email}</td>
-                            <td>${response.attendee.name}</td>
-                            <td>${response.attendee.table}</td>
-                            <td>${response.attendee.company}</td>
-                            <td>${response.attendee.phone}</td>
-                            <td>${response.attendee.role}</td>
-                            <td>${response.attendee.saluation}</td>
-                            <td>${response.attendee.industry}</td>
-                            <td>${response.attendee.transport}</td>
-                            <td>${response.attendee.meal}</td>
-                            <td>${response.attendee.remarks}</td>
-                            <td>
-                                <input type="checkbox" class="checkin-toggle" data-_id="${response.attendee._id}" />
-                            </td>
-                            <td>
-                                <button class="btn btn-danger delete-user" data-_id="${response.attendee._id}">Delete</button>
-                            </td>
-                        </tr>
-                    `);
-                    $('#addUserForm').hide(); // Hide form
-                    $('#userForm')[0].reset(); // Reset form
-                },
-                error: function(xhr) {
-                    alert(xhr.responseJSON.message);
-                }
-            });
-        });
-
-        // Cancel button
-        $('#cancelBtn').on('click', function() {
-            $('#addUserForm').hide(); // Hide form
-        });
-
-        // Delete user
-        $('#usersTable tbody').on('click', '.delete-user', function() {
-            const _id = $(this).data('_id');
-            const event_id = '<%= event._id %>';
-
-            // 確認是否刪除
-            if (confirm('確定要刪除這個用戶嗎？')) {
-                // 發送 AJAX 請求刪除用戶
-                $.ajax({
-                    url: `/events/${event_id}/users/${_id}`,
-                    type: 'DELETE',
-                    success: function(response) {
-                        // 從表格中移除該行
-                        $(this).closest('tr').remove();
-                        // 顯示成功提示
-                        const alertHtml = `
-                            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                                用戶刪除成功！
-                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
-                            </div>
-                        `;
-                        $('#alertContainer').append(alertHtml);
-                        // 自動隱藏提示
-                        setTimeout(() => {
-                            $('.alert').alert('close');
-                        }, 1500);
-                    }.bind(this),
-                    error: function(xhr, status, error) {
-                        console.error('Error deleting user:', error);
-                        alert('刪除失敗，請稍後再試。');
-                    }
-                });
-            }
-        });
 
         // 取得 eventId
         const eventId = '<%= event._id %>';

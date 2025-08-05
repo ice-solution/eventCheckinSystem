@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投票活動</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        .vote-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .vote-header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            animation: fadeInDown 1s ease-out;
+        }
+        
+        .vote-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .vote-description {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .vote-option {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            animation: fadeInUp 0.8s ease-out;
+        }
+        
+        .vote-option:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+        
+        .vote-option.selected {
+            border: 3px solid #28a745;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+        
+        .vote-option.selected::before {
+            content: '✓';
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .option-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .option-name {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .option-description {
+            color: #666;
+            margin-bottom: 15px;
+        }
+        
+        .vote-button {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 20px;
+        }
+        
+        .vote-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,123,255,0.4);
+        }
+        
+        .vote-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .results-section {
+            background: rgba(255,255,255,0.95);
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            animation: fadeInUp 1s ease-out;
+        }
+        
+        .results-title {
+            text-align: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        
+        .result-item {
+            margin-bottom: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.6s ease-out forwards;
+            opacity: 0;
+        }
+        
+        .result-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .result-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .result-image-container {
+            flex-shrink: 0;
+            width: 80px;
+            height: 80px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+        
+        .result-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .result-image-placeholder {
+            width: 100%;
+            height: 100%;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+        }
+        
+        .result-details {
+            flex: 1;
+        }
+        
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .result-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        
+        .result-stats {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .progress-container {
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            height: 30px;
+            position: relative;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(45deg, #28a745, #20c997);
+            transition: width 1s ease-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .total-votes {
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #333;
+            margin-top: 20px;
+        }
+        
+        .alert {
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .pulse {
+            animation: pulse 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="vote-container">
+        <div class="vote-header">
+            <h1 class="vote-title"><%= vote.title %></h1>
+            <p class="vote-description"><%= vote.description %></p>
+        </div>
+
+        <div id="alertContainer"></div>
+
+        <% if (hasVoted) { %>
+            <!-- 已投票，顯示結果 -->
+            <div class="results-section">
+                <h2 class="results-title">Voting Results</h2>
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-check-circle"></i> You have already participated in the vote, thank you for your participation!
+                </div>
+                
+
+                
+                <div id="resultsContainer">
+                    <% if (results && results.length > 0) { %>
+                        <% results.forEach((option, index) => { %>
+                        <div class="result-item" style="animation-delay: <%= index * 200 %>ms">
+                            <div class="result-content">
+                                <div class="result-image-container">
+                                    <% if (option.image) { %>
+                                        <img src="<%= option.image %>" alt="<%= option.name %>" class="result-image">
+                                    <% } else { %>
+                                        <div class="result-image-placeholder">
+                                            <i class="fas fa-image fa-2x text-muted"></i>
+                                        </div>
+                                    <% } %>
+                                </div>
+                                <div class="result-details">
+                                    <div class="result-header">
+                                        <span class="result-name"><%= option.name %></span>
+                                        <span class="result-stats"><%= option.votes %> votes (<%= option.percentage %>%)</span>
+                                    </div>
+                                    <div class="progress-container">
+                                        <div class="progress-bar" style="width: <%= option.percentage %>%">
+                                            <%= option.percentage %>%
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <% }); %>
+                    <% } else { %>
+                        <div class="alert alert-warning text-center">
+                            <i class="fas fa-exclamation-triangle"></i> No voting options or result data
+                        </div>
+                    <% } %>
+                </div>
+                <div class="total-votes">
+                    Total Votes: <span id="totalVotes"><%= totalVotes %></span>
+                </div>
+            </div>
+        <% } else { %>
+            <!-- 未投票，顯示投票選項 -->
+            <div id="voteSection">
+                <div class="options-grid">
+                    <% vote.options.forEach((option, index) => { %>
+                        <div class="vote-option" data-id="<%= option._id %>" onclick="selectOption(this)">
+                            <% if (option.image) { %>
+                                <img src="<%= option.image %>" alt="<%= option.name %>" class="option-image">
+                            <% } else { %>
+                                <div class="option-image bg-light d-flex align-items-center justify-content-center">
+                                    <i class="fas fa-image fa-3x text-muted"></i>
+                                </div>
+                            <% } %>
+                            <div class="option-name"><%= option.name %></div>
+                            <div class="option-description"><%= option.description || 'No description' %></div>
+                        </div>
+                    <% }); %>
+                </div>
+                
+                <div class="text-center">
+                    <button id="submitVote" class="vote-button" onclick="submitVote()" disabled>
+                        Submit Vote
+                    </button>
+                </div>
+            </div>
+
+            <div id="resultsSection" class="results-section" style="display: none;">
+                <h2 class="results-title">Voting Results</h2>
+                <div id="resultsContainer"></div>
+                <div class="total-votes">
+                    Total Votes: <span id="totalVotes">0</span>
+                </div>
+            </div>
+        <% } %>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        let selectedOption = null;
+        let hasVoted = <%= hasVoted %>;
+        const eventId = '<%= eventId %>';
+        const userId = '<%= user ? user._id : "" %>';
+        const userName = '<%= user ? user.name : "" %>';
+
+        // Socket.IO 連接
+        const socket = io();
+
+        $(document).ready(function() {
+            // 如果已經投票，不需要檢查
+            if (!hasVoted && userId) {
+                checkUserVote();
+            }
+
+            // 監聽投票更新
+            socket.on('vote_update', function(data) {
+                if (data.eventId === eventId) {
+                    updateResults(data.results, data.totalVotes);
+                }
+            });
+        });
+
+        function selectOption(element) {
+            if (hasVoted) return;
+            
+            $('.vote-option').removeClass('selected');
+            $(element).addClass('selected');
+            selectedOption = $(element).data('id');
+            $('#submitVote').prop('disabled', false);
+        }
+
+        function submitVote() {
+            if (!selectedOption || hasVoted) return;
+
+            const button = $('#submitVote');
+            button.prop('disabled', true);
+            button.text('Voting...');
+
+            fetch(`/votes/${eventId}/submit`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    optionId: selectedOption,
+                    userId: userId,
+                    userName: userName
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    showAlert('success', data.message);
+                    hasVoted = true;
+                    updateResults(data.results, data.totalVotes);
+                    $('#voteSection').hide();
+                    $('#resultsSection').show();
+                    
+                    // 發送 Socket 事件
+                    socket.emit('vote_submitted', {
+                        eventId: eventId,
+                        results: data.results,
+                        totalVotes: data.totalVotes
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('danger', 'Vote failed, please try again later');
+                button.prop('disabled', false);
+                button.text('Submit Vote');
+            });
+        }
+
+        function checkUserVote() {
+            fetch(`/votes/${eventId}/check/${userId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.hasVoted) {
+                    hasVoted = true;
+                    $('#voteSection').hide();
+                    loadResults();
+                }
+            })
+            .catch(error => {
+                console.error('Error checking user vote:', error);
+            });
+        }
+
+        function loadResults() {
+            fetch(`/votes/${eventId}/results`)
+            .then(response => response.json())
+            .then(data => {
+                updateResults(data.results, data.totalVotes);
+                $('#resultsSection').show();
+            })
+            .catch(error => {
+                console.error('Error loading results:', error);
+            });
+        }
+
+        function updateResults(results, totalVotes) {
+            const container = $('#resultsContainer');
+            container.empty();
+            
+            results.forEach((option, index) => {
+                const delay = index * 200;
+                const imageHtml = option.image 
+                    ? `<img src="${option.image}" alt="${option.name}" class="result-image">`
+                    : `<div class="result-image-placeholder"><i class="fas fa-image fa-2x text-muted"></i></div>`;
+                
+                const resultHtml = `
+                    <div class="result-item" style="animation-delay: ${delay}ms">
+                        <div class="result-content">
+                            <div class="result-image-container">
+                                ${imageHtml}
+                            </div>
+                            <div class="result-details">
+                                <div class="result-header">
+                                    <span class="result-name">${option.name}</span>
+                                    <span class="result-stats">${option.votes} votes (${option.percentage}%)</span>
+                                </div>
+                                <div class="progress-container">
+                                    <div class="progress-bar" style="width: ${option.percentage}%">
+                                        ${option.percentage}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.append(resultHtml);
+            });
+            
+            $('#totalVotes').text(totalVotes);
+        }
+
+        function showAlert(type, message) {
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="close" data-dismiss="alert">
+                        <span>&times;</span>
+                    </button>
+                </div>
+            `;
+            $('#alertContainer').append(alertHtml);
+            
+            setTimeout(() => {
+                $('.alert').alert('close');
+            }, 3000);
+        }
+
+        // Socket 事件處理
+        socket.on('connect', function() {
+            console.log('Connected to server');
+        });
+
+        socket.on('vote_submitted', function(data) {
+            if (data.eventId === eventId) {
+                updateResults(data.results, data.totalVotes);
+            }
+        });
+    </script>
+</body>
+</html> 

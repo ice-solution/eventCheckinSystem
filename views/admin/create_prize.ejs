@@ -1,0 +1,84 @@
+<%- include ("components/header") %>
+<%- include ("components/menu", {eventId: eventId }) %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+<div id="right-panel" class="right-panel">
+    <%- include ("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title">新增獎品 - <%= event.name %></strong>
+                        </div>
+                        <div class="card-body">
+                            <form id="createPrizeForm">
+                                <div class="form-group">
+                                    <label for="name">獎品名稱</label>
+                                    <input type="text" class="form-control" id="name" name="name" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="prizeImage">獎品圖片</label>
+                                    <input type="file" class="form-control-file" id="prizeImage" name="prizeImage" accept="image/*">
+                                    <small class="form-text text-muted">支持 JPG, PNG, GIF 格式，最大 5MB</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="picture">獎品圖片URL（可選）</label>
+                                    <input type="url" class="form-control" id="picture" name="picture" placeholder="https://example.com/image.jpg">
+                                    <small class="form-text text-muted">如果上傳了圖片文件，此URL將被忽略</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="unit">數量</label>
+                                    <input type="number" class="form-control" id="unit" name="unit" value="1" min="1" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">新增獎品</button>
+                                <a href="/prizes/<%= eventId %>/prizes/list" class="btn btn-secondary">返回列表</a>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include ("./components/footer") %>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#createPrizeForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('name', $('#name').val());
+            formData.append('unit', $('#unit').val());
+            
+            // 如果有上傳圖片文件，使用文件；否則使用URL
+            const imageFile = $('#prizeImage')[0].files[0];
+            if (imageFile) {
+                formData.append('prizeImage', imageFile);
+            } else {
+                formData.append('picture', $('#picture').val());
+            }
+            
+            fetch(`/prizes/<%= eventId %>/prizes`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data._id) {
+                    alert('獎品新增成功！');
+                    window.location.href = `/prizes/<%= eventId %>/prizes/list`;
+                } else {
+                    alert('新增失敗：' + (data.message || '未知錯誤'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('新增失敗');
+            });
+        });
+    });
+</script> 
