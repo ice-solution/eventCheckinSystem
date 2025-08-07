@@ -1209,3 +1209,32 @@ exports.checkInUser = async (req, res) => {
         res.status(500).json({ message: 'Error checking in user' });
     }
 };
+
+// Batch delete users
+exports.batchDeleteUsers = async (req, res) => {
+    const { eventId } = req.params;
+    const { userIds } = req.body; // 接收用戶ID數組
+    
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+        
+        // 過濾掉要刪除的用戶
+        const originalCount = event.users.length;
+        event.users = event.users.filter(user => !userIds.includes(user._id.toString()));
+        const deletedCount = originalCount - event.users.length;
+        
+        await event.save();
+        
+        res.status(200).json({ 
+            message: `Successfully deleted ${deletedCount} users`,
+            deletedCount: deletedCount
+        });
+        
+    } catch (error) {
+        console.error('Error batch deleting users:', error);
+        res.status(500).json({ message: 'Error batch deleting users' });
+    }
+};

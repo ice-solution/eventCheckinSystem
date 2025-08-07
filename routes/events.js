@@ -55,6 +55,9 @@ router.post('/:eventId/users', eventsController.addUserToEvent);
 // Check-in 用戶
 router.put('/:eventId/users/:userId/checkin', eventsController.checkInUser);
 
+// Batch delete users
+router.delete('/:eventId/users/batch', eventsController.batchDeleteUsers);
+
 router.get('/:eventId/scan', eventsController.scanEventUsers);
 
 
