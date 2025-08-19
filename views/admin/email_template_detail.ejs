@@ -14,12 +14,14 @@
     <script>
         tinymce.init({
             selector: '#content', // WYSIWYG 編輯器的選擇器
-            plugins: 'image code',
-            toolbar: 'undo redo | styleselect | bold italic | alignleft aligncenter alignright | image | code',
+            plugins: 'image code link',
+            toolbar: 'undo redo | styleselect | bold italic | alignleft aligncenter alignright | image link | code',
             images_upload_url: '/emailTemplate/upload', // 圖片上傳的路由
-            image_upload_base_url_path: '/uploads/email_template_images', // 圖片上傳的路由
             automatic_uploads: true,
-            convert_urls: false,
+            convert_urls: true, // 啟用 URL 轉換
+            relative_urls: false, // 使用絕對 URL
+            remove_script_host: false, // 保留主機名
+            document_base_url: window.location.origin, // 設置基礎 URL
             file_picker_types: 'image',
             file_picker_callback: function (callback, value, meta) {
                 if (meta.filetype === 'image') {
@@ -37,6 +39,26 @@
                     input.click();
                 }
             },
+            // 圖片處理配置
+            image_advtab: true,
+            image_dimensions: true,
+            image_class_list: [
+                {title: 'Responsive', value: 'img-fluid'}
+            ],
+            // 確保圖片 URL 是完整的
+            urlconverter_callback: function(url, node, on_save, name) {
+                // 如果是相對路徑，轉換為絕對路徑
+                if (url && url.indexOf('http') !== 0 && url.indexOf('//') !== 0) {
+                    if (url.indexOf('/') === 0) {
+                        // 已經是絕對路徑，添加域名
+                        return window.location.origin + url;
+                    } else {
+                        // 相對路徑，添加域名和基礎路徑
+                        return window.location.origin + '/' + url;
+                    }
+                }
+                return url;
+            }
         });
     </script>
 </head>

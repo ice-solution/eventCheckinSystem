@@ -14,9 +14,11 @@
             plugins: 'image code',
             toolbar: 'undo redo | styleselect | bold italic | alignleft aligncenter alignright | image | code',
             images_upload_url: '/emailTemplate/upload', // 圖片上傳的路由
-            image_upload_base_url_path: '/uploads/email_template_images', // 圖片上傳的路由
-            convert_urls: false,
             automatic_uploads: true,
+            convert_urls: true, // 啟用 URL 轉換
+            relative_urls: false, // 使用絕對 URL
+            remove_script_host: false, // 保留主機名
+            document_base_url: window.location.origin, // 設置基礎 URL
             file_picker_types: 'image',
 
             file_picker_callback: function (callback, value, meta) {
