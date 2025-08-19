@@ -198,4 +198,9 @@ router.get('/:eventId/emailTemplate', emailTemplateController.renderEmailTemplat
 router.get('/:eventId/emailTemplate/create', emailTemplateController.renderCreateEmailTemplatePage); // 渲染創建電子郵件模板頁面
 router.get('/:eventId/emailTemplate/:id', emailTemplateController.renderEmailTemplateDetail); // 渲染創建電子郵件模板頁面
 
+// Banner 管理路由
+router.get('/:eventId/banner', eventsController.showBannerManagement);
+router.post('/:eventId/banner/upload', eventsController.uploadBanner);
+router.post('/:eventId/banner/delete', eventsController.deleteBanner);
+
 module.exports = router;

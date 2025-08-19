@@ -7,6 +7,16 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
 <body>
+    <div id="carouselExampleCaptions" class="carousel slide" data-ride="carousel">
+        <div class="carousel-inner">
+            <div class="carousel-item active">
+                <img src="/exvent/<%= event_id %>.jpg" class="d-block w-100" alt="第一張圖片" 
+                     onerror="this.src='/exvent/banner.jpg'">
+                <div class="carousel-caption d-none d-md-block">
+                </div>
+            </div>
+        </div>
+    </div>
 <% if (transaction) { %>
     <div class="container mt-5">
         <div class="row justify-content-center">

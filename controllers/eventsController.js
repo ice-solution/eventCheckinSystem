@@ -15,6 +15,8 @@ const ExcelJS = require('exceljs');
 const { getWelcomeEmailTemplate } = require('../template/welcomeEmail'); // 引入歡迎郵件模板
 const emailTemplate = require('./emailTemplateController');
 const EmailTemplate = require('../model/EmailTemplate'); // 引入 EmailTemplate 模型
+const multer = require('multer');
+const fs = require('fs');
 
 // 創建事件
 exports.createEvent = async (req, res) => {
@@ -1245,5 +1247,127 @@ exports.batchDeleteUsers = async (req, res) => {
     } catch (error) {
         console.error('Error batch deleting users:', error);
         res.status(500).json({ message: 'Error batch deleting users' });
+    }
+};
+
+// Banner 管理功能
+// 配置 multer 用於文件上傳
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const uploadDir = 'public/exvent';
+        // 確保目錄存在
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+        // 使用 eventId 作為文件名
+        const eventId = req.params.eventId;
+        const ext = path.extname(file.originalname);
+        cb(null, eventId + '-temp' + Date.now() + ext);
+    }
+});
+
+const fileFilter = (req, file, cb) => {
+    // 只允許 PNG 和 JPG 文件
+    if (file.mimetype === 'image/png' || file.mimetype === 'image/jpeg' || file.mimetype === 'image/jpg') {
+        cb(null, true);
+    } else {
+        cb(new Error('只允許上傳 PNG 或 JPG 格式的圖片'), false);
+    }
+};
+
+const upload = multer({ 
+    storage: storage,
+    fileFilter: fileFilter,
+    limits: {
+        fileSize: 5 * 1024 * 1024 // 限制文件大小為 5MB
+    }
+});
+
+// 顯示 banner 管理頁面
+exports.showBannerManagement = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found');
+        }
+        
+        // 檢查當前 banner 是否存在（優先檢查 eventId 的 banner，如果沒有則檢查默認 banner）
+        const eventBannerPath = `public/exvent/${eventId}.jpg`;
+        const defaultBannerPath = 'public/exvent/banner.jpg';
+        
+        let currentBanner = null;
+        if (fs.existsSync(eventBannerPath)) {
+            currentBanner = `/exvent/${eventId}.jpg`;
+        } else if (fs.existsSync(defaultBannerPath)) {
+            currentBanner = '/exvent/banner.jpg';
+        }
+        
+        res.render('admin/banner_management', { 
+            event, 
+            currentBanner,
+            message: req.query.message || null,
+            error: req.query.error || null
+        });
+    } catch (error) {
+        console.error('Error showing banner management:', error);
+        res.status(500).send('Error loading banner management page');
+    }
+};
+
+// 上傳新的 banner
+exports.uploadBanner = [
+    upload.single('banner'),
+    async (req, res) => {
+        const { eventId } = req.params;
+        
+        try {
+            if (!req.file) {
+                return res.redirect(`/events/${eventId}/banner?error=請選擇要上傳的圖片文件`);
+            }
+
+            const event = await Event.findById(eventId);
+            if (!event) {
+                return res.status(404).send('Event not found');
+            }
+
+            // 刪除舊的 event banner 文件（如果存在）
+            const oldEventBannerPath = `public/exvent/${eventId}.jpg`;
+            if (fs.existsSync(oldEventBannerPath)) {
+                fs.unlinkSync(oldEventBannerPath);
+            }
+
+            // 將新上傳的文件重命名為 eventId.jpg
+            const newBannerPath = req.file.path;
+            const finalBannerPath = `public/exvent/${eventId}.jpg`;
+            fs.renameSync(newBannerPath, finalBannerPath);
+
+            res.redirect(`/events/${eventId}/banner?message=Banner 上傳成功！`);
+            
+        } catch (error) {
+            console.error('Error uploading banner:', error);
+            res.redirect(`/events/${eventId}/banner?error=Banner 上傳失敗：${error.message}`);
+        }
+    }
+];
+
+// 刪除當前 banner
+exports.deleteBanner = async (req, res) => {
+    const { eventId } = req.params;
+    
+    try {
+        const eventBannerPath = `public/exvent/${eventId}.jpg`;
+        if (fs.existsSync(eventBannerPath)) {
+            fs.unlinkSync(eventBannerPath);
+            res.redirect(`/events/${eventId}/banner?message=Banner 已刪除`);
+        } else {
+            res.redirect(`/events/${eventId}/banner?error=沒有找到此活動的 banner 文件`);
+        }
+    } catch (error) {
+        console.error('Error deleting banner:', error);
+        res.redirect(`/events/${eventId}/banner?error=刪除 banner 失敗：${error.message}`);
     }
 };

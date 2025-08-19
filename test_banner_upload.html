@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banner 上傳測試</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .file-upload {
+            border: 2px dashed #007bff;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            background-color: white;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .file-upload:hover {
+            border-color: #0056b3;
+            background-color: #f8f9fa;
+        }
+        .file-input {
+            display: none;
+        }
+        .btn {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>Banner 上傳功能測試</h1>
+    
+    <div class="test-section">
+        <h2>測試文件選擇功能</h2>
+        <div class="file-upload" id="fileUpload">
+            <h5>點擊選擇文件或拖拽圖片到此處</h5>
+            <p>支援 PNG、JPG、JPEG 格式，最大 5MB</p>
+            <input type="file" id="bannerFile" class="file-input" accept="image/png,image/jpeg,image/jpg">
+            <button type="button" class="btn btn-primary" id="selectFileBtn">
+                選擇文件
+            </button>
+        </div>
+        
+        <div id="fileInfo" style="display: none; margin-top: 20px;">
+            <h4>已選擇文件：</h4>
+            <p><strong>文件名：</strong> <span id="fileName"></span></p>
+            <p><strong>文件大小：</strong> <span id="fileSize"></span></p>
+            <p><strong>文件類型：</strong> <span id="fileType"></span></p>
+        </div>
+    </div>
+
+    <script>
+        // 首先聲明所有需要的 DOM 元素
+        const fileUpload = document.getElementById('fileUpload');
+        const selectFileBtn = document.getElementById('selectFileBtn');
+        const bannerFile = document.getElementById('bannerFile');
+        
+        // 防止重複觸發的標記
+        let isSelectingFile = false;
+        
+        // 統一的文件選擇函數
+        function selectFile() {
+            if (isSelectingFile) return;
+            isSelectingFile = true;
+            bannerFile.click();
+            setTimeout(() => {
+                isSelectingFile = false;
+            }, 100);
+        }
+        
+        // 文件選擇處理
+        bannerFile.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                console.log('文件已選擇:', file.name);
+                
+                // 檢查文件類型
+                const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+                if (!allowedTypes.includes(file.type)) {
+                    alert('只允許上傳 PNG 或 JPG 格式的圖片！');
+                    return;
+                }
+                
+                // 檢查文件大小 (5MB)
+                const maxSize = 5 * 1024 * 1024;
+                if (file.size > maxSize) {
+                    alert('文件大小不能超過 5MB！');
+                    return;
+                }
+                
+                // 顯示文件信息
+                document.getElementById('fileName').textContent = file.name;
+                document.getElementById('fileSize').textContent = formatFileSize(file.size);
+                document.getElementById('fileType').textContent = file.type;
+                document.getElementById('fileInfo').style.display = 'block';
+                
+                // 更新上傳區域樣式
+                fileUpload.style.borderColor = '#28a745';
+                fileUpload.style.backgroundColor = '#d4edda';
+            }
+        });
+        
+        // 拖拽上傳功能
+        fileUpload.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.classList.add('dragover');
+        });
+        
+        fileUpload.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            this.classList.remove('dragover');
+        });
+        
+        fileUpload.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                bannerFile.files = files;
+                bannerFile.dispatchEvent(new Event('change'));
+            }
+        });
+        
+        // 點擊選擇文件按鈕觸發文件選擇
+        selectFileBtn.addEventListener('click', function(e) {
+            e.stopPropagation(); // 防止事件冒泡
+            selectFile();
+        });
+        
+        // 點擊上傳區域觸發文件選擇（但排除按鈕區域）
+        fileUpload.addEventListener('click', function(e) {
+            // 如果點擊的是按鈕或其子元素，不觸發文件選擇
+            if (e.target.closest('#selectFileBtn')) {
+                return;
+            }
+            selectFile();
+        });
+        
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        console.log('Banner 上傳測試頁面已載入');
+        console.log('fileUpload:', fileUpload);
+        console.log('selectFileBtn:', selectFileBtn);
+        console.log('bannerFile:', bannerFile);
+    </script>
+</body>
+</html>

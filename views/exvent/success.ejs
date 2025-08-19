@@ -10,7 +10,8 @@
     <div id="carouselExampleCaptions" class="carousel slide" data-ride="carousel">
         <div class="carousel-inner">
             <div class="carousel-item active">
-                <img src="/exvent/banner.jpg" class="d-block w-100" alt="第一張圖片">
+                <img src="/exvent/<%= event_id %>.jpg" class="d-block w-100" alt="第一張圖片" 
+                     onerror="this.src='/exvent/banner.jpg'">
                 <div class="carousel-caption d-none d-md-block">
                 </div>
             </div>

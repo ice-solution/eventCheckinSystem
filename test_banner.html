@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banner 功能測試</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .banner-preview {
+            max-width: 100%;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Banner 功能測試</h1>
+    
+    <div class="test-section">
+        <h2>1. 檢查 Banner 文件是否存在</h2>
+        <p>默認 banner 路徑：<code>/exvent/banner.jpg</code></p>
+        <p>活動專用 banner 路徑：<code>/exvent/EVENT_ID.jpg</code></p>
+        <div id="bannerStatus">檢查中...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Banner 預覽</h2>
+        <p>請將 EVENT_ID 替換為實際的活動 ID 來測試：</p>
+        <input type="text" id="eventIdInput" placeholder="輸入活動 ID" style="width: 200px; padding: 5px;">
+        <button onclick="checkBanner()" style="margin-left: 10px; padding: 5px 10px;">檢查 Banner</button>
+        <br><br>
+        <img id="bannerImage" class="banner-preview" style="display: none;" alt="Banner">
+        <div id="noBanner" style="color: #666;">請輸入活動 ID 並點擊檢查</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. 功能連結</h2>
+        <p>請將以下 URL 中的 <code>EVENT_ID</code> 替換為實際的事件 ID：</p>
+        <ul>
+            <li><strong>Banner 管理頁面：</strong> <code>/events/EVENT_ID/banner</code></li>
+            <li><strong>上傳 Banner：</strong> <code>POST /events/EVENT_ID/banner/upload</code></li>
+            <li><strong>刪除 Banner：</strong> <code>POST /events/EVENT_ID/banner/delete</code></li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. 已修改的頁面</h2>
+        <p>以下頁面的 banner 路徑已更新為使用 eventId：</p>
+        <ul>
+            <li><strong>註冊頁面：</strong> <code>views/exvent/register.ejs</code></li>
+            <li><strong>成功頁面：</strong> <code>views/exvent/success.ejs</code></li>
+            <li><strong>失敗頁面：</strong> <code>views/exvent/fail.ejs</code></li>
+        </ul>
+        <p>所有頁面都會優先載入 <code>/exvent/EVENT_ID.jpg</code>，如果不存在則回退到 <code>/exvent/banner.jpg</code></p>
+    </div>
+
+    <script>
+        // 檢查 banner 是否存在
+        const bannerImg = document.getElementById('bannerImage');
+        const noBanner = document.getElementById('noBanner');
+        const bannerStatus = document.getElementById('bannerStatus');
+        
+        function checkBanner() {
+            const eventId = document.getElementById('eventIdInput').value.trim();
+            if (!eventId) {
+                alert('請輸入活動 ID');
+                return;
+            }
+            
+            // 先嘗試載入活動專用的 banner
+            bannerImg.src = `/exvent/${eventId}.jpg`;
+        }
+        
+        bannerImg.onload = function() {
+            const eventId = document.getElementById('eventIdInput').value.trim();
+            bannerStatus.innerHTML = `<span style="color: green;">✓ 活動 ${eventId} 的 Banner 文件存在</span>`;
+            bannerImg.style.display = 'block';
+            noBanner.style.display = 'none';
+        };
+        
+        bannerImg.onerror = function() {
+            const eventId = document.getElementById('eventIdInput').value.trim();
+            // 如果活動專用的 banner 不存在，嘗試載入默認 banner
+            if (bannerImg.src.includes(eventId)) {
+                bannerImg.src = '/exvent/banner.jpg';
+            } else {
+                bannerStatus.innerHTML = `<span style="color: red;">✗ 活動 ${eventId} 的 Banner 文件不存在，默認 Banner 也不存在</span>`;
+                bannerImg.style.display = 'none';
+                noBanner.style.display = 'block';
+            }
+        };
+        
+        // 頁面載入時檢查默認 banner
+        window.onload = function() {
+            bannerImg.src = '/exvent/banner.jpg';
+        };
+    </script>
+</body>
+</html>
