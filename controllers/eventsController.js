@@ -1143,7 +1143,7 @@ exports.outputReport = async (req, res) => {
             { header: 'Phone', key: 'phone', width: 15 },
             { header: 'Role', key: 'role', width: 10 },
             { header: 'Industry', key: 'industry', width: 15 },
-            { header: 'CheckInAt', key: 'modified_at', width: 15 },
+            { header: 'CheckInAt', key: 'checkInAt', width: 15 },
             { header: '已簽到', key: 'isCheckIn', width: 10 }
         ];
         users.forEach(user => {
@@ -1155,6 +1155,15 @@ exports.outputReport = async (req, res) => {
                 phone: user.phone,
                 role: user.role,
                 industry: user.industry,
+                checkInAt: user.checkInAt ? new Date(user.checkInAt).toLocaleString('zh-TW', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                }) : '',
                 isCheckIn: user.isCheckIn ? '✓' : ''
             });
         });
