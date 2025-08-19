@@ -45,18 +45,20 @@
             image_class_list: [
                 {title: 'Responsive', value: 'img-fluid'}
             ],
-            // 確保圖片 URL 是完整的
+            // 只對 banner 圖片使用絕對 URL，其他圖片保持相對路徑
             urlconverter_callback: function(url, node, on_save, name) {
-                // 如果是相對路徑，轉換為絕對路徑
-                if (url && url.indexOf('http') !== 0 && url.indexOf('//') !== 0) {
-                    if (url.indexOf('/') === 0) {
-                        // 已經是絕對路徑，添加域名
-                        return window.location.origin + url;
-                    } else {
-                        // 相對路徑，添加域名和基礎路徑
-                        return window.location.origin + '/' + url;
+                // 檢查是否為 banner 相關的圖片
+                if (url && (url.includes('banner') || url.includes('exvent'))) {
+                    // 對 banner 圖片使用絕對 URL
+                    if (url.indexOf('http') !== 0 && url.indexOf('//') !== 0) {
+                        if (url.indexOf('/') === 0) {
+                            return window.location.origin + url;
+                        } else {
+                            return window.location.origin + '/' + url;
+                        }
                     }
                 }
+                // 其他圖片（如 QR code）保持相對路徑
                 return url;
             }
         });

@@ -11,8 +11,8 @@
     <script>
         tinymce.init({
             selector: '#content', // WYSIWYG 編輯器的選擇器
-            plugins: 'image code',
-            toolbar: 'undo redo | styleselect | bold italic | alignleft aligncenter alignright | image | code',
+            plugins: 'image code link',
+            toolbar: 'undo redo | styleselect | bold italic | alignleft aligncenter alignright | image link | code',
             images_upload_url: '/emailTemplate/upload', // 圖片上傳的路由
             automatic_uploads: true,
             convert_urls: true, // 啟用 URL 轉換
@@ -20,7 +20,6 @@
             remove_script_host: false, // 保留主機名
             document_base_url: window.location.origin, // 設置基礎 URL
             file_picker_types: 'image',
-
             file_picker_callback: function (callback, value, meta) {
                 if (meta.filetype === 'image') {
                     var input = document.createElement('input');
@@ -36,6 +35,28 @@
                     };
                     input.click();
                 }
+            },
+            // 圖片處理配置
+            image_advtab: true,
+            image_dimensions: true,
+            image_class_list: [
+                {title: 'Responsive', value: 'img-fluid'}
+            ],
+            // 只對 banner 圖片使用絕對 URL，其他圖片保持相對路徑
+            urlconverter_callback: function(url, node, on_save, name) {
+                // 檢查是否為 banner 相關的圖片
+                if (url && (url.includes('banner') || url.includes('exvent'))) {
+                    // 對 banner 圖片使用絕對 URL
+                    if (url.indexOf('http') !== 0 && url.indexOf('//') !== 0) {
+                        if (url.indexOf('/') === 0) {
+                            return window.location.origin + url;
+                        } else {
+                            return window.location.origin + '/' + url;
+                        }
+                    }
+                }
+                // 其他圖片（如 QR code）保持相對路徑
+                return url;
             }
         });
     </script>

@@ -187,7 +187,12 @@ exports.uploadEmailTemplateImage = async (req, res) => {
     if (!req.file) {
       return res.status(400).send("請選擇一個圖片文件！")
     }
-    const imageUrl = `/uploads/email_template_images/${req.file.filename}`
+    
+    // 構建完整的絕對 URL
+    const protocol = req.protocol;
+    const host = req.get('host');
+    const imageUrl = `${protocol}://${host}/uploads/email_template_images/${req.file.filename}`;
+    
     res.status(200).json({ location: imageUrl })
   })
 }
