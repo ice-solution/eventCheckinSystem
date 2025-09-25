@@ -51,18 +51,28 @@
                                         <th>次序</th>
                                         <th>姓名</th>
                                         <th>公司</th>
+                                        <th>桌號</th>
                                         <th>獎品</th>
                                         <th>中獎時間</th>
+                                        <th>操作</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <% winners.forEach(winner => { %>
-                                        <tr>
+                                        <tr data-winner-id="<%= winner._id %>">
                                             <td><%= winner.order %></td>
                                             <td><%= winner.name %></td>
-                                            <td><%= winner.company %></td>
+                                            <td><%= winner.company || '-' %></td>
+                                            <td><%= winner.table || '-' %></td>
                                             <td><%= winner.prizeName || '隨機獎品' %></td>
                                             <td><%= winner.wonAt ? new Date(winner.wonAt).toLocaleString('zh-TW') : '未記錄' %></td>
+                                            <td>
+                                                <button class="btn btn-danger btn-sm delete-winner" 
+                                                        data-winner-id="<%= winner._id %>"
+                                                        data-winner-name="<%= winner.name %>">
+                                                    <i class="fa fa-trash"></i> 刪除
+                                                </button>
+                                            </td>
                                         </tr>
                                     <% }); %>
                                 </tbody>
@@ -86,6 +96,44 @@
 <script type="text/javascript">
     $(document).ready(function() {
         $('#winners-table').DataTable(); // 初始化 DataTable
+        
+        // 處理刪除中獎者
+        $(document).on('click', '.delete-winner', function() {
+            const winnerId = $(this).data('winner-id');
+            const winnerName = $(this).data('winner-name');
+            
+            if (confirm(`確定要刪除 ${winnerName} 的中獎記錄嗎？`)) {
+                // 發送刪除請求
+                $.ajax({
+                    url: `/events/<%= eventId %>/luckydraw`,
+                    type: 'DELETE',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ _id: winnerId }),
+                    success: function(response) {
+                        // 刪除成功，移除表格行
+                        $(`tr[data-winner-id="${winnerId}"]`).fadeOut(300, function() {
+                            $(this).remove();
+                            // 重新計算次序
+                            updateOrderNumbers();
+                        });
+                        
+                        // 顯示成功消息
+                        alert('中獎記錄已成功刪除！');
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('刪除失敗:', error);
+                        alert('刪除失敗，請稍後再試。');
+                    }
+                });
+            }
+        });
+        
+        // 重新計算表格行的次序
+        function updateOrderNumbers() {
+            $('#winners-table tbody tr').each(function(index) {
+                $(this).find('td:first').text(index + 1);
+            });
+        }
     });
 </script>
 

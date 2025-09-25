@@ -72,6 +72,25 @@
       margin-top: 3px;
     }
 
+    .table {
+      font-size: 12px;
+      color: #666;
+      margin-top: 2px;
+    }
+
+    .prize {
+      font-size: 14px;
+      font-weight: bold;
+      color: #e74c3c;
+      background-color: #fff3cd;
+      border: 2px solid #ffc107;
+      border-radius: 4px;
+      padding: 4px 8px;
+      margin-bottom: 6px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
     #control {
       display: flex;
       flex-direction: column;
@@ -151,19 +170,12 @@
     }
 
     .spinner {
-      width: 120px; /* 調整圖片大小為原來的兩倍 */
-      height: 120px; /* 調整圖片大小為原來的兩倍 */
-      animation: spin 0.5s linear infinite; /* 將動畫時間設置為 0.5 秒以加快速度 */
+      width: 150px; /* 調整為新的 giftbox.gif 尺寸 */
+      height: 150px; /* 調整為新的 giftbox.gif 尺寸 */
+      /* 移除 CSS 旋轉動畫，因為 giftbox.gif 本身已有動畫 */
     }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      20% { transform: rotate(72deg); } /* 5個方向的第一個 */
-      40% { transform: rotate(144deg); } /* 5個方向的第二個 */
-      60% { transform: rotate(216deg); } /* 5個方向的第三個 */
-      80% { transform: rotate(288deg); } /* 5個方向的第四個 */
-      100% { transform: rotate(360deg); } /* 完整一圈 */
-    }
+    /* 移除 CSS 旋轉動畫，因為 giftbox.gif 本身已有動畫 */
   </style>
   <!-- <link rel="stylesheet" href="/admin/assets/css/luckydraw.css"> -->
 </head>
@@ -176,8 +188,8 @@
       <div id="control">
         <div id="prizeSelector" style="margin-bottom: 15px;">
           <label for="prizeSelect" style="color: white; font-weight: bold; display: block; margin-bottom: 5px;">選擇獎品：</label>
-          <select id="prizeSelect" style="width: 180px; padding: 8px; border-radius: 4px; margin-bottom: 10px;">
-            <option value="">隨機獎品</option>
+          <select id="prizeSelect" style="width: 180px; padding: 8px; border-radius: 4px; margin-bottom: 10px;" required>
+            <option value="">請選擇獎品</option>
             <% prizes.forEach(prize => { %>
               <% if (prize.unit > 0) { %>
                 <option value="<%= prize._id %>" data-name="<%= prize.name %>"><%= prize.name %> (剩餘: <%= prize.unit %>)</option>
@@ -186,9 +198,9 @@
           </select>
         </div>
         <img id="startBtn" src="/admin/img/start.png" alt="start...">
+        <button id="draw5Btn" style="padding: 15px 20px; font-size: 16px; background-color: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; margin-top: 10px;">連抽5人</button>
         <!-- <button id="startBtn">1</button> -->
-        <!-- <button id="draw5Btn">5</button>
-        <button id="draw10Btn">10</button> -->
+        <!-- <button id="draw10Btn">10</button> -->
         <div id="spinner"></div>
       </div>
     </div>
@@ -196,7 +208,7 @@
     <div id="current"></div>
     <div class="overlay" id="overlay"></div>
     <div class="animation" id="animation">
-      <img src="/admin/img/spin.png" alt="Loading..." class="spinner" id="spinnerImage">
+      <img src="/admin/img/giftbox.gif" alt="Loading..." class="spinner" id="spinnerImage">
     </div>
   </div> 
 
@@ -222,6 +234,29 @@
         return;
       }
 
+      // 檢查是否選擇了獎品
+      const prizeSelect = document.getElementById('prizeSelect');
+      if (!prizeSelect.value) {
+        alert("請先選擇獎品！");
+        return;
+      }
+
+      // 動態檢查獎品庫存
+      const selectedOption = prizeSelect.options[prizeSelect.selectedIndex];
+      const currentText = selectedOption.text;
+      const match = currentText.match(/\(剩餘: (\d+)\)/);
+      
+      if (!match) {
+        alert("無法獲取獎品庫存信息！");
+        return;
+      }
+
+      const remainingPrize = parseInt(match[1]);
+      if (remainingPrize <= 0) {
+        alert("所選獎品已無庫存！");
+        return;
+      }
+
       overlay.style.display = 'block';
       animationDiv.style.display = 'block';
       spinner.style.display = 'block';
@@ -235,17 +270,58 @@
         const person = availablePeople.splice(index, 1)[0];
         drawnPeople.push(person);
 
+        // 獲取選擇的獎品信息（提前獲取）
+        const prizeSelect = document.getElementById('prizeSelect');
+        const selectedPrizeId = prizeSelect.value;
+        const selectedPrizeName = prizeSelect.options[prizeSelect.selectedIndex].dataset.name || '';
+        
+        // 將獎品信息存儲到 person 對象中
+        person.prizeId = selectedPrizeId || null;
+        person.prizeName = selectedPrizeName;
+
         const rets = document.createElement('div');
         rets.className = 'rets';
         rets.dataset.id = person._id;
 
         // 顯示中獎者的序號
         const winnerIndex = drawnPeople.length; // 當前中獎者的序號
-        rets.innerHTML = `<div class="number">${winnerIndex}</div><div class="card"><div class="name">${person.name}</div><div class="company">${person.company}</div></div>`;
+        // 構建顯示內容，處理空值
+        let displayContent = '';
+        
+        // 添加獎品信息（在名字上方）
+        if (person.prizeName) {
+          displayContent += `<div class="prize">🎁 ${person.prizeName}</div>`;
+        }
+        
+        displayContent += `<div class="name">${person.name}</div>`;
+        
+        if (person.company) {
+          displayContent += `<div class="company">${person.company}</div>`;
+        }
+        
+        if (person.table) {
+          displayContent += `<div class="table">桌號: ${person.table}</div>`;
+        }
+        
+        rets.innerHTML = `<div class="number">${winnerIndex}</div><div class="card">${displayContent}</div>`;
         resultDiv.appendChild(rets);
 
         // 顯示當前中獎者
-        currentDiv.innerHTML = ` ${person.name}<br>(${person.company})`; // 顯示公司名稱
+        let currentDisplay = '';
+        
+        // 添加獎品信息
+        if (person.prizeName) {
+          currentDisplay += `<div style="font-size: 24px; color: #e74c3c; font-weight: bold; margin-bottom: 10px;">🎁 ${person.prizeName}</div>`;
+        }
+        
+        currentDisplay += person.name;
+        if (person.company) {
+          currentDisplay += `<br>(${person.company})`;
+        }
+        if (person.table) {
+          currentDisplay += `<br>桌號: ${person.table}`;
+        }
+        currentDiv.innerHTML = currentDisplay;
         currentDiv.style.display = 'block'; // 顯示 current
 
         // 點擊卡片 → 刪除確認
@@ -254,6 +330,37 @@
             resultDiv.removeChild(rets);
             drawnPeople.splice(drawnPeople.findIndex(p => p._id === person._id), 1);
             availablePeople.push(person);
+
+            // 如果這個人有指定獎品，需要還原獎品選項的顯示
+            if (person.prizeId) {
+              const prizeSelect = document.getElementById('prizeSelect');
+              let option = Array.from(prizeSelect.options).find(opt => opt.value === person.prizeId);
+              
+              if (option) {
+                // 選項存在，更新數量
+                const currentText = option.text;
+                const match = currentText.match(/\(剩餘: (\d+)\)/);
+                if (match) {
+                  const remaining = parseInt(match[1]) + 1; // 還原數量
+                  option.text = option.text.replace(/\(剩餘: \d+\)/, `(剩餘: ${remaining})`);
+                }
+              } else {
+                // 選項不存在（被移除了），需要重新創建
+                const newOption = document.createElement('option');
+                newOption.value = person.prizeId;
+                newOption.dataset.name = person.prizeName || '未知獎品';
+                newOption.text = `${person.prizeName || '未知獎品'} (剩餘: 1)`;
+                
+                // 插入到第一個選項之後
+                if (prizeSelect.options.length > 1) {
+                  prizeSelect.insertBefore(newOption, prizeSelect.options[1]);
+                } else {
+                  prizeSelect.appendChild(newOption);
+                }
+                
+                console.log(`已重新添加獎品選項: ${person.prizeName} (剩餘: 1)`);
+              }
+            }
 
             // DELETE API
             fetch(`/events/${eventId}/luckydraw`, { // 使用 eventId
@@ -274,15 +381,11 @@
           }
         });
 
-        // 獲取選擇的獎品
-        const prizeSelect = document.getElementById('prizeSelect');
-        const selectedPrizeId = prizeSelect.value;
-        const selectedPrizeName = prizeSelect.options[prizeSelect.selectedIndex].dataset.name || '';
-        
+        // 獎品信息已經在上面獲取並存儲到 person 對象中
         // 準備發送的數據
         const postData = {
           ...person,
-          prizeId: selectedPrizeId || null
+          prizeId: person.prizeId
         };
         
         // POST 該人資料
@@ -296,22 +399,28 @@
         .then(res => {
           if (res.ok) {
             console.log("已送出", person);
-            // 如果選擇了特定獎品，更新選項顯示
-            if (selectedPrizeId) {
-              const option = prizeSelect.options[prizeSelect.selectedIndex];
-              const currentText = option.text;
-              const match = currentText.match(/\(剩餘: (\d+)\)/);
-              if (match) {
-                const remaining = parseInt(match[1]) - 1;
-                if (remaining <= 0) {
-                  option.remove(); // 移除數量為0的選項
+            // 更新獎品選項顯示
+            const option = prizeSelect.options[prizeSelect.selectedIndex];
+            const currentText = option.text;
+            const match = currentText.match(/\(剩餘: (\d+)\)/);
+            if (match) {
+              const remaining = parseInt(match[1]) - 1;
+              if (remaining <= 0) {
+                option.remove(); // 移除數量為0的選項
+                // 重置選擇為第一個可用選項
+                if (prizeSelect.options.length > 1) {
+                  prizeSelect.selectedIndex = 1;
                 } else {
-                  option.text = option.text.replace(/\(剩餘: \d+\)/, `(剩餘: ${remaining})`);
+                  prizeSelect.selectedIndex = 0;
                 }
+              } else {
+                option.text = option.text.replace(/\(剩餘: \d+\)/, `(剩餘: ${remaining})`);
               }
             }
           } else {
             console.error("送出失敗", res.statusText);
+            // 如果送出失敗，重新啟用按鈕
+            startBtn.disabled = false;
           }
         })
         .catch(err => console.error("送出失敗", err));
@@ -324,10 +433,76 @@
     startBtn.addEventListener('click', drawWinner);
 
     draw5Btn.addEventListener('click', () => {
-      const drawCount = Math.min(5, availablePeople.length); // 確保最多抽取可用人數
-      for (let i = 0; i < drawCount; i++) {
-        drawWinner();
+      // 檢查是否選擇了獎品
+      const prizeSelect = document.getElementById('prizeSelect');
+      if (!prizeSelect.value) {
+        alert("請先選擇獎品！");
+        return;
       }
+
+      // 獲取當前選擇的獎品信息
+      const selectedPrizeId = prizeSelect.value;
+      const selectedOption = prizeSelect.options[prizeSelect.selectedIndex];
+      const currentText = selectedOption.text;
+      const match = currentText.match(/\(剩餘: (\d+)\)/);
+      
+      if (!match) {
+        alert("無法獲取獎品庫存信息！");
+        return;
+      }
+
+      const remainingPrize = parseInt(match[1]);
+      const availablePeopleCount = availablePeople.length;
+      
+      // 計算實際可抽取的數量：取最小值（5人、可用人數、獎品庫存）
+      const drawCount = Math.min(5, availablePeopleCount, remainingPrize);
+      
+      if (drawCount <= 0) {
+        if (availablePeopleCount === 0) {
+          alert("所有人都已抽出！");
+        } else if (remainingPrize === 0) {
+          alert("所選獎品已無庫存！");
+        }
+        return;
+      }
+
+      // 顯示連抽信息
+      console.log(`開始連抽 ${drawCount} 人，獎品庫存：${remainingPrize}，可用人數：${availablePeopleCount}`);
+
+      // 執行連抽
+      let currentDraw = 0;
+      const executeDraw = () => {
+        if (currentDraw >= drawCount) {
+          return; // 已完成所有抽獎
+        }
+
+        // 重新檢查獎品庫存
+        const prizeSelect = document.getElementById('prizeSelect');
+        const selectedOption = prizeSelect.options[prizeSelect.selectedIndex];
+        const currentText = selectedOption.text;
+        const match = currentText.match(/\(剩餘: (\d+)\)/);
+        
+        if (!match || parseInt(match[1]) <= 0) {
+          console.log("獎品庫存不足，停止連抽");
+          return;
+        }
+
+        // 檢查是否還有可用人員
+        if (availablePeople.length === 0) {
+          console.log("沒有可用人員，停止連抽");
+          return;
+        }
+
+        drawWinner();
+        currentDraw++;
+        
+        // 如果還有剩餘抽獎次數，繼續下一次
+        if (currentDraw < drawCount) {
+          setTimeout(executeDraw, 3500); // 3.5秒後執行下一次抽獎
+        }
+      };
+
+      executeDraw();
     });
 
     draw10Btn.addEventListener('click', () => {

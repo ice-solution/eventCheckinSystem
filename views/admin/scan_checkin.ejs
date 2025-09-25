@@ -52,7 +52,10 @@
             width: 80%;
             max-width: 600px;
         }
-        #checkInButton, #printButton {
+        #checkInButton {
+            display: none;
+        }
+        #printButton {
             display: none;
         }
     </style>
@@ -160,15 +163,18 @@
                 const userList = $('#userList');
                 userList.empty(); // Clear user list
                 users.forEach(user => {
-                    const company = user.company || '';
-                    const phone = user.phone || '';
+                    // 安全處理所有可能為 undefined 的值
+                    const safeName = user.name || '';
+                    const safeTable = (user.table && user.table !== 'undefined') ? user.table : '';
+                    const safeCompany = (user.company && user.company !== 'undefined') ? user.company : '';
+                    const safePhone = (user.phone && user.phone !== 'undefined') ? user.phone : '';
 
                     userList.append(`
-                        <tr onclick="showDetails('${user.name}', '${user.table}', '${user.company}', '${user.phone}', ${user.isCheckIn}, '${user._id}')">
-                            <td>${user.name}</td>
-                            <td>${typeof user.table !== 'undefined' ? user.table : ''}</td>
-                            <td>${company}</td>
-                            <td>${phone}</td>
+                        <tr onclick="showDetails('${safeName}', '${safeTable}', '${safeCompany}', '${safePhone}', ${user.isCheckIn}, '${user._id}')">
+                            <td>${safeName}</td>
+                            <td>${safeTable}</td>
+                            <td>${safeCompany}</td>
+                            <td>${safePhone}</td>
                             <td>
                                 <span class="${user.isCheckIn ? 'text-primary' : 'text-secondary'}">
                                     ${user.isCheckIn ? 'Checked In' : 'Check In'}
@@ -190,11 +196,18 @@
     // Show user details
     function showDetails(name, table, company, phone, isCheckIn, userId) {
         console.log(table);
+        
+        // 處理 undefined 值，避免顯示 "undefined"
+        const safeTable = (table && table !== 'undefined') ? table : '';
+        const safeCompany = (company && company !== 'undefined') ? company : '';
+        const safePhone = (phone && phone !== 'undefined') ? phone : '';
+        const safeName = (name && name !== 'undefined') ? name : '';
+        
         document.getElementById('detailsContent').innerHTML = `
-            <h4>${name}</h4>
-            <p>Table: ${table !== 'undefined' ? table : ''}</p>
-            <p>Company: ${company}</p>
-            <p>Phone: ${phone}</p>
+            <h4>${safeName}</h4>
+            <p>Table: ${safeTable}</p>
+            <p>Company: ${safeCompany}</p>
+            <p>Phone: ${safePhone}</p>
             <p>Checked In: ${isCheckIn ? 'Yes' : 'No'}</p>`
         document.getElementById('checkInButton').style.display = isCheckIn ? 'none' : 'inline-block'; // Show button based on check-in status
         document.getElementById('printButton').style.display = isCheckIn ? 'inline-block' : 'none';
@@ -293,11 +306,74 @@
 
     // Print user details
     function printDetails() {
-        const detailsContent = document.getElementById('detailsContent').innerHTML;
+        // 只獲取姓名和公司信息，不包含 Table、Phone、Checked In
+        const detailsElement = document.getElementById('detailsContent');
+        const name = detailsElement.querySelector('h4').textContent;
+        const company = detailsElement.querySelector('p:nth-of-type(2)').textContent.replace('Company: ', '');
+        
+        const printContent = `
+            <style>
+                @page {
+                    size: 48mm 39mm;
+                    margin: 0;
+                }
+                body {
+                    width: 48mm;
+                    height: 39mm;
+                    margin: 0;
+                    padding: 1mm;
+                    font-family: Arial, sans-serif;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    box-sizing: border-box;
+                }
+                .left-section {
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: flex-start;
+                    flex: 1;
+                    padding-right: 2mm;
+                }
+                .right-section {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                }
+                h1 {
+                    font-size: 14px;
+                    margin: 0 0 1mm 0;
+                    font-weight: bold;
+                    line-height: 1.1;
+                }
+                .qrcode {
+                    width: 18mm;
+                    height: 18mm;
+                }
+                h3 {
+                    font-size: 10px;
+                    margin: 0;
+                    color: #666;
+                    font-weight: bold;
+                    line-height: 1.1;
+                }
+            </style>
+            <div class="left-section">
+                <h1>${name}</h1>
+                <h3>${company}</h3>
+            </div>
+            <div class="right-section">
+                <div class="qrcode">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?data=${name}&size=72x72" alt="QR Code" style="width: 100%; height: 100%;">
+                </div>
+            </div>
+        `;
+        
         const printWindow = window.open('', '', 'height=600,width=800');
         printWindow.document.write('<html><head><title>Print User Details</title>');
         printWindow.document.write('</head><body>');
-        printWindow.document.write(detailsContent);
+        printWindow.document.write(printContent);
         printWindow.document.write('</body></html>');
         printWindow.document.close();
         

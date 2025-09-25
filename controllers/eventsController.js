@@ -315,7 +315,21 @@ exports.getUserById = async (req, res) => {
 };
 exports.updateUser = async (req, res) => {
     const { eventId, userId } = req.params; // 從請求參數中獲取事件 ID 和用戶的 _id
-    const { name, phone_code, phone, company, isCheckIn } = req.body; // 從請求中獲取更新的用戶信息
+    const { 
+        name, 
+        email,
+        phone_code, 
+        phone, 
+        company, 
+        table,
+        role,
+        saluation,
+        industry,
+        transport,
+        meal,
+        remarks,
+        isCheckIn 
+    } = req.body; // 從請求中獲取更新的用戶信息
 
     try {
         // 查詢事件以確保存在
@@ -329,6 +343,7 @@ exports.updateUser = async (req, res) => {
         if (!user) {
             return res.status(404).send('找不到該用戶'); // 如果用戶不存在，返回 404 錯誤
         }
+        
         // 更新用戶信息
         if (typeof isCheckIn !== 'undefined') {
             if (!user.isCheckIn && isCheckIn === true) {
@@ -339,13 +354,21 @@ exports.updateUser = async (req, res) => {
                 user.checkInAt = undefined;
             }
         }
-        user.name = name || user.name;
-        user.phone_code = phone_code || user.phone_code;
-        user.phone = phone || user.phone;
-        user.company = company || user.company;
-        // user.email = email || user.email;
-        // user.point = point || user.point;
-        // user._id = _id || user._id;
+        
+        // 更新所有欄位
+        if (name !== undefined) user.name = name;
+        if (email !== undefined) user.email = email;
+        if (phone_code !== undefined) user.phone_code = phone_code;
+        if (phone !== undefined) user.phone = phone;
+        if (company !== undefined) user.company = company;
+        if (table !== undefined) user.table = table;
+        if (role !== undefined) user.role = role;
+        if (saluation !== undefined) user.saluation = saluation;
+        if (industry !== undefined) user.industry = industry;
+        if (transport !== undefined) user.transport = transport;
+        if (meal !== undefined) user.meal = meal;
+        if (remarks !== undefined) user.remarks = remarks;
+        
         user.modified_at = Date.now(); // 更新修改時間
         await event.save(); // 保存事件以更新用戶資料
 
@@ -834,6 +857,20 @@ exports.removeLuckydrawUser = async (req, res) => {
             return res.status(404).send('Winner not found.');
         }
 
+        // 獲取要刪除的中獎者信息
+        const winnerToDelete = event.winners[winnerIndex];
+        
+        // 如果中獎者有指定獎品，需要還原獎品數量
+        if (winnerToDelete.prizeId) {
+            const Prize = require('../model/Prize');
+            const prize = await Prize.findById(winnerToDelete.prizeId);
+            if (prize) {
+                prize.unit += 1; // 還原獎品數量
+                await prize.save();
+                console.log(`已還原獎品 ${prize.name} 的數量，當前數量: ${prize.unit}`);
+            }
+        }
+
         // 刪除中獎者
         event.winners.splice(winnerIndex, 1);
         await event.save(); // 保存更改
@@ -847,11 +884,16 @@ exports.removeLuckydrawUser = async (req, res) => {
 
 // 新增中獎者
 exports.addLuckydrawUser = async (req, res) => {
-    const { _id, name, company, prizeId } = req.body; // 獲取中獎者資料和獎品ID
+    const { _id, name, company, table, prizeId } = req.body; // 獲取中獎者資料和獎品ID
     try {
         const event = await Event.findById(req.params.eventId);
         if (!event) {
             return res.status(404).send('Event not found.');
+        }
+
+        // 檢查是否選擇了獎品
+        if (!prizeId) {
+            return res.status(400).send('Please select a prize.');
         }
 
         // 檢查中獎者是否已經存在
@@ -860,23 +902,27 @@ exports.addLuckydrawUser = async (req, res) => {
             return res.status(400).send('This user has already won.');
         }
 
-        let prizeName = '隨機獎品';
-        // 如果指定了獎品，檢查獎品是否存在並更新數量
-        if (prizeId) {
-            const Prize = require('../model/Prize');
-            const prize = await Prize.findById(prizeId);
-            if (prize && prize.unit > 0) {
-                prize.unit -= 1;
-                prizeName = prize.name;
-                await prize.save();
-            }
+        // 檢查獎品是否存在並更新數量
+        const Prize = require('../model/Prize');
+        const prize = await Prize.findById(prizeId);
+        if (!prize) {
+            return res.status(404).send('Prize not found.');
         }
+        
+        if (prize.unit <= 0) {
+            return res.status(400).send('Prize is out of stock.');
+        }
+
+        prize.unit -= 1;
+        const prizeName = prize.name;
+        await prize.save();
 
         // 創建 winner 對象，包含獎品信息
         const winner = { 
             _id, 
             name, 
             company, 
+            table,
             prizeId, 
             prizeName,
             wonAt: new Date()
@@ -936,6 +982,7 @@ exports.renderAdminLuckydrawPage = async (req, res) => {
             _id: winner._id,
             name: winner.name,
             company: winner.company,
+            table: winner.table,
             prizeName: winner.prizeName,
             wonAt: winner.wonAt
         }));

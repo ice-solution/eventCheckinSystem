@@ -420,21 +420,26 @@
         // Function to update user field
         function updateUserField(userId, columnIndex, newValue) {
             const fieldMap = {
-                1: 'email',
-                2: 'name', 
-                3: 'table',
-                4: 'company',
-                5: 'phone',
-                6: 'role',
-                7: 'saluation',
-                8: 'industry',
-                9: 'transport',
-                10: 'meal',
-                11: 'remarks'
+                1: 'email',      // 第1欄：email
+                2: 'name',       // 第2欄：name
+                3: 'table',      // 第3欄：table
+                4: 'company',    // 第4欄：company
+                5: 'phone',      // 第5欄：phone
+                6: 'role',       // 第6欄：role
+                7: 'saluation',  // 第7欄：saluation
+                8: 'industry',   // 第8欄：industry
+                9: 'transport',  // 第9欄：transport
+                10: 'meal',      // 第10欄：meal
+                11: 'remarks'    // 第11欄：remarks
             };
             
             const fieldName = fieldMap[columnIndex];
-            if (!fieldName) return;
+            if (!fieldName) {
+                console.log('No field mapping found for column index:', columnIndex);
+                return;
+            }
+            
+            console.log('Updating field:', fieldName, 'with value:', newValue, 'for user:', userId);
             
             $.ajax({
                 url: `/events/<%= event._id %>/users/${userId}`,
@@ -442,10 +447,12 @@
                 contentType: 'application/json',
                 data: JSON.stringify({ [fieldName]: newValue }),
                 success: function(response) {
+                    console.log('Update successful:', response);
                     showAlert('success', 'User updated successfully!');
                 },
                 error: function(xhr) {
-                    showAlert('danger', 'Update failed, please try again.');
+                    console.error('Update failed:', xhr.responseText);
+                    showAlert('danger', 'Update failed: ' + xhr.responseText);
                 }
             });
         }
@@ -698,6 +705,40 @@
                 showTicketFields();
             } else {
                 $('#paymentEventForm').remove();
+                // 立即保存取消支付的設定
+                $.ajax({
+                    url: `/events/${eventId}/paymentEvent`,
+                    type: 'PATCH',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ isPaymentEvent: false, PaymentTickets: [] }),
+                    success: function(res) {
+                        const alertHtml = `
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                已取消付費活動設定！
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        `;
+                        $('#alertContainer').append(alertHtml);
+                        setTimeout(() => { $('.alert').alert('close'); }, 1500);
+                    },
+                    error: function(error) {
+                        console.error('取消付費設定失敗:', error);
+                        // 如果保存失敗，重新勾選 checkbox
+                        $('#paymentEvent').prop('checked', true);
+                        showTicketFields();
+                        const alertHtml = `
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                取消付費設定失敗，請重試！
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        `;
+                        $('#alertContainer').append(alertHtml);
+                    }
+                });
             }
         });
     });
