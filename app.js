@@ -16,6 +16,7 @@ const emailTemplateRoutes = require('./routes/emailTemplate'); // 引入 emailTe
 const prizesRouter = require('./routes/prizes'); // 引入獎品路由
 const votesRouter = require('./routes/votes'); // 引入投票路由
 const gamesRouter = require('./routes/games'); // 引入遊戲路由
+const formConfigRouter = require('./routes/formConfig'); // 引入表單配置路由
 
 const eventsController = require('./controllers/eventsController');
 
@@ -130,6 +131,7 @@ app.use('/emailTemplate', emailTemplateRoutes); // 使用 emailTemplate 路由
 app.use('/prizes', prizesRouter); // 使用獎品路由
 app.use('/votes', votesRouter); // 使用投票路由
 app.use('/api/game', gamesRouter); // 使用遊戲API路由
+app.use('/formConfig', isAuthenticated, formConfigRouter); // 使用表單配置路由（需要認證）
 
 app.get('/demo_website',async function (req, res){
     try {

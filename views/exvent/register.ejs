@@ -155,165 +155,101 @@
         </div>
 
         <form id="userForm" method="POST">
-            <div class="form-section">
-                <h3>聯絡人資料</h3>
-                <div class="form-note">
-                    <strong>注意：</strong>聯絡人可在付款完成後登入編輯參加者資料。所有參加者資料必須在付款前填寫完成。
-                </div>
-                <div class="form-note">
-                    <strong>（* 為必填欄位）</strong>
-                </div>
+            <% if (formConfig && formConfig.length > 0) { %>
+                <% formConfig.forEach((section, sectionIndex) => { %>
+                    <% if (section.visible) { %>
+                        <div class="form-section">
+                            <h3><%= section.sectionTitle %></h3>
+                            <% if (sectionIndex === 0) { %>
+                                <div class="form-note">
+                                    <strong>注意：</strong>聯絡人可在付款完成後登入編輯參加者資料。所有參加者資料必須在付款前填寫完成。
+                                </div>
+                                <div class="form-note">
+                                    <strong>（* 為必填欄位）</strong>
+                                </div>
+                            <% } %>
+                            
+                            <% if (section.fields && section.fields.length > 0) { %>
+                                <% section.fields.forEach((field, fieldIndex) => { %>
+                                    <% if (field.visible) { %>
+                                        <div class="form-row">
+                                            <label class="form-label" for="<%= field.fieldName %>">
+                                                <%= field.label %>
+                                                <% if (field.required) { %>
+                                                    <span class="required">*</span>
+                                                <% } %>
+                                            </label>
+                                            <div class="form-input">
+                                                <% if (field.type === 'select' && field.options) { %>
+                                                    <select class="form-control" id="<%= field.fieldName %>" name="<%= field.fieldName %>" <%= field.required ? 'required' : '' %>>
+                                                        <option value="">--- 請選擇 ---</option>
+                                                        <% field.options.forEach((option) => { %>
+                                                            <option value="<%= option.value %>"><%= option.label %></option>
+                                                        <% }); %>
+                                                    </select>
+                                                <% } else if (field.type === 'textarea') { %>
+                                                    <textarea class="form-control" id="<%= field.fieldName %>" name="<%= field.fieldName %>" 
+                                                              placeholder="<%= field.placeholder || '' %>" <%= field.required ? 'required' : '' %> rows="3"></textarea>
+                                                <% } else { %>
+                                                    <input type="<%= field.type %>" class="form-control" id="<%= field.fieldName %>" name="<%= field.fieldName %>" 
+                                                           placeholder="<%= field.placeholder || '' %>" <%= field.required ? 'required' : '' %>>
+                                                <% } %>
+                                            </div>
+                                        </div>
+                                    <% } %>
+                                <% }); %>
+                            <% } %>
+                        </div>
+                    <% } %>
+                <% }); %>
+            <% } else { %>
+                <!-- 預設表單結構（如果沒有配置） -->
+                <div class="form-section">
+                    <h3>聯絡人資料</h3>
+                    <div class="form-note">
+                        <strong>注意：</strong>聯絡人可在付款完成後登入編輯參加者資料。所有參加者資料必須在付款前填寫完成。
+                    </div>
+                    <div class="form-note">
+                        <strong>（* 為必填欄位）</strong>
+                    </div>
 
-                <div class="form-row">
-                    <label class="form-label" for="email">
-                        電子郵件 <span class="required">*</span>
-                    </label>
-                    <div class="form-input">
-                        <input type="email" class="form-control" id="email" name="email" 
-                               placeholder="例如：peterwong@abccompany.com" required>
+                    <!-- 預設表單字段將在這裡顯示（如果沒有動態配置） -->
+                    <div class="form-row">
+                        <label class="form-label" for="email">
+                            電子郵件 <span class="required">*</span>
+                        </label>
+                        <div class="form-input">
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   placeholder="例如：peterwong@abccompany.com" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label" for="name">
+                            姓名 <span class="required">*</span>
+                        </label>
+                        <div class="form-input">
+                            <input type="text" class="form-control" id="name" name="name" 
+                                   placeholder="例如：王小明" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label" for="company">
+                            公司名稱 <span class="required">*</span>
+                        </label>
+                        <div class="form-input">
+                            <input type="text" class="form-control" id="company" name="company" 
+                                   placeholder="例如：ABC 公司" required>
+                        </div>
                     </div>
                 </div>
+            <% } %>
 
-                <div class="form-row">
-                    <label class="form-label" for="name">
-                        姓名 <span class="required">*</span>
-                    </label>
-                    <div class="form-input">
-                        <input type="text" class="form-control" id="name" name="name" 
-                               placeholder="例如：王小明" required>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <label class="form-label" for="phone_code">
-                        電話區號 <span class="required">*</span>
-                    </label>
-                    <div class="form-input">
-                        <select class="form-control" id="phone_code" name="phone_code" required>
-                            <option value="">--- 請選擇區號 ---</option>
-                            <option value="+852">香港 (+852)</option>
-                            <option value="+1">加拿大 (+1)</option>
-                            <option value="+86">中國 (+86)</option>
-                            <option value="+81">日本 (+81)</option>
-                            <option value="+82">韓國 (+82)</option>
-                            <option value="+65">新加坡 (+65)</option>
-                            <option value="+60">馬來西亞 (+60)</option>
-                            <option value="+63">菲律賓 (+63)</option>
-                            <option value="+84">越南 (+84)</option>
-                            <option value="+66">泰國 (+66)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <label class="form-label" for="phone">
-                        電話號碼 <span class="required">*</span>
-                    </label>
-                    <div class="form-input">
-                        <input type="text" class="form-control" id="phone" name="phone" 
-                               placeholder="例如：區號 - 電話號碼" required>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <label class="form-label" for="saluation">
-                        稱謂 <span class="required">*</span>
-                    </label>
-                    <div class="form-input">
-                        <select class="form-control" id="saluation" name="saluation" required>
-                            <option value="">--- 請選擇稱謂 ---</option>
-                            <option value="Mr.">Mr.</option>
-                            <option value="Ms.">Ms.</option>
-                            <option value="Mrs.">Mrs.</option>
-                            <option value="Dr.">Dr.</option>
-                            <option value="Prof.">Prof.</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <label class="form-label" for="company">
-                        公司名稱 <span class="required">*</span>
-                    </label>
-                    <div class="form-input">
-                        <input type="text" class="form-control" id="company" name="company" 
-                               placeholder="例如：ABC 公司" required>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <label class="form-label" for="role">
-                        職位 <span class="required">*</span>
-                    </label>
-                    <div class="form-input">
-                        <input type="text" class="form-control" id="role" name="role" 
-                               placeholder="例如：資深經理" required>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <label class="form-label" for="industry">
-                        行業
-                    </label>
-                    <div class="form-input">
-                        <select class="form-control" id="industry" name="industry">
-                            <option value="">--- 請選擇行業 ---</option>
-                            <option value="金融服務">金融服務</option>
-                            <option value="科技">科技</option>
-                            <option value="製造業">製造業</option>
-                            <option value="零售">零售</option>
-                            <option value="醫療保健">醫療保健</option>
-                            <option value="教育">教育</option>
-                            <option value="政府">政府</option>
-                            <option value="非營利組織">非營利組織</option>
-                            <option value="其他">其他</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <label class="form-label" for="transport">
-                        交通方式
-                    </label>
-                    <div class="form-input">
-                        <select class="form-control" id="transport" name="transport">
-                            <option value="">--- 請選擇交通方式 ---</option>
-                            <option value="地鐵">地鐵</option>
-                            <option value="巴士">巴士</option>
-                            <option value="計程車">計程車</option>
-                            <option value="自駕">自駕</option>
-                            <option value="步行">步行</option>
-                            <option value="其他">其他</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <label class="form-label" for="meal">
-                        餐飲選擇
-                    </label>
-                    <div class="form-input">
-                        <select class="form-control" id="meal" name="meal">
-                            <option value="">--- 請選擇餐飲 ---</option>
-                            <option value="葷食">葷食</option>
-                            <option value="素食">素食</option>
-                            <option value="清真">清真</option>
-                            <option value="無特殊要求">無特殊要求</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <label class="form-label" for="remarks">
-                        備註
-                    </label>
-                    <div class="form-input">
-                        <textarea class="form-control" id="remarks" name="remarks" 
-                                  placeholder="請輸入任何特殊需求或備註" rows="3"></textarea>
-                    </div>
-                </div>
-
-                <% if (paymentTickets && paymentTickets.length > 0) { %>
+            <!-- 票券選擇（如果適用） -->
+            <% if (paymentTickets && paymentTickets.length > 0) { %>
+                <div class="form-section">
+                    <h3>票券選擇</h3>
                     <div class="form-row">
                         <label class="form-label" for="ticketId">
                             選擇票券 <span class="required">*</span>
@@ -331,8 +267,8 @@
                             </select>
                         </div>
                     </div>
-                <% } %>
-            </div>
+                </div>
+            <% } %>
 
             <div class="btn-container">
                 <button type="button" class="btn btn-secondary" onclick="history.back()">返回</button>
@@ -358,20 +294,16 @@
         $('#userForm').on('submit', function(e) {
             e.preventDefault(); // 防止表單默認提交
             const ticketId = $('#ticketId').val();
-            const newUser = {
-                email: $('#email').val(),
-                name: $('#name').val(),
-                company: $('#company').val(),
-                phone_code: $('#phone_code').val(),
-                phone: $('#phone').val(),
-                saluation: $('#saluation').val(),
-                role: $('#role').val(),
-                industry: $('#industry').val(),
-                transport: $('#transport').val(),
-                meal: $('#meal').val(),
-                remarks: $('#remarks').val(),
-                ticketId: ticketId
-            };
+            
+            // 動態收集所有表單字段
+            const newUser = {};
+            $('#userForm').find('input, select, textarea').each(function() {
+                const fieldName = $(this).attr('name');
+                if (fieldName && fieldName !== 'ticketId') {
+                    newUser[fieldName] = $(this).val();
+                }
+            });
+            newUser.ticketId = ticketId;
             if (ticketId) {
                 // Stripe checkout
 

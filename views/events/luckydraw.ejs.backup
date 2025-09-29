@@ -182,27 +182,17 @@
 <body>
 
   <div class="bg">
-    <!-- Banner區域 -->
-    <div id="bannerContainer" style="width: 100%; height: 200px; overflow: hidden; position: relative; display: flex; justify-content: center; align-items: center; padding: 20px; margin-top: 20px;">
-      <img id="eventBanner" src="/exvent/<%= eventId %>.jpg" alt="Event Banner" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px;" onerror="this.style.display='none';">
-    </div>
     <div class="js-container  container">
       <div id="result"></div>
 
       <div id="control">
         <div id="prizeSelector" style="margin-bottom: 15px;">
           <label for="prizeSelect" style="color: white; font-weight: bold; display: block; margin-bottom: 5px;">選擇獎品：</label>
-          
-          <!-- 產品圖片顯示區域 -->
-          <div id="prizeImageContainer" style="margin-bottom: 10px; text-align: center;">
-            <img id="prizeImage" src="" alt="選擇獎品" style="max-width: 200px; max-height: 150px; border-radius: 8px; border: 2px solid #fff; display: none;">
-          </div>
-          
           <select id="prizeSelect" style="width: 180px; padding: 8px; border-radius: 4px; margin-bottom: 10px;" required>
             <option value="">請選擇獎品</option>
             <% prizes.forEach(prize => { %>
               <% if (prize.unit > 0) { %>
-                <option value="<%= prize._id %>" data-name="<%= prize.name %>" data-image="<%= prize.picture || '' %>"><%= prize.name %> (剩餘: <%= prize.unit %>)</option>
+                <option value="<%= prize._id %>" data-name="<%= prize.name %>"><%= prize.name %> (剩餘: <%= prize.unit %>)</option>
               <% } %>
             <% }); %>
           </select>
@@ -232,27 +222,6 @@
     const resultDiv = document.getElementById('result');
     const startBtn = document.getElementById('startBtn');
     const draw5Btn = document.getElementById('draw5Btn');
-
-    // 產品圖片顯示功能
-    document.addEventListener('DOMContentLoaded', function() {
-      const prizeSelect = document.getElementById('prizeSelect');
-      const prizeImage = document.getElementById('prizeImage');
-      const prizeImageContainer = document.getElementById('prizeImageContainer');
-
-      prizeSelect.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        const imagePath = selectedOption.dataset.image;
-        
-        if (imagePath && imagePath.trim() !== '') {
-          prizeImage.src = imagePath;
-          prizeImage.style.display = 'block';
-          prizeImageContainer.style.display = 'block';
-        } else {
-          prizeImage.style.display = 'none';
-          prizeImageContainer.style.display = 'none';
-        }
-      });
-    });
     const draw10Btn = document.getElementById('draw10Btn');
     const spinner = document.getElementById('spinner');
     const currentDiv = document.getElementById('current');
@@ -324,7 +293,8 @@
           displayContent += `<div class="prize">🎁 ${person.prizeName}</div>`;
         }
         
-        // 更改顯示次序為：Company, table, name
+        displayContent += `<div class="name">${person.name}</div>`;
+        
         if (person.company) {
           displayContent += `<div class="company">${person.company}</div>`;
         }
@@ -332,8 +302,6 @@
         if (person.table) {
           displayContent += `<div class="table">桌號: ${person.table}</div>`;
         }
-        
-        displayContent += `<div class="name">${person.name}</div>`;
         
         rets.innerHTML = `<div class="number">${winnerIndex}</div><div class="card">${displayContent}</div>`;
         resultDiv.appendChild(rets);
@@ -346,14 +314,13 @@
           currentDisplay += `<div style="font-size: 24px; color: #e74c3c; font-weight: bold; margin-bottom: 10px;">🎁 ${person.prizeName}</div>`;
         }
         
-        // 更改顯示次序為：Company, table, name
+        currentDisplay += person.name;
         if (person.company) {
-          currentDisplay += `<div style="font-size: 18px; font-weight: bold;">${person.company}</div>`;
+          currentDisplay += `<br>(${person.company})`;
         }
         if (person.table) {
-          currentDisplay += `<div style="font-size: 16px;">桌號: ${person.table}</div>`;
+          currentDisplay += `<br>桌號: ${person.table}`;
         }
-        currentDisplay += `<div style="font-size: 16px;">${person.name}</div>`;
         currentDiv.innerHTML = currentDisplay;
         currentDiv.style.display = 'block'; // 顯示 current
 
