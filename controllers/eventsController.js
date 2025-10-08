@@ -80,8 +80,17 @@ exports.getEventUsersByEventID = async (req, res) => {
 
 exports.fetchUsersByEvent = async (req, res) => {
     const { eventId } = req.params;
-    const event = await Event.findById(eventId).populate('users'); // 獲取用戶數據
-    res.json(event.users);
+    try {
+        const event = await Event.findById(eventId); // 獲取事件數據
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+        console.log('Fetched event users:', event.users); // Debug log
+        res.json(event.users);
+    } catch (error) {
+        console.error('Error fetching users by event:', error);
+        res.status(500).json({ message: 'Error fetching users' });
+    }
 };
 
 
@@ -321,13 +330,14 @@ exports.getUserById = async (req, res) => {
         if (!user.isCheckIn && req.body.isCheckIn === true) {
             user.isCheckIn = true;
             user.checkInAt = new Date();
+            console.log('User check-in updated:', user.name, 'isCheckIn:', user.isCheckIn); // Debug log
         } else if (req.body.isCheckIn === false) {
             user.isCheckIn = false;
             user.checkInAt = undefined;
         }
         await event.save(); // 保存事件以更新用戶資料
 
-        res.status(200).send(user); // 返回更新後的用戶資料
+        res.status(200).json(user); // 返回更新後的用戶資料
     } catch (error) {
         console.error('Error fetching user:', error);
         res.status(500).send('伺服器錯誤'); // 返回伺服器錯誤

@@ -68,6 +68,7 @@
         
         <!-- <input type="text" id="searchInput" class="form-control mb-3" placeholder="Search Users..." onkeyup="searchUsers()"> -->
         <button id="scanButton" class="btn btn-primary mt-3" onclick="openLightbox()">Scan QR Code</button>
+        <button id="refreshListButton" class="btn btn-info mt-3 ml-2" onclick="refreshUserList()">Refresh List</button>
         <!-- <button id="addGuestButton" class="btn btn-success mt-3" data-toggle="modal" data-target="#addGuestModal">Add Guest</button> -->
         
         <table id="userTable" class="table table-striped table-bordered">
@@ -104,6 +105,7 @@
         <div id="detailsContent"></div>
         <button id="checkInButton" class="btn btn-primary mt-3" onclick="checkInUser()">Check In</button>
         <button id="printButton" class="btn btn-secondary mt-3" onclick="printDetails()">Print</button>
+        <button id="refreshButton" class="btn btn-info mt-3" onclick="refreshUserList()">Refresh List</button>
     </div>
 </div>
 
@@ -155,37 +157,81 @@
     let currentUserId = null; // Store current user ID for check-in
 
     // Fetch user data
+    function refreshUserList() {
+        const refreshListBtn = $('#refreshListButton');
+        const refreshBtn = $('#refreshButton');
+        const originalText = 'Refresh List';
+        
+        // Show loading state for both buttons
+        refreshListBtn.prop('disabled', true).text('Refreshing...');
+        refreshBtn.prop('disabled', true).text('Refreshing...');
+        
+        fetchUsers().then(() => {
+            // Restore button state after a short delay
+            setTimeout(() => {
+                refreshListBtn.prop('disabled', false).text(originalText);
+                refreshBtn.prop('disabled', false).text(originalText);
+            }, 500);
+        });
+    }
+
     function fetchUsers() {
-        $.ajax({
+        return $.ajax({
             url: `/events/${eventId}/users/data`, // API to fetch user data
             method: 'GET',
+            cache: false, // Prevent caching
             success: function(users) {
-                const userList = $('#userList');
-                userList.empty(); // Clear user list
-                users.forEach(user => {
-                    // 安全處理所有可能為 undefined 的值
-                    const safeName = user.name || '';
-                    const safeTable = (user.table && user.table !== 'undefined') ? user.table : '';
-                    const safeCompany = (user.company && user.company !== 'undefined') ? user.company : '';
-                    const safePhone = (user.phone && user.phone !== 'undefined') ? user.phone : '';
-
-                    userList.append(`
-                        <tr onclick="showDetails('${safeName}', '${safeTable}', '${safeCompany}', '${safePhone}', ${user.isCheckIn}, '${user._id}')">
-                            <td>${safeName}</td>
-                            <td>${safeTable}</td>
-                            <td>${safeCompany}</td>
-                            <td>${safePhone}</td>
-                            <td>
-                                <span class="${user.isCheckIn ? 'text-primary' : 'text-secondary'}">
-                                    ${user.isCheckIn ? 'Checked In' : 'Check In'}
-                                </span>
-                            </td>
-                        </tr>
-                    `);
-                });
-                // Initialize DataTable after populating the user list
-                $('#userTable').DataTable().destroy();
-                $('#userTable').DataTable();
+                console.log('Fetched users:', users); // Debug log
+                // Update DataTable data without recreating
+                if ($.fn.DataTable.isDataTable('#userTable')) {
+                    const table = $('#userTable').DataTable();
+                    table.clear();
+                    users.forEach(user => {
+                        const safeName = user.name || '';
+                        const safeTable = (user.table && user.table !== 'undefined') ? user.table : '';
+                        const safeCompany = (user.company && user.company !== 'undefined') ? user.company : '';
+                        const safePhone = (user.phone && user.phone !== 'undefined') ? user.phone : '';
+                        
+                        table.row.add([
+                            safeName,
+                            safeTable,
+                            safeCompany,
+                            safePhone,
+                            `<span class="${user.isCheckIn ? 'text-primary' : 'text-secondary'}">${user.isCheckIn ? 'Checked In' : 'Check In'}</span>`
+                        ]);
+                    });
+                    table.draw();
+                    
+                    // Add click event handlers for table rows
+                    $('#userTable tbody').off('click', 'tr').on('click', 'tr', function() {
+                        const rowData = table.row(this).data();
+                        if (rowData) {
+                            const user = users[$(this).index()];
+                            showDetails(user.name, user.table, user.company, user.phone, user.isCheckIn, user._id);
+                        }
+                    });
+                } else {
+                    // Initialize DataTable if not exists
+                    const table = $('#userTable').DataTable({
+                        "pageLength": 25,
+                        "order": [[ 0, "asc" ]],
+                        "columnDefs": [
+                            {
+                                "targets": -1, // Last column (Status)
+                                "orderable": false
+                            }
+                        ]
+                    });
+                    
+                    // Add click event handlers for table rows
+                    $('#userTable tbody').off('click', 'tr').on('click', 'tr', function() {
+                        const rowData = table.row(this).data();
+                        if (rowData) {
+                            const user = users[$(this).index()];
+                            showDetails(user.name, user.table, user.company, user.phone, user.isCheckIn, user._id);
+                        }
+                    });
+                }
             },
             error: function(err) {
                 console.error('Error fetching users:', err);
@@ -282,9 +328,38 @@
                     .then(response => response.json())
                     .then(user => {
                         if (user) {
-                            showDetails(user.name, user.table, user.company, user.phone, user.isCheckIn, user._id);
-                            alert('User checked in successfully!');
-                            fetchUsers();
+                            // If user is not checked in, perform check-in
+                            if (!user.isCheckIn) {
+                                $.ajax({
+                                    url: `/events/${eventId}/users/${userId}`,
+                                    method: 'PUT',
+                                    contentType: 'application/json',
+                                    data: JSON.stringify({ isCheckIn: true }),
+                                    success: function(response) {
+                                        console.log('Check-in successful:', response); // Debug log
+                                        // Update the user object with new check-in status
+                                        const updatedUser = { ...user, isCheckIn: true };
+                                        showDetails(updatedUser.name, updatedUser.table, updatedUser.company, updatedUser.phone, true, updatedUser._id);
+                                        alert('User checked in successfully!');
+                                        // Update button states first
+                                        document.getElementById('checkInButton').style.display = 'none';
+                                        document.getElementById('printButton').style.display = 'inline-block';
+                                        // Then refresh the user list to update the table
+                                        setTimeout(() => {
+                                            fetchUsers();
+                                        }, 100); // Small delay to ensure server update
+                                    },
+                                    error: function(err) {
+                                        console.error('Error checking in user:', err);
+                                        alert('Failed to check in user.');
+                                    }
+                                });
+                            } else {
+                                // User is already checked in
+                                showDetails(user.name, user.table, user.company, user.phone, user.isCheckIn, user._id);
+                                alert('User is already checked in.');
+                                fetchUsers();
+                            }
                         } else {
                             alert('User not found');
                         }
