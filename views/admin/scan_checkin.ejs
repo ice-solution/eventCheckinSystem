@@ -314,58 +314,73 @@
         const printContent = `
             <style>
                 @page {
-                    size: 48mm 39mm;
+                    size: 62mm 100mm;
                     margin: 0;
                 }
                 body {
-                    width: 48mm;
-                    height: 39mm;
+                    width: 62mm;
+                    height: 100mm;
                     margin: 0;
-                    padding: 1mm;
+                    padding: 2mm;
                     font-family: Arial, sans-serif;
                     display: flex;
+                    flex-direction: column;
                     justify-content: space-between;
-                    align-items: center;
+                    align-items: stretch;
                     box-sizing: border-box;
                 }
-                .left-section {
+                .content-container {
                     display: flex;
                     flex-direction: column;
                     justify-content: center;
-                    align-items: flex-start;
-                    flex: 1;
-                    padding-right: 2mm;
+                    align-items: stretch;
+                    width: 100%;
+                    height: 100%;
+                    gap: 3mm;
                 }
-                .right-section {
+                .top-section {
                     display: flex;
                     justify-content: center;
                     align-items: center;
                 }
+                .bottom-section {
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: center;
+                    text-align: center;
+                }
                 h1 {
-                    font-size: 14px;
+                    font-size: 22px;
                     margin: 0 0 1mm 0;
                     font-weight: bold;
                     line-height: 1.1;
+                    text-align: center;
+                    width: 100%;
                 }
                 .qrcode {
-                    width: 18mm;
-                    height: 18mm;
+                    width: 38mm;
+                    height: 38mm;
                 }
                 h3 {
-                    font-size: 10px;
+                    font-size: 16px;
                     margin: 0;
                     color: #666;
                     font-weight: bold;
                     line-height: 1.1;
+                    text-align: center;
+                    width: 100%;
                 }
             </style>
-            <div class="left-section">
-                <h1>${name}</h1>
-                <h3>${company}</h3>
-            </div>
-            <div class="right-section">
-                <div class="qrcode">
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?data=${name}&size=72x72" alt="QR Code" style="width: 100%; height: 100%;">
+            <div class="content-container">
+                <div class="top-section">
+                    <div class="qrcode">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?data=${name}&size=150x150" alt="QR Code" style="width: 100%; height: 100%;">
+                    </div>
+                </div>
+                <div class="bottom-section">
+                    <h1>${name}</h1>
+                    <h3>${company}</h3>
                 </div>
             </div>
         `;
@@ -381,11 +396,13 @@
         printLabel();
     }
     function printLabel() {
-        const labelTemplateUrl = '你的模板文件路徑';
-        const mediaSettingsUrl = '你的媒介設置文件路徑';
-        const printUrl = `brotherwebprint://print?filename=rsvp_label.lbx&size=62x100.bin&copies=1&name=keith&qrcode=12345&company=icesolution`;
+        const detailsElement = document.getElementById('detailsContent');
+        const name = detailsElement.querySelector('h4').textContent;
+        const company = detailsElement.querySelector('p:nth-of-type(2)').textContent.replace('Company: ', '');
         
-        window.location.href = printUrl; // 使用 URL scheme 發送列印請求
+        const printUrl = `brotherwebprint://print?filename=rsvp_label.lbx&size=62x100&copies=1&name=${encodeURIComponent(name)}&qrcode=${encodeURIComponent(name)}&company=${encodeURIComponent(company)}`;
+        
+        window.location.href = printUrl; // Use URL scheme to send print request
     }
 
     // 添加用戶的功能

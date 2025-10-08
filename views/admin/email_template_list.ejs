@@ -22,6 +22,7 @@
                                                     <th>Type</th>
                                                     <th>Created At</th>
                                                     <th>Modified At</th>
+                                                    <th>Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -48,17 +49,22 @@
                                                         <td>
                                                             <%= t.modified_at%>
                                                         </td>
+                                                        <td>
+                                                            <button class="btn btn-danger btn-sm" onclick="deleteTemplate('<%= t._id %>', '<%= t.subject %>')">
+                                                                Delete
+                                                            </button>
+                                                        </td>
                                                     </tr>
                                                     <% }); %>
                                             </tbody>
                                         </table>
                                         <% if (eventId !=null) { %>
                                             <a href="/events/<%= eventId %>/emailTemplate/create"
-                                                class="btn btn-primary">創建</a>
+                                                class="btn btn-primary">Create</a>
                                             <% } else { %>
-                                                <a href="/emailTemplate/create" class="btn btn-primary">創建</a>
+                                                <a href="/emailTemplate/create" class="btn btn-primary">Create</a>
                                                 <% } %>
-                                                    <a href="/admin" class="btn btn-primary">返回管理頁面</a>
+                                                    <a href="/admin" class="btn btn-primary">Back to Admin</a>
                                     </div>
                                 </div>
                             </div>
@@ -68,7 +74,47 @@
         </div>
 
         <%- include ("./components/footer") %>
-            <script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script>
+            // 刪除模板功能
+            function deleteTemplate(templateId, templateSubject) {
+                if (confirm('Are you sure you want to delete email template "' + templateSubject + '"? This action cannot be undone!')) {
+                    $.ajax({
+                        url: '/emailTemplate/' + templateId,
+                        type: 'DELETE',
+                        success: function(response) {
+                            // 顯示成功訊息
+                            const alertHtml = `
+                                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                    Email template deleted successfully!
+                                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                            `;
+                            $('body').prepend(alertHtml);
+                            // 重新加載頁面
+                            setTimeout(() => {
+                                location.reload();
+                            }, 1500);
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Error deleting email template:', error);
+                            const alertHtml = `
+                                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                    Failed to delete email template. Please try again later.
+                                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                            `;
+                            $('body').prepend(alertHtml);
+                        }
+                    });
+                }
+            }
+        </script>
+        <script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
             <script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
             <script src="/admin/assets/js/lib/data-table/dataTables.buttons.min.js"></script>
             <script src="/admin/assets/js/lib/data-table/buttons.bootstrap.min.js"></script>

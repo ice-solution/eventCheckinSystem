@@ -6,6 +6,23 @@ const EmailRecord = require("../model/EmailRecord")
 
 const {sampleHtmlTemplate} = require("../template/sample");
 
+// 刪除電子郵件模板
+exports.deleteEmailTemplate = async (req, res) => {
+  const { id } = req.params
+  
+  try {
+    const template = await EmailTemplate.findByIdAndDelete(id)
+    if (!template) {
+      return res.status(404).json({ message: "電子郵件模板未找到！" })
+    }
+    
+    res.status(200).json({ message: "電子郵件模板刪除成功！" })
+  } catch (error) {
+    console.error("Error deleting email template:", error)
+    res.status(500).json({ message: "刪除電子郵件模板時出現錯誤！" })
+  }
+}
+
 const multer = require("multer")
 const upload = multer({
   dest: "public/uploads/email_template_images/",

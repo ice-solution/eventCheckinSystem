@@ -114,7 +114,7 @@
                                 <a href="/events/<%= event._id%>/scan" class="btn btn-outline-secondary">Scan QR Code</a>
                                 <a href="/events/<%= event._id%>/import" class="btn btn-outline-secondary">Import Data</a>
                                 <a href="/events/<%= event._id%>/banner" class="btn btn-outline-info ml-2">
-                                    <i class="fas fa-image"></i> Banner 管理
+                                    <i class="fas fa-image"></i> Banner Management
                                 </a>
 
                                 <a href="/events/<%= event._id %>/report" class="btn btn-outline-success ml-2">Download Report</a>
@@ -420,17 +420,17 @@
         // Function to update user field
         function updateUserField(userId, columnIndex, newValue) {
             const fieldMap = {
-                1: 'email',      // 第1欄：email
-                2: 'name',       // 第2欄：name
-                3: 'table',      // 第3欄：table
-                4: 'company',    // 第4欄：company
-                5: 'phone',      // 第5欄：phone
-                6: 'role',       // 第6欄：role
-                7: 'saluation',  // 第7欄：saluation
-                8: 'industry',   // 第8欄：industry
-                9: 'transport',  // 第9欄：transport
-                10: 'meal',      // 第10欄：meal
-                11: 'remarks'    // 第11欄：remarks
+                1: 'email',      // Column 1: email
+                2: 'name',       // Column 2: name
+                3: 'table',      // Column 3: table
+                4: 'company',    // Column 4: company
+                5: 'phone',      // Column 5: phone
+                6: 'role',       // Column 6: role
+                7: 'saluation',  // Column 7: saluation
+                8: 'industry',   // Column 8: industry
+                9: 'transport',  // Column 9: transport
+                10: 'meal',      // Column 10: meal
+                11: 'remarks'    // Column 11: remarks
             };
             
             const fieldName = fieldMap[columnIndex];
@@ -539,25 +539,25 @@
 
 
 
-        // 取得 eventId
+        // Get eventId
         const eventId = '<%= event._id %>';
-        // 初始化票券資料
+        // Initialize ticket data
         let paymentTickets = <%- JSON.stringify(event.PaymentTickets || []) %>;
         let isPaymentEvent = <%- event.isPaymentEvent ? 'true' : 'false' %>;
 
-        // Payment Event checkbox 狀態初始化
+        // Payment Event checkbox status initialization
         $('#paymentEvent').prop('checked', isPaymentEvent);
         if(isPaymentEvent) showTicketFields();
 
-        // 動態顯示票券欄位
+        // Dynamically display ticket fields
         function showTicketFields() {
             if($('#ticketFields').length) return;
             const html = `
                 <form id="paymentEventForm" class="mt-3">
-                    <h5>票券設定</h5>
+                    <h5>Ticket Settings</h5>
                     <div id="ticketsList"></div>
-                    <button type="button" class="btn btn-primary btn-sm" id="addTicketBtn">新增票券</button>
-                    <button type="submit" class="btn btn-success btn-sm ml-2">儲存付費設定</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="addTicketBtn">Add Ticket</button>
+                    <button type="submit" class="btn btn-success btn-sm ml-2">Save Payment Settings</button>
                 </form>
             `;
             $('#paymentEvent').closest('.form-check').after(html);

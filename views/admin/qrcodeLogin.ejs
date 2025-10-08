@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>QR 碼登錄</title>
+    <title>QR Code Login</title>
     <style>
         body {
             display: flex;
@@ -14,7 +14,7 @@
             font-family: Arial, sans-serif;
         }
         img {
-            width: 500px; /* 限制 QR 碼的最大寬度 */
+            width: 500px; /* Limit the maximum width of QR code */
             height: auto;
         }
     </style>
@@ -22,9 +22,9 @@
 <body>
 
     <div>
-        <h1>掃描 QR 碼以登錄</h1>
+        <h1>Scan QR Code to Login</h1>
         <img src="<%= qrCodeImage %>" alt="QR Code for Event ID: <%= eventId %>">
-        <p>事件 ID: <%= eventId %></p>
+        <p>Event ID: <%= eventId %></p>
     </div>
 
 </body>

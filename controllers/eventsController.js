@@ -23,6 +23,11 @@ exports.createEvent = async (req, res) => {
     const { name, from, to } = req.body;
 
     try {
+        // 檢查是否有用戶數據
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.status(401).json({ message: '未授權：請先登入' });
+        }
+
         const newEvent = new Event({
             name,
             from,
@@ -44,6 +49,11 @@ exports.createEvent = async (req, res) => {
 // 獲取用戶的事件
 exports.getUserEvents = async (req, res) => {
     try {
+        // 檢查是否有用戶數據
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.status(401).json({ message: '未授權：請先登入' });
+        }
+        
         const events = await Event.find({ owner: req.session.user._id }); // 根據擁有者查詢事件
         res.status(200).json(events);
     } catch (error) {
@@ -265,6 +275,11 @@ exports.removeUserFromEvent = async (req, res) => {
 
 exports.renderCreateEventPage = async (req, res) => {
     try {
+        // 檢查是否有用戶數據
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.redirect('/login');
+        }
+        
         res.render('admin/create_event'); // 渲染事件列表視圖
     } catch (error) {
         console.error('Error fetching events:', error);
@@ -274,6 +289,11 @@ exports.renderCreateEventPage = async (req, res) => {
 // 獲取當前用戶的事件並渲染事件列表視圖
 exports.renderEventsList = async (req, res) => {
     try {
+        // 檢查是否有用戶數據
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.redirect('/login');
+        }
+        
         const events = await Event.find({ owner: req.session.user._id }); // 根據擁有者查詢事件
         res.render('admin/events_list', { events }); // 渲染事件列表視圖
     } catch (error) {

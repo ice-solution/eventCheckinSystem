@@ -17,5 +17,6 @@ router
   .route("/:id")
   .get(emailTemplateController.renderEmailTemplateDetail)
   .put(emailTemplateController.updateEmailTemplate)
+  .delete(emailTemplateController.deleteEmailTemplate)
   
 module.exports = router

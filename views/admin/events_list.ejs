@@ -12,17 +12,17 @@
                     <div class="col-md-12">
                         <div class="card">
                             <div class="card-header">
-                                <strong class="card-title">我的活動列表</strong>
+                                <strong class="card-title">My Events List</strong>
                             </div>
                             <div class="card-body">
                                 <table id="bootstrap-data-table" class="table table-bordered">
                                     <thead>
                                         <tr>
-                                            <th>事件名稱</th>
-                                            <th>開始時間</th>
-                                            <th>結束時間</th>
-                                            <th>創建時間</th>
-                                            <th>用戶數</th>
+                                            <th>Event Name</th>
+                                            <th>Start Time</th>
+                                            <th>End Time</th>
+                                            <th>Created At</th>
+                                            <th>User Count</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -38,13 +38,13 @@
                                             <% }); %>
                                         <% } else { %>
                                             <tr>
-                                                <td colspan="5" class="text-center">沒有找到活動</td>
+                                                <td colspan="5" class="text-center">No events found</td>
                                             </tr>
                                         <% } %>
                                     </tbody>
                                 </table>
-                                <a href="/events/create" class="btn btn-primary">創建活動</a>
-                                <a href="/admin" class="btn btn-primary">返回管理頁面</a>
+                                <a href="/events/create" class="btn btn-primary">Create Event</a>
+                                <a href="/admin" class="btn btn-primary">Back to Admin</a>
                             </div>
                         </div>
                     </div>
