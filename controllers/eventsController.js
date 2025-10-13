@@ -1165,45 +1165,146 @@ exports.stripeCheckout = async (req, res) => {
 // Stripe Webhook
 exports.stripeWebhook = async (req, res) => {
     const sig = req.headers['stripe-signature'];
-      console.log('Webhook received:', req.body);
+    console.log('Webhook received:', {
+        type: req.body?.type,
+        timestamp: new Date().toISOString()
+    });
+    
     let event;
+    
     try {
+        // Verify webhook signature
         event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
-        
+        console.log('Webhook verified successfully:', event.type);
     } catch (err) {
-        console.log(err.message);
+        console.error('Webhook signature verification failed:', err.message);
         return res.status(400).send(`Webhook Error: ${err.message}`);
     }
-    // 處理事件
-    if (event.type === 'checkout.session.completed') {
-        const session = event.data.object;
-        // 更新 transaction 狀態
-        const transaction = await Transaction.findOneAndUpdate(
-            { stripeSessionId: session.id },
-            { status: 'paid' },
-            { new: true }
-        );
-        if (transaction) {
-            // 將用戶加入 event.users
+    
+    try {
+        // Handle checkout.session.completed event
+        if (event.type === 'checkout.session.completed') {
+            const session = event.data.object;
+            console.log('Processing checkout.session.completed:', session.id);
+            
+            // Find and update transaction status
+            const transaction = await Transaction.findOneAndUpdate(
+                { stripeSessionId: session.id },
+                { 
+                    status: 'paid',
+                    updatedAt: new Date()
+                },
+                { new: true }
+            );
+            
+            if (!transaction) {
+                console.error('Transaction not found for session:', session.id);
+                return res.json({ received: true, warning: 'Transaction not found' });
+            }
+            
+            console.log('Transaction updated:', transaction._id);
+            
+            // Find the event
             const eventDoc = await Event.findById(transaction.eventId);
-            if (eventDoc) {
+            if (!eventDoc) {
+                console.error('Event not found:', transaction.eventId);
+                return res.json({ received: true, warning: 'Event not found' });
+            }
+            
+            // Check if user already exists in event.users
+            const existingUser = eventDoc.users.find(u => u.email === transaction.userEmail);
+            if (existingUser) {
+                console.log('User already exists, updating payment status:', transaction.userEmail);
+                existingUser.paymentStatus = 'paid';
+                existingUser.modified_at = new Date();
+            } else {
+                console.log('Adding new user to event:', transaction.userEmail);
+                // Add user to event.users with all metadata
                 eventDoc.users.push({
                     email: transaction.userEmail,
-                    name: transaction.userName,
-                    company: session.metadata.company,
-                    paymentStatus: 'paid'
+                    name: transaction.userName || session.metadata.name,
+                    company: session.metadata.company || '',
+                    phone_code: session.metadata.phone_code || '',
+                    phone: session.metadata.phone || '',
+                    paymentStatus: 'paid',
+                    isCheckIn: false,
+                    role: 'guests',
+                    create_at: new Date(),
+                    modified_at: new Date()
                 });
-                await eventDoc.save();
             }
+            
+            await eventDoc.save();
+            console.log('Event updated successfully:', eventDoc._id);
+            
+            // Optional: Send confirmation email here
+            // await sendPaymentConfirmationEmail(transaction.userEmail, transaction);
+            
+        } 
+        // Handle checkout.session.expired event
+        else if (event.type === 'checkout.session.expired') {
+            const session = event.data.object;
+            console.log('Processing checkout.session.expired:', session.id);
+            
+            await Transaction.findOneAndUpdate(
+                { stripeSessionId: session.id },
+                { 
+                    status: 'failed',
+                    updatedAt: new Date()
+                }
+            );
+            console.log('Transaction marked as failed (expired):', session.id);
         }
-    } else if (event.type === 'checkout.session.expired' || event.type === 'checkout.session.payment_failed') {
-        const session = event.data.object;
-        await Transaction.findOneAndUpdate(
-            { stripeSessionId: session.id },
-            { status: 'failed' }
-        );
+        // Handle payment_intent.payment_failed event
+        else if (event.type === 'payment_intent.payment_failed') {
+            const paymentIntent = event.data.object;
+            console.log('Processing payment_intent.payment_failed:', paymentIntent.id);
+            
+            // Find transaction by payment intent if needed
+            // This depends on how you store payment intent ID
+        }
+        // Log unhandled event types
+        else {
+            console.log('Unhandled event type:', event.type);
+        }
+        
+        res.json({ received: true, eventType: event.type });
+        
+    } catch (error) {
+        console.error('Error processing webhook:', error);
+        // Still return 200 to acknowledge receipt to Stripe
+        res.status(200).json({ received: true, error: error.message });
     }
-    res.json({ received: true });
+};
+
+// Render Transaction Records Page
+exports.renderTransactionRecords = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        // Check authentication
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.redirect('/login');
+        }
+
+        // Find event
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found');
+        }
+
+        // Find all transactions for this event
+        const transactions = await Transaction.find({ eventId: eventId })
+            .sort({ createdAt: -1 });
+
+        res.render('admin/transaction_records', { 
+            event, 
+            transactions,
+            eventId: eventId 
+        });
+    } catch (error) {
+        console.error('Error fetching transaction records:', error);
+        res.status(500).send('Server error');
+    }
 };
 
 exports.outputReport = async (req, res) => {
