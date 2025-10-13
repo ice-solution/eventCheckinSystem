@@ -1133,8 +1133,8 @@ exports.stripeCheckout = async (req, res) => {
                 },
             ],
             mode: 'payment',
-            success_url: `${req.protocol}://${req.get('host')}/web/${event_id}/register/success?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${req.protocol}://${req.get('host')}/web/${event_id}/register/fail?session_id={CHECKOUT_SESSION_ID}`,
+            success_url: `${process.env.DOMAIN}/web/${event_id}/register/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.DOMAIN}/web/${event_id}/register/fail?session_id={CHECKOUT_SESSION_ID}`,
             metadata: {
                 event_id,
                 ticketId,
