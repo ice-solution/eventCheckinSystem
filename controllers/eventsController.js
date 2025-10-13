@@ -1116,6 +1116,12 @@ exports.stripeCheckout = async (req, res) => {
         if (!event) return res.status(404).json({ message: 'Event not found' });
         const ticket = event.PaymentTickets.id(ticketId);
         if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+        // Ensure DOMAIN has proper scheme
+        const domain = process.env.DOMAIN || `${req.protocol}://${req.get('host')}`;
+        const baseUrl = domain.startsWith('http://') || domain.startsWith('https://') 
+            ? domain 
+            : `https://${domain}`;
+        
         // Stripe session
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
@@ -1133,8 +1139,8 @@ exports.stripeCheckout = async (req, res) => {
                 },
             ],
             mode: 'payment',
-            success_url: `${process.env.DOMAIN}/web/${event_id}/register/success?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${process.env.DOMAIN}/web/${event_id}/register/fail?session_id={CHECKOUT_SESSION_ID}`,
+            success_url: `${baseUrl}/web/${event_id}/register/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${baseUrl}/web/${event_id}/register/fail?session_id={CHECKOUT_SESSION_ID}`,
             metadata: {
                 event_id,
                 ticketId,
