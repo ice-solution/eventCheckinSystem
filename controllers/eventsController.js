@@ -183,6 +183,56 @@ exports.sendEmail = async (user, event) => {
         ses.sendEmail(user.email, '歡迎加入我們的活動', messageBody);
     }
 }
+
+// 發送支付確認郵件
+exports.sendPaymentConfirmationEmail = async (user, event, transaction) => {
+    try {
+        // 生成 QR 碼
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
+        
+        // 查找歡迎郵件模板
+        let emailTemplate = await EmailTemplate.findOne({ 
+            eventId: event._id, 
+            type: 'welcome' 
+        });
+        
+        // 如果沒有找到模板，使用默認的歡迎郵件模板
+        if (!emailTemplate) {
+            emailTemplate = await EmailTemplate.findOne({ 
+                eventId: null, 
+                type: 'welcome' 
+            });
+        }
+        
+        let subject = '歡迎加入我們的活動';
+        let messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl); // 使用默認模板
+        
+        // 如果找到了郵件模板，使用模板的內容
+        if (emailTemplate) {
+            subject = emailTemplate.subject;
+            messageBody = emailTemplate.content
+                .replace(/\{\{user\.name\}\}/g, user.name)
+                .replace(/\{\{user\.email\}\}/g, user.email)
+                .replace(/\{\{user\.company\}\}/g, user.company || '')
+                .replace(/\{\{event\.name\}\}/g, event.name)
+                .replace(/\{\{qrCodeUrl\}\}/g, qrCodeUrl)
+                .replace(/\{\{transaction\.ticketTitle\}\}/g, transaction.ticketTitle || '')
+                .replace(/\{\{transaction\.ticketPrice\}\}/g, transaction.ticketPrice || '')
+                .replace(/\{\{transaction\.amount\}\}/g, transaction.ticketPrice || '');
+        }
+        
+        // 發送郵件
+        await ses.sendEmail(user.email, subject, messageBody);
+        console.log('Payment confirmation email sent successfully to:', user.email);
+        
+    } catch (error) {
+        console.error('Error sending payment confirmation email:', error);
+        // 如果出現錯誤，使用默認的歡迎郵件
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
+        const messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl);
+        await ses.sendEmail(user.email, '歡迎加入我們的活動', messageBody);
+    }
+}
 // 渲染用戶登入頁面
 exports.renderLoginPage = async (req, res) => {
     const { eventId } = req.params; // 獲取事件 ID
@@ -1243,8 +1293,17 @@ exports.stripeWebhook = async (req, res) => {
             await eventDoc.save();
             console.log('Event updated successfully:', eventDoc._id);
             
-            // Optional: Send confirmation email here
-            // await sendPaymentConfirmationEmail(transaction.userEmail, transaction);
+            // Send payment confirmation email
+            try {
+                const user = eventDoc.users.find(u => u.email === transaction.userEmail);
+                if (user) {
+                    await exports.sendPaymentConfirmationEmail(user, eventDoc, transaction);
+                    console.log('Payment confirmation email sent to:', transaction.userEmail);
+                }
+            } catch (emailError) {
+                console.error('Error sending payment confirmation email:', emailError);
+                // Don't fail the webhook if email fails
+            }
             
         } 
         // Handle checkout.session.expired event
