@@ -54,7 +54,7 @@ app.use((req, res, next) => {
 });
 
 // 連接到 MongoDB
-mongoose.connect('mongodb+srv://icesolution19:jLuZY1Lbi5UQNtyz@cluster0.nky9l.mongodb.net/events', {
+mongoose.connect(process.env.mongodb, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 })
@@ -110,7 +110,7 @@ app.post('/login', async (req, res) => {
 });
 app.get('/logout', (req, res) => {
     req.session.destroy(); // 銷毀 session
-    res.redirect('admin/login'); // 重定向到登入頁面
+    res.redirect('/login'); // 重定向到登入頁面
 });
 
 // 中間件：檢查是否登入
@@ -118,7 +118,7 @@ const isAuthenticated = (req, res, next) => {
     if (req.session.user) {
         return next(); // 已登入，繼續
     }
-    res.redirect('login'); // 未登入，重定向到登入頁
+    res.redirect('/login'); // 未登入，重定向到登入頁
 };
 
 // 設置路由
@@ -178,13 +178,12 @@ app.get('/qrcode', async (req, res) => {
 app.get('/',isAuthenticated, async function (req, res){
     // res.render('admin/home');
 
-    res.redirect('events/list');
+    res.redirect('/events/list');
 });
 // 啟動伺服器
 
 io.on('connection', (socket) => {
     console.log('A user connected');
-
     socket.on('start_draw', async (numOfUsers) => {
         const awardsController = require('./controllers/awardsController');
         await awardsController.startDraw(numOfUsers); // 調用控制器中的 startDraw 方法

@@ -39,6 +39,29 @@
             margin-bottom: 20px;
             font-weight: 600;
         }
+
+        .language-switcher .btn-group .btn {
+            padding: 8px 16px;
+            font-size: 14px;
+            border-radius: 4px;
+        }
+
+        .language-switcher .btn-group .btn.active {
+            background-color: #007bff;
+            border-color: #007bff;
+            color: white;
+        }
+
+        .language-switcher .btn-group .btn:not(.active) {
+            background-color: transparent;
+            border-color: #007bff;
+            color: #007bff;
+        }
+
+        .language-switcher .btn-group .btn:not(.active):hover {
+            background-color: #007bff;
+            color: white;
+        }
         .form-note {
             background-color: #e3f2fd;
             border-left: 4px solid #2196f3;
@@ -148,24 +171,35 @@
             </div>
         </div>
         
+        <!-- 語言切換 -->
+        <div class="language-switcher" style="text-align: right; margin-top: 40px; margin-bottom: 30px;">
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-primary" id="langZhBtn" onclick="switchLanguage('zh')">中文</button>
+                <button type="button" class="btn btn-outline-primary" id="langEnBtn" onclick="switchLanguage('en')">English</button>
+            </div>
+        </div>
+
         <div class="form-header">
             <br><br>
-            <h1>立即登記！</h1>
-            <p class="text-muted">請填寫以下資料完成活動報名</p>
+            <h1 id="formTitle">立即登記！</h1>
+            <p class="text-muted" id="formSubtitle">請填寫以下資料完成活動報名</p>
         </div>
 
         <form id="userForm" method="POST">
-            <% if (formConfig && formConfig.length > 0) { %>
-                <% formConfig.forEach((section, sectionIndex) => { %>
+            <% if (formConfig && formConfig.sections && formConfig.sections.length > 0) { %>
+                <% formConfig.sections.forEach((section, sectionIndex) => { %>
                     <% if (section.visible) { %>
                         <div class="form-section">
-                            <h3><%= section.sectionTitle %></h3>
+                            <h3 class="section-title" data-zh="<%= section.sectionTitle && section.sectionTitle.zh ? section.sectionTitle.zh : section.sectionTitle %>" data-en="<%= section.sectionTitle && section.sectionTitle.en ? section.sectionTitle.en : '' %>">
+                                <%= section.sectionTitle && section.sectionTitle.zh ? section.sectionTitle.zh : (typeof section.sectionTitle === 'string' ? section.sectionTitle : '') %>
+                            </h3>
                             <% if (sectionIndex === 0) { %>
                                 <div class="form-note">
-                                    <strong>注意：</strong>聯絡人可在付款完成後登入編輯參加者資料。所有參加者資料必須在付款前填寫完成。
+                                    <strong class="note-text" data-zh="注意：" data-en="Note: ">注意：</strong>
+                                    <span class="note-content" data-zh="聯絡人可在付款完成後登入編輯參加者資料。所有參加者資料必須在付款前填寫完成。" data-en="Contact person can login to edit participant information after payment completion. All participant information must be completed before payment.">聯絡人可在付款完成後登入編輯參加者資料。所有參加者資料必須在付款前填寫完成。</span>
                                 </div>
                                 <div class="form-note">
-                                    <strong>（* 為必填欄位）</strong>
+                                    <strong class="required-note" data-zh="（* 為必填欄位）" data-en="(* Required fields)">（* 為必填欄位）</strong>
                                 </div>
                             <% } %>
                             
@@ -173,26 +207,39 @@
                                 <% section.fields.forEach((field, fieldIndex) => { %>
                                     <% if (field.visible) { %>
                                         <div class="form-row">
-                                            <label class="form-label" for="<%= field.fieldName %>">
-                                                <%= field.label %>
+                                            <label class="form-label field-label" for="<%= field.fieldName %>" 
+                                                   data-zh="<%= field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '') %>" 
+                                                   data-en="<%= field.label && field.label.en ? field.label.en : '' %>">
+                                                <%= field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '') %>
                                                 <% if (field.required) { %>
                                                     <span class="required">*</span>
                                                 <% } %>
                                             </label>
                                             <div class="form-input">
+                                                <!-- Debug: field.type = <%= field.type %>, has options = <%= field.options ? 'yes' : 'no' %> -->
                                                 <% if (field.type === 'select' && field.options) { %>
                                                     <select class="form-control" id="<%= field.fieldName %>" name="<%= field.fieldName %>" <%= field.required ? 'required' : '' %>>
-                                                        <option value="">--- 請選擇 ---</option>
+                                                        <option value="" class="select-placeholder" data-zh="--- 請選擇 ---" data-en="--- Please select ---">--- 請選擇 ---</option>
                                                         <% field.options.forEach((option) => { %>
-                                                            <option value="<%= option.value %>"><%= option.label %></option>
+                                                            <option value="<%= option.value %>" 
+                                                                    data-zh="<%= option.label && option.label.zh ? option.label.zh : option.label %>" 
+                                                                    data-en="<%= option.label && option.label.en ? option.label.en : '' %>">
+                                                                <%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>
+                                                            </option>
                                                         <% }); %>
                                                     </select>
                                                 <% } else if (field.type === 'textarea') { %>
                                                     <textarea class="form-control" id="<%= field.fieldName %>" name="<%= field.fieldName %>" 
-                                                              placeholder="<%= field.placeholder || '' %>" <%= field.required ? 'required' : '' %> rows="3"></textarea>
+                                                              placeholder="<%= field.placeholder && field.placeholder.zh ? field.placeholder.zh : (typeof field.placeholder === 'string' ? field.placeholder : '') %>" 
+                                                              data-placeholder-zh="<%= field.placeholder && field.placeholder.zh ? field.placeholder.zh : '' %>" 
+                                                              data-placeholder-en="<%= field.placeholder && field.placeholder.en ? field.placeholder.en : '' %>" 
+                                                              <%= field.required ? 'required' : '' %> rows="3"></textarea>
                                                 <% } else { %>
                                                     <input type="<%= field.type %>" class="form-control" id="<%= field.fieldName %>" name="<%= field.fieldName %>" 
-                                                           placeholder="<%= field.placeholder || '' %>" <%= field.required ? 'required' : '' %>>
+                                                           placeholder="<%= field.placeholder && field.placeholder.zh ? field.placeholder.zh : (typeof field.placeholder === 'string' ? field.placeholder : '') %>" 
+                                                           data-placeholder-zh="<%= field.placeholder && field.placeholder.zh ? field.placeholder.zh : '' %>" 
+                                                           data-placeholder-en="<%= field.placeholder && field.placeholder.en ? field.placeholder.en : '' %>" 
+                                                           <%= field.required ? 'required' : '' %>>
                                                 <% } %>
                                             </div>
                                         </div>
@@ -284,6 +331,121 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
+        // 語言設置
+        let currentLanguage = '<%= formConfig.defaultLanguage || "zh" %>';
+        
+        // 初始化語言按鈕狀態
+        $(document).ready(function() {
+            updateLanguageButtons();
+            // 如果默認語言不是中文，直接更新頁面語言
+            if (currentLanguage !== 'zh') {
+                updatePageLanguage();
+            }
+        });
+
+        // 切換語言
+        function switchLanguage(lang) {
+            currentLanguage = lang;
+            updateLanguageButtons();
+            updatePageLanguage();
+            
+            // 保存語言偏好到localStorage
+            localStorage.setItem('preferredLanguage', lang);
+        }
+
+        // 更新語言按鈕狀態
+        function updateLanguageButtons() {
+            $('#langZhBtn').toggleClass('active', currentLanguage === 'zh');
+            $('#langEnBtn').toggleClass('active', currentLanguage === 'en');
+        }
+
+        // 更新頁面語言
+        function updatePageLanguage() {
+            // 更新標題和副標題
+            if (currentLanguage === 'zh') {
+                $('#formTitle').text('立即登記！');
+                $('#formSubtitle').text('請填寫以下資料完成活動報名');
+            } else {
+                $('#formTitle').text('Register Now!');
+                $('#formSubtitle').text('Please fill in the following information to complete event registration');
+            }
+
+            // 更新區塊標題
+            $('.section-title').each(function() {
+                const zhText = $(this).data('zh');
+                const enText = $(this).data('en');
+                if (currentLanguage === 'zh' && zhText) {
+                    $(this).text(zhText);
+                } else if (currentLanguage === 'en' && enText) {
+                    $(this).text(enText);
+                }
+            });
+
+            // 更新字段標籤
+            $('.field-label').each(function() {
+                const zhText = $(this).data('zh');
+                const enText = $(this).data('en');
+                if (currentLanguage === 'zh' && zhText) {
+                    $(this).text(zhText + ($(this).find('.required').length ? ' *' : ''));
+                } else if (currentLanguage === 'en' && enText) {
+                    $(this).text(enText + ($(this).find('.required').length ? ' *' : ''));
+                }
+            });
+
+            // 更新佔位符文本
+            $('input, textarea').each(function() {
+                const zhPlaceholder = $(this).data('placeholder-zh');
+                const enPlaceholder = $(this).data('placeholder-en');
+                if (currentLanguage === 'zh' && zhPlaceholder) {
+                    $(this).attr('placeholder', zhPlaceholder);
+                } else if (currentLanguage === 'en' && enPlaceholder) {
+                    $(this).attr('placeholder', enPlaceholder);
+                }
+            });
+
+            // 更新選擇框選項
+            $('select option').each(function() {
+                const zhText = $(this).data('zh');
+                const enText = $(this).data('en');
+                if (currentLanguage === 'zh' && zhText) {
+                    $(this).text(zhText);
+                } else if (currentLanguage === 'en' && enText) {
+                    $(this).text(enText);
+                }
+            });
+
+            // 更新提示文本
+            $('.note-text').each(function() {
+                const zhText = $(this).data('zh');
+                const enText = $(this).data('en');
+                if (currentLanguage === 'zh' && zhText) {
+                    $(this).text(zhText);
+                } else if (currentLanguage === 'en' && enText) {
+                    $(this).text(enText);
+                }
+            });
+
+            $('.note-content').each(function() {
+                const zhText = $(this).data('zh');
+                const enText = $(this).data('en');
+                if (currentLanguage === 'zh' && zhText) {
+                    $(this).text(zhText);
+                } else if (currentLanguage === 'en' && enText) {
+                    $(this).text(enText);
+                }
+            });
+
+            $('.required-note').each(function() {
+                const zhText = $(this).data('zh');
+                const enText = $(this).data('en');
+                if (currentLanguage === 'zh' && zhText) {
+                    $(this).text(zhText);
+                } else if (currentLanguage === 'en' && enText) {
+                    $(this).text(enText);
+                }
+            });
+        }
+
         // stripe public key
         const STRIPE_PK = '<%= process.env.STRIPE_PK || "" %>';
         let stripe;

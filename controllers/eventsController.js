@@ -71,7 +71,44 @@ exports.getEventUsersByEventID = async (req, res) => {
         if (!event) {
             return res.status(404).json({ message: 'Event not found' });
         }
-        res.render('admin/users', { event }); // 渲染用戶頁面，傳遞事件信息
+        
+        // 獲取表單配置
+        const FormConfig = require('../model/FormConfig');
+        let formConfig = await FormConfig.findOne({ eventId: eventId });
+        
+        // 如果沒有配置，使用預設配置
+        if (!formConfig) {
+            const formConfigController = require('./formConfigController');
+            const defaultConfig = formConfigController.getDefaultFormConfig();
+            formConfig = new FormConfig({
+                eventId: eventId,
+                ...defaultConfig
+            });
+            await formConfig.save();
+        } else {
+            // 檢查是否需要數據遷移（只在第一次訪問時進行，避免覆蓋用戶設置）
+            const formConfigController = require('./formConfigController');
+            const migratedConfig = formConfigController.migrateFormConfig(formConfig);
+            
+            // 只有在數據結構真正需要遷移時才保存（避免覆蓋用戶的 defaultLanguage 設置）
+            const needsMigration = !formConfig.defaultLanguage || 
+                                  (formConfig.sections && formConfig.sections.length > 0 && 
+                                   formConfig.sections[0].fields && formConfig.sections[0].fields.length > 0 &&
+                                   typeof formConfig.sections[0].fields[0].label === 'string');
+            
+            if (needsMigration && JSON.stringify(migratedConfig) !== JSON.stringify(formConfig)) {
+                // 保留用戶設置的 defaultLanguage
+                const userDefaultLanguage = formConfig.defaultLanguage;
+                Object.assign(formConfig, migratedConfig);
+                if (userDefaultLanguage) {
+                    formConfig.defaultLanguage = userDefaultLanguage;
+                }
+                await formConfig.save();
+                console.log('FormConfig 數據已遷移，保留用戶設置的 defaultLanguage:', userDefaultLanguage);
+            }
+        }
+        
+        res.render('admin/users', { event, formConfig }); // 渲染用戶頁面，傳遞事件信息和表單配置
     } catch (error) {
         console.error('Error fetching event:', error);
         res.status(500).json({ message: 'Error fetching event' });

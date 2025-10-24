@@ -134,84 +134,115 @@
                             <div id="addUserForm" class="add-user-form" style="display: none;">
                                 <h5>Add New User</h5>
                                 <form id="newUserForm">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="newUserEmail">Email *</label>
-                                                <input type="email" class="form-control" id="newUserEmail" required>
+                                    <% if (formConfig && formConfig.sections) { %>
+                                        <% formConfig.sections.forEach((section, sectionIndex) => { %>
+                                            <% if (section.visible && section.fields) { %>
+                                                <div class="form-section mb-4">
+                                                    <h6>
+                                                        <% 
+                                                        let sectionTitle = '';
+                                                        if (typeof section.sectionTitle === 'string') {
+                                                            sectionTitle = section.sectionTitle;
+                                                        } else if (section.sectionTitle && section.sectionTitle[formConfig.defaultLanguage]) {
+                                                            sectionTitle = section.sectionTitle[formConfig.defaultLanguage];
+                                                        } else if (section.sectionTitle && section.sectionTitle.zh) {
+                                                            sectionTitle = section.sectionTitle.zh;
+                                                        } else {
+                                                            sectionTitle = section.sectionName || '';
+                                                        }
+                                                        %>
+                                                        <%= sectionTitle %>
+                                                    </h6>
+                                                    <div class="row">
+                                                        <% section.fields.forEach((field, fieldIndex) => { %>
+                                                            <% if (field.visible) { %>
+                                                                <div class="col-md-6">
+                                                                    <div class="form-group">
+                                                                        <label for="newUser<%= field.fieldName %>">
+                                                                            <% 
+                                                                            let fieldLabel = '';
+                                                                            if (typeof field.label === 'string') {
+                                                                                fieldLabel = field.label;
+                                                                            } else if (field.label && field.label[formConfig.defaultLanguage]) {
+                                                                                fieldLabel = field.label[formConfig.defaultLanguage];
+                                                                            } else if (field.label && field.label.zh) {
+                                                                                fieldLabel = field.label.zh;
+                                                                            } else {
+                                                                                fieldLabel = field.fieldName || '';
+                                                                            }
+                                                                            %>
+                                                                            <%= fieldLabel %>
+                                                                            <% if (field.required) { %>
+                                                                                <span class="text-danger">*</span>
+                                                                            <% } %>
+                                                                        </label>
+                                                                        <% if (field.type === 'select' && field.options) { %>
+                                                                            <select class="form-control" id="newUser<%= field.fieldName %>" name="<%= field.fieldName %>" <%= field.required ? 'required' : '' %>>
+                                                                                <option value="">--- 請選擇 ---</option>
+                                                                                <% field.options.forEach((option) => { %>
+                                                                                    <option value="<%= option.value %>">
+                                                                                        <% 
+                                                                                        let optionLabel = '';
+                                                                                        if (typeof option.label === 'string') {
+                                                                                            optionLabel = option.label;
+                                                                                        } else if (option.label && option.label[formConfig.defaultLanguage]) {
+                                                                                            optionLabel = option.label[formConfig.defaultLanguage];
+                                                                                        } else if (option.label && option.label.zh) {
+                                                                                            optionLabel = option.label.zh;
+                                                                                        } else {
+                                                                                            optionLabel = option.value || '';
+                                                                                        }
+                                                                                        %>
+                                                                                        <%= optionLabel %>
+                                                                                    </option>
+                                                                                <% }); %>
+                                                                            </select>
+                                                                        <% } else if (field.type === 'textarea') { %>
+                                                                            <textarea class="form-control" id="newUser<%= field.fieldName %>" name="<%= field.fieldName %>" 
+                                                                                      placeholder="<%= (typeof field.placeholder === 'string' ? field.placeholder : (field.placeholder && field.placeholder[formConfig.defaultLanguage] ? field.placeholder[formConfig.defaultLanguage] : (field.placeholder && field.placeholder.zh ? field.placeholder.zh : ''))) || '' %>" <%= field.required ? 'required' : '' %> rows="3"></textarea>
+                                                                        <% } else { %>
+                                                                            <input type="<%= field.type %>" class="form-control" id="newUser<%= field.fieldName %>" name="<%= field.fieldName %>" 
+                                                                                   placeholder="<%= (typeof field.placeholder === 'string' ? field.placeholder : (field.placeholder && field.placeholder[formConfig.defaultLanguage] ? field.placeholder[formConfig.defaultLanguage] : (field.placeholder && field.placeholder.zh ? field.placeholder.zh : ''))) || '' %>" <%= field.required ? 'required' : '' %>>
+                                                                        <% } %>
+                                                                    </div>
+                                                                </div>
+                                                            <% } %>
+                                                        <% }); %>
+                                                    </div>
+                                                </div>
+                                            <% } %>
+                                        <% }); %>
+                                    <% } else { %>
+                                        <!-- 預設表單字段（如果沒有formConfig） -->
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="newUserEmail">Email *</label>
+                                                    <input type="email" class="form-control" id="newUserEmail" name="email" required>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="newUserName">Name *</label>
+                                                    <input type="text" class="form-control" id="newUserName" name="name" required>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="newUserName">Name *</label>
-                                                <input type="text" class="form-control" id="newUserName" required>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="newUserCompany">Company</label>
+                                                    <input type="text" class="form-control" id="newUserCompany" name="company">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="newUserPhone">Phone</label>
+                                                    <input type="text" class="form-control" id="newUserPhone" name="phone">
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="newUserTable">Table</label>
-                                                <input type="text" class="form-control" id="newUserTable">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="newUserCompany">Company</label>
-                                                <input type="text" class="form-control" id="newUserCompany">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="newUserPhone">Phone</label>
-                                                <input type="text" class="form-control" id="newUserPhone">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="newUserRole">Role</label>
-                                                <input type="text" class="form-control" id="newUserRole">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="newUserSalutation">Salutation</label>
-                                                <input type="text" class="form-control" id="newUserSalutation">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="newUserIndustry">Industry</label>
-                                                <input type="text" class="form-control" id="newUserIndustry">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="newUserTransport">Transport</label>
-                                                <input type="text" class="form-control" id="newUserTransport">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="newUserMeal">Meal Choice</label>
-                                                <input type="text" class="form-control" id="newUserMeal">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-12">
-                                            <div class="form-group">
-                                                <label for="newUserRemarks">Remarks</label>
-                                                <textarea class="form-control" id="newUserRemarks" rows="3"></textarea>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <% } %>
                                     <div class="form-group">
                                         <button type="submit" class="btn btn-success">Add User</button>
                                         <button type="button" class="btn btn-secondary ml-2" id="cancelAddUser">Cancel</button>
@@ -223,17 +254,37 @@
                                 <thead>
                                     <tr>
                                         <th><input type="checkbox" id="selectAll" /></th>
-                                        <th>Email</th>
-                                        <th>Name</th>
-                                        <th>Table</th>
-                                        <th>Company</th>
-                                        <th>Phone</th>
-                                        <th>Role</th>
-                                        <th>Salutation</th>
-                                        <th>Industry</th>
-                                        <th>Transport</th>
-                                        <th>Meal Choice</th>
-                                        <th>Remarks</th>
+                                        <% if (formConfig && formConfig.sections) { %>
+                                            <% formConfig.sections.forEach(section => { %>
+                                                <% if (section.visible && section.fields) { %>
+                                                    <% section.fields.forEach(field => { %>
+                                                        <% if (field.visible) { %>
+                                                            <th>
+                                                                <% 
+                                                                let displayLabel = '';
+                                                                if (typeof field.label === 'string') {
+                                                                    displayLabel = field.label;
+                                                                } else if (field.label && field.label[formConfig.defaultLanguage]) {
+                                                                    displayLabel = field.label[formConfig.defaultLanguage];
+                                                                } else if (field.label && field.label.zh) {
+                                                                    displayLabel = field.label.zh;
+                                                                } else {
+                                                                    displayLabel = field.fieldName || '';
+                                                                }
+                                                                %>
+                                                                <%= displayLabel %>
+                                                            </th>
+                                                        <% } %>
+                                                    <% }); %>
+                                                <% } %>
+                                            <% }); %>
+                                        <% } else { %>
+                                            <!-- 預設列（如果沒有formConfig） -->
+                                            <th>Email</th>
+                                            <th>Name</th>
+                                            <th>Company</th>
+                                            <th>Phone</th>
+                                        <% } %>
                                         <th>Checked In</th>
                                         <th>Actions</th>
                                     </tr>
@@ -242,17 +293,23 @@
                                     <% event.users.forEach(user => { %>
                                         <tr class="<%= user.isCheckIn ? 'checkin-true' : 'checkin-false' %>" data-id="<%= user._id %>">
                                             <td><input type="checkbox" class="user-select" data-_id="<%= user._id %>" /></td>
-                                            <td><%= user.email %></td>
-                                            <td><%= user.name %></td>
-                                            <td><%= user.table %></td>
-                                            <td><%= user.company %></td>
-                                            <td><%= user.phone %></td>
-                                            <td><%= user.role %></td>
-                                            <td><%= user.saluation %></td>
-                                            <td><%= user.industry %></td>
-                                            <td><%= user.transport %></td>
-                                            <td><%= user.meal %></td>
-                                            <td><%= user.remarks %></td>
+                                            <% if (formConfig && formConfig.sections) { %>
+                                                <% formConfig.sections.forEach(section => { %>
+                                                    <% if (section.visible && section.fields) { %>
+                                                        <% section.fields.forEach(field => { %>
+                                                            <% if (field.visible) { %>
+                                                                <td><%= user[field.fieldName] || '-' %></td>
+                                                            <% } %>
+                                                        <% }); %>
+                                                    <% } %>
+                                                <% }); %>
+                                            <% } else { %>
+                                                <!-- 預設列（如果沒有formConfig） -->
+                                                <td><%= user.email %></td>
+                                                <td><%= user.name %></td>
+                                                <td><%= user.company %></td>
+                                                <td><%= user.phone %></td>
+                                            <% } %>
                                             <td>
                                                 <input type="checkbox" class="checkin-toggle" data-_id="<%= user._id %>" <%= user.isCheckIn ? 'checked' : '' %> />
                                             </td>
@@ -645,20 +702,17 @@
         $('#newUserForm').on('submit', function(e) {
             e.preventDefault();
             
+            // 動態收集表單數據
             const userData = {
-                email: $('#newUserEmail').val(),
-                name: $('#newUserName').val(),
-                table: $('#newUserTable').val(),
-                company: $('#newUserCompany').val(),
-                phone: $('#newUserPhone').val(),
-                role: $('#newUserRole').val(),
-                saluation: $('#newUserSalutation').val(),
-                industry: $('#newUserIndustry').val(),
-                transport: $('#newUserTransport').val(),
-                meal: $('#newUserMeal').val(),
-                remarks: $('#newUserRemarks').val(),
                 isCheckIn: false
             };
+            
+            $('#newUserForm').find('input, select, textarea').each(function() {
+                const fieldName = $(this).attr('name');
+                if (fieldName) {
+                    userData[fieldName] = $(this).val();
+                }
+            });
 
             $.ajax({
                 url: `/events/<%= event._id %>/users`,
@@ -667,22 +721,33 @@
                 data: JSON.stringify(userData),
                 success: function(response) {
                     // Add new row to DataTable
+                    // 動態構建新行數據
                     const newRow = [
-                        '<input type="checkbox" class="user-select" data-_id="' + response._id + '" />',
-                        userData.email,
-                        userData.name,
-                        userData.table,
-                        userData.company,
-                        userData.phone,
-                        userData.role,
-                        userData.saluation,
-                        userData.industry,
-                        userData.transport,
-                        userData.meal,
-                        userData.remarks,
-                        '<input type="checkbox" class="checkin-toggle" data-_id="' + response._id + '" />',
-                        '<button class="btn btn-danger delete-user" data-_id="' + response._id + '">Delete</button>'
+                        '<input type="checkbox" class="user-select" data-_id="' + response._id + '" />'
                     ];
+                    
+                    // 根據formConfig添加字段數據
+                    <% if (formConfig && formConfig.sections) { %>
+                        <% formConfig.sections.forEach(section => { %>
+                            <% if (section.visible && section.fields) { %>
+                                <% section.fields.forEach(field => { %>
+                                    <% if (field.visible) { %>
+                                        newRow.push(userData['<%= field.fieldName %>'] || '-');
+                                    <% } %>
+                                <% }); %>
+                            <% } %>
+                        <% }); %>
+                    <% } else { %>
+                        // 預設字段
+                        newRow.push(userData.email || '-');
+                        newRow.push(userData.name || '-');
+                        newRow.push(userData.company || '-');
+                        newRow.push(userData.phone || '-');
+                    <% } %>
+                    
+                    // 添加Checked In和Actions列
+                    newRow.push('<input type="checkbox" class="checkin-toggle" data-_id="' + response._id + '" />');
+                    newRow.push('<button class="btn btn-danger delete-user" data-_id="' + response._id + '">Delete</button>');
                     
                     const rowNode = table.row.add(newRow).draw().node();
                     $(rowNode).addClass('checkin-false').attr('data-id', response._id);

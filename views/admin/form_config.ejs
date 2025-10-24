@@ -63,6 +63,31 @@
                                 <p class="mb-0">配置此事件的註冊表單字段顯示設定</p>
                             </div>
 
+                            <!-- 語言設置 -->
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6>語言設置 (Language Settings)</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label>默認語言 (Default Language)</label>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-outline-success <%= formConfig.defaultLanguage === 'zh' ? 'active' : '' %>" id="defaultZhBtn" onclick="console.log('Zh button clicked'); updateDefaultLanguage('zh')">中文</button>
+                                                <button type="button" class="btn btn-outline-success <%= formConfig.defaultLanguage === 'en' ? 'active' : '' %>" id="defaultEnBtn" onclick="console.log('En button clicked'); updateDefaultLanguage('en')">English</button>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label>當前語言 (Current Language)</label>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-outline-primary active" id="langZhBtn" onclick="switchLanguage('zh')">中文</button>
+                                                <button type="button" class="btn btn-outline-primary" id="langEnBtn" onclick="switchLanguage('en')">English</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- 表單配置區域 -->
                             <div id="formConfigContainer">
                                 <% if (formConfig && formConfig.sections) { %>
@@ -103,17 +128,23 @@
                                                         </div>
                                                         
                                                         <div class="row">
-                                                            <div class="col-md-3">
+                                                            <div class="col-md-2">
                                                                 <label class="form-label">字段名稱</label>
                                                                 <input type="text" class="form-control form-control-sm" 
                                                                        value="<%= field.fieldName %>" 
                                                                        onchange="updateFieldProperty(<%= sectionIndex %>, <%= fieldIndex %>, 'fieldName', this.value)">
                                                             </div>
-                                                            <div class="col-md-3">
-                                                                <label class="form-label">顯示標籤</label>
+                                                            <div class="col-md-2">
+                                                                <label class="form-label">中文標籤</label>
                                                                 <input type="text" class="form-control form-control-sm" 
-                                                                       value="<%= field.label %>" 
-                                                                       onchange="updateFieldProperty(<%= sectionIndex %>, <%= fieldIndex %>, 'label', this.value)">
+                                                                       value="<%= field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '') %>" 
+                                                                       onchange="updateFieldLabel(<%= sectionIndex %>, <%= fieldIndex %>, 'zh', this.value)">
+                                                            </div>
+                                                            <div class="col-md-2">
+                                                                <label class="form-label">English Label</label>
+                                                                <input type="text" class="form-control form-control-sm" 
+                                                                       value="<%= field.label && field.label.en ? field.label.en : '' %>" 
+                                                                       onchange="updateFieldLabel(<%= sectionIndex %>, <%= fieldIndex %>, 'en', this.value)">
                                                             </div>
                                                             <div class="col-md-2">
                                                                 <label class="form-label">字段類型</label>
@@ -143,11 +174,17 @@
                                                         </div>
                                                         
                                                         <div class="row mt-2">
-                                                            <div class="col-md-6">
-                                                                <label class="form-label">佔位符文字</label>
+                                                            <div class="col-md-3">
+                                                                <label class="form-label">中文佔位符</label>
                                                                 <input type="text" class="form-control form-control-sm" 
-                                                                       value="<%= field.placeholder || '' %>" 
-                                                                       onchange="updateFieldProperty(<%= sectionIndex %>, <%= fieldIndex %>, 'placeholder', this.value)">
+                                                                       value="<%= field.placeholder && field.placeholder.zh ? field.placeholder.zh : (typeof field.placeholder === 'string' ? field.placeholder : '') %>" 
+                                                                       onchange="updateFieldPlaceholder(<%= sectionIndex %>, <%= fieldIndex %>, 'zh', this.value)">
+                                                            </div>
+                                                            <div class="col-md-3">
+                                                                <label class="form-label">English Placeholder</label>
+                                                                <input type="text" class="form-control form-control-sm" 
+                                                                       value="<%= field.placeholder && field.placeholder.en ? field.placeholder.en : '' %>" 
+                                                                       onchange="updateFieldPlaceholder(<%= sectionIndex %>, <%= fieldIndex %>, 'en', this.value)">
                                                             </div>
                                                         </div>
                                                         
@@ -156,17 +193,30 @@
                                                                 <label class="form-label">選項設定</label>
                                                                 <div id="options-<%= sectionIndex %>-<%= fieldIndex %>">
                                                                     <% field.options.forEach((option, optionIndex) => { %>
-                                                                        <div class="input-group mb-1">
-                                                                            <input type="text" class="form-control form-control-sm" 
-                                                                                   placeholder="選項值" value="<%= option.value %>"
-                                                                                   onchange="updateOption(<%= sectionIndex %>, <%= fieldIndex %>, <%= optionIndex %>, 'value', this.value)">
-                                                                            <input type="text" class="form-control form-control-sm" 
-                                                                                   placeholder="顯示文字" value="<%= option.label %>"
-                                                                                   onchange="updateOption(<%= sectionIndex %>, <%= fieldIndex %>, <%= optionIndex %>, 'label', this.value)">
-                                                                            <button type="button" class="btn btn-outline-danger btn-sm" 
-                                                                                    onclick="removeOption(<%= sectionIndex %>, <%= fieldIndex %>, <%= optionIndex %>)">
-                                                                                <i class="fas fa-trash"></i>
-                                                                            </button>
+                                                                        <div class="row mb-2">
+                                                                            <div class="col-md-3">
+                                                                                <input type="text" class="form-control form-control-sm" 
+                                                                                       placeholder="選項值" value="<%= option.value %>"
+                                                                                       onchange="updateOption(<%= sectionIndex %>, <%= fieldIndex %>, <%= optionIndex %>, 'value', this.value)">
+                                                                            </div>
+                                                                            <div class="col-md-3">
+                                                                                <input type="text" class="form-control form-control-sm" 
+                                                                                       placeholder="中文標籤" 
+                                                                                       value="<%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>"
+                                                                                       onchange="updateOptionLabel(<%= sectionIndex %>, <%= fieldIndex %>, <%= optionIndex %>, 'zh', this.value)">
+                                                                            </div>
+                                                                            <div class="col-md-3">
+                                                                                <input type="text" class="form-control form-control-sm" 
+                                                                                       placeholder="English Label" 
+                                                                                       value="<%= option.label && option.label.en ? option.label.en : '' %>"
+                                                                                       onchange="updateOptionLabel(<%= sectionIndex %>, <%= fieldIndex %>, <%= optionIndex %>, 'en', this.value)">
+                                                                            </div>
+                                                                            <div class="col-md-3">
+                                                                                <button type="button" class="btn btn-outline-danger btn-sm" 
+                                                                                        onclick="removeOption(<%= sectionIndex %>, <%= fieldIndex %>, <%= optionIndex %>)">
+                                                                                    <i class="fas fa-trash"></i>
+                                                                                </button>
+                                                                            </div>
                                                                         </div>
                                                                     <% }); %>
                                                                 </div>
@@ -198,7 +248,13 @@
 
                             <!-- 預覽區域 -->
                             <div class="mt-4">
-                                <h5>表單預覽</h5>
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5>表單預覽</h5>
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="btn btn-outline-primary active" id="previewZhBtn" onclick="switchPreviewLanguage('zh')">中文預覽</button>
+                                        <button type="button" class="btn btn-outline-primary" id="previewEnBtn" onclick="switchPreviewLanguage('en')">English Preview</button>
+                                    </div>
+                                </div>
                                 <div class="border p-3 bg-light">
                                     <div id="formPreview">
                                         <!-- 預覽內容將在這裡動態生成 -->
@@ -217,15 +273,188 @@
 <script src="/admin/assets/js/vendor/jquery-2.1.4.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 
+<style>
+    /* 默認語言按鈕組樣式 */
+    .btn-outline-success {
+        border-color: #28a745;
+        color: #28a745;
+    }
+
+    .btn-outline-success.active {
+        background-color: #28a745;
+        border-color: #28a745;
+        color: white;
+    }
+
+    .btn-outline-success:not(.active):hover {
+        background-color: #28a745;
+        border-color: #28a745;
+        color: white;
+    }
+
+    /* 當前語言按鈕組樣式 */
+    .btn-outline-primary {
+        border-color: #007bff;
+        color: #007bff;
+    }
+
+    .btn-outline-primary.active {
+        background-color: #007bff;
+        border-color: #007bff;
+        color: white;
+    }
+
+    .btn-outline-primary:not(.active):hover {
+        background-color: #007bff;
+        border-color: #007bff;
+        color: white;
+    }
+
+    /* 預覽語言切換按鈕樣式 */
+    .btn-group .btn {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+</style>
+
 <script>
     let formConfig = <%- JSON.stringify(formConfig) %>;
     const eventId = '<%= event._id %>';
+    let currentLanguage = 'zh'; // 當前編輯語言
+
+    // 切換語言
+    function switchLanguage(lang) {
+        currentLanguage = lang;
+        
+        // 更新按鈕狀態
+        document.getElementById('langZhBtn').classList.toggle('active', lang === 'zh');
+        document.getElementById('langEnBtn').classList.toggle('active', lang === 'en');
+        
+        // 重新渲染頁面以顯示對應語言的內容
+        location.reload();
+    }
+
+    // 顯示提示信息
+    function showAlert(type, message) {
+        // 創建提示元素
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        // 插入到頁面頂部
+        const container = document.querySelector('.card-body');
+        if (container) {
+            container.insertBefore(alertDiv, container.firstChild);
+            
+            // 3秒後自動消失
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 3000);
+        }
+    }
+
+    // 更新默認語言
+    async function updateDefaultLanguage(lang) {
+        console.log('updateDefaultLanguage called with:', lang);
+        console.log('Current formConfig.defaultLanguage:', formConfig.defaultLanguage);
+        
+        formConfig.defaultLanguage = lang;
+        console.log('Updated formConfig.defaultLanguage to:', formConfig.defaultLanguage);
+        
+        // 更新按鈕狀態
+        updateDefaultLanguageButtons();
+        
+        try {
+            console.log('Saving config...');
+            await saveConfig();
+            console.log('Config saved successfully');
+            showAlert('success', '默認語言已更新！');
+        } catch (error) {
+            console.error('Error updating default language:', error);
+            showAlert('danger', '更新失敗：' + error.message);
+        }
+    }
+
+    // 更新默認語言按鈕狀態
+    function updateDefaultLanguageButtons() {
+        const defaultLang = formConfig.defaultLanguage;
+        const zhBtn = document.getElementById('defaultZhBtn');
+        const enBtn = document.getElementById('defaultEnBtn');
+        
+        if (zhBtn && enBtn) {
+            zhBtn.classList.toggle('active', defaultLang === 'zh');
+            enBtn.classList.toggle('active', defaultLang === 'en');
+        }
+    }
+
+    // 更新字段標籤（多語言）
+    function updateFieldLabel(sectionIndex, fieldIndex, lang, value) {
+        if (formConfig.sections[sectionIndex] && formConfig.sections[sectionIndex].fields[fieldIndex]) {
+            if (!formConfig.sections[sectionIndex].fields[fieldIndex].label) {
+                formConfig.sections[sectionIndex].fields[fieldIndex].label = {};
+            }
+            formConfig.sections[sectionIndex].fields[fieldIndex].label[lang] = value;
+            updatePreview();
+        }
+    }
+
+    // 更新字段佔位符（多語言）
+    function updateFieldPlaceholder(sectionIndex, fieldIndex, lang, value) {
+        if (formConfig.sections[sectionIndex] && formConfig.sections[sectionIndex].fields[fieldIndex]) {
+            if (!formConfig.sections[sectionIndex].fields[fieldIndex].placeholder) {
+                formConfig.sections[sectionIndex].fields[fieldIndex].placeholder = {};
+            }
+            formConfig.sections[sectionIndex].fields[fieldIndex].placeholder[lang] = value;
+            updatePreview();
+        }
+    }
+
+    // 更新選項標籤（多語言）
+    function updateOptionLabel(sectionIndex, fieldIndex, optionIndex, lang, value) {
+        if (formConfig.sections[sectionIndex] && 
+            formConfig.sections[sectionIndex].fields[fieldIndex] &&
+            formConfig.sections[sectionIndex].fields[fieldIndex].options[optionIndex]) {
+            if (!formConfig.sections[sectionIndex].fields[fieldIndex].options[optionIndex].label) {
+                formConfig.sections[sectionIndex].fields[fieldIndex].options[optionIndex].label = {};
+            }
+            formConfig.sections[sectionIndex].fields[fieldIndex].options[optionIndex].label[lang] = value;
+            updatePreview();
+        }
+    }
 
     // 更新字段屬性
-    function updateFieldProperty(sectionIndex, fieldIndex, property, value) {
+    async function updateFieldProperty(sectionIndex, fieldIndex, property, value) {
         if (formConfig.sections[sectionIndex] && formConfig.sections[sectionIndex].fields[fieldIndex]) {
             formConfig.sections[sectionIndex].fields[fieldIndex][property] = value;
-            updatePreview();
+            
+            // 如果更改了字段類型，需要處理選項
+            if (property === 'type') {
+                if (value === 'select') {
+                    // 如果是下拉選單，確保有選項數組
+                    if (!formConfig.sections[sectionIndex].fields[fieldIndex].options) {
+                        formConfig.sections[sectionIndex].fields[fieldIndex].options = [];
+                    }
+                } else {
+                    // 如果不是下拉選單，清除選項
+                    delete formConfig.sections[sectionIndex].fields[fieldIndex].options;
+                }
+                
+                // 字段類型切換時立即保存
+                try {
+                    await saveConfig();
+                    location.reload();
+                } catch (error) {
+                    console.error('保存失敗:', error);
+                    alert('保存失敗，請重試');
+                }
+            } else {
+                updatePreview();
+            }
         }
     }
 
@@ -239,21 +468,40 @@
     }
 
     // 添加選項
-    function addOption(sectionIndex, fieldIndex) {
+    async function addOption(sectionIndex, fieldIndex) {
         if (!formConfig.sections[sectionIndex].fields[fieldIndex].options) {
             formConfig.sections[sectionIndex].fields[fieldIndex].options = [];
         }
         formConfig.sections[sectionIndex].fields[fieldIndex].options.push({
             value: '',
-            label: ''
+            label: {
+                zh: '',
+                en: ''
+            }
         });
-        location.reload();
+        
+        // 先保存到資料庫，然後重新載入頁面
+        try {
+            await saveConfig();
+            location.reload();
+        } catch (error) {
+            console.error('保存失敗:', error);
+            alert('保存失敗，請重試');
+        }
     }
 
     // 移除選項
-    function removeOption(sectionIndex, fieldIndex, optionIndex) {
+    async function removeOption(sectionIndex, fieldIndex, optionIndex) {
         formConfig.sections[sectionIndex].fields[fieldIndex].options.splice(optionIndex, 1);
-        location.reload();
+        
+        // 先保存到資料庫，然後重新載入頁面
+        try {
+            await saveConfig();
+            location.reload();
+        } catch (error) {
+            console.error('保存失敗:', error);
+            alert('保存失敗，請重試');
+        }
     }
 
     // 切換字段顯示
@@ -285,7 +533,7 @@
     }
 
     // 添加字段
-    function addField(sectionIndex) {
+    async function addField(sectionIndex) {
         const newField = {
             fieldName: 'new_field',
             label: '新字段',
@@ -296,19 +544,35 @@
             order: formConfig.sections[sectionIndex].fields.length + 1
         };
         formConfig.sections[sectionIndex].fields.push(newField);
-        location.reload();
+        
+        // 先保存到資料庫，然後重新載入頁面
+        try {
+            await saveConfig();
+            location.reload();
+        } catch (error) {
+            console.error('保存失敗:', error);
+            alert('保存失敗，請重試');
+        }
     }
 
     // 移除字段
-    function removeField(sectionIndex, fieldIndex) {
+    async function removeField(sectionIndex, fieldIndex) {
         if (confirm('確定要刪除此字段嗎？')) {
             formConfig.sections[sectionIndex].fields.splice(fieldIndex, 1);
-            location.reload();
+            
+            // 先保存到資料庫，然後重新載入頁面
+            try {
+                await saveConfig();
+                location.reload();
+            } catch (error) {
+                console.error('保存失敗:', error);
+                alert('保存失敗，請重試');
+            }
         }
     }
 
     // 添加區塊
-    function addSection() {
+    async function addSection() {
         const newSection = {
             sectionName: 'new_section',
             sectionTitle: '新區塊',
@@ -317,17 +581,57 @@
             fields: []
         };
         formConfig.sections.push(newSection);
-        location.reload();
-    }
-
-    // 移除區塊
-    function removeSection(sectionIndex) {
-        if (confirm('確定要刪除此區塊嗎？')) {
-            formConfig.sections.splice(sectionIndex, 1);
+        
+        // 先保存到資料庫，然後重新載入頁面
+        try {
+            await saveConfig();
             location.reload();
+        } catch (error) {
+            console.error('保存失敗:', error);
+            alert('保存失敗，請重試');
         }
     }
 
+    // 移除區塊
+    async function removeSection(sectionIndex) {
+        if (confirm('確定要刪除此區塊嗎？')) {
+            formConfig.sections.splice(sectionIndex, 1);
+            
+            // 先保存到資料庫，然後重新載入頁面
+            try {
+                await saveConfig();
+                location.reload();
+            } catch (error) {
+                console.error('保存失敗:', error);
+                alert('保存失敗，請重試');
+            }
+        }
+    }
+
+    // 預覽語言設置
+    let previewLanguage = 'zh';
+    
+    // 切換預覽語言
+    function switchPreviewLanguage(lang) {
+        previewLanguage = lang;
+        updatePreview();
+        updatePreviewLanguageButtons();
+    }
+    
+    // 更新預覽語言按鈕狀態
+    function updatePreviewLanguageButtons() {
+        document.getElementById('previewZhBtn').classList.toggle('active', previewLanguage === 'zh');
+        document.getElementById('previewEnBtn').classList.toggle('active', previewLanguage === 'en');
+    }
+    
+    // 獲取多語言文本
+    function getMultilingualText(obj, lang) {
+        if (typeof obj === 'string') return obj;
+        if (obj && obj[lang]) return obj[lang];
+        if (obj && obj.zh) return obj.zh; // 回退到中文
+        return '';
+    }
+    
     // 更新預覽
     function updatePreview() {
         const preview = document.getElementById('formPreview');
@@ -336,26 +640,26 @@
         formConfig.sections.forEach(function(section) {
             if (section.visible) {
                 html += '<div class="form-section-preview mb-3">';
-                html += '<h5>' + section.sectionTitle + '</h5>';
+                html += '<h5>' + getMultilingualText(section.sectionTitle, previewLanguage) + '</h5>';
                 
                 section.fields.forEach(function(field) {
                     if (field.visible) {
                         html += '<div class="mb-2">';
-                        html += '<label class="form-label">' + field.label;
+                        html += '<label class="form-label">' + getMultilingualText(field.label, previewLanguage);
                         if (field.required) html += ' <span class="text-danger">*</span>';
                         html += '</label>';
                         
                         if (field.type === 'select' && field.options) {
                             html += '<select class="form-select" disabled>';
-                            html += '<option>--- 請選擇 ---</option>';
+                            html += '<option>--- ' + (previewLanguage === 'zh' ? '請選擇' : 'Please select') + ' ---</option>';
                             field.options.forEach(function(option) {
-                                html += '<option value="' + option.value + '">' + option.label + '</option>';
+                                html += '<option value="' + option.value + '">' + getMultilingualText(option.label, previewLanguage) + '</option>';
                             });
                             html += '</select>';
                         } else if (field.type === 'textarea') {
-                            html += '<textarea class="form-control" placeholder="' + (field.placeholder || '') + '" disabled></textarea>';
+                            html += '<textarea class="form-control" placeholder="' + getMultilingualText(field.placeholder, previewLanguage) + '" disabled></textarea>';
                         } else {
-                            html += '<input type="' + field.type + '" class="form-control" placeholder="' + (field.placeholder || '') + '" disabled>';
+                            html += '<input type="' + field.type + '" class="form-control" placeholder="' + getMultilingualText(field.placeholder, previewLanguage) + '" disabled>';
                         }
                         html += '</div>';
                     }
@@ -376,17 +680,22 @@
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ sections: formConfig.sections })
+                body: JSON.stringify({ 
+                    sections: formConfig.sections,
+                    defaultLanguage: formConfig.defaultLanguage
+                })
             });
             
             const result = await response.json();
             if (result.success) {
-                alert('表單配置已儲存！');
+                console.log('表單配置已儲存！');
             } else {
-                alert('儲存失敗：' + result.message);
+                console.error('儲存失敗：' + result.message);
+                throw new Error(result.message);
             }
         } catch (error) {
-            alert('儲存失敗：' + error.message);
+            console.error('儲存失敗：' + error.message);
+            throw error;
         }
     }
 

@@ -28,68 +28,37 @@ router.get('/:event_id/register', async (req, res) => {
     // 如果沒有配置，使用預設配置
     if (!formConfig) {
         const formConfigController = require('../controllers/formConfigController');
-        // 這裡我們需要獲取預設配置，但由於是靜態函數，我們直接創建
-        const defaultConfig = {
-            sections: [
-                {
-                    sectionName: 'contact_info',
-                    sectionTitle: '聯絡人資料',
-                    visible: true,
-                    fields: [
-                        { fieldName: 'email', label: '電子郵件', type: 'email', required: true, visible: true, placeholder: '例如：peterwong@abccompany.com' },
-                        { fieldName: 'name', label: '姓名', type: 'text', required: true, visible: true, placeholder: '例如：王小明' },
-                        { fieldName: 'phone_code', label: '電話區號', type: 'select', required: true, visible: true, options: [
-                            { value: '+852', label: '香港 (+852)' },
-                            { value: '+1', label: '加拿大 (+1)' },
-                            { value: '+86', label: '中國 (+86)' },
-                            { value: '+81', label: '日本 (+81)' },
-                            { value: '+82', label: '韓國 (+82)' },
-                            { value: '+65', label: '新加坡 (+65)' },
-                            { value: '+60', label: '馬來西亞 (+60)' },
-                            { value: '+63', label: '菲律賓 (+63)' },
-                            { value: '+84', label: '越南 (+84)' },
-                            { value: '+66', label: '泰國 (+66)' }
-                        ]},
-                        { fieldName: 'phone', label: '電話號碼', type: 'tel', required: true, visible: true, placeholder: '例如：區號 - 電話號碼' },
-                        { fieldName: 'saluation', label: '稱謂', type: 'select', required: true, visible: true, options: [
-                            { value: 'Mr.', label: 'Mr.' },
-                            { value: 'Ms.', label: 'Ms.' },
-                            { value: 'Mrs.', label: 'Mrs.' },
-                            { value: 'Dr.', label: 'Dr.' },
-                            { value: 'Prof.', label: 'Prof.' }
-                        ]},
-                        { fieldName: 'company', label: '公司名稱', type: 'text', required: true, visible: true, placeholder: '例如：ABC 公司' },
-                        { fieldName: 'role', label: '職位', type: 'text', required: true, visible: true, placeholder: '例如：資深經理' },
-                        { fieldName: 'industry', label: '行業', type: 'select', required: false, visible: true, options: [
-                            { value: '科技', label: '科技' },
-                            { value: '金融', label: '金融' },
-                            { value: '教育', label: '教育' },
-                            { value: '醫療', label: '醫療' },
-                            { value: '零售', label: '零售' },
-                            { value: '其他', label: '其他' }
-                        ]},
-                        { fieldName: 'transport', label: '交通方式', type: 'select', required: false, visible: true, options: [
-                            { value: '地鐵', label: '地鐵' },
-                            { value: '巴士', label: '巴士' },
-                            { value: '計程車', label: '計程車' },
-                            { value: '自駕', label: '自駕' },
-                            { value: '其他', label: '其他' }
-                        ]},
-                        { fieldName: 'meal', label: '餐飲選擇', type: 'select', required: false, visible: true, options: [
-                            { value: '葷食', label: '葷食' },
-                            { value: '素食', label: '素食' },
-                            { value: '清真', label: '清真' },
-                            { value: '無特殊要求', label: '無特殊要求' }
-                        ]},
-                        { fieldName: 'remarks', label: '備註', type: 'textarea', required: false, visible: true, placeholder: '請輸入任何特殊需求或備註' }
-                    ]
-                }
-            ]
-        };
-        formConfig = { sections: defaultConfig.sections };
+        // 使用完整的預設配置
+        const defaultConfig = formConfigController.getDefaultFormConfig();
+        formConfig = new FormConfig({
+            eventId: event_id,
+            ...defaultConfig
+        });
+        await formConfig.save();
+    } else {
+        // 檢查是否需要數據遷移（只在第一次訪問時進行，避免覆蓋用戶設置）
+        const formConfigController = require('../controllers/formConfigController');
+        const migratedConfig = formConfigController.migrateFormConfig(formConfig);
+        
+        // 只有在數據結構真正需要遷移時才保存（避免覆蓋用戶的 defaultLanguage 設置）
+        const needsMigration = !formConfig.defaultLanguage || 
+                              (formConfig.sections && formConfig.sections.length > 0 && 
+                               formConfig.sections[0].fields && formConfig.sections[0].fields.length > 0 &&
+                               typeof formConfig.sections[0].fields[0].label === 'string');
+        
+        if (needsMigration && JSON.stringify(migratedConfig) !== JSON.stringify(formConfig)) {
+            // 保留用戶設置的 defaultLanguage
+            const userDefaultLanguage = formConfig.defaultLanguage;
+            Object.assign(formConfig, migratedConfig);
+            if (userDefaultLanguage) {
+                formConfig.defaultLanguage = userDefaultLanguage;
+            }
+            await formConfig.save();
+            console.log('FormConfig 數據已遷移，保留用戶設置的 defaultLanguage:', userDefaultLanguage);
+        }
     }
     
-    res.render('exvent/register', { event_id, paymentTickets, formConfig: formConfig.sections });
+    res.render('exvent/register', { event_id, paymentTickets, formConfig: formConfig });
 });
 // 路由到註冊成功頁面
 router.get('/:event_id/register/success', async (req, res) => {
