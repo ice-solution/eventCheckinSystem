@@ -1651,3 +1651,41 @@ exports.deleteBanner = async (req, res) => {
         res.redirect(`/events/${eventId}/banner?error=刪除 banner 失敗：${error.message}`);
     }
 };
+// 重發歡迎電郵
+exports.resendWelcomeEmail = async (req, res) => {
+    try {
+        const { eventId, userId } = req.params;
+        
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Event not found' 
+            });
+        }
+        
+        // 查找用戶
+        const user = event.users.id(userId);
+        if (!user) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'User not found' 
+            });
+        }
+        
+        // 發送歡迎電郵
+        await exports.sendEmail(user, event);
+        
+        res.json({ 
+            success: true, 
+            message: '歡迎電郵已重新發送' 
+        });
+        
+    } catch (error) {
+        console.error('Error resending welcome email:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '發送電郵失敗：' + error.message 
+        });
+    }
+};

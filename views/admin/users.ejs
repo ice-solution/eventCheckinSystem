@@ -314,7 +314,10 @@
                                                 <input type="checkbox" class="checkin-toggle" data-_id="<%= user._id %>" <%= user.isCheckIn ? 'checked' : '' %> />
                                             </td>
                                             <td>
-                                                <button class="btn btn-danger delete-user" data-_id="<%= user._id %>">Delete</button>
+                                                <button class="btn btn-info btn-sm resend-email" data-_id="<%= user._id %>" title="重發歡迎電郵">
+                                                    <i class="fa fa-envelope"></i>
+                                                </button>
+                                                <button class="btn btn-danger btn-sm delete-user" data-_id="<%= user._id %>">Delete</button>
                                             </td>
                                         </tr>
                                     <% }) %>
@@ -808,6 +811,41 @@
                     }
                 });
             }
+        });
+
+        // 重發歡迎電郵
+        $(document).on('click', '.resend-email', function() {
+            const userId = $(this).data('_id');
+            const eventId = '<%= event._id %>';
+            const button = $(this);
+            
+            // 顯示確認對話框
+            if (!confirm('確定要重新發送歡迎電郵給此用戶嗎？')) {
+                return;
+            }
+            
+            // 禁用按鈕防止重複點擊
+            button.prop('disabled', true);
+            
+            $.ajax({
+                url: `/events/${eventId}/users/${userId}/resend-email`,
+                type: 'POST',
+                success: function(response) {
+                    if (response.success) {
+                        showAlert('success', '歡迎電郵已成功發送！');
+                    } else {
+                        showAlert('danger', '發送失敗：' + response.message);
+                    }
+                },
+                error: function(xhr) {
+                    const errorMsg = xhr.responseJSON ? xhr.responseJSON.message : '發送電郵失敗';
+                    showAlert('danger', '發送失敗：' + errorMsg);
+                },
+                complete: function() {
+                    // 重新啟用按鈕
+                    button.prop('disabled', false);
+                }
+            });
         });
     });
 </script>

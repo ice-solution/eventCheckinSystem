@@ -123,3 +123,4 @@ mongoose.connect(process.env.mongodb || 'mongodb://localhost:27017/checkinSystem
     console.error('MongoDB 連接失敗：', err);
     process.exit(1);
 });
+

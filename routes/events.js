@@ -68,6 +68,9 @@ router.get('/:eventId/users/:userId', eventsController.getUserById); // 根據�
 router.put('/:eventId/users/:userId', eventsController.updateUser); // 更新事件中的用戶
 router.delete('/:eventId/users/:userId', eventsController.removeUserFromEvent);
 
+// 重發歡迎電郵
+router.post('/:eventId/users/:userId/resend-email', eventsController.resendWelcomeEmail);
+
 // 獲取事件的用戶列表
 
 // 用戶登入
