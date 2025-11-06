@@ -1,0 +1,255 @@
+/* Phoebe Version - Neverland.Co Limited Color Theme */
+/* Color Palette:
+ * Primary: #E8B4B8 (Rosewater)
+ * Secondary: #EED6D3 (Dusty Rose)
+ * Coffee Pot Light: #A49393
+ * Coffee Pot Dark: #67595E
+ * Brown: #D48C70
+ * Dark Brown: #5B4A43
+ */
+
+:root {
+    --phoebe-primary: #E8B4B8;
+    --phoebe-secondary: #EED6D3;
+    --phoebe-coffee-light: #A49393;
+    --phoebe-coffee-dark: #67595E;
+    --phoebe-brown: #D48C70;
+    --phoebe-dark-brown: #5B4A43;
+}
+
+/* Primary Color Overrides */
+.btn-primary,
+.bg-primary,
+.alert-primary,
+.badge-primary {
+    background-color: var(--phoebe-primary) !important;
+    border-color: var(--phoebe-primary) !important;
+    color: var(--phoebe-dark-brown) !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: var(--phoebe-coffee-dark) !important;
+    border-color: var(--phoebe-coffee-dark) !important;
+    color: #fff !important;
+}
+
+/* Secondary Color Overrides */
+.btn-secondary,
+.bg-secondary,
+.alert-secondary,
+.badge-secondary {
+    background-color: var(--phoebe-secondary) !important;
+    border-color: var(--phoebe-secondary) !important;
+    color: var(--phoebe-dark-brown) !important;
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus {
+    background-color: var(--phoebe-coffee-light) !important;
+    border-color: var(--phoebe-coffee-light) !important;
+    color: #fff !important;
+}
+
+/* Flat Colors - Updated to theme colors */
+.bg-flat-color-1,
+.flat-color-1 {
+    background: var(--phoebe-primary) !important;
+    color: var(--phoebe-dark-brown) !important;
+}
+
+.bg-flat-color-2,
+.flat-color-2 {
+    background: var(--phoebe-secondary) !important;
+    color: var(--phoebe-dark-brown) !important;
+}
+
+.bg-flat-color-3,
+.flat-color-3 {
+    background: var(--phoebe-coffee-light) !important;
+    color: #fff !important;
+}
+
+.bg-flat-color-4,
+.flat-color-4 {
+    background: var(--phoebe-brown) !important;
+    color: #fff !important;
+}
+
+.bg-flat-color-5,
+.flat-color-5 {
+    background: var(--phoebe-coffee-dark) !important;
+    color: #fff !important;
+}
+
+.bg-flat-color-6,
+.flat-color-6 {
+    background: var(--phoebe-dark-brown) !important;
+    color: #fff !important;
+}
+
+/* Links */
+a,
+.text-primary {
+    color: var(--phoebe-primary) !important;
+}
+
+a:hover,
+a:focus {
+    color: var(--phoebe-coffee-dark) !important;
+}
+
+/* Navbar Brand */
+.navbar-brand {
+    color: var(--phoebe-primary) !important;
+}
+
+.navbar-brand:hover {
+    color: var(--phoebe-coffee-dark) !important;
+}
+
+/* Tables */
+.table-primary,
+.table-primary > th,
+.table-primary > td {
+    background-color: var(--phoebe-primary) !important;
+    color: var(--phoebe-dark-brown) !important;
+}
+
+.table-hover tbody tr:hover {
+    background-color: var(--phoebe-secondary) !important;
+}
+
+/* Cards */
+.card-header.bg-primary {
+    background-color: var(--phoebe-primary) !important;
+    color: var(--phoebe-dark-brown) !important;
+}
+
+/* Progress Bars */
+.progress-bar {
+    background-color: var(--phoebe-primary) !important;
+}
+
+/* Pagination */
+.page-item.active .page-link {
+    background-color: var(--phoebe-primary) !important;
+    border-color: var(--phoebe-primary) !important;
+    color: var(--phoebe-dark-brown) !important;
+}
+
+.page-link {
+    color: var(--phoebe-primary) !important;
+}
+
+.page-link:hover {
+    color: var(--phoebe-coffee-dark) !important;
+}
+
+/* Breadcrumbs */
+.breadcrumb-item.active {
+    color: var(--phoebe-coffee-dark) !important;
+}
+
+/* Custom Select */
+.cs-skin-elastic > span {
+    background-color: var(--phoebe-secondary) !important;
+}
+
+.cs-skin-elastic .cs-options > ul::before {
+    background: var(--phoebe-secondary) !important;
+}
+
+.cs-skin-elastic .cs-options span:hover,
+.cs-skin-elastic .cs-options li.cs-focus span,
+.cs-skin-elastic .cs-options .cs-selected span {
+    color: var(--phoebe-dark-brown) !important;
+    background-color: var(--phoebe-primary) !important;
+}
+
+/* DataTables */
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+    background: var(--phoebe-primary) !important;
+    border-color: var(--phoebe-primary) !important;
+    color: var(--phoebe-dark-brown) !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: var(--phoebe-secondary) !important;
+    border-color: var(--phoebe-secondary) !important;
+    color: var(--phoebe-dark-brown) !important;
+}
+
+/* Form Controls */
+.form-control:focus {
+    border-color: var(--phoebe-primary) !important;
+    box-shadow: 0 0 0 0.2rem rgba(232, 180, 184, 0.25) !important;
+}
+
+.custom-control-input:checked ~ .custom-control-label::before {
+    background-color: var(--phoebe-primary) !important;
+    border-color: var(--phoebe-primary) !important;
+}
+
+/* Sidebar/Navigation */
+.left-sidebar {
+    background-color: var(--phoebe-dark-brown) !important;
+}
+
+.menu-list a.active,
+.menu-list a:hover {
+    background-color: var(--phoebe-primary) !important;
+    color: var(--phoebe-dark-brown) !important;
+}
+
+/* Header */
+.header {
+    background-color: var(--phoebe-secondary) !important;
+}
+
+/* Navbar Header */
+.right-panel .navbar-header {
+    background-color: transparent !important;
+}
+
+/* User Actions Buttons */
+.user-action-buttons {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    white-space: nowrap;
+}
+
+.user-action-buttons .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+}
+
+/* Status Colors */
+.text-success {
+    color: var(--phoebe-coffee-dark) !important;
+}
+
+.bg-success {
+    background-color: var(--phoebe-coffee-dark) !important;
+}
+
+.text-info {
+    color: var(--phoebe-coffee-light) !important;
+}
+
+.bg-info {
+    background-color: var(--phoebe-coffee-light) !important;
+}
+
+.text-warning {
+    color: var(--phoebe-brown) !important;
+}
+
+.bg-warning {
+    background-color: var(--phoebe-brown) !important;
+}
+

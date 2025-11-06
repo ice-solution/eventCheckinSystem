@@ -314,10 +314,12 @@
                                                 <input type="checkbox" class="checkin-toggle" data-_id="<%= user._id %>" <%= user.isCheckIn ? 'checked' : '' %> />
                                             </td>
                                             <td>
-                                                <button class="btn btn-info btn-sm resend-email" data-_id="<%= user._id %>" title="重發歡迎電郵">
-                                                    <i class="fa fa-envelope"></i>
-                                                </button>
-                                                <button class="btn btn-danger btn-sm delete-user" data-_id="<%= user._id %>">Delete</button>
+                                                <div class="user-action-buttons">
+                                                    <button class="btn btn-info btn-sm resend-email" data-_id="<%= user._id %>" title="重發歡迎電郵">
+                                                        <i class="fa fa-envelope"></i>
+                                                    </button>
+                                                    <button class="btn btn-danger btn-sm delete-user" data-_id="<%= user._id %>">Delete</button>
+                                                </div>
                                             </td>
                                         </tr>
                                     <% }) %>
@@ -750,7 +752,12 @@
                     
                     // 添加Checked In和Actions列
                     newRow.push('<input type="checkbox" class="checkin-toggle" data-_id="' + response._id + '" />');
-                    newRow.push('<button class="btn btn-danger delete-user" data-_id="' + response._id + '">Delete</button>');
+                    newRow.push('<div class="user-action-buttons">'
+                        + '<button class="btn btn-info btn-sm resend-email" data-_id="' + response._id + '" title="重發歡迎電郵">'
+                        + '<i class="fa fa-envelope"></i>'
+                        + '</button>'
+                        + '<button class="btn btn-danger btn-sm delete-user" data-_id="' + response._id + '">Delete</button>'
+                        + '</div>');
                     
                     const rowNode = table.row.add(newRow).draw().node();
                     $(rowNode).addClass('checkin-false').attr('data-id', response._id);

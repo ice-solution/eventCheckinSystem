@@ -1,0 +1,76 @@
+/* Phoebe Version - Neverland.Co Limited Color Theme for Exvent */
+
+:root {
+    --phoebe-primary: #E8B4B8;
+    --phoebe-secondary: #EED6D3;
+    --phoebe-coffee-light: #A49393;
+    --phoebe-coffee-dark: #67595E;
+    --phoebe-brown: #D48C70;
+    --phoebe-dark-brown: #5B4A43;
+}
+
+/* Button Styles */
+.btn-5,
+.btn-primary {
+    background-color: var(--phoebe-primary) !important;
+    border-color: var(--phoebe-primary) !important;
+    color: var(--phoebe-dark-brown) !important;
+}
+
+.btn-5:hover,
+.btn-primary:hover {
+    background-color: var(--phoebe-coffee-dark) !important;
+    border-color: var(--phoebe-coffee-dark) !important;
+    color: #fff !important;
+}
+
+/* Links */
+a {
+    color: var(--phoebe-primary) !important;
+}
+
+a:hover {
+    color: var(--phoebe-coffee-dark) !important;
+}
+
+/* Header */
+.exvent-header-2 {
+    background-color: var(--phoebe-secondary) !important;
+}
+
+/* Hero Section */
+.hero-btn .btn-5 {
+    background-color: var(--phoebe-primary) !important;
+    color: var(--phoebe-dark-brown) !important;
+}
+
+/* Counter */
+.counter-numb {
+    color: var(--phoebe-primary) !important;
+}
+
+/* Schedule */
+.schedule-title {
+    color: var(--phoebe-primary) !important;
+}
+
+/* Pricing */
+.price-card .price-btn {
+    background-color: var(--phoebe-primary) !important;
+    color: var(--phoebe-dark-brown) !important;
+}
+
+.price-header.pink-bg {
+    background-color: var(--phoebe-primary) !important;
+}
+
+/* Footer */
+.footer-section {
+    background-color: var(--phoebe-dark-brown) !important;
+}
+
+.footer .btn-primary {
+    background-color: var(--phoebe-primary) !important;
+    color: var(--phoebe-dark-brown) !important;
+}
+
