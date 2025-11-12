@@ -195,6 +195,20 @@ exports.sendEmailById = async (req, res) => {
   return res.status(400).send("請提供有效的收件人電子郵件地址！")
 }
 
+function getPublicBaseUrl(req) {
+  if (process.env.DOMAIN) {
+    const configured = process.env.DOMAIN.trim();
+    return configured.endsWith('/') ? configured.slice(0, -1) : configured;
+  }
+
+  const forwardedProto = req.headers['x-forwarded-proto'];
+  const forwardedHost = req.headers['x-forwarded-host'] || req.headers['x-forwarded-server'];
+  const protocol = forwardedProto ? forwardedProto.split(',')[0].trim() : req.protocol;
+  const host = forwardedHost ? forwardedHost.split(',')[0].trim() : req.get('host');
+
+  return `${protocol}://${host}`;
+}
+
 exports.uploadEmailTemplateImage = async (req, res) => {
   upload.single("file")(req, res, (err) => {
     if (err) {
@@ -204,11 +218,9 @@ exports.uploadEmailTemplateImage = async (req, res) => {
     if (!req.file) {
       return res.status(400).send("請選擇一個圖片文件！")
     }
-    
-    // 構建完整的絕對 URL
-    const protocol = req.protocol;
-    const host = req.get('host');
-    const imageUrl = `${protocol}://${host}/uploads/email_template_images/${req.file.filename}`;
+  
+    const baseUrl = getPublicBaseUrl(req);
+    const imageUrl = `${baseUrl}/uploads/email_template_images/${req.file.filename}`;
     
     res.status(200).json({ location: imageUrl })
   })
