@@ -221,6 +221,35 @@ exports.sendEmail = async (user, event) => {
     }
 }
 
+// 重新發送歡迎郵件
+exports.resendWelcomeEmail = async (req, res) => {
+    const { eventId, userId } = req.params;
+
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        const user = event.users.id(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (!user.email) {
+            return res.status(400).json({ message: 'User does not have an email address' });
+        }
+
+        const userData = typeof user.toObject === 'function' ? user.toObject() : user;
+        await exports.sendEmail(userData, event);
+
+        res.status(200).json({ message: 'Welcome email resent successfully' });
+    } catch (error) {
+        console.error('Error resending welcome email:', error);
+        res.status(500).json({ message: 'Error resending welcome email' });
+    }
+};
+
 // 發送支付確認郵件
 exports.sendPaymentConfirmationEmail = async (user, event, transaction) => {
     try {

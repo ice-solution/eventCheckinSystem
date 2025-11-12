@@ -48,9 +48,13 @@ router.get('/:eventId', eventsController.getEventUsersByEventID);
 router.get('/:eventId/luckydraw', eventsController.renderLuckydrawPage); // 使用控制器函數
 router.get('/:eventId/import', importController.getImportUserPage);
 router.post('/:eventId/import', upload, importController.importUsers);
+router.get('/:eventId/import/sample', importController.downloadSampleFile);
 
 router.post('/:eventId/users', eventsController.addUserToEvent);
 // router.put('/:eventId/users/:userEmail', eventsController.updateUserInEvent);
+
+// Resend welcome email
+router.post('/:eventId/users/:userId/resend-email', eventsController.resendWelcomeEmail);
 
 // Check-in 用戶
 router.put('/:eventId/users/:userId/checkin', eventsController.checkInUser);

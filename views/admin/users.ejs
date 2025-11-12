@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
     <title>User List</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
@@ -24,6 +25,11 @@
             background-color: rgba(255, 255, 255, 0.9);
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .user-action-buttons {
+            display: inline-flex;
+            gap: 6px;
+            align-items: center;
         }
     </style>
 </head>
@@ -314,7 +320,12 @@
                                                 <input type="checkbox" class="checkin-toggle" data-_id="<%= user._id %>" <%= user.isCheckIn ? 'checked' : '' %> />
                                             </td>
                                             <td>
-                                                <button class="btn btn-danger delete-user" data-_id="<%= user._id %>">Delete</button>
+                                                <div class="user-action-buttons">
+                                                    <button class="btn btn-outline-primary resend-email" data-_id="<%= user._id %>" title="Resend welcome email">
+                                                        <i class="fa fa-envelope mr-1"></i> Resend Welcome Email
+                                                    </button>
+                                                    <button class="btn btn-danger delete-user" data-_id="<%= user._id %>">Delete</button>
+                                                </div>
                                             </td>
                                         </tr>
                                     <% }) %>
@@ -368,6 +379,31 @@
                     searchable: false
                 }
             ]
+        });
+
+        // Resend welcome email functionality
+        $('#usersTable tbody').on('click', '.resend-email', function() {
+            const _id = $(this).data('_id');
+            const event_id = '<%= event._id %>';
+            const button = $(this);
+            const originalHtml = button.html();
+
+            button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+
+            $.ajax({
+                url: `/events/${event_id}/users/${_id}/resend-email`,
+                type: 'POST',
+                success: function() {
+                    showAlert('success', 'Welcome email resent successfully!');
+                },
+                error: function(xhr) {
+                    console.error('Error resending email:', xhr.responseText);
+                    showAlert('danger', 'Failed to resend email. Please try again.');
+                },
+                complete: function() {
+                    button.prop('disabled', false).html(originalHtml);
+                }
+            });
         });
 
         // Batch delete functionality
@@ -747,7 +783,7 @@
                     
                     // 添加Checked In和Actions列
                     newRow.push('<input type="checkbox" class="checkin-toggle" data-_id="' + response._id + '" />');
-                    newRow.push('<button class="btn btn-danger delete-user" data-_id="' + response._id + '">Delete</button>');
+                    newRow.push('<div class="user-action-buttons"><button class="btn btn-outline-primary resend-email" data-_id="' + response._id + '" title="Resend welcome email"><i class="fa fa-envelope mr-1"></i> Resend Welcome Email</button><button class="btn btn-danger delete-user" data-_id="' + response._id + '">Delete</button></div>');
                     
                     const rowNode = table.row.add(newRow).draw().node();
                     $(rowNode).addClass('checkin-false').attr('data-id', response._id);

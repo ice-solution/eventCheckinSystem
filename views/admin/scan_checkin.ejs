@@ -13,8 +13,9 @@
         body {
             background-color: #f8f9fa;
         }
-        .container {
+        .scan-container {
             display: flex;
+            flex-wrap: nowrap;
             margin-top: 20px;
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -25,12 +26,14 @@
             padding: 20px; /* Increased padding */
             background-color: #ffffff;
             border-radius: 10px 0 0 10px;
+            overflow: hidden;
         }
         .user-details {
             width: 30%;
             padding: 20px; /* Increased padding */
             background-color: #ffffff;
             border-radius: 0 10px 10px 0;
+            border-left: 1px solid #dee2e6;
         }
         h4 {
             margin-top: 0;
@@ -58,11 +61,43 @@
         #printButton {
             display: none;
         }
+        @media (max-width: 992px) {
+            .scan-container {
+                flex-direction: column;
+                box-shadow: none;
+            }
+            .user-list,
+            .user-details {
+                width: 100%;
+                border-radius: 10px;
+                border: none;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+                margin-bottom: 20px;
+            }
+            .user-details {
+                margin-bottom: 0;
+            }
+        }
+        @media (max-width: 576px) {
+            .user-list,
+            .user-details {
+                padding: 15px;
+            }
+            #userTable {
+                font-size: 14px;
+            }
+            #userDetails h4 {
+                font-size: 18px;
+            }
+            #userDetails p {
+                font-size: 14px;
+            }
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
+<div class="scan-container container-fluid">
     <div class="user-list">
         <h4>Guest List</h4>
         
@@ -71,32 +106,34 @@
         <button id="refreshListButton" class="btn btn-info mt-3 ml-2" onclick="refreshUserList()">Refresh List</button>
         <!-- <button id="addGuestButton" class="btn btn-success mt-3" data-toggle="modal" data-target="#addGuestModal">Add Guest</button> -->
         
-        <table id="userTable" class="table table-striped table-bordered">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Table</th>
-                    <th>Company</th>
-                    <th>Phone</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody id="userList">
-                <% event.users.forEach(user => { %>
-                    <tr onclick="showDetails('<%= user.name %>', '<%= user.table %>', '<%= user.company %>', '<%= user.phone %>', <%= user.isCheckIn %>, '<%= user._id %>')">
-                        <td><%= user.name %></td>
-                        <td><%= typeof user.table !== 'undefined' ? user.table : '' %></td>
-                        <td><%= typeof user.company !== 'undefined' ? user.company : '' %></td>
-                        <td><%= user.phone %></td>
-                        <td>
-                            <span class="<%= user.isCheckIn ? 'text-primary' : 'text-secondary' %>">
-                                <%= user.isCheckIn ? 'Checked In' : 'Check In' %>
-                            </span>
-                        </td>
+        <div class="table-responsive mt-3">
+            <table id="userTable" class="table table-striped table-bordered mb-0">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Table</th>
+                        <th>Company</th>
+                        <th>Phone</th>
+                        <th>Status</th>
                     </tr>
-                <% }); %>
-            </tbody>
-        </table>
+                </thead>
+                <tbody id="userList">
+                    <% event.users.forEach(user => { %>
+                        <tr onclick="showDetails('<%= user.name %>', '<%= user.table %>', '<%= user.company %>', '<%= user.phone %>', <%= user.isCheckIn %>, '<%= user._id %>')">
+                            <td><%= user.name %></td>
+                            <td><%= typeof user.table !== 'undefined' ? user.table : '' %></td>
+                            <td><%= typeof user.company !== 'undefined' ? user.company : '' %></td>
+                            <td><%= user.phone %></td>
+                            <td>
+                                <span class="<%= user.isCheckIn ? 'text-primary' : 'text-secondary' %>">
+                                    <%= user.isCheckIn ? 'Checked In' : 'Check In' %>
+                                </span>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
         
     </div>
     <div class="user-details" id="userDetails">

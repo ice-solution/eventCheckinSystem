@@ -23,14 +23,35 @@
                                 <strong class="card-title">Import Users</strong>
                             </div>
                             <div class="card-body">
+                                <p>You can only import columns that exist in the current registration form. Use the column names below as the first row (headers) in your Excel file.</p>
+                                
+                                <% if (importFields && importFields.length > 0) { %>
+                                    <div class="mb-3">
+                                        <h5>Required columns</h5>
+                                        <ul>
+                                            <% importFields.forEach(field => { %>
+                                                <li><strong><%= field.label %></strong> (<code><%= field.fieldName %></code>)</li>
+                                            <% }); %>
+                                        </ul>
+                                    </div>
+                                <% } else { %>
+                                    <div class="alert alert-warning">
+                                        This event does not have any visible form fields. Please configure the registration form before importing users.
+                                    </div>
+                                <% } %>
+
                                 <form action="/events/<%= event._id %>/import" method="POST" enctype="multipart/form-data">
                                     <div class="form-group">
                                         <label for="fileInput">Select xlsx File:</label>
-                                        <input type="file" class="form-control" id="fileInput" name="file" accept=".xlsx" required>
+                                        <input type="file" class="form-control" id="fileInput" name="file" accept=".xlsx" <%= (importFields && importFields.length > 0) ? 'required' : 'disabled' %>>
                                     </div>
-                                    <button type="submit" class="btn btn-primary">Import</button>
+                                    <button type="submit" class="btn btn-primary" <%= (importFields && importFields.length > 0) ? '' : 'disabled' %>>Import</button>
                                     <a href="/events/<%= event._id%>" class="btn btn-secondary">Return to User List</a>
-                                    <a href="/sample_user.xlsx" class="btn btn-info">Download Sample File</a>
+                                    <% if (importFields && importFields.length > 0) { %>
+                                        <a href="/events/<%= event._id %>/import/sample" class="btn btn-info">Download Sample File</a>
+                                    <% } else { %>
+                                        <span class="btn btn-info disabled" aria-disabled="true">Download Sample File</span>
+                                    <% } %>
                                 </form>
                             </div>
                         </div>

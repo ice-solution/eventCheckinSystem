@@ -21,7 +21,10 @@
                     <a href="/events/<%=eventId%>"> <i class="menu-icon ti-email"></i>RSVP </a>
                 </li>
                 <li>
-                    <a href="/votes/<%=eventId%>/admin"> <i class="menu-icon fa fa-vote-yea"></i>Vote Management</a>
+                    <a href="/events/<%=eventId%>/emailTemplate"> <i class="menu-icon ti-email"></i>Event template email </a>
+                </li>
+                <li>
+                    <a href="/events/<%=eventId%>/qrcodeLogin" target="_blank"> <i class="menu-icon fa fa-qrcode"></i>QR code login page</a>
                 </li>
                 <li class="menu-item-has-children dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <i class="menu-icon fa fa-bar-chart"></i>Lucky Draw</a>
@@ -29,14 +32,11 @@
                         <li><i class="menu-icon fa fa-rotate-left"></i><a href="/events/<%=eventId%>/luckydraw/list">Luckydraw List</a></li>
                         <li><i class="menu-icon fa fa-area-chart"></i><a target="_blank" href="/events/<%=eventId%>/luckydraw">Open LuckyDraw Page</a></li>
                         <li><i class="menu-icon fa fa-cog"></i><a href="/events/<%=eventId%>/luckydraw_setting">LuckyDraw Setting</a></li>
-                                                            <li><i class="menu-icon fa fa-gift"></i><a href="/prizes/<%=eventId%>/prizes/list">Prize Management</a></li>
+                        <li><i class="menu-icon fa fa-gift"></i><a href="/prizes/<%=eventId%>/prizes/list">Prize Management</a></li>
                     </ul>
                 </li>
                 <li>
-                    <a href="/events/<%=eventId%>/emailTemplate"> <i class="menu-icon ti-email"></i>Event template email </a>
-                </li>
-                <li>
-                    <a href="/events/<%=eventId%>/transactions"> <i class="menu-icon fa fa-credit-card"></i>Transaction Records </a>
+                    <a href="/votes/<%=eventId%>/admin"> <i class="menu-icon fa fa-vote-yea"></i>Vote Management</a>
                 </li>
                 <li class="menu-item-has-children dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <i class="menu-icon fa fa-globe"></i>Website Content</a>
@@ -48,7 +48,7 @@
                     </ul>
                 </li>
                 <li>
-                    <a href="/events/<%=eventId%>/qrcodeLogin" target="_blank"> <i class="menu-icon fa fa-qrcode"></i>QRcode Login page</a>
+                    <a href="/events/<%=eventId%>/transactions"> <i class="menu-icon fa fa-credit-card"></i>Transaction record</a>
                 </li>
                 
                 <% } %>
