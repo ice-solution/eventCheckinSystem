@@ -55,6 +55,28 @@
             width: 80%;
             max-width: 600px;
         }
+        #reader {
+            text-align: center !important;
+            margin: 0 auto !important;
+        }
+        #reader > div {
+            margin: 0 auto !important;
+            text-align: center !important;
+            display: inline-block !important;
+        }
+        #reader video,
+        #reader canvas,
+        #reader img {
+            margin: 0 auto !important;
+            display: block !important;
+            max-width: 100% !important;
+        }
+        #reader__dashboard,
+        #reader__camera_selection,
+        #reader__scan_region {
+            margin: 0 auto !important;
+            text-align: center !important;
+        }
         #checkInButton {
             display: none;
         }
@@ -110,20 +132,79 @@
             <table id="userTable" class="table table-striped table-bordered mb-0">
                 <thead>
                     <tr>
-                        <th>Name</th>
-                        <th>Table</th>
-                        <th>Company</th>
-                        <th>Phone</th>
+                        <% if (formConfig && formConfig.sections) { %>
+                            <% formConfig.sections.forEach(section => { %>
+                                <% if (section.visible && section.fields) { %>
+                                    <% section.fields.forEach(field => { %>
+                                        <% if (field.visible) { %>
+                                            <th>
+                                                <% 
+                                                let displayLabel = '';
+                                                if (typeof field.label === 'string') {
+                                                    displayLabel = field.label;
+                                                } else if (field.label && field.label[formConfig.defaultLanguage]) {
+                                                    displayLabel = field.label[formConfig.defaultLanguage];
+                                                } else if (field.label && field.label.zh) {
+                                                    displayLabel = field.label.zh;
+                                                } else {
+                                                    displayLabel = field.fieldName || '';
+                                                }
+                                                %>
+                                                <%= displayLabel %>
+                                            </th>
+                                        <% } %>
+                                    <% }); %>
+                                <% } %>
+                            <% }); %>
+                        <% } else { %>
+                            <!-- 預設列（如果沒有formConfig） -->
+                            <th>Email</th>
+                            <th>Name</th>
+                            <th>Phone</th>
+                        <% } %>
+                        <th>Point</th>
                         <th>Status</th>
                     </tr>
                 </thead>
                 <tbody id="userList">
                     <% event.users.forEach(user => { %>
-                        <tr onclick="showDetails('<%= user.name %>', '<%= user.table %>', '<%= user.company %>', '<%= user.phone %>', <%= user.isCheckIn %>, '<%= user._id %>')">
-                            <td><%= user.name %></td>
-                            <td><%= typeof user.table !== 'undefined' ? user.table : '' %></td>
-                            <td><%= typeof user.company !== 'undefined' ? user.company : '' %></td>
-                            <td><%= user.phone %></td>
+                        <% 
+                        // 構建參數字符串用於 showDetails 函數
+                        let detailParams = '';
+                        if (formConfig && formConfig.sections) {
+                            const params = [];
+                            formConfig.sections.forEach(section => {
+                                if (section.visible && section.fields) {
+                                    section.fields.forEach(field => {
+                                        if (field.visible) {
+                                            params.push("'" + (user[field.fieldName] || '').toString().replace(/'/g, "\\'") + "'");
+                                        }
+                                    });
+                                }
+                            });
+                            detailParams = params.join(', ') + ', ' + user.isCheckIn + ', \'' + user._id + '\', ' + (user.point || 0);
+                        } else {
+                            detailParams = "'" + (user.name || '').toString().replace(/'/g, "\\'") + "', '" + (user.table || '').toString().replace(/'/g, "\\'") + "', '" + (user.company || '').toString().replace(/'/g, "\\'") + "', '" + (user.phone || '').toString().replace(/'/g, "\\'") + "', " + user.isCheckIn + ", '" + user._id + "', " + (user.point || 0);
+                        }
+                        %>
+                        <tr data-user-id="<%= user._id %>" onclick="showDetailsFromRow(this)">
+                            <% if (formConfig && formConfig.sections) { %>
+                                <% formConfig.sections.forEach(section => { %>
+                                    <% if (section.visible && section.fields) { %>
+                                        <% section.fields.forEach(field => { %>
+                                            <% if (field.visible) { %>
+                                                <td><%= user[field.fieldName] || '-' %></td>
+                                            <% } %>
+                                        <% }); %>
+                                    <% } %>
+                                <% }); %>
+                            <% } else { %>
+                                <!-- 預設列（如果沒有formConfig） -->
+                                <td><%= user.email || '-' %></td>
+                                <td><%= user.name || '-' %></td>
+                                <td><%= user.phone || '-' %></td>
+                            <% } %>
+                            <td><%= user.point || 0 %></td>
                             <td>
                                 <span class="<%= user.isCheckIn ? 'text-primary' : 'text-secondary' %>">
                                     <%= user.isCheckIn ? 'Checked In' : 'Check In' %>
@@ -189,9 +270,40 @@
 <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
 <script>
     const eventId = "<%= event._id %>"; // Get event ID from backend
+    const formConfig = <%- JSON.stringify(formConfig || null) %>; // Get form config from backend
     const html5QrCode = new Html5Qrcode("reader");
     let scanning = false;
     let currentUserId = null; // Store current user ID for check-in
+    
+    // Helper function to get visible fields from formConfig
+    function getVisibleFields() {
+        const fields = [];
+        if (formConfig && formConfig.sections) {
+            formConfig.sections.forEach(section => {
+                if (section.visible && section.fields) {
+                    section.fields.forEach(field => {
+                        if (field.visible) {
+                            fields.push(field);
+                        }
+                    });
+                }
+            });
+        }
+        return fields;
+    }
+    
+    // Helper function to get field label
+    function getFieldLabel(field) {
+        if (!formConfig) return field.fieldName || '';
+        if (typeof field.label === 'string') {
+            return field.label;
+        } else if (field.label && field.label[formConfig.defaultLanguage]) {
+            return field.label[formConfig.defaultLanguage];
+        } else if (field.label && field.label.zh) {
+            return field.label.zh;
+        }
+        return field.fieldName || '';
+    }
 
     // Fetch user data
     function refreshUserList() {
@@ -220,32 +332,39 @@
             success: function(users) {
                 console.log('Fetched users:', users); // Debug log
                 // Update DataTable data without recreating
+                const visibleFields = getVisibleFields();
+                
                 if ($.fn.DataTable.isDataTable('#userTable')) {
                     const table = $('#userTable').DataTable();
                     table.clear();
                     users.forEach(user => {
-                        const safeName = user.name || '';
-                        const safeTable = (user.table && user.table !== 'undefined') ? user.table : '';
-                        const safeCompany = (user.company && user.company !== 'undefined') ? user.company : '';
-                        const safePhone = (user.phone && user.phone !== 'undefined') ? user.phone : '';
+                        const rowData = [];
                         
-                        table.row.add([
-                            safeName,
-                            safeTable,
-                            safeCompany,
-                            safePhone,
-                            `<span class="${user.isCheckIn ? 'text-primary' : 'text-secondary'}">${user.isCheckIn ? 'Checked In' : 'Check In'}</span>`
-                        ]);
+                        // Add data fields based on formConfig
+                        if (visibleFields.length > 0) {
+                            visibleFields.forEach(field => {
+                                const value = user[field.fieldName] || '-';
+                                rowData.push(value);
+                            });
+                        } else {
+                            // Default fields if no formConfig
+                            rowData.push(user.email || '-');
+                            rowData.push(user.name || '-');
+                            rowData.push(user.phone || '-');
+                        }
+                        
+                        // Add Point and Status columns
+                        rowData.push(user.point || 0);
+                        rowData.push(`<span class="${user.isCheckIn ? 'text-primary' : 'text-secondary'}">${user.isCheckIn ? 'Checked In' : 'Check In'}</span>`);
+                        
+                        // Create row with user ID stored in data attribute
+                        const rowNode = table.row.add(rowData).draw().node();
+                        $(rowNode).attr('data-user-id', user._id);
                     });
-                    table.draw();
                     
                     // Add click event handlers for table rows
                     $('#userTable tbody').off('click', 'tr').on('click', 'tr', function() {
-                        const rowData = table.row(this).data();
-                        if (rowData) {
-                            const user = users[$(this).index()];
-                            showDetails(user.name, user.table, user.company, user.phone, user.isCheckIn, user._id);
-                        }
+                        showDetailsFromRow(this);
                     });
                 } else {
                     // Initialize DataTable if not exists
@@ -256,17 +375,25 @@
                             {
                                 "targets": -1, // Last column (Status)
                                 "orderable": false
+                            },
+                            {
+                                "targets": -2, // Point column
+                                "orderable": false
                             }
                         ]
                     });
                     
+                    // Add data-user-id to existing rows
+                    $('#userTable tbody tr').each(function() {
+                        const userId = $(this).attr('data-user-id');
+                        if (userId) {
+                            $(this).attr('data-user-id', userId);
+                        }
+                    });
+                    
                     // Add click event handlers for table rows
                     $('#userTable tbody').off('click', 'tr').on('click', 'tr', function() {
-                        const rowData = table.row(this).data();
-                        if (rowData) {
-                            const user = users[$(this).index()];
-                            showDetails(user.name, user.table, user.company, user.phone, user.isCheckIn, user._id);
-                        }
+                        showDetailsFromRow(this);
                     });
                 }
             },
@@ -276,25 +403,85 @@
         });
     }
 
-    // Show user details
-    function showDetails(name, table, company, phone, isCheckIn, userId) {
-        console.log(table);
+    // Show user details from row click
+    function showDetailsFromRow(rowElement) {
+        const userId = $(rowElement).data('user-id');
+        if (!userId) {
+            console.error('User ID not found in row');
+            return;
+        }
         
-        // 處理 undefined 值，避免顯示 "undefined"
-        const safeTable = (table && table !== 'undefined') ? table : '';
-        const safeCompany = (company && company !== 'undefined') ? company : '';
-        const safePhone = (phone && phone !== 'undefined') ? phone : '';
-        const safeName = (name && name !== 'undefined') ? name : '';
+        // Fetch full user data
+        fetch(`/events/${eventId}/users/${userId}`)
+            .then(response => response.json())
+            .then(user => {
+                showDetailsFromUser(user);
+            })
+            .catch(error => {
+                console.error('Error fetching user:', error);
+                alert('Failed to load user details');
+            });
+    }
+    
+    // Show user details from user object
+    function showDetailsFromUser(user) {
+        if (!user) {
+            console.error('User data is empty');
+            return;
+        }
         
-        document.getElementById('detailsContent').innerHTML = `
-            <h4>${safeName}</h4>
-            <p>Table: ${safeTable}</p>
-            <p>Company: ${safeCompany}</p>
-            <p>Phone: ${safePhone}</p>
-            <p>Checked In: ${isCheckIn ? 'Yes' : 'No'}</p>`
-        document.getElementById('checkInButton').style.display = isCheckIn ? 'none' : 'inline-block'; // Show button based on check-in status
-        document.getElementById('printButton').style.display = isCheckIn ? 'inline-block' : 'none';
-        currentUserId = userId; // Store the current user ID for check-in
+        // 構建詳細信息HTML，根據formConfig動態顯示欄位
+        let detailsHTML = `<h4>${user.name || '-'}</h4>`;
+        
+        const visibleFields = getVisibleFields();
+        
+        if (visibleFields.length > 0) {
+            // 根據formConfig顯示欄位
+            visibleFields.forEach(field => {
+                const fieldValue = user[field.fieldName];
+                if (fieldValue && fieldValue !== 'undefined' && fieldValue !== '-') {
+                    const fieldLabel = getFieldLabel(field);
+                    detailsHTML += `<p>${fieldLabel}: ${fieldValue}</p>`;
+                }
+            });
+        } else {
+            // 預設欄位（如果沒有formConfig）
+            if (user.email && user.email !== 'undefined') {
+                detailsHTML += `<p>Email: ${user.email}</p>`;
+            }
+            if (user.table && user.table !== 'undefined') {
+                detailsHTML += `<p>Table: ${user.table}</p>`;
+            }
+            if (user.company && user.company !== 'undefined') {
+                detailsHTML += `<p>Company: ${user.company}</p>`;
+            }
+            if (user.phone && user.phone !== 'undefined') {
+                detailsHTML += `<p>Phone: ${user.phone}</p>`;
+            }
+        }
+        
+        detailsHTML += `<p>Point: ${user.point || 0}</p>`;
+        detailsHTML += `<p>Checked In: ${user.isCheckIn ? 'Yes' : 'No'}</p>`;
+        
+        document.getElementById('detailsContent').innerHTML = detailsHTML;
+        document.getElementById('checkInButton').style.display = user.isCheckIn ? 'none' : 'inline-block';
+        document.getElementById('printButton').style.display = user.isCheckIn ? 'inline-block' : 'none';
+        currentUserId = user._id; // Store the current user ID for check-in
+    }
+    
+    // Show user details (legacy function for compatibility)
+    function showDetails(name, table, company, phone, isCheckIn, userId, point) {
+        // 這是一個兼容性函數，現在直接從API獲取完整用戶數據
+        if (userId) {
+            fetch(`/events/${eventId}/users/${userId}`)
+                .then(response => response.json())
+                .then(user => {
+                    showDetailsFromUser(user);
+                })
+                .catch(error => {
+                    console.error('Error fetching user:', error);
+                });
+        }
     }
 
     // Check in user
@@ -376,7 +563,7 @@
                                         console.log('Check-in successful:', response); // Debug log
                                         // Update the user object with new check-in status
                                         const updatedUser = { ...user, isCheckIn: true };
-                                        showDetails(updatedUser.name, updatedUser.table, updatedUser.company, updatedUser.phone, true, updatedUser._id);
+                                        showDetails(updatedUser.name, updatedUser.table, updatedUser.company, updatedUser.phone, true, updatedUser._id, updatedUser.point || 0);
                                         alert('User checked in successfully!');
                                         // Update button states first
                                         document.getElementById('checkInButton').style.display = 'none';
@@ -393,7 +580,7 @@
                                 });
                             } else {
                                 // User is already checked in
-                                showDetails(user.name, user.table, user.company, user.phone, user.isCheckIn, user._id);
+                                showDetails(user.name, user.table, user.company, user.phone, user.isCheckIn, user._id, user.point || 0);
                                 alert('User is already checked in.');
                                 fetchUsers();
                             }

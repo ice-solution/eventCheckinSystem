@@ -301,21 +301,21 @@
                                             <td><input type="checkbox" class="user-select" data-_id="<%= user._id %>" /></td>
                                             <% if (formConfig && formConfig.sections) { %>
                                                 <% formConfig.sections.forEach(section => { %>
-                                                    <% if (section.visible && section.fields) { %>
-                                                        <% section.fields.forEach(field => { %>
-                                                            <% if (field.visible) { %>
-                                                                <td><%= user[field.fieldName] || '-' %></td>
-                                                            <% } %>
-                                                        <% }); %>
+                                            <% if (section.visible && section.fields) { %>
+                                                <% section.fields.forEach(field => { %>
+                                                    <% if (field.visible) { %>
+                                                        <td data-field-name="<%= field.fieldName %>"><%= user[field.fieldName] || '-' %></td>
                                                     <% } %>
                                                 <% }); %>
-                                            <% } else { %>
-                                                <!-- 預設列（如果沒有formConfig） -->
-                                                <td><%= user.email %></td>
-                                                <td><%= user.name %></td>
-                                                <td><%= user.company %></td>
-                                                <td><%= user.phone %></td>
                                             <% } %>
+                                                <% }); %>
+                                        <% } else { %>
+                                            <!-- 預設列（如果沒有formConfig） -->
+                                            <td data-field-name="email"><%= user.email %></td>
+                                            <td data-field-name="name"><%= user.name %></td>
+                                            <td data-field-name="company"><%= user.company %></td>
+                                            <td data-field-name="phone"><%= user.phone %></td>
+                                        <% } %>
                                             <td>
                                                 <input type="checkbox" class="checkin-toggle" data-_id="<%= user._id %>" <%= user.isCheckIn ? 'checked' : '' %> />
                                             </td>
@@ -485,10 +485,16 @@
         // Add inline editing functionality
         $('#usersTable tbody').on('dblclick', 'td:not(:last-child):not(:nth-last-child(2)):not(:first-child)', function() {
             const cell = $(this);
-            const currentText = cell.text();
-            const columnIndex = cell.index();
+            const currentText = cell.text().trim();
+            const fieldName = cell.data('field-name'); // 從 data-field-name 屬性獲取欄位名稱
             const row = cell.closest('tr');
             const userId = row.data('id');
+            
+            // 如果沒有 field-name 屬性，跳過編輯
+            if (!fieldName) {
+                console.log('No field-name attribute found for this cell');
+                return;
+            }
             
             // Create input field
             const input = $('<input>', {
@@ -508,30 +514,15 @@
                     cell.text(newValue);
                     
                     // Send update to server
-                    updateUserField(userId, columnIndex, newValue);
+                    updateUserField(userId, fieldName, newValue);
                 }
             });
         });
         
         // Function to update user field
-        function updateUserField(userId, columnIndex, newValue) {
-            const fieldMap = {
-                1: 'email',      // Column 1: email
-                2: 'name',       // Column 2: name
-                3: 'table',      // Column 3: table
-                4: 'company',    // Column 4: company
-                5: 'phone',      // Column 5: phone
-                6: 'role',       // Column 6: role
-                7: 'saluation',  // Column 7: saluation
-                8: 'industry',   // Column 8: industry
-                9: 'transport',  // Column 9: transport
-                10: 'meal',      // Column 10: meal
-                11: 'remarks'    // Column 11: remarks
-            };
-            
-            const fieldName = fieldMap[columnIndex];
+        function updateUserField(userId, fieldName, newValue) {
             if (!fieldName) {
-                console.log('No field mapping found for column index:', columnIndex);
+                console.log('No field name provided');
                 return;
             }
             
@@ -763,11 +754,13 @@
                     ];
                     
                     // 根據formConfig添加字段數據
+                    const fieldNames = []; // 用於記錄欄位名稱順序
                     <% if (formConfig && formConfig.sections) { %>
                         <% formConfig.sections.forEach(section => { %>
                             <% if (section.visible && section.fields) { %>
                                 <% section.fields.forEach(field => { %>
                                     <% if (field.visible) { %>
+                                        fieldNames.push('<%= field.fieldName %>');
                                         newRow.push(userData['<%= field.fieldName %>'] || '-');
                                     <% } %>
                                 <% }); %>
@@ -775,6 +768,10 @@
                         <% }); %>
                     <% } else { %>
                         // 預設字段
+                        fieldNames.push('email');
+                        fieldNames.push('name');
+                        fieldNames.push('company');
+                        fieldNames.push('phone');
                         newRow.push(userData.email || '-');
                         newRow.push(userData.name || '-');
                         newRow.push(userData.company || '-');
@@ -787,6 +784,14 @@
                     
                     const rowNode = table.row.add(newRow).draw().node();
                     $(rowNode).addClass('checkin-false').attr('data-id', response._id);
+                    
+                    // 為新行的每個數據欄位設置 data-field-name 屬性
+                    // 跳過第一個 checkbox 列、Checked In 列和 Actions 列
+                    $(rowNode).find('td').each(function(index) {
+                        if (index > 0 && index <= fieldNames.length) {
+                            $(this).attr('data-field-name', fieldNames[index - 1]);
+                        }
+                    });
                     
                     // Hide form and show button
                     $('#addUserForm').hide();

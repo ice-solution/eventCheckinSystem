@@ -31,6 +31,7 @@ const userSchema = new mongoose.Schema({
     meal: { type: String }, // 餐飲選擇
     remarks: { type: String }, // 備註
     paymentStatus: { type: String, enum: ['unpaid', 'pending', 'paid', 'failed'], default: 'unpaid' }, // 付款狀態
+    scannedTreasureItems: [{ type: mongoose.Schema.Types.ObjectId }] // 已掃描的 Treasure Hunt 項目 ID 列表
 });
 
 const winnerSchema = new mongoose.Schema({
@@ -49,6 +50,25 @@ const ticketSchema = new mongoose.Schema({
     datetime: { type: Date, required: true }
 });
 
+// 掃瞄加分用戶 schema
+const scanPointUserSchema = new mongoose.Schema({
+    name: { type: String, required: true }, // 用戶名稱
+    pin: { type: String, required: true }, // 6位數字 PIN 碼
+    created_at: { type: Date, default: Date.now }, // 創建時間
+    modified_at: { type: Date, default: Date.now } // 修改時間
+});
+
+// Treasure Hunt 項目 schema
+const treasureHuntItemSchema = new mongoose.Schema({
+    name: { type: String, required: true }, // 項目名稱
+    points: { type: Number, required: true, min: 1 }, // 積分數值
+    qrCodeData: { type: String, required: true }, // QR Code 數據（用於掃描識別）
+    qrCodeImage: { type: String }, // QR Code 圖片 URL（可選）
+    description: { type: String }, // 描述
+    created_at: { type: Date, default: Date.now }, // 創建時間
+    modified_at: { type: Date, default: Date.now } // 修改時間
+});
+
 const eventSchema = new mongoose.Schema({
     name: { type: String, required: true }, // 事件名稱
     from: { type: Date, required: true },   // 事件開始時間
@@ -62,7 +82,9 @@ const eventSchema = new mongoose.Schema({
     winners: [winnerSchema], // 新增 winners 字段
     isPaymentEvent: { type: Boolean, default: false }, // 是否為付費活動
     PaymentTickets: [ticketSchema], // 票券陣列
-    gameIds: [{ type: String }] // 新增 gameIds 陣列，存儲該事件開放的遊戲ID
+    gameIds: [{ type: String }], // 新增 gameIds 陣列，存儲該事件開放的遊戲ID
+    scanPointUsers: [scanPointUserSchema], // 掃瞄加分用戶列表
+    treasureHuntItems: [treasureHuntItemSchema] // Treasure Hunt 項目列表
 });
 
 // 在保存之前更新 modified_at 字段

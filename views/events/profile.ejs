@@ -61,12 +61,67 @@
             background: rgba(0, 0, 0, 0.8);
             justify-content: center;
             align-items: center;
+            z-index: 9999;
         }
         .scanner-content {
             background: white;
-            padding: 20px;
-            border-radius: 5px;
+            padding: 30px;
+            border-radius: 10px;
             text-align: center;
+            max-width: 500px;
+            width: 90%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #reader {
+            width: 100% !important;
+            max-width: 400px;
+            margin: 20px auto !important;
+            text-align: center !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+        }
+        #reader > div {
+            margin: 0 auto !important;
+            text-align: center !important;
+            width: 100% !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+        }
+        #reader video {
+            margin: 0 auto !important;
+            display: block !important;
+            max-width: 100% !important;
+            transform: none !important;
+        }
+        /* 隱藏 qr-canvas，只顯示 video */
+        #reader canvas#qr-canvas,
+        #reader canvas {
+            display: none !important;
+        }
+        #reader__dashboard,
+        #reader__camera_selection {
+            margin: 0 auto !important;
+            text-align: center !important;
+        }
+        #reader__scan_region {
+            margin: 0 auto !important;
+            text-align: center !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+        }
+        #reader__scan_region video {
+            margin: 0 auto !important;
+            display: block !important;
+        }
+        /* 確保只有一個 video 顯示 */
+        #reader video {
+            position: relative !important;
+            z-index: 1 !important;
         }
     </style>
 </head>
@@ -98,12 +153,13 @@
             
             <h4>Event Features</h4>
             <a href="/votes/<%= eventId %>" class="btn btn-success mb-4">Participate in Voting</a>
+            <a href="/events/<%= eventId %>/treasure-hunt/scan?userId=<%= user._id %>" class="btn btn-warning mb-4">🏴‍☠️ Treasure Hunt 尋寶遊戲</a>
             
             <!-- Lightbox -->
             <div class="lightbox" id="scannerLightbox">
-                <div class="scanner-content">
+                <div class="scanner-content" onclick="event.stopPropagation();">
                     <h3>掃描 QR 碼</h3>
-                    <div id="reader" style="width: 300px; height: 300px;"></div>
+                    <div id="reader" style="display: none;"></div>
                     <button id="closeScanner" class="btn btn-danger mt-2">關閉</button>
                 </div>
             </div>
@@ -127,100 +183,225 @@
             height: 128
         });
 
-        $('#loginQRCode').on('click', function() {
+        let html5QrCode = null;
+        let currentAction = null;
+
+        $('#loginQRCode').on('click', async function() {
+            await stopScanner();
             $('#scannerLightbox').show();
-            startScanner('login');
+            setTimeout(() => {
+                startScanner('login');
+            }, 100);
         });
 
-        $('#scanPointQRCode').on('click', function() {
+        $('#scanPointQRCode').on('click', async function() {
+            await stopScanner();
             $('#scannerLightbox').show();
-            startScanner('point');
+            setTimeout(() => {
+                startScanner('point');
+            }, 100);
         });
 
-        $('#closeScanner').on('click', function() {
+        $('#closeScanner').on('click', async function(e) {
+            e.stopPropagation();
+            await stopScanner();
             $('#scannerLightbox').hide();
-            stopScanner();
         });
 
-        const html5QrCode = new Html5Qrcode("reader");
+        // 當 lightbox 背景被點擊時也停止掃描
+        $('#scannerLightbox').on('click', async function(e) {
+            if (e.target === this) {
+                await stopScanner();
+                $(this).hide();
+            }
+        });
 
-        function startScanner(action) {
-            scanning = true;
-            html5QrCode.start(
-                { facingMode: "environment" },
-                {
-                    fps: 10,
-                    qrbox: 250
-                },
-                (decodedText, decodedResult) => {
-                    if (scanning) {
-                        const params = decodedText.split(','); // 假設 QR 碼格式為 eventId,userId 或 eventId,pointId
-                        const scannedEventId = params[0];
-
-                        if (action === 'login') {
-                            const scannedUserId = "<%= user._id %>"; // 使用當前頁面的用戶ID
-
-                            // 檢查掃描的 eventId 是否與當前 eventId 匹配
-                            if (scannedEventId === eventId) {
-                                                            // 發送 checkIn 請求
-                            $.ajax({
-                                url: `/events/${scannedEventId}/users/${scannedUserId}/checkin`, // 使用新的 checkin URL
-                                method: 'PUT', // 使用 PUT 方法
-                                contentType: 'application/json',
-                                success: function(response) {
-                                    alert(response.message);
-                                    $('#scannerLightbox').hide();
-                                    stopScanner();
-                                },
-                                error: function(xhr) {
-                                    alert(xhr.responseJSON.message);
-                                }
-                            });
-                            } else {
-                                alert("掃描的事件 ID 不匹配！");
-                            }
-                        } else if (action === 'point') {
-                            const pointId = params[1]; // 假設 QR 碼格式為 eventId,pointId
-
-                            // 檢查掃描的 eventId 是否與當前 eventId 匹配
-                            if (scannedEventId === eventId) {
-                                // 發送獲取點數請求
-                                $.ajax({
-                                    url: `/events/${scannedEventId}/points/getPoint`, // 使用獲取點數的 URL
-                                    method: 'POST', // 使用 POST 方法
-                                    contentType: 'application/json',
-                                    data: JSON.stringify({ pointId: pointId }),
-                                    success: function(response) {
-                                        alert(response.message);
-                                        $('#scannerLightbox').hide();
-                                        stopScanner();
-                                    },
-                                    error: function(xhr) {
-                                        alert(xhr.responseJSON.message);
-                                    }
-                                });
-                            } else {
-                                alert("掃描的事件 ID 不匹配！");
-                            }
-                        }
-                        scanning = false;
-                    }
-                },
-                (errorMessage) => {
-                    console.warn(`QR Code scan error: ${errorMessage}`);
+        async function startScanner(action) {
+            // 如果已經在掃描，先停止
+            if (scanning) {
+                await stopScanner();
+            }
+            
+            // 確保先停止任何殘留的掃描器
+            if (html5QrCode) {
+                try {
+                    scanning = false; // 先設置標誌
+                    await html5QrCode.stop();
+                    await html5QrCode.clear();
+                } catch (e) {
+                    // 忽略錯誤
                 }
-            ).catch(err => {
-                console.error('Unable to start scanning:', err);
-            });
+                html5QrCode = null;
+                currentAction = null;
+            }
+            
+            // 清空 reader div
+            $('#reader').html('');
+            
+            try {
+                // 創建新的掃描器實例
+                html5QrCode = new Html5Qrcode("reader");
+                currentAction = action;
+                $('#loginQRCode').prop('disabled', true);
+                $('#reader').show();
+                
+                await html5QrCode.start(
+                    { facingMode: "environment" },
+                    {
+                        fps: 10,
+                        qrbox: { width: 250, height: 250 },
+                        aspectRatio: 1.0
+                    },
+                    async (decodedText, decodedResult) => {
+                        // 立即處理，避免重複掃描
+                        if (!scanning) return;
+                        await handleQRCodeScan(decodedText, action);
+                    },
+                    (errorMessage) => {
+                        // 掃描錯誤時不顯示
+                    }
+                );
+                
+                // 啟動後隱藏 canvas，只顯示 video
+                setTimeout(() => {
+                    $('#reader canvas#qr-canvas').css('display', 'none');
+                    $('#reader canvas').not('video').css('display', 'none');
+                }, 200);
+                
+                scanning = true;
+            } catch (error) {
+                console.error('Error starting scanner:', error);
+                scanning = false;
+                html5QrCode = null;
+                $('#loginQRCode').prop('disabled', false);
+                $('#reader').html('');
+                $('#reader').hide();
+                
+                if (error.message && (error.message.includes('already') || error.message.includes('Permission'))) {
+                    alert('掃描器正在使用中或權限問題，請稍後再試');
+                } else {
+                    alert('無法啟動掃描器：' + error.message);
+                }
+            }
         }
 
-        function stopScanner() {
-            html5QrCode.stop().then(() => {
-                console.log("QR Code scanning stopped.");
-                scanning = false;
-            }).catch(err => {
-                console.error('Error stopping scanning:', err);
-            });
+        async function stopScanner() {
+            scanning = false;
+            
+            if (!html5QrCode) {
+                $('#reader').html('');
+                return;
+            }
+            
+            try {
+                await html5QrCode.stop();
+            } catch (error) {
+                console.log('Error stopping scanner:', error);
+            } finally {
+                try {
+                    await html5QrCode.clear();
+                } catch (e) {
+                    // 忽略
+                }
+                $('#reader').html('');
+                html5QrCode = null;
+                currentAction = null;
+                $('#loginQRCode').prop('disabled', false);
+                $('#reader').hide();
+            }
+        }
+
+        async function handleQRCodeScan(decodedText, action) {
+            if (!scanning) return;
+            
+            // 立即停止掃描器
+            scanning = false;
+            await stopScanner();
+            
+            // 檢查是否是 Treasure Hunt QR Code（格式：treasure:eventId:itemId）
+            if (decodedText.startsWith('treasure:')) {
+                const parts = decodedText.split(':');
+                if (parts.length === 3 && parts[1] === eventId) {
+                    const scannedUserId = "<%= user._id %>";
+                    // 發送 Treasure Hunt 掃描請求
+                    $.ajax({
+                        url: `/events/${eventId}/treasure-hunt/scan`,
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ 
+                            qrCodeData: decodedText,
+                            userId: scannedUserId
+                        }),
+                        success: function(response) {
+                            if (response.success) {
+                                alert(response.message);
+                                $('#scannerLightbox').hide();
+                                location.reload(); // 重新載入頁面以更新積分
+                            } else {
+                                alert(response.message || '掃描失敗');
+                            }
+                        },
+                        error: function(xhr) {
+                            alert(xhr.responseJSON?.message || '掃描失敗');
+                        }
+                    });
+                    return;
+                } else {
+                    alert('無效的 Treasure Hunt QR Code 或事件 ID 不匹配');
+                    return;
+                }
+            }
+            
+            // 處理其他類型的 QR Code（原有邏輯）
+            const params = decodedText.split(','); // 假設 QR 碼格式為 eventId,userId 或 eventId,pointId
+            const scannedEventId = params[0];
+
+                if (action === 'login') {
+                    const scannedUserId = "<%= user._id %>"; // 使用當前頁面的用戶ID
+
+                    // 檢查掃描的 eventId 是否與當前 eventId 匹配
+                    if (scannedEventId === eventId) {
+                        // 發送 checkIn 請求
+                        $.ajax({
+                            url: `/events/${scannedEventId}/users/${scannedUserId}/checkin`,
+                            method: 'PUT',
+                            contentType: 'application/json',
+                            success: function(response) {
+                                alert(response.message);
+                                $('#scannerLightbox').hide();
+                                location.reload(); // 重新載入頁面以更新狀態
+                            },
+                            error: function(xhr) {
+                                alert(xhr.responseJSON?.message || 'Check-in 失敗');
+                            }
+                        });
+                    } else {
+                        alert("掃描的事件 ID 不匹配！");
+                    }
+                } else if (action === 'point') {
+                    const pointId = params[1]; // 假設 QR 碼格式為 eventId,pointId
+
+                    // 檢查掃描的 eventId 是否與當前 eventId 匹配
+                    if (scannedEventId === eventId) {
+                        // 發送獲取點數請求
+                        $.ajax({
+                            url: `/events/${scannedEventId}/points/getPoint`,
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({ pointId: pointId }),
+                            success: function(response) {
+                                alert(response.message);
+                                $('#scannerLightbox').hide();
+                                location.reload(); // 重新載入頁面以更新積分
+                            },
+                            error: function(xhr) {
+                                alert(xhr.responseJSON?.message || '獲取點數失敗');
+                            }
+                        });
+                    } else {
+                        alert("掃描的事件 ID 不匹配！");
+                    }
+                }
         }
     });
 </script>

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>掃瞄加分用戶管理</title>
+    <%- include("components/header") %>
+    <%- include("components/menu", { eventId: eventId }) %>
+    <link rel="stylesheet" href="/admin/assets/css/style.css">
+    <style>
+        .add-user-form {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .pin-code {
+            font-family: 'Courier New', monospace;
+            font-size: 20px;
+            font-weight: bold;
+            color: #007bff;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        .alert-container {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 1050;
+            min-width: 300px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="right-panel" class="right-panel">
+    <%- include("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title">掃瞄加分用戶管理</strong>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert-container" id="alertContainer"></div>
+                            
+                            <button id="addUserBtn" class="btn btn-primary mb-3">添加掃瞄加分用戶</button>
+                            
+                            <div class="add-user-form" id="addUserForm">
+                                <h5>添加新用戶</h5>
+                                <form id="newUserForm">
+                                    <div class="form-group">
+                                        <label for="userName">用戶名稱 *</label>
+                                        <input type="text" class="form-control" id="userName" name="name" required placeholder="例如：peter">
+                                    </div>
+                                    <div class="form-group">
+                                        <button type="submit" class="btn btn-success">創建用戶</button>
+                                        <button type="button" class="btn btn-secondary ml-2" id="cancelBtn">取消</button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <table class="table table-striped table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 15%;">用戶名稱</th>
+                                        <th style="width: 12%;">PIN 碼</th>
+                                        <th style="width: 40%;">登入 URL</th>
+                                        <th style="width: 18%;">創建時間</th>
+                                        <th style="width: 15%;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="usersList">
+                                    <% scanPointUsers.forEach(user => { %>
+                                        <tr data-user-id="<%= user._id %>">
+                                            <td><%= user.name %></td>
+                                            <td>
+                                                <span class="pin-code"><%= user.pin %></span>
+                                            </td>
+                                            <td>
+                                                <a href="<%= loginUrl %>" target="_blank" class="btn btn-sm btn-outline-primary" style="word-break: break-all; white-space: normal;">
+                                                    <i class="fa fa-external-link-alt"></i> 打開登入頁面
+                                                </a>
+                                                <br>
+                                                <small class="text-muted mt-2 d-block" style="word-break: break-all;"><%= loginUrl %></small>
+                                            </td>
+                                            <td><%= new Date(user.created_at).toLocaleString('zh-TW') %></td>
+                                            <td>
+                                                <button class="btn btn-warning btn-sm regenerate-pin-btn" data-user-id="<%= user._id %>">重新生成 PIN</button>
+                                                <button class="btn btn-danger btn-sm delete-user-btn" data-user-id="<%= user._id %>">刪除</button>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include("components/footer") %>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    const eventId = '<%= eventId %>';
+    
+    function showAlert(type, message) {
+        const alertHtml = `
+            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        `;
+        $('#alertContainer').html(alertHtml);
+        setTimeout(() => {
+            $('.alert').alert('close');
+        }, 3000);
+    }
+    
+    // 顯示/隱藏添加表單
+    $('#addUserBtn').on('click', function() {
+        $('#addUserForm').toggle();
+    });
+    
+    $('#cancelBtn').on('click', function() {
+        $('#addUserForm').hide();
+        $('#newUserForm')[0].reset();
+    });
+    
+    // 創建用戶
+    $('#newUserForm').on('submit', function(e) {
+        e.preventDefault();
+        const name = $('#userName').val().trim();
+        
+        if (!name) {
+            showAlert('danger', '請輸入用戶名稱');
+            return;
+        }
+        
+        $.ajax({
+            url: `/events/${eventId}/scan-point-users`,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ name: name }),
+            success: function(response) {
+                if (response.success) {
+                    showAlert('success', `用戶 ${response.user.name} 創建成功！PIN 碼：${response.user.pin}`);
+                    location.reload();
+                } else {
+                    showAlert('danger', response.message || '創建失敗');
+                }
+            },
+            error: function(xhr) {
+                const errorMsg = xhr.responseJSON?.message || '創建失敗';
+                showAlert('danger', errorMsg);
+            }
+        });
+    });
+    
+    // 重新生成 PIN
+    $(document).on('click', '.regenerate-pin-btn', function() {
+        const userId = $(this).data('user-id');
+        const row = $(this).closest('tr');
+        const userName = row.find('td:first').text();
+        
+        if (!confirm(`確定要為 ${userName} 重新生成 PIN 碼嗎？`)) {
+            return;
+        }
+        
+        $.ajax({
+            url: `/events/${eventId}/scan-point-users/${userId}/regenerate-pin`,
+            type: 'POST',
+            success: function(response) {
+                if (response.success) {
+                    row.find('.pin-code').text(response.pin);
+                    showAlert('success', `PIN 碼已重新生成：${response.pin}`);
+                } else {
+                    showAlert('danger', response.message || '重新生成失敗');
+                }
+            },
+            error: function(xhr) {
+                const errorMsg = xhr.responseJSON?.message || '重新生成失敗';
+                showAlert('danger', errorMsg);
+            }
+        });
+    });
+    
+    // 刪除用戶
+    $(document).on('click', '.delete-user-btn', function() {
+        const userId = $(this).data('user-id');
+        const row = $(this).closest('tr');
+        const userName = row.find('td:first').text();
+        
+        if (!confirm(`確定要刪除用戶 ${userName} 嗎？此操作無法恢復。`)) {
+            return;
+        }
+        
+        $.ajax({
+            url: `/events/${eventId}/scan-point-users/${userId}`,
+            type: 'DELETE',
+            success: function(response) {
+                if (response.success) {
+                    row.remove();
+                    showAlert('success', '用戶已刪除');
+                } else {
+                    showAlert('danger', response.message || '刪除失敗');
+                }
+            },
+            error: function(xhr) {
+                const errorMsg = xhr.responseJSON?.message || '刪除失敗';
+                showAlert('danger', errorMsg);
+            }
+        });
+    });
+});
+</script>
+
+</body>
+</html>
+

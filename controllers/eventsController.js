@@ -17,6 +17,7 @@ const emailTemplate = require('./emailTemplateController');
 const EmailTemplate = require('../model/EmailTemplate'); // 引入 EmailTemplate 模型
 const multer = require('multer');
 const fs = require('fs');
+const { getSocket } = require('../socket'); // 引入 socket 以發送實時更新
 
 // 創建事件
 exports.createEvent = async (req, res) => {
@@ -534,7 +535,42 @@ exports.scanEventUsers = async (req, res) => {
             return res.status(404).send('找不到該事件 ID'); // 如果事件不存在，返回 404 錯誤
         }
 
-        res.render('admin/scan_checkin', { event }); // 傳遞事件資料到 EJS 頁面
+        // 獲取表單配置
+        const FormConfig = require('../model/FormConfig');
+        let formConfig = await FormConfig.findOne({ eventId: eventId });
+        
+        // 如果沒有配置，使用預設配置
+        if (!formConfig) {
+            const formConfigController = require('./formConfigController');
+            const defaultConfig = formConfigController.getDefaultFormConfig();
+            formConfig = new FormConfig({
+                eventId: eventId,
+                ...defaultConfig
+            });
+            await formConfig.save();
+        } else {
+            // 檢查是否需要數據遷移
+            const formConfigController = require('./formConfigController');
+            const migratedConfig = formConfigController.migrateFormConfig(formConfig);
+            
+            // 只有在數據結構真正需要遷移時才保存
+            const needsMigration = !formConfig.defaultLanguage || 
+                                  (formConfig.sections && formConfig.sections.length > 0 && 
+                                   formConfig.sections[0].fields && formConfig.sections[0].fields.length > 0 &&
+                                   typeof formConfig.sections[0].fields[0].label === 'string');
+            
+            if (needsMigration && JSON.stringify(migratedConfig) !== JSON.stringify(formConfig)) {
+                const userDefaultLanguage = formConfig.defaultLanguage;
+                Object.assign(formConfig, migratedConfig);
+                if (userDefaultLanguage) {
+                    formConfig.defaultLanguage = userDefaultLanguage;
+                }
+                await formConfig.save();
+                console.log('FormConfig 數據已遷移，保留用戶設置的 defaultLanguage:', userDefaultLanguage);
+            }
+        }
+
+        res.render('admin/scan_checkin', { event, formConfig }); // 傳遞事件資料和表單配置到 EJS 頁面
     } catch (error) {
         console.log(error);
         res.status(500).send('伺服器錯誤');
@@ -547,13 +583,43 @@ exports.getEventsUserById = async (req, res) => {
 };
 
 // 渲染用戶資料頁面
-exports.renderProfilePage = (req, res) => {
+exports.renderProfilePage = async (req, res) => {
     const { user } = req.session; // 從 session 中獲取用戶資料
     const eventId = req.params.eventId; // 獲取事件 ID
-    if (!user) {
+    if (!user || !user._id) {
         return res.redirect(`/events/${eventId}/login`); // 如果用戶未登入，重定向到登入頁面
     }
-    res.render('events/profile', { user, eventId }); // 渲染用戶資料頁面，並傳遞用戶資料和事件 ID
+    
+    try {
+        // 從數據庫重新獲取最新的用戶數據，確保積分等資料是最新的
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+        
+        const latestUser = event.users.id(user._id);
+        if (!latestUser) {
+            return res.redirect(`/events/${eventId}/login`); // 如果找不到用戶，重定向到登入頁面
+        }
+        
+        // 更新 session 中的用戶數據，保持登入狀態
+        req.session.user = {
+            _id: latestUser._id,
+            name: latestUser.name,
+            email: latestUser.email,
+            phone: latestUser.phone,
+            point: latestUser.point,
+            isCheckIn: latestUser.isCheckIn
+        };
+        
+        res.render('events/profile', { 
+            user: latestUser.toObject(), // 將 Mongoose 文檔轉換為普通對象
+            eventId 
+        }); // 渲染用戶資料頁面，並傳遞最新的用戶資料和事件 ID
+    } catch (error) {
+        console.error('Error rendering profile page:', error);
+        res.status(500).send('Error rendering profile page.');
+    }
 };
 
 // 添加參展商
@@ -985,6 +1051,8 @@ exports.updatePoint = async (req, res) => {
     }
 };
 
+// 舊的積分掃描器功能已移除，請使用掃瞄加分管理功能（/events/:eventId/scan-point-users）
+
 // 刪除中獎者
 exports.removeLuckydrawUser = async (req, res) => {
     const { _id } = req.body; // 獲取要刪除的中獎者 ID
@@ -1018,8 +1086,19 @@ exports.removeLuckydrawUser = async (req, res) => {
         }
 
         // 刪除中獎者
+        const winnerId = winnerToDelete._id.toString();
         event.winners.splice(winnerIndex, 1);
         await event.save(); // 保存更改
+
+        // 通過 socket 發送中獎者移除事件給顯示頁面
+        try {
+            const io = getSocket();
+            const room = `luckydraw:${req.params.eventId}`;
+            io.to(room).emit('luckydraw:winner_removed', { winnerId });
+        } catch (socketError) {
+            console.error('Error sending socket event:', socketError);
+            // Socket 錯誤不影響 HTTP 響應
+        }
 
         res.status(200).send({ message: 'Winner deleted successfully.' });
     } catch (error) {
@@ -1078,6 +1157,26 @@ exports.addLuckydrawUser = async (req, res) => {
         event.winners.push(winner);
         await event.save(); // 保存更改
 
+        // 通過 socket 發送中獎者添加事件給顯示頁面
+        try {
+            const io = getSocket();
+            const room = `luckydraw:${req.params.eventId}`;
+            // 確保 winner 對象的 _id 是字符串格式，並包含所有必要字段
+            const winnerForSocket = {
+                _id: String(_id),
+                name: name || '',
+                company: company || '',
+                table: table || '',
+                prizeId: String(prizeId),
+                prizeName: prizeName || '',
+                wonAt: winner.wonAt
+            };
+            io.to(room).emit('luckydraw:winner_added', { winner: winnerForSocket });
+        } catch (socketError) {
+            console.error('Error sending socket event:', socketError);
+            // Socket 錯誤不影響 HTTP 響應
+        }
+
         res.status(201).send({ message: 'Winner added successfully.', winner });
     } catch (error) {
         console.error('Error adding winner:', error);
@@ -1113,6 +1212,627 @@ exports.renderLuckydrawPage = async (req, res) => {
     }
 };
 
+// 渲染抽獎控制面板頁面（iPad）
+exports.renderLuckydrawPanelPage = async (req, res) => {
+    const { eventId } = req.params; // 獲取 eventId
+    try {
+        const event = await Event.findById(eventId).populate('users'); // 獲取事件並填充用戶和中獎者
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+
+        // 獲取獎品列表
+        const Prize = require('../model/Prize');
+        const prizes = await Prize.find({ eventId });
+
+        // 日誌輸出 winners 陣列
+        console.log('Winners:', event.winners);
+
+        // 獲取所有已經簽到且未中獎的用戶
+        const availablePeople = event.users.filter(user => 
+            user.isCheckIn === true && !event.winners.some(winner => winner._id && winner._id.equals(user._id)) // 確保 winner._id 存在
+        );
+
+        res.render('admin/luckydraw_panel', { eventId, availablePeople, prizes }); // 傳遞可用的參與者和獎品列表
+    } catch (error) {
+        console.error('Error rendering luckydraw panel page:', error);
+        res.status(500).send('Error rendering luckydraw panel page.');
+    }
+};
+
+// ========== 掃瞄加分功能 ==========
+
+// 生成6位數字 PIN 碼
+function generatePIN() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// 渲染掃瞄加分用戶管理頁面
+exports.renderScanPointUsersPage = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+        
+        // 獲取完整域名
+        const domain = process.env.DOMAIN || `${req.protocol}://${req.get('host')}`;
+        const baseUrl = domain.startsWith('http://') || domain.startsWith('https://') 
+            ? domain 
+            : `https://${domain}`;
+        const loginUrl = `${baseUrl}/events/${eventId}/attendee`;
+        
+        res.render('admin/scan_point_users', { 
+            eventId, 
+            scanPointUsers: event.scanPointUsers || [],
+            loginUrl: loginUrl
+        });
+    } catch (error) {
+        console.error('Error rendering scan point users page:', error);
+        res.status(500).send('Error rendering scan point users page.');
+    }
+};
+
+// 創建掃瞄加分用戶
+exports.createScanPointUser = async (req, res) => {
+    const { eventId } = req.params;
+    const { name } = req.body;
+    
+    try {
+        if (!name || !name.trim()) {
+            return res.status(400).json({ success: false, message: '請提供用戶名稱' });
+        }
+        
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ success: false, message: '找不到該事件' });
+        }
+        
+        // 檢查名稱是否已存在
+        const existingUser = event.scanPointUsers.find(user => user.name === name.trim());
+        if (existingUser) {
+            return res.status(400).json({ success: false, message: '該用戶名稱已存在' });
+        }
+        
+        // 生成唯一的 PIN 碼
+        let pin = generatePIN();
+        let attempts = 0;
+        while (event.scanPointUsers.find(user => user.pin === pin) && attempts < 10) {
+            pin = generatePIN();
+            attempts++;
+        }
+        
+        if (attempts >= 10) {
+            return res.status(500).json({ success: false, message: '無法生成唯一的 PIN 碼，請重試' });
+        }
+        
+        // 創建新用戶
+        const newUser = {
+            name: name.trim(),
+            pin: pin,
+            created_at: new Date(),
+            modified_at: new Date()
+        };
+        
+        event.scanPointUsers.push(newUser);
+        await event.save();
+        
+        res.status(200).json({ 
+            success: true, 
+            message: '用戶創建成功',
+            user: newUser
+        });
+    } catch (error) {
+        console.error('Error creating scan point user:', error);
+        res.status(500).json({ success: false, message: '創建用戶時發生錯誤' });
+    }
+};
+
+// 刪除掃瞄加分用戶
+exports.deleteScanPointUser = async (req, res) => {
+    const { eventId, userId } = req.params;
+    
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ success: false, message: '找不到該事件' });
+        }
+        
+        const userIndex = event.scanPointUsers.findIndex(user => user._id.toString() === userId);
+        if (userIndex === -1) {
+            return res.status(404).json({ success: false, message: '找不到該用戶' });
+        }
+        
+        event.scanPointUsers.splice(userIndex, 1);
+        await event.save();
+        
+        res.status(200).json({ success: true, message: '用戶刪除成功' });
+    } catch (error) {
+        console.error('Error deleting scan point user:', error);
+        res.status(500).json({ success: false, message: '刪除用戶時發生錯誤' });
+    }
+};
+
+// 重新生成 PIN 碼
+exports.regeneratePIN = async (req, res) => {
+    const { eventId, userId } = req.params;
+    
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ success: false, message: '找不到該事件' });
+        }
+        
+        const user = event.scanPointUsers.id(userId);
+        if (!user) {
+            return res.status(404).json({ success: false, message: '找不到該用戶' });
+        }
+        
+        // 生成新的 PIN 碼
+        let pin = generatePIN();
+        let attempts = 0;
+        while (event.scanPointUsers.find(u => u._id.toString() !== userId && u.pin === pin) && attempts < 10) {
+            pin = generatePIN();
+            attempts++;
+        }
+        
+        if (attempts >= 10) {
+            return res.status(500).json({ success: false, message: '無法生成唯一的 PIN 碼，請重試' });
+        }
+        
+        user.pin = pin;
+        user.modified_at = new Date();
+        await event.save();
+        
+        res.status(200).json({ 
+            success: true, 
+            message: 'PIN 碼重新生成成功',
+            pin: pin
+        });
+    } catch (error) {
+        console.error('Error regenerating PIN:', error);
+        res.status(500).json({ success: false, message: '重新生成 PIN 碼時發生錯誤' });
+    }
+};
+
+// 渲染掃瞄加分登入頁面
+exports.renderScanPointLoginPage = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+        res.render('events/scan_point_login', { eventId });
+    } catch (error) {
+        console.error('Error rendering scan point login page:', error);
+        res.status(500).send('Error rendering scan point login page.');
+    }
+};
+
+// 掃瞄加分 PIN 登入
+exports.scanPointLogin = async (req, res) => {
+    const { eventId } = req.params;
+    const { pin } = req.body;
+    
+    try {
+        if (!pin || pin.length !== 6 || !/^\d+$/.test(pin)) {
+            return res.status(400).json({ success: false, message: '請提供6位數字 PIN 碼' });
+        }
+        
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ success: false, message: '找不到該事件' });
+        }
+        
+        const user = event.scanPointUsers.find(u => u.pin === pin);
+        if (!user) {
+            return res.status(401).json({ success: false, message: 'PIN 碼錯誤' });
+        }
+        
+        // 將用戶信息存入 session
+        req.session.scanPointUser = {
+            _id: user._id.toString(),
+            name: user.name,
+            eventId: eventId
+        };
+        
+        res.status(200).json({ 
+            success: true, 
+            message: '登入成功',
+            user: {
+                _id: user._id.toString(),
+                name: user.name
+            }
+        });
+    } catch (error) {
+        console.error('Error during scan point login:', error);
+        res.status(500).json({ success: false, message: '登入時發生錯誤' });
+    }
+};
+
+// 渲染掃瞄加分頁面
+exports.renderScanPointScanPage = async (req, res) => {
+    const { eventId } = req.params;
+    
+    try {
+        // 檢查 session
+        if (!req.session.scanPointUser || req.session.scanPointUser.eventId !== eventId) {
+            return res.redirect(`/events/${eventId}/attendee`);
+        }
+        
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+        
+        res.render('events/scan_point_scan', { 
+            eventId, 
+            userName: req.session.scanPointUser.name 
+        });
+    } catch (error) {
+        console.error('Error rendering scan point scan page:', error);
+        res.status(500).send('Error rendering scan point scan page.');
+    }
+};
+
+// 通過掃瞄添加分數
+exports.addPointsByScan = async (req, res) => {
+    const { eventId } = req.params;
+    const { userId, points } = req.body;
+    
+    try {
+        // 檢查 session
+        if (!req.session.scanPointUser || req.session.scanPointUser.eventId !== eventId) {
+            return res.status(401).json({ success: false, message: '未登入或登入已過期' });
+        }
+        
+        if (!userId || !points || points <= 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: '請提供有效的用戶ID和積分數值（必須大於0）' 
+            });
+        }
+        
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ 
+                success: false, 
+                message: '找不到該事件' 
+            });
+        }
+        
+        // 查找用戶
+        const user = event.users.id(userId);
+        if (!user) {
+            return res.status(404).json({ 
+                success: false, 
+                message: '找不到該用戶' 
+            });
+        }
+        
+        // 添加積分
+        const previousPoints = user.point || 0;
+        user.point = previousPoints + parseInt(points);
+        
+        await event.save();
+        
+        res.status(200).json({ 
+            success: true, 
+            message: '積分添加成功',
+            user: {
+                _id: user._id,
+                name: user.name,
+                company: user.company,
+                table: user.table,
+                previousPoints: previousPoints,
+                addedPoints: parseInt(points),
+                currentPoints: user.point
+            }
+        });
+    } catch (error) {
+        console.error('Error adding points by scan:', error);
+        res.status(500).json({ success: false, message: '添加積分時發生錯誤' });
+    }
+};
+
+// ========== Treasure Hunt 功能 ==========
+
+// 渲染 Treasure Hunt 管理頁面
+exports.renderTreasureHuntPage = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+        
+        // 獲取完整域名
+        const domain = process.env.DOMAIN || `${req.protocol}://${req.get('host')}`;
+        const baseUrl = domain.startsWith('http://') || domain.startsWith('https://') 
+            ? domain 
+            : `https://${domain}`;
+        
+        res.render('admin/treasure_hunt', { 
+            eventId, 
+            treasureHuntItems: event.treasureHuntItems || [],
+            baseUrl: baseUrl
+        });
+    } catch (error) {
+        console.error('Error rendering treasure hunt page:', error);
+        res.status(500).send('Error rendering treasure hunt page.');
+    }
+};
+
+// 創建 Treasure Hunt 項目
+exports.createTreasureHuntItem = async (req, res) => {
+    const { eventId } = req.params;
+    const { name, points, description } = req.body;
+    
+    try {
+        if (!name || !name.trim()) {
+            return res.status(400).json({ success: false, message: '請提供項目名稱' });
+        }
+        
+        if (!points || points <= 0) {
+            return res.status(400).json({ success: false, message: '請提供有效的積分數值（必須大於0）' });
+        }
+        
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ success: false, message: '找不到該事件' });
+        }
+        
+        // 生成唯一的 QR Code 數據（格式：treasure:eventId:itemId）
+        // 由於 itemId 還不存在，我們先使用時間戳作為臨時 ID
+        const tempId = Date.now().toString();
+        const qrCodeData = `treasure:${eventId}:${tempId}`;
+        
+        // 生成 QR Code 圖片
+        const QRCode = require('qrcode');
+        const qrCodeImage = await QRCode.toDataURL(qrCodeData);
+        
+        // 創建新項目
+        const newItem = {
+            name: name.trim(),
+            points: parseInt(points),
+            qrCodeData: qrCodeData,
+            qrCodeImage: qrCodeImage,
+            description: description || '',
+            created_at: new Date(),
+            modified_at: new Date()
+        };
+        
+        event.treasureHuntItems.push(newItem);
+        await event.save();
+        
+        // 獲取保存後的項目（包含真實的 _id）
+        const savedItem = event.treasureHuntItems[event.treasureHuntItems.length - 1];
+        
+        // 更新 QR Code 數據和圖片，使用真實的 _id
+        const finalQrCodeData = `treasure:${eventId}:${savedItem._id}`;
+        const finalQrCodeImage = await QRCode.toDataURL(finalQrCodeData);
+        
+        savedItem.qrCodeData = finalQrCodeData;
+        savedItem.qrCodeImage = finalQrCodeImage;
+        await event.save();
+        
+        res.status(200).json({ 
+            success: true, 
+            message: 'Treasure Hunt 項目創建成功',
+            item: {
+                _id: savedItem._id,
+                name: savedItem.name,
+                points: savedItem.points,
+                qrCodeData: savedItem.qrCodeData,
+                qrCodeImage: savedItem.qrCodeImage,
+                description: savedItem.description
+            }
+        });
+    } catch (error) {
+        console.error('Error creating treasure hunt item:', error);
+        res.status(500).json({ success: false, message: '創建項目時發生錯誤' });
+    }
+};
+
+// 更新 Treasure Hunt 項目
+exports.updateTreasureHuntItem = async (req, res) => {
+    const { eventId, itemId } = req.params;
+    const { name, points, description } = req.body;
+    
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ success: false, message: '找不到該事件' });
+        }
+        
+        const item = event.treasureHuntItems.id(itemId);
+        if (!item) {
+            return res.status(404).json({ success: false, message: '找不到該項目' });
+        }
+        
+        if (name !== undefined) item.name = name.trim();
+        if (points !== undefined && points > 0) item.points = parseInt(points);
+        if (description !== undefined) item.description = description || '';
+        item.modified_at = new Date();
+        
+        await event.save();
+        
+        res.status(200).json({ 
+            success: true, 
+            message: '項目更新成功',
+            item: item
+        });
+    } catch (error) {
+        console.error('Error updating treasure hunt item:', error);
+        res.status(500).json({ success: false, message: '更新項目時發生錯誤' });
+    }
+};
+
+// 刪除 Treasure Hunt 項目
+exports.deleteTreasureHuntItem = async (req, res) => {
+    const { eventId, itemId } = req.params;
+    
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ success: false, message: '找不到該事件' });
+        }
+        
+        const itemIndex = event.treasureHuntItems.findIndex(item => item._id.toString() === itemId);
+        if (itemIndex === -1) {
+            return res.status(404).json({ success: false, message: '找不到該項目' });
+        }
+        
+        event.treasureHuntItems.splice(itemIndex, 1);
+        await event.save();
+        
+        res.status(200).json({ success: true, message: '項目刪除成功' });
+    } catch (error) {
+        console.error('Error deleting treasure hunt item:', error);
+        res.status(500).json({ success: false, message: '刪除項目時發生錯誤' });
+    }
+};
+
+// 渲染用戶 Treasure Hunt 掃描頁面
+exports.renderTreasureHuntScanPage = async (req, res) => {
+    const { eventId } = req.params;
+    
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+        
+        // 嘗試從 session 獲取用戶 ID（如果用戶已登入）
+        // 也可以從 URL 參數獲取
+        let userId = req.query.userId;
+        if (!userId && req.session.user && req.session.user._id) {
+            userId = req.session.user._id.toString();
+        }
+        
+        // 獲取用戶的掃描歷史記錄
+        let scanHistory = [];
+        if (userId) {
+            const user = event.users.id(userId);
+            if (user && user.scannedTreasureItems && user.scannedTreasureItems.length > 0) {
+                // 根據已掃描的項目 ID 查找對應的項目信息
+                scanHistory = user.scannedTreasureItems.map(itemId => {
+                    const item = event.treasureHuntItems.id(itemId);
+                    if (item) {
+                        return {
+                            itemId: itemId.toString(),
+                            name: item.name,
+                            points: item.points
+                        };
+                    }
+                    return null;
+                }).filter(item => item !== null); // 過濾掉找不到的項目
+            }
+        }
+        
+        res.render('events/treasure_hunt_scan', { 
+            eventId,
+            userId: userId || null,
+            scanHistory: scanHistory || [],
+            userPoints: userId ? (event.users.id(userId)?.point || 0) : 0
+        });
+    } catch (error) {
+        console.error('Error rendering treasure hunt scan page:', error);
+        res.status(500).send('Error rendering treasure hunt scan page.');
+    }
+};
+
+// 掃描 Treasure Hunt QR Code 並添加積分
+exports.scanTreasureHuntQRCode = async (req, res) => {
+    const { eventId } = req.params;
+    const { qrCodeData, userId } = req.body;
+    
+    try {
+        if (!qrCodeData) {
+            return res.status(400).json({ success: false, message: '請提供 QR Code 數據' });
+        }
+        
+        if (!userId) {
+            return res.status(400).json({ success: false, message: '請提供用戶 ID' });
+        }
+        
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ success: false, message: '找不到該事件' });
+        }
+        
+        // 解析 QR Code 數據（格式：treasure:eventId:itemId）
+        const parts = qrCodeData.split(':');
+        // 將 eventId 轉換為字符串進行比較，確保匹配
+        const eventIdStr = String(eventId);
+        if (parts.length !== 3 || parts[0] !== 'treasure' || parts[1] !== eventIdStr) {
+            return res.status(400).json({ 
+                success: false, 
+                message: `無效的 QR Code。期望事件 ID: ${eventIdStr}，實際: ${parts[1]}` 
+            });
+        }
+        
+        const itemId = parts[2];
+        const item = event.treasureHuntItems.id(itemId);
+        if (!item) {
+            return res.status(404).json({ success: false, message: '找不到該 Treasure Hunt 項目' });
+        }
+        
+        // 查找用戶
+        const user = event.users.id(userId);
+        if (!user) {
+            return res.status(404).json({ success: false, message: '找不到該用戶' });
+        }
+        
+        // 檢查用戶是否已經掃描過這個 QR Code
+        // 初始化 scannedTreasureItems 陣列（如果不存在）
+        if (!user.scannedTreasureItems) {
+            user.scannedTreasureItems = [];
+        }
+        
+        // 檢查是否已經掃描過
+        const itemObjectId = new mongoose.Types.ObjectId(itemId);
+        const alreadyScanned = user.scannedTreasureItems.some(id => id.equals(itemObjectId));
+        
+        if (alreadyScanned) {
+            return res.status(400).json({ 
+                success: false, 
+                message: '您已經掃描過這個 QR Code 了！' 
+            });
+        }
+        
+        // 添加積分
+        const previousPoints = user.point || 0;
+        user.point = previousPoints + item.points;
+        
+        // 記錄已掃描的項目
+        user.scannedTreasureItems.push(itemObjectId);
+        
+        await event.save();
+        
+        res.status(200).json({ 
+            success: true, 
+            message: `成功獲得 ${item.points} 積分！`,
+            item: {
+                name: item.name,
+                points: item.points
+            },
+            user: {
+                _id: user._id,
+                name: user.name,
+                previousPoints: previousPoints,
+                addedPoints: item.points,
+                currentPoints: user.point
+            }
+        });
+    } catch (error) {
+        console.error('Error scanning treasure hunt QR code:', error);
+        res.status(500).json({ success: false, message: '掃描時發生錯誤' });
+    }
+};
+
 // 渲染管理中獎者頁面
 exports.renderAdminLuckydrawPage = async (req, res) => {
     const { eventId } = req.params; // 獲取 eventId
@@ -1141,6 +1861,57 @@ exports.renderAdminLuckydrawPage = async (req, res) => {
     } catch (error) {
         console.error('Error rendering admin luckydraw page:', error);
         res.status(500).send('Error rendering admin luckydraw page.');
+    }
+};
+
+// 匯出中獎者列表為 Excel
+exports.exportLuckydrawList = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+
+        const winners = event.winners || [];
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('中獎者列表');
+        
+        worksheet.columns = [
+            { header: '次序', key: 'order', width: 10 },
+            { header: '姓名', key: 'name', width: 20 },
+            { header: '公司', key: 'company', width: 25 },
+            { header: '桌號', key: 'table', width: 10 },
+            { header: '獎品', key: 'prizeName', width: 25 },
+            { header: '中獎時間', key: 'wonAt', width: 20 }
+        ];
+
+        winners.forEach((winner, index) => {
+            worksheet.addRow({
+                order: index + 1,
+                name: winner.name || '',
+                company: winner.company || '',
+                table: winner.table || '',
+                prizeName: winner.prizeName || '',
+                wonAt: winner.wonAt ? new Date(winner.wonAt).toLocaleString('zh-TW', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                }) : ''
+            });
+        });
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=luckydraw_list_${eventId}.xlsx`);
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (error) {
+        console.error('Error exporting luckydraw list:', error);
+        res.status(500).send('匯出中獎者列表失敗');
     }
 };
 

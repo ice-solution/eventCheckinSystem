@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>互動抽獎</title>
+  <script src="/socket.io/socket.io.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -18,12 +19,6 @@
       background-position: center; /* 使背景圖片居中 */
       padding: 120px;
       height:100vh;
-    }
-
-    .container {
-      display: flex;
-      align-items: flex-start;
-      gap: 30px;
     }
 
     #result {
@@ -79,40 +74,16 @@
     }
 
     .prize {
-      font-size: 14px;
+      font-size: 24px;
       font-weight: bold;
       color: #e74c3c;
       background-color: #fff3cd;
       border: 2px solid #ffc107;
       border-radius: 4px;
-      padding: 4px 8px;
-      margin-bottom: 6px;
+      padding: 8px 16px;
+      margin-bottom: 10px;
       text-align: center;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    #control {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-      position: fixed;
-      right: 0;
-      transform: translate(-50%,0%);
-    }
-
-    #startBtn, #draw5Btn, #draw10Btn {
-      padding: 15px 20px;
-      font-size: 16px;
-      /* background-color: #28a745; */
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    #startBtn:disabled {
-      background-color: #aaa;
-      cursor: not-allowed;
     }
 
     #spinner {
@@ -182,37 +153,13 @@
 <body>
 
   <div class="bg">
-    <!-- Banner區域 -->
-    <div id="bannerContainer" style="width: 100%; height: 200px; overflow: hidden; position: relative; display: flex; justify-content: center; align-items: center; padding: 20px; margin-top: 20px;">
-      <img id="eventBanner" src="/exvent/<%= eventId %>.jpg" alt="Event Banner" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px;" onerror="this.style.display='none';">
+    <!-- 控制器狀態和獎品顯示 -->
+    <div id="controllerStatus" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; background: rgba(255, 255, 255, 0.95); padding: 20px 40px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); text-align: center; font-size: 24px; font-weight: bold; color: #333;">
+      <div id="statusText">等待控制器連線</div>
+      <div id="prizeText" style="margin-top: 10px; font-size: 20px; color: #e74c3c; display: none;"></div>
     </div>
     <div class="js-container  container">
       <div id="result"></div>
-
-      <div id="control">
-        <div id="prizeSelector" style="margin-bottom: 15px;">
-          <label for="prizeSelect" style="color: white; font-weight: bold; display: block; margin-bottom: 5px;">選擇獎品：</label>
-          
-          <!-- 產品圖片顯示區域 -->
-          <div id="prizeImageContainer" style="margin-bottom: 10px; text-align: center;">
-            <img id="prizeImage" src="" alt="選擇獎品" style="max-width: 200px; max-height: 150px; border-radius: 8px; border: 2px solid #fff; display: none;">
-          </div>
-          
-          <select id="prizeSelect" style="width: 180px; padding: 8px; border-radius: 4px; margin-bottom: 10px;" required>
-            <option value="">請選擇獎品</option>
-            <% prizes.forEach(prize => { %>
-              <% if (prize.unit > 0) { %>
-                <option value="<%= prize._id %>" data-name="<%= prize.name %>" data-image="<%= prize.picture || '' %>"><%= prize.name %> (剩餘: <%= prize.unit %>)</option>
-              <% } %>
-            <% }); %>
-          </select>
-        </div>
-        <img id="startBtn" src="/admin/img/start.png" alt="start...">
-        <button id="draw5Btn" style="padding: 15px 20px; font-size: 16px; background-color: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; margin-top: 10px;">連抽5人</button>
-        <!-- <button id="startBtn">1</button> -->
-        <!-- <button id="draw10Btn">10</button> -->
-        <div id="spinner"></div>
-      </div>
     </div>
 
     <div id="current"></div>
@@ -223,326 +170,177 @@
   </div> 
 
   <script>
-    const allPeople = <%- JSON.stringify(availablePeople) %>; // 將 users 轉換為 JSON 格式
     const eventId = '<%= eventId %>';
-
-    let availablePeople = [...allPeople];
-    const drawnPeople = [];
-    
     const resultDiv = document.getElementById('result');
-    const startBtn = document.getElementById('startBtn');
-    const draw5Btn = document.getElementById('draw5Btn');
-
-    // 產品圖片顯示功能
-    document.addEventListener('DOMContentLoaded', function() {
-      const prizeSelect = document.getElementById('prizeSelect');
-      const prizeImage = document.getElementById('prizeImage');
-      const prizeImageContainer = document.getElementById('prizeImageContainer');
-
-      prizeSelect.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        const imagePath = selectedOption.dataset.image;
-        
-        if (imagePath && imagePath.trim() !== '') {
-          prizeImage.src = imagePath;
-          prizeImage.style.display = 'block';
-          prizeImageContainer.style.display = 'block';
-        } else {
-          prizeImage.style.display = 'none';
-          prizeImageContainer.style.display = 'none';
-        }
-      });
-    });
-    const draw10Btn = document.getElementById('draw10Btn');
-    const spinner = document.getElementById('spinner');
     const currentDiv = document.getElementById('current');
     const overlay = document.getElementById('overlay');
     const animationDiv = document.getElementById('animation');
 
-    function drawWinner() {
-      if (availablePeople.length === 0) {
-        alert("所有人都已抽出！");
-        return;
+    const socket = io();
+    socket.emit('join_luckydraw', { eventId });
+
+    const controllerStatusDiv = document.getElementById('controllerStatus');
+    const statusTextDiv = document.getElementById('statusText');
+    const prizeTextDiv = document.getElementById('prizeText');
+    let controllerConnected = false;
+    let currentPrizeName = null;
+
+    function updateStatusDisplay() {
+      if (!controllerConnected) {
+        controllerStatusDiv.style.display = 'block';
+        statusTextDiv.textContent = '等待控制器連線';
+        prizeTextDiv.style.display = 'none';
+      } else if (currentPrizeName) {
+        controllerStatusDiv.style.display = 'block';
+        statusTextDiv.textContent = '現在抽獎';
+        prizeTextDiv.textContent = `: ${currentPrizeName}`;
+        prizeTextDiv.style.display = 'block';
+      } else {
+        // 控制器已連接但還沒選擇獎品，隱藏狀態顯示
+        controllerStatusDiv.style.display = 'none';
       }
-
-      // 檢查是否選擇了獎品
-      const prizeSelect = document.getElementById('prizeSelect');
-      if (!prizeSelect.value) {
-        alert("請先選擇獎品！");
-        return;
-      }
-
-      // 動態檢查獎品庫存
-      const selectedOption = prizeSelect.options[prizeSelect.selectedIndex];
-      const currentText = selectedOption.text;
-      const match = currentText.match(/\(剩餘: (\d+)\)/);
-      
-      if (!match) {
-        alert("無法獲取獎品庫存信息！");
-        return;
-      }
-
-      const remainingPrize = parseInt(match[1]);
-      if (remainingPrize <= 0) {
-        alert("所選獎品已無庫存！");
-        return;
-      }
-
-      overlay.style.display = 'block';
-      animationDiv.style.display = 'block';
-      spinner.style.display = 'block';
-      startBtn.disabled = true;
-
-      setTimeout(() => {
-        spinner.style.display = 'none';
-        startBtn.disabled = false;
-
-        const index = Math.floor(Math.random() * availablePeople.length);
-        const person = availablePeople.splice(index, 1)[0];
-        drawnPeople.push(person);
-
-        // 獲取選擇的獎品信息（提前獲取）
-        const prizeSelect = document.getElementById('prizeSelect');
-        const selectedPrizeId = prizeSelect.value;
-        const selectedPrizeName = prizeSelect.options[prizeSelect.selectedIndex].dataset.name || '';
-        
-        // 將獎品信息存儲到 person 對象中
-        person.prizeId = selectedPrizeId || null;
-        person.prizeName = selectedPrizeName;
-
-        const rets = document.createElement('div');
-        rets.className = 'rets';
-        rets.dataset.id = person._id;
-
-        // 顯示中獎者的序號
-        const winnerIndex = drawnPeople.length; // 當前中獎者的序號
-        // 構建顯示內容，處理空值
-        let displayContent = '';
-        
-        // 添加獎品信息（在名字上方）
-        if (person.prizeName) {
-          displayContent += `<div class="prize">🎁 ${person.prizeName}</div>`;
-        }
-        
-        // 更改顯示次序為：Company, table, name
-        if (person.company) {
-          displayContent += `<div class="company">${person.company}</div>`;
-        }
-        
-        if (person.table) {
-          displayContent += `<div class="table">桌號: ${person.table}</div>`;
-        }
-        
-        displayContent += `<div class="name">${person.name}</div>`;
-        
-        rets.innerHTML = `<div class="number">${winnerIndex}</div><div class="card">${displayContent}</div>`;
-        resultDiv.appendChild(rets);
-
-        // 顯示當前中獎者
-        let currentDisplay = '';
-        
-        // 添加獎品信息
-        if (person.prizeName) {
-          currentDisplay += `<div style="font-size: 24px; color: #e74c3c; font-weight: bold; margin-bottom: 10px;">🎁 ${person.prizeName}</div>`;
-        }
-        
-        // 更改顯示次序為：Company, table, name
-        if (person.company) {
-          currentDisplay += `<div style="font-size: 18px; font-weight: bold;">${person.company}</div>`;
-        }
-        if (person.table) {
-          currentDisplay += `<div style="font-size: 16px;">桌號: ${person.table}</div>`;
-        }
-        currentDisplay += `<div style="font-size: 16px;">${person.name}</div>`;
-        currentDiv.innerHTML = currentDisplay;
-        currentDiv.style.display = 'block'; // 顯示 current
-
-        // 點擊卡片 → 刪除確認
-        rets.addEventListener('click', () => {
-          if (confirm(`確定要取消 ${person.name} 的中獎結果？`)) {
-            resultDiv.removeChild(rets);
-            drawnPeople.splice(drawnPeople.findIndex(p => p._id === person._id), 1);
-            availablePeople.push(person);
-
-            // 如果這個人有指定獎品，需要還原獎品選項的顯示
-            if (person.prizeId) {
-              const prizeSelect = document.getElementById('prizeSelect');
-              let option = Array.from(prizeSelect.options).find(opt => opt.value === person.prizeId);
-              
-              if (option) {
-                // 選項存在，更新數量
-                const currentText = option.text;
-                const match = currentText.match(/\(剩餘: (\d+)\)/);
-                if (match) {
-                  const remaining = parseInt(match[1]) + 1; // 還原數量
-                  option.text = option.text.replace(/\(剩餘: \d+\)/, `(剩餘: ${remaining})`);
-                }
-              } else {
-                // 選項不存在（被移除了），需要重新創建
-                const newOption = document.createElement('option');
-                newOption.value = person.prizeId;
-                newOption.dataset.name = person.prizeName || '未知獎品';
-                newOption.text = `${person.prizeName || '未知獎品'} (剩餘: 1)`;
-                
-                // 插入到第一個選項之後
-                if (prizeSelect.options.length > 1) {
-                  prizeSelect.insertBefore(newOption, prizeSelect.options[1]);
-                } else {
-                  prizeSelect.appendChild(newOption);
-                }
-                
-                console.log(`已重新添加獎品選項: ${person.prizeName} (剩餘: 1)`);
-              }
-            }
-
-            // DELETE API
-            fetch(`/events/${eventId}/luckydraw`, { // 使用 eventId
-              method: 'DELETE',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ _id: person._id })
-            })
-            .then(res => {
-              if (res.ok) {
-                console.log("已刪除", person);
-              } else {
-                console.error("刪除失敗", res.statusText);
-              }
-            })
-            .catch(err => console.error("刪除失敗", err));
-          }
-        });
-
-        // 獎品信息已經在上面獲取並存儲到 person 對象中
-        // 準備發送的數據
-        const postData = {
-          ...person,
-          prizeId: person.prizeId
-        };
-        
-        // POST 該人資料
-        fetch(`/events/${eventId}/luckydraw`, { // 使用 eventId
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(postData)
-        })
-        .then(res => {
-          if (res.ok) {
-            console.log("已送出", person);
-            // 更新獎品選項顯示
-            const option = prizeSelect.options[prizeSelect.selectedIndex];
-            const currentText = option.text;
-            const match = currentText.match(/\(剩餘: (\d+)\)/);
-            if (match) {
-              const remaining = parseInt(match[1]) - 1;
-              if (remaining <= 0) {
-                option.remove(); // 移除數量為0的選項
-                // 重置選擇為第一個可用選項
-                if (prizeSelect.options.length > 1) {
-                  prizeSelect.selectedIndex = 1;
-                } else {
-                  prizeSelect.selectedIndex = 0;
-                }
-              } else {
-                option.text = option.text.replace(/\(剩餘: \d+\)/, `(剩餘: ${remaining})`);
-              }
-            }
-          } else {
-            console.error("送出失敗", res.statusText);
-            // 如果送出失敗，重新啟用按鈕
-            startBtn.disabled = false;
-          }
-        })
-        .catch(err => console.error("送出失敗", err));
-
-        overlay.style.display = 'none';
-        animationDiv.style.display = 'none';
-      }, 3000); // 3秒後顯示結果
     }
 
-    startBtn.addEventListener('click', drawWinner);
+    // 初始化顯示
+    updateStatusDisplay();
 
-    draw5Btn.addEventListener('click', () => {
-      // 檢查是否選擇了獎品
-      const prizeSelect = document.getElementById('prizeSelect');
-      if (!prizeSelect.value) {
-        alert("請先選擇獎品！");
-        return;
+    // 監聽控制器連接狀態
+    socket.on('luckydraw:controller_status', ({ status }) => {
+      controllerConnected = (status === 'online');
+      if (!controllerConnected) {
+        currentPrizeName = null;
       }
-
-      // 獲取當前選擇的獎品信息
-      const selectedPrizeId = prizeSelect.value;
-      const selectedOption = prizeSelect.options[prizeSelect.selectedIndex];
-      const currentText = selectedOption.text;
-      const match = currentText.match(/\(剩餘: (\d+)\)/);
-      
-      if (!match) {
-        alert("無法獲取獎品庫存信息！");
-        return;
-      }
-
-      const remainingPrize = parseInt(match[1]);
-      const availablePeopleCount = availablePeople.length;
-      
-      // 計算實際可抽取的數量：取最小值（5人、可用人數、獎品庫存）
-      const drawCount = Math.min(5, availablePeopleCount, remainingPrize);
-      
-      if (drawCount <= 0) {
-        if (availablePeopleCount === 0) {
-          alert("所有人都已抽出！");
-        } else if (remainingPrize === 0) {
-          alert("所選獎品已無庫存！");
-        }
-        return;
-      }
-
-      // 顯示連抽信息
-      console.log(`開始連抽 ${drawCount} 人，獎品庫存：${remainingPrize}，可用人數：${availablePeopleCount}`);
-
-      // 執行連抽
-      let currentDraw = 0;
-      const executeDraw = () => {
-        if (currentDraw >= drawCount) {
-          return; // 已完成所有抽獎
-        }
-
-        // 重新檢查獎品庫存
-        const prizeSelect = document.getElementById('prizeSelect');
-        const selectedOption = prizeSelect.options[prizeSelect.selectedIndex];
-        const currentText = selectedOption.text;
-        const match = currentText.match(/\(剩餘: (\d+)\)/);
-        
-        if (!match || parseInt(match[1]) <= 0) {
-          console.log("獎品庫存不足，停止連抽");
-          return;
-        }
-
-        // 檢查是否還有可用人員
-        if (availablePeople.length === 0) {
-          console.log("沒有可用人員，停止連抽");
-          return;
-        }
-
-        drawWinner();
-        currentDraw++;
-        
-        // 如果還有剩餘抽獎次數，繼續下一次
-        if (currentDraw < drawCount) {
-          setTimeout(executeDraw, 3500); // 3.5秒後執行下一次抽獎
-        }
-      };
-
-      executeDraw();
+      updateStatusDisplay();
     });
 
-    draw10Btn.addEventListener('click', () => {
-      const drawCount = Math.min(10, availablePeople.length); // 確保最多抽取可用人數
-      for (let i = 0; i < drawCount; i++) {
-        drawWinner();
+    // 監聽獎品選擇
+    socket.on('luckydraw:prize_selected', ({ prizeName }) => {
+      currentPrizeName = prizeName;
+      updateStatusDisplay();
+    });
+
+    let winners = [];
+
+    function renderWinner(winner) {
+      // 確保 winner 對象有必要的字段
+      if (!winner || !winner._id) {
+        console.error('Invalid winner object:', winner);
+        return;
       }
+
+      console.log('Rendering winner:', winner);
+
+      const winnerId = String(winner._id);
+      const existsIndex = winners.findIndex(w => String(w._id) === winnerId);
+      
+      // 檢查 DOM 中是否已存在該元素
+      const existingElement = resultDiv.querySelector(`.rets[data-id="${winnerId}"]`);
+      
+      if (existsIndex === -1) {
+        winners.push(winner);
+      } else {
+        winners[existsIndex] = winner;
+      }
+
+      // 如果元素已存在，先移除
+      if (existingElement) {
+        resultDiv.removeChild(existingElement);
+      }
+
+      const rets = document.createElement('div');
+      rets.className = 'rets';
+      rets.dataset.id = winnerId;
+
+      // 計算正確的序號（在 winners 數組中的位置 + 1）
+      const number = existsIndex === -1 ? winners.length : existsIndex + 1;
+      let displayContent = '';
+
+      if (winner.prizeName) {
+        displayContent += `<div class="prize">🎁 ${winner.prizeName}</div>`;
+      }
+      if (winner.company) {
+        displayContent += `<div class="company">${winner.company}</div>`;
+      }
+      if (winner.table) {
+        displayContent += `<div class="table">桌號: ${winner.table}</div>`;
+      }
+      // 確保用戶名一定會顯示
+      const userName = winner.name || '未知';
+      displayContent += `<div class="name">${userName}</div>`;
+
+      rets.innerHTML = `<div class="number">${number}</div><div class="card">${displayContent}</div>`;
+      resultDiv.appendChild(rets);
+
+      // 更新所有元素的序號
+      Array.from(resultDiv.querySelectorAll('.rets')).forEach((el, idx) => {
+        const numberDiv = el.querySelector('.number');
+        if (numberDiv) numberDiv.textContent = idx + 1;
+      });
+
+      let currentDisplay = '';
+      if (winner.prizeName) {
+        currentDisplay += `<div style="font-size: 24px; color: #e74c3c; font-weight: bold; margin-bottom: 10px;">🎁 ${winner.prizeName}</div>`;
+      }
+      if (winner.company) {
+        currentDisplay += `<div style="font-size: 18px; font-weight: bold;">${winner.company}</div>`;
+      }
+      if (winner.table) {
+        currentDisplay += `<div style="font-size: 16px;">桌號: ${winner.table}</div>`;
+      }
+      currentDisplay += `<div style="font-size: 16px;">${userName}</div>`;
+      currentDiv.innerHTML = currentDisplay;
+      currentDiv.style.display = 'block';
+    }
+
+    function removeWinnerFromView(winnerId) {
+      winners = winners.filter(w => String(w._id) !== String(winnerId));
+      const node = resultDiv.querySelector(`.rets[data-id="${winnerId}"]`);
+      if (node) {
+        resultDiv.removeChild(node);
+      }
+      Array.from(resultDiv.querySelectorAll('.rets')).forEach((el, idx) => {
+        const numberDiv = el.querySelector('.number');
+        if (numberDiv) numberDiv.textContent = idx + 1;
+      });
+    }
+
+    let animationTimer = null;
+    let animationStartTime = null;
+
+    socket.on('luckydraw:start', () => {
+      overlay.style.display = 'block';
+      animationDiv.style.display = 'block';
+      animationStartTime = Date.now();
+      // 清除之前的定时器
+      if (animationTimer) clearTimeout(animationTimer);
+      // 动画持续 3 秒
+      animationTimer = setTimeout(() => {
+        overlay.style.display = 'none';
+        animationDiv.style.display = 'none';
+        animationStartTime = null;
+      }, 3000);
+    });
+
+    socket.on('luckydraw:winner_added', ({ winner }) => {
+      console.log('Received winner_added event:', winner);
+      // 如果动画正在播放，等待动画结束；否则立即显示
+      if (animationDiv.style.display === 'block' && animationStartTime) {
+        const elapsed = Date.now() - animationStartTime;
+        const remaining = Math.max(0, 3000 - elapsed);
+        setTimeout(() => {
+          overlay.style.display = 'none';
+          animationDiv.style.display = 'none';
+          animationStartTime = null;
+          renderWinner(winner);
+        }, remaining);
+      } else {
+        // 没有动画在播放，立即显示
+        renderWinner(winner);
+      }
+    });
+
+    socket.on('luckydraw:winner_removed', ({ winnerId }) => {
+      removeWinnerFromView(winnerId);
     });
   </script>
   <!-- <script src="/admin/assets/js/luckydraw.js"></script> -->

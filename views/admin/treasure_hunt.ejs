@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Treasure Hunt 管理</title>
+    <%- include("components/header") %>
+    <%- include("components/menu", { eventId: eventId }) %>
+    <link rel="stylesheet" href="/admin/assets/css/style.css">
+    <style>
+        .add-item-form {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .alert-container {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 1050;
+            min-width: 300px;
+        }
+        .qr-code-preview {
+            max-width: 200px;
+            max-height: 200px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            background: white;
+        }
+        .points-badge {
+            font-size: 18px;
+            font-weight: bold;
+            color: #28a745;
+            padding: 5px 10px;
+            background: #d4edda;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        .modal-qr-code {
+            text-align: center;
+            padding: 20px;
+        }
+        .modal-qr-code img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+
+<div id="right-panel" class="right-panel">
+    <%- include("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title">Treasure Hunt 管理</strong>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert-container" id="alertContainer"></div>
+                            
+                            <button id="addItemBtn" class="btn btn-primary mb-3">添加 Treasure Hunt 項目</button>
+                            
+                            <div class="add-item-form" id="addItemForm">
+                                <h5>添加新項目</h5>
+                                <form id="newItemForm">
+                                    <div class="form-group">
+                                        <label for="itemName">項目名稱 *</label>
+                                        <input type="text" class="form-control" id="itemName" name="name" required placeholder="例如：寶箱 A">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="itemPoints">積分數值 *</label>
+                                        <input type="number" class="form-control" id="itemPoints" name="points" required min="1" value="10" placeholder="例如：10">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="itemDescription">描述</label>
+                                        <textarea class="form-control" id="itemDescription" name="description" rows="3" placeholder="項目描述（可選）"></textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <button type="submit" class="btn btn-success">創建項目</button>
+                                        <button type="button" class="btn btn-secondary ml-2" id="cancelBtn">取消</button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <table class="table table-striped table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 15%;">項目名稱</th>
+                                        <th style="width: 10%;">積分</th>
+                                        <th style="width: 20%;">QR Code</th>
+                                        <th style="width: 25%;">描述</th>
+                                        <th style="width: 15%;">創建時間</th>
+                                        <th style="width: 15%;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="itemsList">
+                                    <% treasureHuntItems.forEach(item => { %>
+                                        <tr data-item-id="<%= item._id %>">
+                                            <td><strong><%= item.name %></strong></td>
+                                            <td>
+                                                <span class="points-badge"><%= item.points %> 分</span>
+                                            </td>
+                                            <td>
+                                                <% if (item.qrCodeImage) { %>
+                                                    <img src="<%= item.qrCodeImage %>" alt="QR Code" class="qr-code-preview" style="cursor: pointer;" onclick="showQRCodeModal('<%= item.name %>', '<%= item.qrCodeImage %>', '<%= item.qrCodeData %>')">
+                                                <% } else { %>
+                                                    <span class="text-muted">未生成</span>
+                                                <% } %>
+                                            </td>
+                                            <td><%= item.description || '-' %></td>
+                                            <td><%= new Date(item.created_at).toLocaleString('zh-TW') %></td>
+                                            <td>
+                                                <button class="btn btn-info btn-sm view-qr-btn" data-item-id="<%= item._id %>" data-name="<%= item.name %>" data-image="<%= item.qrCodeImage %>" data-data="<%= item.qrCodeData %>">查看 QR Code</button>
+                                                <button class="btn btn-warning btn-sm edit-item-btn" data-item-id="<%= item._id %>" data-name="<%= item.name %>" data-points="<%= item.points %>" data-description="<%= item.description || '' %>">編輯</button>
+                                                <button class="btn btn-danger btn-sm delete-item-btn" data-item-id="<%= item._id %>">刪除</button>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- QR Code 查看 Modal -->
+<div class="modal fade" id="qrCodeModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="qrCodeModalTitle">QR Code</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body modal-qr-code">
+                <img id="qrCodeModalImage" src="" alt="QR Code" style="max-width: 100%;">
+                <p class="mt-3"><strong>掃描此 QR Code 可獲得積分</strong></p>
+                <p class="text-muted"><small id="qrCodeModalData"></small></p>
+                <a id="qrCodeDownloadLink" href="#" download="qrcode.png" class="btn btn-primary mt-2">下載 QR Code</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 編輯項目 Modal -->
+<div class="modal fade" id="editItemModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">編輯項目</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="editItemForm">
+                    <input type="hidden" id="editItemId">
+                    <div class="form-group">
+                        <label for="editItemName">項目名稱 *</label>
+                        <input type="text" class="form-control" id="editItemName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editItemPoints">積分數值 *</label>
+                        <input type="number" class="form-control" id="editItemPoints" required min="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="editItemDescription">描述</label>
+                        <textarea class="form-control" id="editItemDescription" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="saveEditBtn">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include("components/footer") %>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+<script>
+$(document).ready(function() {
+    const eventId = '<%= eventId %>';
+    
+    function showAlert(type, message) {
+        const alertHtml = `
+            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        `;
+        $('#alertContainer').html(alertHtml);
+        setTimeout(() => {
+            $('.alert').alert('close');
+        }, 3000);
+    }
+    
+    // 顯示/隱藏添加表單
+    $('#addItemBtn').on('click', function() {
+        $('#addItemForm').toggle();
+    });
+    
+    $('#cancelBtn').on('click', function() {
+        $('#addItemForm').hide();
+        $('#newItemForm')[0].reset();
+    });
+    
+    // 創建項目
+    $('#newItemForm').on('submit', function(e) {
+        e.preventDefault();
+        const name = $('#itemName').val().trim();
+        const points = parseInt($('#itemPoints').val());
+        const description = $('#itemDescription').val().trim();
+        
+        if (!name) {
+            showAlert('danger', '請輸入項目名稱');
+            return;
+        }
+        
+        if (!points || points <= 0) {
+            showAlert('danger', '請輸入有效的積分數值（必須大於0）');
+            return;
+        }
+        
+        $.ajax({
+            url: `/events/${eventId}/treasure-hunt`,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ name, points, description }),
+            success: function(response) {
+                if (response.success) {
+                    showAlert('success', `項目 ${response.item.name} 創建成功！`);
+                    location.reload();
+                } else {
+                    showAlert('danger', response.message || '創建失敗');
+                }
+            },
+            error: function(xhr) {
+                const errorMsg = xhr.responseJSON?.message || '創建失敗';
+                showAlert('danger', errorMsg);
+            }
+        });
+    });
+    
+    // 查看 QR Code
+    $(document).on('click', '.view-qr-btn', function() {
+        const name = $(this).data('name');
+        const image = $(this).data('image');
+        const data = $(this).data('data');
+        
+        $('#qrCodeModalTitle').text(name + ' - QR Code');
+        $('#qrCodeModalImage').attr('src', image);
+        $('#qrCodeModalData').text('數據: ' + data);
+        $('#qrCodeDownloadLink').attr('href', image);
+        $('#qrCodeModal').modal('show');
+    });
+    
+    // 編輯項目
+    $(document).on('click', '.edit-item-btn', function() {
+        const itemId = $(this).data('item-id');
+        const name = $(this).data('name');
+        const points = $(this).data('points');
+        const description = $(this).data('description') || '';
+        
+        $('#editItemId').val(itemId);
+        $('#editItemName').val(name);
+        $('#editItemPoints').val(points);
+        $('#editItemDescription').val(description);
+        $('#editItemModal').modal('show');
+    });
+    
+    // 保存編輯
+    $('#saveEditBtn').on('click', function() {
+        const itemId = $('#editItemId').val();
+        const name = $('#editItemName').val().trim();
+        const points = parseInt($('#editItemPoints').val());
+        const description = $('#editItemDescription').val().trim();
+        
+        if (!name) {
+            showAlert('danger', '請輸入項目名稱');
+            return;
+        }
+        
+        if (!points || points <= 0) {
+            showAlert('danger', '請輸入有效的積分數值（必須大於0）');
+            return;
+        }
+        
+        $.ajax({
+            url: `/events/${eventId}/treasure-hunt/${itemId}`,
+            type: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({ name, points, description }),
+            success: function(response) {
+                if (response.success) {
+                    showAlert('success', '項目更新成功');
+                    $('#editItemModal').modal('hide');
+                    location.reload();
+                } else {
+                    showAlert('danger', response.message || '更新失敗');
+                }
+            },
+            error: function(xhr) {
+                const errorMsg = xhr.responseJSON?.message || '更新失敗';
+                showAlert('danger', errorMsg);
+            }
+        });
+    });
+    
+    // 刪除項目
+    $(document).on('click', '.delete-item-btn', function() {
+        const itemId = $(this).data('item-id');
+        const row = $(this).closest('tr');
+        const itemName = row.find('td:first').text();
+        
+        if (!confirm(`確定要刪除項目 ${itemName} 嗎？此操作無法恢復。`)) {
+            return;
+        }
+        
+        $.ajax({
+            url: `/events/${eventId}/treasure-hunt/${itemId}`,
+            type: 'DELETE',
+            success: function(response) {
+                if (response.success) {
+                    row.remove();
+                    showAlert('success', '項目已刪除');
+                } else {
+                    showAlert('danger', response.message || '刪除失敗');
+                }
+            },
+            error: function(xhr) {
+                const errorMsg = xhr.responseJSON?.message || '刪除失敗';
+                showAlert('danger', errorMsg);
+            }
+        });
+    });
+});
+
+// 顯示 QR Code Modal（用於圖片點擊）
+function showQRCodeModal(name, image, data) {
+    $('#qrCodeModalTitle').text(name + ' - QR Code');
+    $('#qrCodeModalImage').attr('src', image);
+    $('#qrCodeModalData').text('數據: ' + data);
+    $('#qrCodeDownloadLink').attr('href', image);
+    $('#qrCodeModal').modal('show');
+}
+</script>
+
+</body>
+</html>
+
+

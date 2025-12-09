@@ -45,6 +45,11 @@
                             <strong class="card-title">中獎者列表 - event : <%= eventId %></strong>
                         </div>
                         <div class="card-body">
+                            <div class="mb-3">
+                                <a href="/events/<%= eventId %>/luckydraw/list/export" class="btn btn-success">
+                                    匯出 Excel
+                                </a>
+                            </div>
                             <table id="winners-table" class="table table-bordered">
                                 <thead>
                                     <tr>
@@ -90,10 +95,43 @@
 
 <%- include("components/footer") %>
 
+<div id="controllerToast" style="position: fixed; top: 80px; right: 20px; z-index: 2000; padding: 8px 14px; border-radius: 4px; font-size: 13px; color: #fff; background-color: rgba(220,53,69,0.9); opacity: 0; pointer-events: none; transition: opacity 0.2s ease-in-out;"></div>
+
+<script src="/socket.io/socket.io.js"></script>
 <script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
 <script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
 <script src="/admin/assets/js/init/datatables-init.js"></script>
 <script type="text/javascript">
+    const eventId = '<%= eventId %>';
+    const controllerToast = document.getElementById('controllerToast');
+    let controllerToastTimer = null;
+
+    function showControllerToast(message, type) {
+        controllerToast.textContent = message;
+        controllerToast.style.backgroundColor =
+            type === 'success'
+                ? 'rgba(40,167,69,0.9)'
+                : type === 'warning'
+                ? 'rgba(255,193,7,0.9)'
+                : 'rgba(220,53,69,0.9)';
+        controllerToast.style.opacity = '1';
+        if (controllerToastTimer) clearTimeout(controllerToastTimer);
+        controllerToastTimer = setTimeout(() => {
+            controllerToast.style.opacity = '0';
+        }, 2000);
+    }
+
+    const socket = io();
+    socket.emit('join_luckydraw', { eventId });
+
+    socket.on('luckydraw:controller_status', ({ status }) => {
+        if (status === 'online') {
+            showControllerToast('LuckyDraw 控制器已連接', 'success');
+        } else if (status === 'offline') {
+            showControllerToast('LuckyDraw 控制器未連接', 'warning');
+        }
+    });
+
     $(document).ready(function() {
         $('#winners-table').DataTable(); // 初始化 DataTable
         

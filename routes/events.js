@@ -46,6 +46,7 @@ router.get('/list', eventsController.renderEventsList);
 router.get('/:eventId/users/data', eventsController.fetchUsersByEvent);
 router.get('/:eventId', eventsController.getEventUsersByEventID);
 router.get('/:eventId/luckydraw', eventsController.renderLuckydrawPage); // 使用控制器函數
+router.get('/:eventId/luckydraw/panel', eventsController.renderLuckydrawPanelPage); // iPad 抽獎控制面板
 router.get('/:eventId/import', importController.getImportUserPage);
 router.post('/:eventId/import', upload, importController.importUsers);
 router.get('/:eventId/import/sample', importController.downloadSampleFile);
@@ -145,19 +146,7 @@ router.post('/:eventId/points', eventsController.createPoint);
 // 獲取所有 points
 router.get('/:eventId/points', eventsController.getPoints);
 
-// 獲取單個 point
-// 生成 QRCode 的路由
-router.get('/:eventId/points/:pointId', (req, res) => {
-    const { eventId, pointId } = req.params; // 獲取 eventId 和 pointId
-    res.render('admin/points/qrcode', { eventId, pointId }); // 渲染 QRCode 頁面
-});
-
-// 更新 point
-router.put('/:eventId/points/:pointId', eventsController.updatePoint);
-
-
-
-// 渲染編輯點數的頁面
+// 積分掃描器路由已移除，請使用掃瞄加分管理功能
 router.get('/:eventId/points/edit/:pointId', async (req, res) => {
     const { eventId, pointId } = req.params; // 獲取 eventId 和 pointId
     try {
@@ -173,6 +162,16 @@ router.get('/:eventId/points/edit/:pointId', async (req, res) => {
     }
 });
 
+// 獲取單個 point
+// 生成 QRCode 的路由
+router.get('/:eventId/points/:pointId', (req, res) => {
+    const { eventId, pointId } = req.params; // 獲取 eventId 和 pointId
+    res.render('admin/points/qrcode', { eventId, pointId }); // 渲染 QRCode 頁面
+});
+
+// 更新 point
+router.put('/:eventId/points/:pointId', eventsController.updatePoint);
+
 // 刪除中獎者
 router.delete('/:eventId/luckydraw', eventsController.removeLuckydrawUser); // 使用控制器函數
 
@@ -181,6 +180,8 @@ router.post('/:eventId/luckydraw', eventsController.addLuckydrawUser); // 使用
 
 // 添加路由以顯示中獎者列表
 router.get('/:eventId/luckydraw/list', eventsController.renderAdminLuckydrawPage); // 使用控制器函數
+// 匯出中獎者列表為 Excel
+router.get('/:eventId/luckydraw/list/export', eventsController.exportLuckydrawList);
 
 // 添加路由以顯示 QR 碼登錄頁面
 router.get('/:eventId/qrcodeLogin', eventsController.renderQRCodeLoginPage); // 使用控制器函數
@@ -208,5 +209,30 @@ router.get('/:eventId/emailTemplate/:id', emailTemplateController.renderEmailTem
 router.get('/:eventId/banner', eventsController.showBannerManagement);
 router.post('/:eventId/banner/upload', eventsController.uploadBanner);
 router.post('/:eventId/banner/delete', eventsController.deleteBanner);
+
+// 掃瞄加分功能路由
+router.get('/:eventId/scan-point-users', eventsController.renderScanPointUsersPage); // 管理頁面
+router.post('/:eventId/scan-point-users', eventsController.createScanPointUser); // 創建用戶
+router.delete('/:eventId/scan-point-users/:userId', eventsController.deleteScanPointUser); // 刪除用戶
+router.post('/:eventId/scan-point-users/:userId/regenerate-pin', eventsController.regeneratePIN); // 重新生成 PIN
+
+// 掃瞄加分登入和掃瞄頁面
+router.get('/:eventId/attendee', eventsController.renderScanPointLoginPage); // 登入頁面 (主要路由)
+router.get('/:eventId/attendee/login', eventsController.renderScanPointLoginPage); // 登入頁面 (備用路由)
+router.post('/:eventId/attendee/login', eventsController.scanPointLogin); // PIN 登入驗證
+router.get('/:eventId/attendee/scan', eventsController.renderScanPointScanPage); // 掃瞄頁面
+router.post('/:eventId/attendee/scan/add-points', eventsController.addPointsByScan); // 添加分數
+router.post('/:eventId/attendee/logout', (req, res) => { // 登出
+    req.session.scanPointUser = null;
+    res.json({ success: true });
+});
+
+// Treasure Hunt 功能路由
+router.get('/:eventId/treasure-hunt', eventsController.renderTreasureHuntPage); // 管理頁面
+router.post('/:eventId/treasure-hunt', eventsController.createTreasureHuntItem); // 創建項目
+router.put('/:eventId/treasure-hunt/:itemId', eventsController.updateTreasureHuntItem); // 更新項目
+router.delete('/:eventId/treasure-hunt/:itemId', eventsController.deleteTreasureHuntItem); // 刪除項目
+router.get('/:eventId/treasure-hunt/scan', eventsController.renderTreasureHuntScanPage); // 用戶掃描頁面
+router.post('/:eventId/treasure-hunt/scan', eventsController.scanTreasureHuntQRCode); // 掃描 QR Code 並添加積分
 
 module.exports = router;
