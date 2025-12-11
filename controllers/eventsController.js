@@ -2520,6 +2520,42 @@ exports.batchDeleteUsers = async (req, res) => {
     }
 };
 
+// Batch check in users
+exports.batchCheckInUsers = async (req, res) => {
+    const { eventId } = req.params;
+    
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+        
+        const now = new Date();
+        let checkedInCount = 0;
+        
+        // 將所有未 check in 的用戶設為 check in
+        event.users.forEach(user => {
+            if (!user.isCheckIn) {
+                user.isCheckIn = true;
+                user.checkInAt = now;
+                checkedInCount++;
+            }
+        });
+        
+        await event.save();
+        
+        res.status(200).json({ 
+            message: `Successfully checked in ${checkedInCount} users`,
+            checkedInCount: checkedInCount,
+            totalUsers: event.users.length
+        });
+        
+    } catch (error) {
+        console.error('Error batch checking in users:', error);
+        res.status(500).json({ message: 'Error batch checking in users' });
+    }
+};
+
 // Banner 管理功能
 // 配置 multer 用於文件上傳
 const storage = multer.diskStorage({

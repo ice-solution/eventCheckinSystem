@@ -128,6 +128,7 @@
                                     <i class="fa fa-credit-card"></i> Transaction Records
                                 </a>
                                 <button id="batchDeleteBtn" class="btn btn-danger ml-2" style="display: none;">Batch Delete Selected</button>
+                                <button id="batchCheckInBtn" class="btn btn-success ml-2">Batch Check In All</button>
                                 <button id="addUserBtn" class="btn btn-primary ml-2">Add User</button>
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" role="switch" id="paymentEvent">
@@ -477,6 +478,50 @@
                     error: function(xhr, status, error) {
                         console.error('Error batch deleting users:', error);
                         showAlert('danger', 'Failed to delete users. Please try again.');
+                    }
+                });
+            }
+        });
+
+        // Batch check in button click
+        $('#batchCheckInBtn').on('click', function() {
+            const totalUsers = <%= event.users.length %>;
+            const alreadyCheckedIn = <%= event.users.filter(u => u.isCheckIn).length %>;
+            const toCheckIn = totalUsers - alreadyCheckedIn;
+
+            if (toCheckIn === 0) {
+                showAlert('info', 'All users are already checked in!');
+                return;
+            }
+
+            if (confirm(`確定要將所有 ${totalUsers} 位用戶設為已簽到嗎？\n（目前已有 ${alreadyCheckedIn} 位已簽到，將新增 ${toCheckIn} 位）`)) {
+                const button = $(this);
+                const originalText = button.text();
+                button.prop('disabled', true).text('處理中...');
+
+                $.ajax({
+                    url: `/events/<%= event._id %>/users/batch-checkin`,
+                    type: 'PUT',
+                    contentType: 'application/json',
+                    success: function(response) {
+                        // 更新所有行的 check in 狀態
+                        $('#usersTable tbody tr').each(function() {
+                            const row = $(this);
+                            const checkInCheckbox = row.find('.checkin-toggle');
+                            
+                            if (!checkInCheckbox.is(':checked')) {
+                                checkInCheckbox.prop('checked', true);
+                                row.removeClass('checkin-false').addClass('checkin-true');
+                            }
+                        });
+                        
+                        showAlert('success', `成功將 ${response.checkedInCount} 位用戶設為已簽到！`);
+                        button.prop('disabled', false).text(originalText);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error batch checking in users:', error);
+                        showAlert('danger', '批量簽到失敗，請重試。');
+                        button.prop('disabled', false).text(originalText);
                     }
                 });
             }
