@@ -52,6 +52,7 @@
       width: 30px; /* 控制序號的寬度 */
       text-align: center;
       font-weight: bold;
+      font-size: 20.8px; /* 16px * 1.3 = 20.8px (加大 30%) */
       margin-right: 10px; /* 與卡片內容的間距 */
     }
 
@@ -61,17 +62,17 @@
 
     .name {
       font-weight: bold;
-      font-size: 16px;
+      font-size: 25px;
     }
 
     .company {
-      font-size: 13px;
+      font-size: 20px;
       color: #555;
       margin-top: 3px;
     }
 
     .table {
-      font-size: 12px;
+      font-size: 15.6px; /* 12px * 1.3 = 15.6px (加大 30%) */
       color: #666;
       margin-top: 2px;
     }
@@ -101,18 +102,49 @@
     }
 
     #current {
-      font-size: 36px;
-      font-weight: bold;
-      color: black; /* 文字顏色設置為黑色 */
-      text-align: center;
-      margin: 150px auto 0 auto; /* 上邊距 150px，左右自動置中 */
-      background-color: #ffeeba; /* 與 card 一致的背景 */
-      border-radius: 6px; /* 與 card 一致的圓角 */
-      padding: 50px; /* 與 card 一致的內邊距 */
-      width: 20%; /* 調整寬度 */
-      min-width: 300px; /* 最小寬度 */
-      max-width: 500px; /* 最大寬度 */
       display: none; /* 初始隱藏 */
+      margin: 150px auto 0 auto; /* 上邊距 150px，左右自動置中 */
+      max-width: 500px; /* 最大寬度 */
+    }
+    
+    #current .rets {
+      display: flex;
+      align-items: center; /* 垂直居中 */
+      background-color: #ffeeba;
+      border-radius: 6px;
+      padding: 15.6px; /* 12px * 1.3 = 15.6px (加大 30%) */
+      box-shadow: 0 0 4px rgba(0,0,0,0.1);
+      transition: 0.3s;
+      width: 100%;
+    }
+    
+    #current .number {
+      width: 39px; /* 30px * 1.3 = 39px (加大 30%) */
+      text-align: center;
+      font-weight: bold;
+      font-size: 20.8px; /* 16px * 1.3 = 20.8px (加大 30%) */
+      margin-right: 13px; /* 10px * 1.3 = 13px (加大 30%) */
+    }
+    
+    #current .card {
+      flex-grow: 1;
+    }
+    
+    #current .name {
+      font-weight: bold;
+      font-size: 25px;
+    }
+    
+    #current .company {
+      font-size: 20px;
+      color: #555;
+      margin-top: 3px;
+    }
+    
+    #current .table {
+      font-size: 15.6px; /* 12px * 1.3 = 15.6px (加大 30%) */
+      color: #666;
+      margin-top: 2px;
     }
 
     h1 {
@@ -280,24 +312,23 @@
       }
     }
     
-    // 單獨的函數用於渲染單抽結果到中間
+    // 單獨的函數用於渲染單抽結果到中間（格式與 #result 一致）
     function renderSingleWinnerToCenter(winner) {
       const userName = winner.name || '未知';
       const orderNumber = winner.order || '';
-      let currentDisplay = '';
-      if (orderNumber) {
-        currentDisplay += `<div style="font-size: 20px; color: #333; font-weight: bold; margin-bottom: 10px;">抽獎號碼: ${orderNumber}</div>`;
-      }
-      // 移除獎品顯示，因為中間已經顯示了
-      // 先顯示公司，後顯示姓名
+      
+      // 使用與 #result 一致的格式，抽獎編號在左邊
+      let displayContent = '';
+      // 先顯示姓名，後顯示公司
+      displayContent += `<div class="name">${userName}</div>`;
       if (winner.company) {
-        currentDisplay += `<div style="font-size: 18px; font-weight: bold;">${winner.company}</div>`;
+        displayContent += `<div class="company">${winner.company}</div>`;
       }
-      currentDisplay += `<div style="font-size: 16px;">${userName}</div>`;
       if (winner.table) {
-        currentDisplay += `<div style="font-size: 16px;">桌號: ${winner.table}</div>`;
+        displayContent += `<div class="table">桌號: ${winner.table}</div>`;
       }
-      currentDiv.innerHTML = currentDisplay;
+      
+      currentDiv.innerHTML = `<div class="rets"><div class="number">${orderNumber}</div><div class="card">${displayContent}</div></div>`;
       currentDiv.style.display = 'block';
       resultDiv.innerHTML = ''; // 清除列表
     }
@@ -323,12 +354,12 @@
         
         let displayContent = '';
         // 移除獎品顯示，因為中間已經顯示了
-        // 先顯示公司，後顯示姓名
+        // 先顯示姓名，後顯示公司
+        const userName = winner.name || '未知';
+        displayContent += `<div class="name">${userName}</div>`;
         if (winner.company) {
           displayContent += `<div class="company">${winner.company}</div>`;
         }
-        const userName = winner.name || '未知';
-        displayContent += `<div class="name">${userName}</div>`;
         if (winner.table) {
           displayContent += `<div class="table">桌號: ${winner.table}</div>`;
         }
@@ -427,6 +458,17 @@
 
     socket.on('luckydraw:winner_removed', ({ winnerId }) => {
       removeWinnerFromView(winnerId);
+    });
+
+    // 監聽所有中獎者被清除的事件
+    socket.on('luckydraw:all_winners_removed', () => {
+      // 清除所有顯示
+      resultDiv.innerHTML = '';
+      currentDiv.innerHTML = '';
+      currentDiv.style.display = 'none';
+      winners = [];
+      currentDrawWinners = [];
+      isCurrentDrawSingle = null;
     });
 
     // Start Button 功能

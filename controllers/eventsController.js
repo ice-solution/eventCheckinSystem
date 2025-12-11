@@ -1110,6 +1110,63 @@ exports.removeLuckydrawUser = async (req, res) => {
     }
 };
 
+// 刪除所有中獎記錄
+exports.removeAllLuckydrawUsers = async (req, res) => {
+    try {
+        const event = await Event.findById(req.params.eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+
+        // 獲取所有中獎者的獎品信息，以便還原獎品數量
+        const Prize = require('../model/Prize');
+        const prizeCounts = {};
+        
+        event.winners.forEach(winner => {
+            if (winner.prizeId) {
+                const prizeId = winner.prizeId.toString();
+                prizeCounts[prizeId] = (prizeCounts[prizeId] || 0) + 1;
+            }
+        });
+
+        // 還原所有獎品的數量
+        for (const [prizeId, count] of Object.entries(prizeCounts)) {
+            try {
+                const prize = await Prize.findById(prizeId);
+                if (prize) {
+                    prize.unit += count;
+                    await prize.save();
+                    console.log(`已還原獎品 ${prize.name} 的數量 ${count} 個，當前數量: ${prize.unit}`);
+                }
+            } catch (prizeError) {
+                console.error(`還原獎品 ${prizeId} 時發生錯誤:`, prizeError);
+            }
+        }
+
+        // 清空所有中獎記錄（但保留 maxLuckydrawOrder，確保 order 唯一性）
+        const deletedCount = event.winners.length;
+        event.winners = [];
+        await event.save();
+
+        // 通過 socket 發送所有中獎者移除事件給顯示頁面
+        try {
+            const io = getSocket();
+            const room = `luckydraw:${req.params.eventId}`;
+            // 發送清除所有中獎者的通知
+            io.to(room).emit('luckydraw:all_winners_removed', { eventId: req.params.eventId });
+        } catch (socketError) {
+            console.error('Error sending socket event:', socketError);
+            // Socket 錯誤不影響 HTTP 響應
+        }
+
+        console.log(`[刪除所有中獎記錄] 已刪除 ${deletedCount} 個中獎記錄，當前最大 order: ${event.maxLuckydrawOrder}`);
+        res.status(200).send({ message: `Successfully deleted ${deletedCount} winner(s).`, deletedCount });
+    } catch (error) {
+        console.error('Error deleting all winners:', error);
+        res.status(500).send('Error deleting all winners.');
+    }
+};
+
 // 新增中獎者
 exports.addLuckydrawUser = async (req, res) => {
     const { _id, name, company, table, prizeId } = req.body; // 獲取中獎者資料和獎品ID

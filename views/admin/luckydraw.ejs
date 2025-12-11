@@ -49,6 +49,9 @@
                                 <a href="/events/<%= eventId %>/luckydraw/list/export" class="btn btn-success">
                                     匯出 Excel
                                 </a>
+                                <button id="delete-all-winners" class="btn btn-danger" style="margin-left: 10px;">
+                                    <i class="fa fa-trash"></i> 全部刪除抽獎記錄
+                                </button>
                             </div>
                             <table id="winners-table" class="table table-bordered">
                                 <thead>
@@ -70,7 +73,7 @@
                                             <td><%= winner.company || '-' %></td>
                                             <td><%= winner.table || '-' %></td>
                                             <td><%= winner.prizeName || '隨機獎品' %></td>
-                                            <td><%= winner.wonAt ? new Date(winner.wonAt).toLocaleString('zh-TW') : '未記錄' %></td>
+                                            <td><%= winner.wonAt ? new Date(winner.wonAt).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }) : '未記錄' %></td>
                                             <td>
                                                 <button class="btn btn-danger btn-sm delete-winner" 
                                                         data-winner-id="<%= winner._id %>"
@@ -133,6 +136,35 @@
                     }
                 });
             }
+        });
+        
+        // 處理全部刪除抽獎記錄（雙重確認）
+        $('#delete-all-winners').on('click', function() {
+            // 第一次確認
+            if (!confirm('⚠️ 警告：您確定要刪除所有抽獎記錄嗎？\n\n此操作無法復原！')) {
+                return;
+            }
+            
+            // 第二次確認
+            if (!confirm('⚠️ 最後確認：您真的要刪除所有抽獎記錄嗎？\n\n所有中獎記錄將被永久刪除，且無法復原！')) {
+                return;
+            }
+            
+            // 發送刪除所有記錄的請求
+            $.ajax({
+                url: `/events/<%= eventId %>/luckydraw/all`,
+                type: 'DELETE',
+                success: function(response) {
+                    // 刪除成功，重新載入頁面
+                    alert('所有抽獎記錄已成功刪除！');
+                    location.reload();
+                },
+                error: function(xhr, status, error) {
+                    console.error('刪除失敗:', error);
+                    const errorMsg = xhr.responseJSON?.message || xhr.responseText || '刪除失敗，請稍後再試。';
+                    alert('刪除失敗：' + errorMsg);
+                }
+            });
         });
     });
 </script>

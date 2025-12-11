@@ -175,6 +175,9 @@ router.put('/:eventId/points/:pointId', eventsController.updatePoint);
 // 刪除中獎者
 router.delete('/:eventId/luckydraw', eventsController.removeLuckydrawUser); // 使用控制器函數
 
+// 刪除所有中獎記錄
+router.delete('/:eventId/luckydraw/all', eventsController.removeAllLuckydrawUsers); // 使用控制器函數
+
 // 新增中獎者
 router.post('/:eventId/luckydraw', eventsController.addLuckydrawUser); // 使用控制器函數
 
