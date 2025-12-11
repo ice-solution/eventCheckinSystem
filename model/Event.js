@@ -41,6 +41,7 @@ const winnerSchema = new mongoose.Schema({
     table: { type: String }, // 桌號
     prizeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Prize' }, // 獎品ID
     prizeName: { type: String }, // 獎品名稱
+    order: { type: Number, required: true }, // 抽獎號碼（從1開始，不重用已刪除的號碼）
     wonAt: { type: Date, default: Date.now } // 中獎時間
 });
 
@@ -80,6 +81,7 @@ const eventSchema = new mongoose.Schema({
     users:[userSchema],
     points: [pointSchema],
     winners: [winnerSchema], // 新增 winners 字段
+    maxLuckydrawOrder: { type: Number, default: 0 }, // 追蹤最大的中獎編號（即使刪除也不會減少，確保唯一性）
     isPaymentEvent: { type: Boolean, default: false }, // 是否為付費活動
     PaymentTickets: [ticketSchema], // 票券陣列
     gameIds: [{ type: String }], // 新增 gameIds 陣列，存儲該事件開放的遊戲ID

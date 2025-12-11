@@ -1085,10 +1085,13 @@ exports.removeLuckydrawUser = async (req, res) => {
             }
         }
 
-        // 刪除中獎者
+        // 刪除中獎者（order 號碼會保留，不會被重用）
+        // 注意：maxLuckydrawOrder 不會減少，確保被刪除的 order 不會被重用
         const winnerId = winnerToDelete._id.toString();
+        const deletedOrder = winnerToDelete.order;
         event.winners.splice(winnerIndex, 1);
         await event.save(); // 保存更改
+        console.log(`[刪除中獎者] 已刪除 order ${deletedOrder} 的中獎者，當前最大 order: ${event.maxLuckydrawOrder}，order 號碼將保留不會重用`);
 
         // 通過 socket 發送中獎者移除事件給顯示頁面
         try {
@@ -1142,7 +1145,12 @@ exports.addLuckydrawUser = async (req, res) => {
         const prizeName = prize.name;
         await prize.save();
 
-        // 創建 winner 對象，包含獎品信息
+        // 計算下一個可用的 order 號碼（從1開始，不重用已刪除的號碼）
+        // 使用 maxLuckydrawOrder 追蹤最大 order，即使刪除中獎者也不會減少，確保 order 唯一性
+        const nextOrder = (event.maxLuckydrawOrder || 0) + 1;
+        console.log(`[單抽] 當前最大 order: ${event.maxLuckydrawOrder || 0}, 下一個 order: ${nextOrder}`);
+
+        // 創建 winner 對象，包含獎品信息和抽獎號碼
         const winner = { 
             _id, 
             name, 
@@ -1150,11 +1158,14 @@ exports.addLuckydrawUser = async (req, res) => {
             table,
             prizeId, 
             prizeName,
+            order: nextOrder, // 分配唯一的抽獎號碼
             wonAt: new Date()
         };
 
         // 將中獎者存儲在 event 的 winners 陣列中
         event.winners.push(winner);
+        // 更新最大 order 號碼
+        event.maxLuckydrawOrder = Math.max(event.maxLuckydrawOrder || 0, nextOrder);
         await event.save(); // 保存更改
 
         // 通過 socket 發送中獎者添加事件給顯示頁面
@@ -1169,6 +1180,7 @@ exports.addLuckydrawUser = async (req, res) => {
                 table: table || '',
                 prizeId: String(prizeId),
                 prizeName: prizeName || '',
+                order: winner.order, // 包含抽獎號碼
                 wonAt: winner.wonAt
             };
             io.to(room).emit('luckydraw:winner_added', { winner: winnerForSocket });
@@ -1181,6 +1193,127 @@ exports.addLuckydrawUser = async (req, res) => {
     } catch (error) {
         console.error('Error adding winner:', error);
         res.status(500).send('Error adding winner.');
+    }
+};
+
+// 批量抽獎 API
+exports.batchDrawWinners = async (req, res) => {
+    const { count, prizeId } = req.body; // 獲取要抽取的數量和獎品ID
+    const { eventId } = req.params;
+    
+    try {
+        if (!count || count <= 0) {
+            return res.status(400).send('Invalid count. Count must be greater than 0.');
+        }
+
+        if (!prizeId) {
+            return res.status(400).send('Please select a prize.');
+        }
+
+        const event = await Event.findById(eventId).populate('users');
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+
+        // 獲取所有已經簽到且未中獎的用戶
+        const availablePeople = event.users.filter(user => 
+            user.isCheckIn === true && 
+            !event.winners.some(winner => winner._id && winner._id.equals(user._id))
+        );
+
+        if (availablePeople.length === 0) {
+            return res.status(400).send('No available people to draw.');
+        }
+
+        // 檢查獎品是否存在並獲取庫存
+        const Prize = require('../model/Prize');
+        const prize = await Prize.findById(prizeId);
+        if (!prize) {
+            return res.status(404).send('Prize not found.');
+        }
+
+        if (prize.unit <= 0) {
+            return res.status(400).send('Prize is out of stock.');
+        }
+
+        // 計算實際可抽取的數量（考慮獎品庫存和可用人數）
+        const actualCount = Math.min(count, prize.unit, availablePeople.length);
+
+        if (actualCount <= 0) {
+            return res.status(400).send('Cannot draw any winners. Not enough prize stock or available people.');
+        }
+
+        // 使用 Fisher-Yates 洗牌算法隨機抽取指定數量的人
+        const shuffled = [...availablePeople];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        
+        const selectedWinners = shuffled.slice(0, actualCount);
+
+        // 更新獎品庫存
+        prize.unit -= actualCount;
+        const prizeName = prize.name;
+        await prize.save();
+
+        // 計算下一個可用的 order 號碼（從1開始，不重用已刪除的號碼）
+        // 使用 maxLuckydrawOrder 追蹤最大 order，即使刪除中獎者也不會減少，確保 order 唯一性
+        let nextOrder = (event.maxLuckydrawOrder || 0) + 1;
+        console.log(`[批量抽] 當前最大 order: ${event.maxLuckydrawOrder || 0}, 下一個 order: ${nextOrder}`);
+
+        // 創建 winners 對象並添加到 event，為每個中獎者分配連續的 order 號碼
+        const winners = selectedWinners.map((user, index) => ({
+            _id: user._id,
+            name: user.name || '',
+            company: user.company || '',
+            table: user.table || '',
+            prizeId: prizeId,
+            prizeName: prizeName,
+            order: nextOrder + index, // 分配連續的抽獎號碼
+            wonAt: new Date()
+        }));
+
+        // 將所有中獎者添加到 event 的 winners 陣列
+        event.winners.push(...winners);
+        // 更新最大 order 號碼（批量抽獎的最後一個 order）
+        const lastOrder = nextOrder + actualCount - 1;
+        event.maxLuckydrawOrder = Math.max(event.maxLuckydrawOrder || 0, lastOrder);
+        await event.save();
+
+        // 通過 socket 發送中獎者添加事件給顯示頁面
+        try {
+            const io = getSocket();
+            const room = `luckydraw:${eventId}`;
+            
+            // 為每個中獎者發送 socket 事件
+            winners.forEach(winner => {
+                const winnerForSocket = {
+                    _id: String(winner._id),
+                    name: winner.name || '',
+                    company: winner.company || '',
+                    table: winner.table || '',
+                    prizeId: String(prizeId),
+                    prizeName: prizeName || '',
+                    order: winner.order, // 包含抽獎號碼
+                    wonAt: winner.wonAt
+                };
+                io.to(room).emit('luckydraw:winner_added', { winner: winnerForSocket });
+            });
+        } catch (socketError) {
+            console.error('Error sending socket event:', socketError);
+            // Socket 錯誤不影響 HTTP 響應
+        }
+
+        res.status(201).send({ 
+            message: `Successfully drew ${actualCount} winner(s).`, 
+            winners,
+            actualCount,
+            requestedCount: count
+        });
+    } catch (error) {
+        console.error('Error batch drawing winners:', error);
+        res.status(500).send('Error batch drawing winners.');
     }
 };
 
@@ -1842,9 +1975,9 @@ exports.renderAdminLuckydrawPage = async (req, res) => {
             return res.status(404).send('Event not found.');
         }
 
-        // 獲取中獎者列表，並添加次序
-        const winners = event.winners.map((winner, index) => ({
-            order: index + 1, // 次序從 1 開始
+        // 獲取中獎者列表，使用實際的中獎編號（order）
+        const winners = event.winners.map((winner) => ({
+            order: winner.order || 0, // 使用數據庫中存儲的中獎編號
             _id: winner._id,
             name: winner.name,
             company: winner.company,

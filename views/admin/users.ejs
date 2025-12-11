@@ -301,21 +301,21 @@
                                             <td><input type="checkbox" class="user-select" data-_id="<%= user._id %>" /></td>
                                             <% if (formConfig && formConfig.sections) { %>
                                                 <% formConfig.sections.forEach(section => { %>
-                                            <% if (section.visible && section.fields) { %>
-                                                <% section.fields.forEach(field => { %>
-                                                    <% if (field.visible) { %>
+                                                    <% if (section.visible && section.fields) { %>
+                                                        <% section.fields.forEach(field => { %>
+                                                            <% if (field.visible) { %>
                                                         <td data-field-name="<%= field.fieldName %>"><%= user[field.fieldName] || '-' %></td>
+                                                            <% } %>
+                                                        <% }); %>
                                                     <% } %>
                                                 <% }); %>
-                                            <% } %>
-                                                <% }); %>
-                                        <% } else { %>
-                                            <!-- 預設列（如果沒有formConfig） -->
+                                            <% } else { %>
+                                                <!-- 預設列（如果沒有formConfig） -->
                                             <td data-field-name="email"><%= user.email %></td>
                                             <td data-field-name="name"><%= user.name %></td>
                                             <td data-field-name="company"><%= user.company %></td>
                                             <td data-field-name="phone"><%= user.phone %></td>
-                                        <% } %>
+                                            <% } %>
                                             <td>
                                                 <input type="checkbox" class="checkin-toggle" data-_id="<%= user._id %>" <%= user.isCheckIn ? 'checked' : '' %> />
                                             </td>

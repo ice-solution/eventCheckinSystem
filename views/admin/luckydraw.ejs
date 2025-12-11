@@ -53,7 +53,7 @@
                             <table id="winners-table" class="table table-bordered">
                                 <thead>
                                     <tr>
-                                        <th>次序</th>
+                                        <th>中獎號碼</th>
                                         <th>姓名</th>
                                         <th>公司</th>
                                         <th>桌號</th>
@@ -95,45 +95,15 @@
 
 <%- include("components/footer") %>
 
-<div id="controllerToast" style="position: fixed; top: 80px; right: 20px; z-index: 2000; padding: 8px 14px; border-radius: 4px; font-size: 13px; color: #fff; background-color: rgba(220,53,69,0.9); opacity: 0; pointer-events: none; transition: opacity 0.2s ease-in-out;"></div>
-
-<script src="/socket.io/socket.io.js"></script>
 <script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
 <script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
 <script src="/admin/assets/js/init/datatables-init.js"></script>
 <script type="text/javascript">
     const eventId = '<%= eventId %>';
-    const controllerToast = document.getElementById('controllerToast');
-    let controllerToastTimer = null;
-
-    function showControllerToast(message, type) {
-        controllerToast.textContent = message;
-        controllerToast.style.backgroundColor =
-            type === 'success'
-                ? 'rgba(40,167,69,0.9)'
-                : type === 'warning'
-                ? 'rgba(255,193,7,0.9)'
-                : 'rgba(220,53,69,0.9)';
-        controllerToast.style.opacity = '1';
-        if (controllerToastTimer) clearTimeout(controllerToastTimer);
-        controllerToastTimer = setTimeout(() => {
-            controllerToast.style.opacity = '0';
-        }, 2000);
-    }
-
-    const socket = io();
-    socket.emit('join_luckydraw', { eventId });
-
-    socket.on('luckydraw:controller_status', ({ status }) => {
-        if (status === 'online') {
-            showControllerToast('LuckyDraw 控制器已連接', 'success');
-        } else if (status === 'offline') {
-            showControllerToast('LuckyDraw 控制器未連接', 'warning');
-        }
-    });
 
     $(document).ready(function() {
-        $('#winners-table').DataTable(); // 初始化 DataTable
+        // 移除 DataTable 排序功能，只顯示表格
+        // $('#winners-table').DataTable(); // 已禁用排序功能
         
         // 處理刪除中獎者
         $(document).on('click', '.delete-winner', function() {
@@ -151,8 +121,7 @@
                         // 刪除成功，移除表格行
                         $(`tr[data-winner-id="${winnerId}"]`).fadeOut(300, function() {
                             $(this).remove();
-                            // 重新計算次序
-                            updateOrderNumbers();
+                            // 注意：不需要重新計算次序，因為使用的是抽獎號碼（order），刪除後不會重用
                         });
                         
                         // 顯示成功消息
@@ -165,13 +134,6 @@
                 });
             }
         });
-        
-        // 重新計算表格行的次序
-        function updateOrderNumbers() {
-            $('#winners-table tbody tr').each(function(index) {
-                $(this).find('td:first').text(index + 1);
-            });
-        }
     });
 </script>
 

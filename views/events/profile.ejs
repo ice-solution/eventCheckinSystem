@@ -190,7 +190,7 @@
             await stopScanner();
             $('#scannerLightbox').show();
             setTimeout(() => {
-                startScanner('login');
+            startScanner('login');
             }, 100);
         });
 
@@ -198,7 +198,7 @@
             await stopScanner();
             $('#scannerLightbox').show();
             setTimeout(() => {
-                startScanner('point');
+            startScanner('point');
             }, 100);
         });
 
@@ -246,12 +246,12 @@
                 $('#reader').show();
                 
                 await html5QrCode.start(
-                    { facingMode: "environment" },
-                    {
-                        fps: 10,
+                { facingMode: "environment" },
+                {
+                    fps: 10,
                         qrbox: { width: 250, height: 250 },
                         aspectRatio: 1.0
-                    },
+                },
                     async (decodedText, decodedResult) => {
                         // 立即處理，避免重複掃描
                         if (!scanning) return;
@@ -353,55 +353,55 @@
             }
             
             // 處理其他類型的 QR Code（原有邏輯）
-            const params = decodedText.split(','); // 假設 QR 碼格式為 eventId,userId 或 eventId,pointId
-            const scannedEventId = params[0];
+                        const params = decodedText.split(','); // 假設 QR 碼格式為 eventId,userId 或 eventId,pointId
+                        const scannedEventId = params[0];
 
-                if (action === 'login') {
-                    const scannedUserId = "<%= user._id %>"; // 使用當前頁面的用戶ID
+                        if (action === 'login') {
+                            const scannedUserId = "<%= user._id %>"; // 使用當前頁面的用戶ID
 
-                    // 檢查掃描的 eventId 是否與當前 eventId 匹配
-                    if (scannedEventId === eventId) {
-                        // 發送 checkIn 請求
-                        $.ajax({
+                            // 檢查掃描的 eventId 是否與當前 eventId 匹配
+                            if (scannedEventId === eventId) {
+                                                            // 發送 checkIn 請求
+                            $.ajax({
                             url: `/events/${scannedEventId}/users/${scannedUserId}/checkin`,
                             method: 'PUT',
-                            contentType: 'application/json',
-                            success: function(response) {
-                                alert(response.message);
-                                $('#scannerLightbox').hide();
+                                contentType: 'application/json',
+                                success: function(response) {
+                                    alert(response.message);
+                                    $('#scannerLightbox').hide();
                                 location.reload(); // 重新載入頁面以更新狀態
-                            },
-                            error: function(xhr) {
+                                },
+                                error: function(xhr) {
                                 alert(xhr.responseJSON?.message || 'Check-in 失敗');
+                                }
+                            });
+                            } else {
+                                alert("掃描的事件 ID 不匹配！");
                             }
-                        });
-                    } else {
-                        alert("掃描的事件 ID 不匹配！");
-                    }
-                } else if (action === 'point') {
-                    const pointId = params[1]; // 假設 QR 碼格式為 eventId,pointId
+                        } else if (action === 'point') {
+                            const pointId = params[1]; // 假設 QR 碼格式為 eventId,pointId
 
-                    // 檢查掃描的 eventId 是否與當前 eventId 匹配
-                    if (scannedEventId === eventId) {
-                        // 發送獲取點數請求
-                        $.ajax({
+                            // 檢查掃描的 eventId 是否與當前 eventId 匹配
+                            if (scannedEventId === eventId) {
+                                // 發送獲取點數請求
+                                $.ajax({
                             url: `/events/${scannedEventId}/points/getPoint`,
                             method: 'POST',
-                            contentType: 'application/json',
-                            data: JSON.stringify({ pointId: pointId }),
-                            success: function(response) {
-                                alert(response.message);
-                                $('#scannerLightbox').hide();
+                                    contentType: 'application/json',
+                                    data: JSON.stringify({ pointId: pointId }),
+                                    success: function(response) {
+                                        alert(response.message);
+                                        $('#scannerLightbox').hide();
                                 location.reload(); // 重新載入頁面以更新積分
-                            },
-                            error: function(xhr) {
+                                    },
+                                    error: function(xhr) {
                                 alert(xhr.responseJSON?.message || '獲取點數失敗');
+                                    }
+                                });
+                            } else {
+                                alert("掃描的事件 ID 不匹配！");
                             }
-                        });
-                    } else {
-                        alert("掃描的事件 ID 不匹配！");
-                    }
-                }
+                        }
         }
     });
 </script>

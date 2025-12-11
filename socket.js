@@ -30,6 +30,14 @@ const initSocket = (server) => {
             socket.to(room).emit('luckydraw:start');
         });
 
+        // LuckyDraw: 從用戶顯示頁面點擊開始按鈕
+        socket.on('luckydraw:user_start_click', ({ eventId }) => {
+            if (!eventId) return;
+            const room = `luckydraw:${eventId}`;
+            // 通知控制面板用戶已經開始（可以用於自動開始或其他邏輯）
+            io.to(room).emit('luckydraw:user_started', { eventId });
+        });
+
         // LuckyDraw: 從控制面板發出「獎品選擇」通知
         socket.on('luckydraw_panel_prize_selected', ({ eventId, prizeName }) => {
             if (!eventId) return;

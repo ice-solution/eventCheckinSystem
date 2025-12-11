@@ -178,6 +178,9 @@ router.delete('/:eventId/luckydraw', eventsController.removeLuckydrawUser); // �
 // 新增中獎者
 router.post('/:eventId/luckydraw', eventsController.addLuckydrawUser); // 使用控制器函數
 
+// 批量抽獎 API
+router.post('/:eventId/luckydraw/batch', eventsController.batchDrawWinners);
+
 // 添加路由以顯示中獎者列表
 router.get('/:eventId/luckydraw/list', eventsController.renderAdminLuckydrawPage); // 使用控制器函數
 // 匯出中獎者列表為 Excel

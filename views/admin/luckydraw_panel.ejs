@@ -309,16 +309,18 @@
 
     function renderWinnerList() {
         winnerList.innerHTML = '';
-        sessionWinners.forEach((w, idx) => {
+        sessionWinners.forEach((w) => {
             const li = document.createElement('li');
             li.className = 'winner-item';
             li.dataset.id = w._id;
             li.style.cursor = 'pointer';
             li.style.userSelect = 'none';
             li.title = '點擊取消此中獎者';
+            // 使用中獎編號（order）取代序號
+            const orderNumber = w.order || '';
             li.innerHTML = `
                 <div class="winner-main">
-                    <span class="winner-name">${idx + 1}. ${w.name}</span>
+                    <span class="winner-name">${orderNumber ? orderNumber + '. ' : ''}${w.name}</span>
                     <span class="winner-meta">
                         ${w.company || ''} ${w.table ? ' | 桌號: ' + w.table : ''} ${w.prizeName ? ' | 🎁 ' + w.prizeName : ''}
                     </span>
@@ -450,21 +452,73 @@
     });
 
     document.getElementById('btn-draw-multi').addEventListener('click', async () => {
+        const prizeInfo = getSelectedPrize();
+        if (!prizeInfo) return;
+        
         const count = Math.max(1, parseInt(drawCountInput.value || '1', 10));
-        for (let i = 0; i < count; i++) {
-            const prizeInfo = getSelectedPrize();
-            if (!prizeInfo) return;
-            if (prizeInfo.remaining <= 0) {
-                alert('獎品已無庫存，停止連抽。');
+        
+        if (prizeInfo.remaining <= 0) {
+            alert('獎品已無庫存，無法抽獎。');
+            return;
+        }
+
+        if (count > prizeInfo.remaining) {
+            alert(`獎品庫存不足，最多只能抽取 ${prizeInfo.remaining} 個。`);
+            return;
+        }
+
+        if (availablePeople.length < count) {
+            alert(`可用人數不足，目前只有 ${availablePeople.length} 人可抽。`);
+            return;
+        }
+
+        // 通知展示頁開始動畫（只通知一次）
+        socket.emit('luckydraw_panel_start', { eventId });
+
+        try {
+            // 使用批量抽獎 API
+            const res = await fetch(`/events/${eventId}/luckydraw/batch`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    count: count,
+                    prizeId: prizeInfo.prizeId
+                })
+            });
+
+            if (!res.ok) {
+                const msg = await res.text();
+                alert('批量抽獎失敗：' + msg);
                 return;
             }
-            // 每次抽獎都通知展示頁開始動畫
-            socket.emit('luckydraw_panel_start', { eventId });
-            const person = pickRandomPerson();
-            if (!person) return;
-            // 等待 3.5 秒讓動畫播放完（動畫 3 秒 + 緩衝 0.5 秒）
-            await new Promise(resolve => setTimeout(resolve, 3500));
-            await confirmWinner(person);
+
+            const data = await res.json();
+            
+            // 更新可用人員列表（移除已中獎的人）
+            if (data.winners && Array.isArray(data.winners)) {
+                data.winners.forEach(winner => {
+                    const index = availablePeople.findIndex(p => String(p._id) === String(winner._id));
+                    if (index !== -1) {
+                        availablePeople.splice(index, 1);
+                    }
+                    sessionWinners.push({
+                        ...winner,
+                        prizeName: prizeInfo.prizeName
+                    });
+                });
+            }
+
+            renderWinnerList();
+
+            // 更新獎品選項文字
+            const newRemaining = prizeInfo.remaining - data.actualCount;
+            updatePrizeOptionText(prizeInfo.option, newRemaining);
+
+            // Socket 事件已經由後端 API 發送，這裡不需要再發送
+            // 後端會自動發送 luckydraw:winner_added 事件給所有連接的客戶端
+        } catch (err) {
+            console.error(err);
+            alert('批量抽獎時發生錯誤：' + err.message);
         }
     });
 
