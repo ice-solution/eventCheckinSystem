@@ -112,7 +112,7 @@
     
     #current {
       display: none; /* 初始隱藏 */
-      max-width: 1400px; /* 增加寬度以容納更長的文字 */
+      max-width: 1610px; /* 1400px * 1.15 = 1610px (增加 15% 以容納更長的文字) */
       width: 90%; /* 使用百分比寬度，確保置中 */
       text-align: center; /* 確保內容置中 */
       justify-content: center; /* flex 置中 */
@@ -139,9 +139,9 @@
     }
     
     #current .card {
-      flex-grow: 1;
+      flex-grow: 1.15; /* 增加 15% 的 flex 增長比例 */
       min-width: 0; /* 允許 flex 項目縮小 */
-      overflow: hidden; /* 防止內容溢出 */
+      overflow: visible; /* 允許內容顯示，不隱藏溢出 */
     }
     
     #current .name {
