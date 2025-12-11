@@ -45,8 +45,48 @@
                                     <% }); %>
                                 </tbody>
                             </table>
-                            <a href="/prizes/<%= eventId %>/prizes/create" class="btn btn-primary">新增獎品</a>
-                            <a href="/events/<%= eventId %>" class="btn btn-secondary">返回事件</a>
+                            <div class="mb-3">
+                                <a href="/prizes/<%= eventId %>/prizes/create" class="btn btn-primary">新增獎品</a>
+                                <button type="button" class="btn btn-success" data-toggle="modal" data-target="#batchUploadModal">批量上傳</button>
+                                <a href="/prizes/<%= eventId %>/prizes/download-sample" class="btn btn-info">下載範本</a>
+                                <a href="/events/<%= eventId %>" class="btn btn-secondary">返回事件</a>
+                            </div>
+                            
+                            <!-- 批量上傳 Modal -->
+                            <div class="modal fade" id="batchUploadModal" tabindex="-1" role="dialog" aria-labelledby="batchUploadModalLabel" aria-hidden="true">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="batchUploadModalLabel">批量上傳獎品</h5>
+                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <form id="batchUploadForm" enctype="multipart/form-data">
+                                                <div class="form-group">
+                                                    <label for="excelFile">選擇 Excel 檔案 (.xlsx)</label>
+                                                    <input type="file" class="form-control-file" id="excelFile" name="file" accept=".xlsx,.xls" required>
+                                                    <small class="form-text text-muted">
+                                                        請上傳包含以下欄位的 Excel 檔案：<br>
+                                                        - name (獎品名稱，必填)<br>
+                                                        - unit (數量，必填，數字)<br>
+                                                        - picture (圖片 URL，選填)
+                                                    </small>
+                                                </div>
+                                                <div id="uploadProgress" class="progress" style="display: none;">
+                                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                                                </div>
+                                                <div id="uploadMessage" class="alert" style="display: none;"></div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+                                            <button type="button" class="btn btn-primary" onclick="submitBatchUpload()">上傳</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -91,5 +131,52 @@
                 alert('刪除失敗');
             });
         }
+    }
+
+    function submitBatchUpload() {
+        const fileInput = document.getElementById('excelFile');
+        const file = fileInput.files[0];
+        
+        if (!file) {
+            alert('請選擇檔案');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const progressDiv = document.getElementById('uploadProgress');
+        const messageDiv = document.getElementById('uploadMessage');
+        
+        progressDiv.style.display = 'block';
+        messageDiv.style.display = 'none';
+
+        fetch(`/prizes/<%= eventId %>/prizes/batch-upload`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            progressDiv.style.display = 'none';
+            messageDiv.style.display = 'block';
+            
+            if (data.success) {
+                messageDiv.className = 'alert alert-success';
+                messageDiv.textContent = `成功上傳 ${data.importedCount} 個獎品！`;
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                messageDiv.className = 'alert alert-danger';
+                messageDiv.textContent = data.message || '上傳失敗';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            progressDiv.style.display = 'none';
+            messageDiv.style.display = 'block';
+            messageDiv.className = 'alert alert-danger';
+            messageDiv.textContent = '上傳失敗：' + error.message;
+        });
     }
 </script> 

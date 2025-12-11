@@ -55,4 +55,29 @@ router.delete('/:eventId/prizes/:prizeId', prizeController.deletePrize);
 // 上傳獎品圖片
 router.post('/:eventId/prizes/:prizeId/upload-image', uploadPrizeImageMulter.single('prizeImage'), prizeController.uploadPrizeImage);
 
+// 批量上傳獎品（使用 memory storage 處理 Excel 檔案）
+const uploadExcel = multer({ 
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 1024 * 1024 * 10, // 10MB
+    },
+    fileFilter: (req, file, cb) => {
+        // 只接受 Excel 檔案
+        const allowedMimes = [
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+            'application/vnd.ms-excel' // .xls
+        ];
+        if (allowedMimes.includes(file.mimetype) || file.originalname.match(/\.(xlsx|xls)$/i)) {
+            cb(null, true);
+        } else {
+            cb(new Error('只允許上傳 Excel 檔案 (.xlsx, .xls)！'), false);
+        }
+    }
+});
+
+router.post('/:eventId/prizes/batch-upload', uploadExcel.single('file'), prizeController.batchUploadPrizes);
+
+// 下載範本檔案
+router.get('/:eventId/prizes/download-sample', prizeController.downloadSampleFile);
+
 module.exports = router; 

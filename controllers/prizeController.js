@@ -2,6 +2,7 @@ const Prize = require('../model/Prize');
 const Event = require('../model/Event');
 const multer = require('multer');
 const path = require('path');
+const XLSX = require('xlsx');
 
 // 設置 multer 來處理獎品圖片上傳
 const uploadPrizeImage = multer.diskStorage({
@@ -206,5 +207,161 @@ exports.uploadPrizeImage = async (req, res) => {
     } catch (error) {
         console.error('Error uploading prize image:', error);
         res.status(500).json({ message: 'Error uploading prize image' });
+    }
+};
+
+// 批量上傳獎品
+exports.batchUploadPrizes = async (req, res) => {
+    const { eventId } = req.params;
+    
+    try {
+        // 確保 req.file 存在
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: '沒有上傳文件' });
+        }
+
+        // 查詢事件以確保存在
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ success: false, message: 'Event not found' });
+        }
+
+        // 解析 Excel 文件
+        const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+        if (!rows || rows.length === 0) {
+            return res.status(400).json({ success: false, message: '上傳的檔案是空的' });
+        }
+
+        // 第一行是標題行
+        const headerRow = rows[0].map(header => (header !== null && header !== undefined ? String(header).trim() : ''));
+        const headerIndexMap = new Map();
+        headerRow.forEach((header, index) => {
+            if (header && !headerIndexMap.has(header)) {
+                headerIndexMap.set(header, index);
+            }
+        });
+
+        // 檢查必填欄位
+        const requiredFields = ['name', 'unit'];
+        const missingColumns = requiredFields.filter(fieldName => !headerIndexMap.has(fieldName));
+        if (missingColumns.length > 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: `缺少必填欄位：${missingColumns.join(', ')}` 
+            });
+        }
+
+        // 處理數據行
+        const dataRows = rows.slice(1).filter(row => {
+            return row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== '');
+        });
+
+        if (dataRows.length === 0) {
+            return res.status(400).json({ success: false, message: '檔案中沒有數據行' });
+        }
+
+        // 批量創建獎品
+        const now = Date.now();
+        let importedCount = 0;
+        const errors = [];
+
+        for (let i = 0; i < dataRows.length; i++) {
+            const row = dataRows[i];
+            const rowNumber = i + 2; // Excel 行號（從 2 開始，因為第 1 行是標題）
+
+            try {
+                // 獲取必填欄位
+                const nameIndex = headerIndexMap.get('name');
+                const unitIndex = headerIndexMap.get('unit');
+                const pictureIndex = headerIndexMap.has('picture') ? headerIndexMap.get('picture') : null;
+
+                const name = nameIndex !== undefined ? String(row[nameIndex] || '').trim() : '';
+                const unitStr = unitIndex !== undefined ? String(row[unitIndex] || '').trim() : '';
+                const picture = pictureIndex !== null && pictureIndex !== undefined ? String(row[pictureIndex] || '').trim() : '';
+
+                // 驗證必填欄位
+                if (!name) {
+                    errors.push(`第 ${rowNumber} 行：獎品名稱不能為空`);
+                    continue;
+                }
+
+                const unit = parseInt(unitStr, 10);
+                if (isNaN(unit) || unit < 1) {
+                    errors.push(`第 ${rowNumber} 行：數量必須是正整數`);
+                    continue;
+                }
+
+                // 創建獎品
+                const newPrize = new Prize({
+                    eventId,
+                    name,
+                    unit,
+                    picture: picture || undefined,
+                    created_at: now,
+                    modified_at: now
+                });
+
+                await newPrize.save();
+                importedCount += 1;
+            } catch (error) {
+                console.error(`Error processing row ${rowNumber}:`, error);
+                errors.push(`第 ${rowNumber} 行：處理失敗 - ${error.message}`);
+            }
+        }
+
+        if (importedCount === 0 && errors.length > 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: '沒有成功導入任何獎品',
+                errors: errors.slice(0, 10) // 只返回前 10 個錯誤
+            });
+        }
+
+        res.json({ 
+            success: true, 
+            importedCount,
+            totalRows: dataRows.length,
+            errors: errors.length > 0 ? errors.slice(0, 10) : []
+        });
+    } catch (error) {
+        console.error('Error during batch upload:', error);
+        res.status(500).json({ success: false, message: '批量上傳過程中發生錯誤：' + error.message });
+    }
+};
+
+// 下載範本檔案
+exports.downloadSampleFile = async (req, res) => {
+    const { eventId } = req.params;
+
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found');
+        }
+
+        // 創建範本 Excel 檔案
+        const headers = ['name', 'unit', 'picture'];
+        const sampleData = [
+            ['範例獎品1', 10, '/prizes/img/sample1.jpg'],
+            ['範例獎品2', 5, ''],
+            ['範例獎品3', 20, '/prizes/img/sample3.jpg']
+        ];
+
+        const worksheet = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, '獎品列表');
+
+        const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+
+        res.setHeader('Content-Disposition', `attachment; filename=prize_import_sample_${eventId}.xlsx`);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.send(buffer);
+    } catch (error) {
+        console.error('Error generating sample file:', error);
+        res.status(500).send('生成範本檔案失敗');
     }
 }; 

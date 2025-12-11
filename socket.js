@@ -5,22 +5,42 @@ let io; // 定義 io 變量
 const initSocket = (server) => {
     io = socketIo(server); // 初始化 socket.io
     
+    // 追蹤每個 room 中是否有 panel 連接
+    const roomPanels = new Map(); // Map<room, Set<socketId>>
+
     io.on('connection', (socket) => {
         console.log('A user connected');
 
         // LuckyDraw: 加入特定 event 的 room，並標記 socket 當前控制的 eventId
-        socket.on('join_luckydraw', ({ eventId }) => {
+        socket.on('join_luckydraw', ({ eventId, type }) => {
             if (!eventId) return;
             const room = `luckydraw:${eventId}`;
             socket.join(room);
             socket.luckydrawEventId = eventId;
-            console.log(`Socket joined room ${room}`);
+            socket.luckydrawType = type || 'display'; // 默認為 display
+            
+            console.log(`Socket joined room ${room} as type: ${socket.luckydrawType}`);
 
-            // 通知該 room：控制器已連接
-            io.to(room).emit('luckydraw:controller_status', {
-                eventId,
-                status: 'online'
-            });
+            // 如果是 panel，記錄到 roomPanels
+            if (type === 'panel') {
+                if (!roomPanels.has(room)) {
+                    roomPanels.set(room, new Set());
+                }
+                roomPanels.get(room).add(socket.id);
+                
+                // 通知該 room：控制器已連接
+                io.to(room).emit('luckydraw:controller_status', {
+                    eventId,
+                    status: 'online'
+                });
+            } else {
+                // 如果是 display page，檢查是否有 panel 連接
+                const hasPanel = roomPanels.has(room) && roomPanels.get(room).size > 0;
+                socket.emit('luckydraw:controller_status', {
+                    eventId,
+                    status: hasPanel ? 'online' : 'offline'
+                });
+            }
         });
 
         // LuckyDraw: 從控制面板發出「開始抽獎動畫」指令
@@ -55,13 +75,25 @@ const initSocket = (server) => {
         socket.on('disconnect', () => {
             console.log('A user disconnected');
 
-            // 如果這個 socket 有加入某個 luckydraw event，通知該 room 控制器離線
+            // 如果這個 socket 有加入某個 luckydraw event
             if (socket.luckydrawEventId) {
                 const room = `luckydraw:${socket.luckydrawEventId}`;
-                io.to(room).emit('luckydraw:controller_status', {
-                    eventId: socket.luckydrawEventId,
-                    status: 'offline'
-                });
+                
+                // 如果是 panel，從 roomPanels 中移除
+                if (socket.luckydrawType === 'panel' && roomPanels.has(room)) {
+                    roomPanels.get(room).delete(socket.id);
+                    
+                    // 如果沒有 panel 了，清理該 room 的記錄
+                    if (roomPanels.get(room).size === 0) {
+                        roomPanels.delete(room);
+                    }
+                    
+                    // 通知該 room：控制器已離線
+                    io.to(room).emit('luckydraw:controller_status', {
+                        eventId: socket.luckydrawEventId,
+                        status: 'offline'
+                    });
+                }
             }
         });
     });

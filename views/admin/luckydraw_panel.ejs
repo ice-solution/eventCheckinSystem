@@ -182,7 +182,7 @@
 
     // 初始化 Socket.IO 並加入 luckydraw room
     const socket = io();
-    socket.emit('join_luckydraw', { eventId });
+    socket.emit('join_luckydraw', { eventId, type: 'panel' });
 
     const controllerToast = document.getElementById('controllerToast');
     let toastTimer = null;

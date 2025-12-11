@@ -14,6 +14,7 @@
       /* background: rgb(0, 46, 93); */
     }
     .bg {
+      position: relative; /* 為 #current 的絕對定位提供參考 */
       background-image: url('/luckydraw/img/<%= eventId %>.jpg'); /* 使用事件 ID 作為背景圖片 */
       background-size: cover; /* 使背景圖片覆蓋整個畫面 */
       background-position: center; /* 使背景圖片居中 */
@@ -101,50 +102,66 @@
       margin: 0 auto;
     }
 
+    .current-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      margin-top: 150px;
+    }
+    
     #current {
       display: none; /* 初始隱藏 */
-      margin: 150px auto 0 auto; /* 上邊距 150px，左右自動置中 */
-      max-width: 500px; /* 最大寬度 */
+      max-width: 1400px; /* 增加寬度以容納更長的文字 */
+      width: 90%; /* 使用百分比寬度，確保置中 */
+      text-align: center; /* 確保內容置中 */
+      justify-content: center; /* flex 置中 */
     }
     
     #current .rets {
       display: flex;
       align-items: center; /* 垂直居中 */
       background-color: #ffeeba;
-      border-radius: 6px;
-      padding: 15.6px; /* 12px * 1.3 = 15.6px (加大 30%) */
+      border-radius: 9px; /* 6px * 1.5 = 9px (再放大 50%) */
+      padding: 23.4px; /* 15.6px * 1.5 = 23.4px (再放大 50%) */
       box-shadow: 0 0 4px rgba(0,0,0,0.1);
       transition: 0.3s;
       width: 100%;
+      justify-content: center; /* 水平置中 */
     }
     
     #current .number {
-      width: 39px; /* 30px * 1.3 = 39px (加大 30%) */
+      width: 58.5px; /* 39px * 1.5 = 58.5px (再放大 50%) */
       text-align: center;
       font-weight: bold;
-      font-size: 20.8px; /* 16px * 1.3 = 20.8px (加大 30%) */
-      margin-right: 13px; /* 10px * 1.3 = 13px (加大 30%) */
+      font-size: 31.2px; /* 20.8px * 1.5 = 31.2px (再放大 50%) */
+      margin-right: 19.5px; /* 13px * 1.5 = 19.5px (再放大 50%) */
     }
     
     #current .card {
       flex-grow: 1;
+      min-width: 0; /* 允許 flex 項目縮小 */
+      overflow: hidden; /* 防止內容溢出 */
     }
     
     #current .name {
       font-weight: bold;
-      font-size: 25px;
+      font-size: 37.5px; /* 25px * 1.5 = 37.5px (再放大 50%) */
+      white-space: nowrap; /* 防止換行 */
     }
     
     #current .company {
-      font-size: 20px;
+      font-size: 30px; /* 20px * 1.5 = 30px (再放大 50%) */
       color: #555;
-      margin-top: 3px;
+      margin-top: 4.5px; /* 3px * 1.5 = 4.5px (再放大 50%) */
+      white-space: nowrap; /* 防止換行 */
     }
     
     #current .table {
-      font-size: 15.6px; /* 12px * 1.3 = 15.6px (加大 30%) */
+      font-size: 23.4px; /* 15.6px * 1.5 = 23.4px (再放大 50%) */
       color: #666;
-      margin-top: 2px;
+      margin-top: 3px; /* 2px * 1.5 = 3px (再放大 50%) */
+      white-space: nowrap; /* 防止換行 */
     }
 
     h1 {
@@ -230,7 +247,9 @@
       <div id="result"></div>
     </div>
 
-    <div id="current"></div>
+    <div class="current-container">
+      <div id="current"></div>
+    </div>
     <div class="overlay" id="overlay"></div>
     <div class="animation" id="animation">
       <img src="/admin/img/giftbox.gif" alt="Loading..." class="spinner" id="spinnerImage">
@@ -245,7 +264,7 @@
     const animationDiv = document.getElementById('animation');
 
     const socket = io();
-    socket.emit('join_luckydraw', { eventId });
+    socket.emit('join_luckydraw', { eventId, type: 'display' });
 
     const controllerStatusDiv = document.getElementById('controllerStatus');
     const statusIndicator = document.getElementById('statusIndicator');
@@ -329,7 +348,8 @@
       }
       
       currentDiv.innerHTML = `<div class="rets"><div class="number">${orderNumber}</div><div class="card">${displayContent}</div></div>`;
-      currentDiv.style.display = 'block';
+      currentDiv.style.display = 'flex'; // 使用 flex 以確保置中
+      currentDiv.style.justifyContent = 'center';
       resultDiv.innerHTML = ''; // 清除列表
     }
     
