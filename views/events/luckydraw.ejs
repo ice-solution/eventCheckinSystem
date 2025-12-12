@@ -41,8 +41,10 @@
       cursor: pointer;
       box-shadow: 0 0 4px rgba(0,0,0,0.1);
       transition: 0.3s;
-      width: calc(25% - 10px); /* 使其佔滿父容器，四個一行 */
-      max-width: 300px; /* 限制最大寬度以確保居中顯示 */
+      width: auto; /* 根據內容自動調整 */
+      min-width: 200px; /* 最小寬度 */
+      max-width: calc(25% - 10px); /* 最大寬度保持四個一行，但允許更長 */
+      flex: 0 1 auto; /* 根據內容自動調整 */
     }
 
     .rets:hover {
@@ -64,6 +66,9 @@
     .name {
       font-weight: bold;
       font-size: 25px;
+      white-space: nowrap; /* 防止換行 */
+      overflow: visible; /* 允許溢出顯示 */
+      word-break: keep-all; /* 保持單詞完整 */
     }
 
     .company {
@@ -112,8 +117,9 @@
     
     #current {
       display: none; /* 初始隱藏 */
-      max-width: 1610px; /* 1400px * 1.15 = 1610px (增加 15% 以容納更長的文字) */
-      width: 90%; /* 使用百分比寬度，確保置中 */
+      width: auto; /* 根據內容自動調整寬度 */
+      min-width: 300px; /* 最小寬度 */
+      max-width: 95%; /* 最大寬度不超過視窗 */
       text-align: center; /* 確保內容置中 */
       justify-content: center; /* flex 置中 */
     }
@@ -126,12 +132,14 @@
       padding: 23.4px; /* 15.6px * 1.5 = 23.4px (再放大 50%) */
       box-shadow: 0 0 4px rgba(0,0,0,0.1);
       transition: 0.3s;
-      width: 100%;
+      width: auto; /* 根據內容自動調整 */
+      min-width: fit-content; /* 適應內容寬度 */
       justify-content: center; /* 水平置中 */
     }
     
     #current .number {
       width: 58.5px; /* 39px * 1.5 = 58.5px (再放大 50%) */
+      flex-shrink: 0; /* 不允許縮小 */
       text-align: center;
       font-weight: bold;
       font-size: 31.2px; /* 20.8px * 1.5 = 31.2px (再放大 50%) */
@@ -139,7 +147,7 @@
     }
     
     #current .card {
-      flex-grow: 1.15; /* 增加 15% 的 flex 增長比例 */
+      flex: 0 1 auto; /* 根據內容自動調整，不強制增長 */
       min-width: 0; /* 允許 flex 項目縮小 */
       overflow: visible; /* 允許內容顯示，不隱藏溢出 */
     }
@@ -148,6 +156,8 @@
       font-weight: bold;
       font-size: 37.5px; /* 25px * 1.5 = 37.5px (再放大 50%) */
       white-space: nowrap; /* 防止換行 */
+      word-break: keep-all; /* 保持單詞完整 */
+      overflow: visible; /* 允許溢出顯示 */
     }
     
     #current .company {
@@ -351,6 +361,19 @@
       currentDiv.style.display = 'flex'; // 使用 flex 以確保置中
       currentDiv.style.justifyContent = 'center';
       resultDiv.innerHTML = ''; // 清除列表
+      
+      // 動態調整 #current 寬度以適應內容
+      setTimeout(() => {
+        const retsElement = currentDiv.querySelector('.rets');
+        if (retsElement) {
+          const contentWidth = retsElement.scrollWidth;
+          const viewportWidth = window.innerWidth;
+          // 設置寬度為內容寬度，但不超過視窗的 95%
+          const maxWidth = Math.min(contentWidth + 50, viewportWidth * 0.95);
+          retsElement.style.width = 'auto';
+          retsElement.style.minWidth = Math.max(contentWidth, 300) + 'px';
+        }
+      }, 10);
     }
     
     // 單獨的函數用於渲染批量抽結果到列表

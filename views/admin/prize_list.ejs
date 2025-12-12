@@ -36,7 +36,7 @@
                                                 <% } %>
                                             </td>
                                             <td><%= prize.unit %></td>
-                                            <td><%= new Date(prize.created_at).toLocaleString() %></td>
+                                            <td class="prize-date"><%= prize.created_at %></td>
                                             <td>
                                                 <a href="/prizes/<%= eventId %>/prizes/<%= prize._id %>/edit" class="btn btn-sm btn-primary">編輯</a>
                                                 <button class="btn btn-sm btn-danger" onclick="deletePrize('<%= prize._id %>')">刪除</button>
@@ -49,6 +49,7 @@
                                 <a href="/prizes/<%= eventId %>/prizes/create" class="btn btn-primary">新增獎品</a>
                                 <button type="button" class="btn btn-success" data-toggle="modal" data-target="#batchUploadModal">批量上傳</button>
                                 <a href="/prizes/<%= eventId %>/prizes/download-sample" class="btn btn-info">下載範本</a>
+                                <button type="button" class="btn btn-danger" onclick="deleteAllPrizes()">一鍵刪除全部獎品</button>
                                 <a href="/events/<%= eventId %>" class="btn btn-secondary">返回事件</a>
                             </div>
                             
@@ -57,7 +58,7 @@
                                 <div class="modal-dialog" role="document">
                                     <div class="modal-content">
                                         <div class="modal-header">
-                                            <h5 class="modal-title" id="batchUploadModalLabel">批量上傳獎品</h5>
+                                            <h5 class="modal-title" id="batchUploadModalLabel">xlsx上傳獎品</h5>
                                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                                 <span aria-hidden="true">&times;</span>
                                             </button>
@@ -109,6 +110,29 @@
 <script type="text/javascript">
     $(document).ready(function () {
         $('#bootstrap-data-table').DataTable();
+        
+        // 格式化日期為 GMT+8 (Asia/Taipei)
+        $('.prize-date').each(function() {
+            const dateStr = $(this).text().trim();
+            if (dateStr) {
+                try {
+                    const date = new Date(dateStr);
+                    const formattedDate = date.toLocaleString('zh-TW', { 
+                        timeZone: 'Asia/Taipei', 
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                    });
+                    $(this).text(formattedDate);
+                } catch (e) {
+                    console.error('Error formatting date:', e);
+                }
+            }
+        });
     });
 
     function deletePrize(prizeId) {
@@ -177,6 +201,58 @@
             messageDiv.style.display = 'block';
             messageDiv.className = 'alert alert-danger';
             messageDiv.textContent = '上傳失敗：' + error.message;
+        });
+    }
+
+    function deleteAllPrizes() {
+        const totalPrizes = <%= prizes.length %>;
+        
+        if (totalPrizes === 0) {
+            alert('目前沒有任何獎品可以刪除');
+            return;
+        }
+
+        // 第一次確認
+        if (!confirm(`警告：您即將刪除所有 ${totalPrizes} 個獎品！\n\n這是一個不可逆的操作，請確認您真的要執行此操作。`)) {
+            return;
+        }
+
+        // 第二次確認
+        if (!confirm(`再次確認：您確定要刪除所有 ${totalPrizes} 個獎品嗎？\n\n此操作無法復原！`)) {
+            return;
+        }
+
+        // 第三次確認
+        if (!confirm(`最後確認：您真的要刪除所有 ${totalPrizes} 個獎品嗎？\n\n請輸入 "確認刪除" 來完成此操作。\n\n（請在提示框中輸入：確認刪除）`)) {
+            return;
+        }
+
+        // 第四次確認 - 要求輸入特定文字
+        const userInput = prompt(`請輸入 "確認刪除" 來確認刪除所有 ${totalPrizes} 個獎品：`);
+        if (userInput !== '確認刪除') {
+            alert('操作已取消');
+            return;
+        }
+
+        // 執行刪除
+        fetch(`/prizes/<%= eventId %>/prizes`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`成功刪除 ${data.deletedCount} 個獎品！`);
+                location.reload();
+            } else {
+                alert('刪除失敗：' + (data.message || '未知錯誤'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('刪除失敗：' + error.message);
         });
     }
 </script> 

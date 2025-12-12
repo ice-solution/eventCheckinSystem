@@ -52,6 +52,9 @@ router.put('/:eventId/prizes/:prizeId', uploadPrizeImageMulter.single('prizeImag
 // 刪除獎品
 router.delete('/:eventId/prizes/:prizeId', prizeController.deletePrize);
 
+// 刪除所有獎品
+router.delete('/:eventId/prizes', prizeController.deleteAllPrizes);
+
 // 上傳獎品圖片
 router.post('/:eventId/prizes/:prizeId/upload-image', uploadPrizeImageMulter.single('prizeImage'), prizeController.uploadPrizeImage);
 

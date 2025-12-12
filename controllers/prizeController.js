@@ -124,6 +124,29 @@ exports.deletePrize = async (req, res) => {
     }
 };
 
+// 刪除所有獎品
+exports.deleteAllPrizes = async (req, res) => {
+    const { eventId } = req.params;
+    
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ success: false, message: 'Event not found' });
+        }
+        
+        const result = await Prize.deleteMany({ eventId });
+        
+        res.json({ 
+            success: true,
+            message: `Successfully deleted ${result.deletedCount} prize(s)`,
+            deletedCount: result.deletedCount
+        });
+    } catch (error) {
+        console.error('Error deleting all prizes:', error);
+        res.status(500).json({ success: false, message: 'Error deleting all prizes' });
+    }
+};
+
 // 渲染獎品管理頁面
 exports.renderPrizeList = async (req, res) => {
     const { eventId } = req.params;
