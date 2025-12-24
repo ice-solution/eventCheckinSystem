@@ -1,0 +1,101 @@
+<%- include ("components/header") %>
+<%- include ("components/menu", {eventId: eventId }) %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+<div id="right-panel" class="right-panel">
+    <%- include ("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title">編輯 SMS 模板 (Edit SMS Template)</strong>
+                        </div>
+                        <div class="card-body">
+                            <form id="smsTemplateForm">
+                                <div class="form-group">
+                                    <label for="type">SMS 類型 (SMS Type)</label>
+                                    <select class="form-control" id="type" required>
+                                        <option value="welcome" <%= template.type === 'welcome' ? 'selected' : '' %>>歡迎 (Welcome)</option>
+                                        <option value="confirmation" <%= template.type === 'confirmation' ? 'selected' : '' %>>確認 (Confirmation)</option>
+                                        <option value="reminder" <%= template.type === 'reminder' ? 'selected' : '' %>>提醒 (Reminder)</option>
+                                        <option value="thankYou" <%= template.type === 'thankYou' ? 'selected' : '' %>>感謝 (Thank You)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="content">SMS 內容 (SMS Content)</label>
+                                    <textarea class="form-control" id="content" rows="10" required><%= template.content || '' %></textarea>
+                                    <small class="form-text text-muted">
+                                        可用變數 (Available variables): 
+                                        {{user.name}}, {{user.email}}, {{user.company}}, {{user.phone}}, {{user.phone_code}}, 
+                                        {{event.name}}, {{qrCodeUrl}}, {{loginUrl}}
+                                    </small>
+                                </div>
+                                <div class="form-group">
+                                    <div class="alert alert-info">
+                                        <strong>範例 (Example):</strong><br>
+                                        歡迎 {{user.name}} 參加 {{event.name}}！您的登入連結：{{loginUrl}}
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">更新 (Update)</button>
+                                <a href="/events/<%= eventId %>/smsTemplate" class="btn btn-secondary">返回 (Back)</a>
+                            </form>
+                            <div id="alertContainer" class="mt-3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include ("./components/footer") %>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#smsTemplateForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                type: $('#type').val(),
+                content: $('#content').val()
+            };
+            
+            $.ajax({
+                url: '/events/<%= eventId %>/smsTemplate/<%= template._id %>',
+                type: 'PUT',
+                contentType: 'application/json',
+                data: JSON.stringify(formData),
+                success: function(response) {
+                    const alertHtml = `
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            SMS 模板更新成功！(SMS template updated successfully!)
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    `;
+                    $('#alertContainer').html(alertHtml);
+                    setTimeout(() => {
+                        window.location.href = '/events/<%= eventId %>/smsTemplate';
+                    }, 1500);
+                },
+                error: function(error) {
+                    console.error('Error updating SMS template:', error);
+                    const errorMsg = error.responseJSON && error.responseJSON.message ? error.responseJSON.message : '更新失敗 (Failed to update SMS template)';
+                    const alertHtml = `
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            ${errorMsg}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    `;
+                    $('#alertContainer').html(alertHtml);
+                }
+            });
+        });
+    });
+</script>
+

@@ -3,7 +3,8 @@ const express = require('express');
 const router = express.Router();
 const eventsController = require('../controllers/eventsController');
 const importController = require('../controllers/importController');
-const emailTemplateController = require("../controllers/emailTemplateController")
+const emailTemplateController = require("../controllers/emailTemplateController");
+const smsTemplateController = require("../controllers/smsTemplateController");
 
 const Event = require('../model/Event'); // 引入 Event 模型
 const multer = require('multer');
@@ -54,8 +55,8 @@ router.get('/:eventId/import/sample', importController.downloadSampleFile);
 router.post('/:eventId/users', eventsController.addUserToEvent);
 // router.put('/:eventId/users/:userEmail', eventsController.updateUserInEvent);
 
-// Resend welcome email
-router.post('/:eventId/users/:userId/resend-email', eventsController.resendWelcomeEmail);
+// Resend email (支持多種類型)
+router.post('/:eventId/users/:userId/resend-email', eventsController.resendEmail);
 
 // Check-in 用戶
 router.put('/:eventId/users/:userId/checkin', eventsController.checkInUser);
@@ -85,8 +86,24 @@ router.get('/:eventId/profile', eventsController.renderProfilePage); // 渲染�
 // 渲染添加參展商頁面
 router.get('/:eventId/attendees/create', eventsController.renderCreateAttendeePage); // 新增的路由
 
-// 渲染參展商列表頁面
-router.get('/:eventId/attendees', eventsController.renderAttendeesListPage); // 新增的路由
+// 渲染參展商列表頁面（舊的 attendees 功能，保留用於向後兼容）
+// router.get('/:eventId/attendees', eventsController.renderAttendeesListPage); // 已改為 guest list
+
+// 渲染 Guest List 頁面（預先準備的來賓列表，尚未註冊為 RSVP）
+router.get('/:eventId/guest-list', eventsController.renderGuestListPage); // Guest List 路由
+
+// Guest List 管理路由
+router.post('/:eventId/guest-list', eventsController.addGuestToList); // 添加來賓到 Guest List
+router.delete('/:eventId/guest-list/:guestId', eventsController.deleteGuestFromList); // 從 Guest List 刪除來賓
+router.post('/:eventId/guest-list/:guestId/add-to-rsvp', eventsController.addGuestToRSVP); // 將 Guest List 中的來賓添加到 RSVP
+
+// Guest List Excel 導入路由
+const guestListStorage = multer.memoryStorage();
+const guestListUpload = multer({ storage: guestListStorage }).single('file');
+router.post('/:eventId/guest-list/import', guestListUpload, eventsController.importGuestListFromExcel); // 導入 Excel 到 Guest List
+
+// 渲染參展商列表頁面（舊的 attendees 功能，保留用於向後兼容）
+router.get('/:eventId/attendees', eventsController.renderAttendeesListPage);
 
 // 添加參展商
 router.post('/:eventId/attendees', eventsController.addAttendee);
@@ -205,6 +222,7 @@ router.get('/:eventId/luckydraw_setting', eventsController.renderLuckydrawSettin
 router.get('/:eventId/email/:userId', eventsController.renderEmailHtml);
 
 router.patch('/:eventId/paymentEvent', eventsController.updatePaymentEvent);
+router.patch('/:eventId/emailSettings', eventsController.updateEmailSettings);
 
 router.get('/:eventId/report', eventsController.outputReport);
 // Transaction Records
@@ -213,6 +231,14 @@ router.get('/:eventId/transactions', eventsController.renderTransactionRecords);
 router.get('/:eventId/emailTemplate', emailTemplateController.renderEmailTemplateList); // 渲染電子郵件模板列表頁面
 router.get('/:eventId/emailTemplate/create', emailTemplateController.renderCreateEmailTemplatePage); // 渲染創建電子郵件模板頁面
 router.get('/:eventId/emailTemplate/:id', emailTemplateController.renderEmailTemplateDetail); // 渲染創建電子郵件模板頁面
+
+// SMS Template
+router.get('/:eventId/smsTemplate', smsTemplateController.renderSmsTemplateList); // 渲染 SMS 模板列表頁面
+router.get('/:eventId/smsTemplate/create', smsTemplateController.renderCreateSmsTemplatePage); // 渲染創建 SMS 模板頁面
+router.get('/:eventId/smsTemplate/:id', smsTemplateController.renderSmsTemplateDetail); // 渲染 SMS 模板詳情頁面
+router.post('/:eventId/smsTemplate', smsTemplateController.createSmsTemplate); // 創建 SMS 模板
+router.put('/:eventId/smsTemplate/:id', smsTemplateController.updateSmsTemplate); // 更新 SMS 模板
+router.delete('/:eventId/smsTemplate/:id', smsTemplateController.deleteSmsTemplate); // 刪除 SMS 模板
 
 // Banner 管理路由
 router.get('/:eventId/banner', eventsController.showBannerManagement);

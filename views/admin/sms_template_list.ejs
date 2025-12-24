@@ -1,0 +1,131 @@
+<%- include ("components/header") %>
+<%- include ("components/menu", {eventId: eventId }) %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+<div id="right-panel" class="right-panel">
+    <%- include ("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title">SMS 模板列表 (SMS Template List)</strong>
+                        </div>
+                        <div class="card-body">
+                            <table id="bootstrap-data-table" class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>類型 (Type)</th>
+                                        <th>內容預覽 (Content Preview)</th>
+                                        <th>創建時間 (Created At)</th>
+                                        <th>修改時間 (Modified At)</th>
+                                        <th>操作 (Actions)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (smsTemplates && smsTemplates.length > 0) { %>
+                                        <% smsTemplates.forEach(t => { %>
+                                            <tr>
+                                                <td>
+                                                    <% if (t.eventId) { %>
+                                                        <a href="/events/<%= t.eventId %>/smsTemplate/<%= t._id %>">
+                                                            <%= t.type || 'welcome' %>
+                                                        </a>
+                                                    <% } else { %>
+                                                        <a href="/smsTemplate/<%= t._id %>">
+                                                            <%= t.type || 'welcome' %>
+                                                        </a>
+                                                    <% } %>
+                                                </td>
+                                                <td>
+                                                    <%= (t.content || '').substring(0, 50) %>...
+                                                </td>
+                                                <td>
+                                                    <%= new Date(t.created_at).toLocaleString() %>
+                                                </td>
+                                                <td>
+                                                    <%= new Date(t.modified_at).toLocaleString() %>
+                                                </td>
+                                                <td>
+                                                    <button class="btn btn-danger btn-sm" onclick="deleteTemplate('<%= t._id %>', '<%= t.type || 'welcome' %>')">
+                                                        刪除 (Delete)
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        <% }); %>
+                                    <% } else { %>
+                                        <tr>
+                                            <td></td>
+                                            <td></td>
+                                            <td></td>
+                                            <td></td>
+                                            <td></td>
+                                        </tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                            <% if (eventId != null) { %>
+                                <a href="/events/<%= eventId %>/smsTemplate/create" class="btn btn-primary">創建 (Create)</a>
+                            <% } else { %>
+                                <a href="/smsTemplate/create" class="btn btn-primary">創建 (Create)</a>
+                            <% } %>
+                            <a href="/events/<%= eventId %>" class="btn btn-secondary">返回 (Back)</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include ("./components/footer") %>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
+<script>
+    $(document).ready(function() {
+        const hasData = <%= (smsTemplates && smsTemplates.length > 0) ? 'true' : 'false' %>;
+        
+        if (hasData) {
+            $('#bootstrap-data-table').DataTable({
+                "language": {
+                    "search": "搜尋:",
+                    "lengthMenu": "顯示 _MENU_ 筆記錄",
+                    "info": "顯示第 _START_ 至 _END_ 筆，共 _TOTAL_ 筆",
+                    "infoEmpty": "沒有記錄",
+                    "infoFiltered": "(從 _MAX_ 筆記錄中過濾)",
+                    "paginate": {
+                        "first": "首頁",
+                        "last": "末頁",
+                        "next": "下一頁",
+                        "previous": "上一頁"
+                    }
+                }
+            });
+        } else {
+            // 當沒有數據時，顯示提示訊息
+            $('#bootstrap-data-table tbody').html('<tr><td colspan="5" class="text-center">沒有 SMS 模板 (No SMS templates found)</td></tr>');
+        }
+    });
+
+    // 刪除模板功能
+    function deleteTemplate(templateId, templateType) {
+        if (confirm('確定要刪除 SMS 模板 "' + templateType + '" 嗎？(Are you sure you want to delete this SMS template?)')) {
+            $.ajax({
+                url: '/events/<%= eventId %>/smsTemplate/' + templateId,
+                type: 'DELETE',
+                success: function(response) {
+                    alert('SMS 模板已刪除 (SMS template deleted successfully)');
+                    location.reload();
+                },
+                error: function(error) {
+                    console.error('Error deleting SMS template:', error);
+                    alert('刪除失敗 (Failed to delete SMS template)');
+                }
+            });
+        }
+    }
+</script>
+

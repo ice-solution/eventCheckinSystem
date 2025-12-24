@@ -121,6 +121,12 @@ const isAuthenticated = (req, res, next) => {
     res.redirect('/login'); // 未登入，重定向到登入頁
 };
 
+// Email Tracking 路由（需要在其他路由之前，避免衝突）
+const emailTrackingController = require('./controllers/emailTrackingController');
+app.get('/track/email/open/:trackingId', emailTrackingController.trackEmailOpen); // 追蹤郵件打開
+app.get('/track/email/click/:trackingId', emailTrackingController.trackEmailClick); // 追蹤郵件點擊
+app.get('/track/email/stats', emailTrackingController.getEmailTrackingStats); // 獲取追蹤統計
+
 // 設置路由
 app.use('/web', websiteRouter);
 app.use('/events', eventsRouter);

@@ -15,6 +15,10 @@ const ExcelJS = require('exceljs');
 const { getWelcomeEmailTemplate } = require('../template/welcomeEmail'); // 引入歡迎郵件模板
 const emailTemplate = require('./emailTemplateController');
 const EmailTemplate = require('../model/EmailTemplate'); // 引入 EmailTemplate 模型
+const SmsTemplate = require('../model/SmsTemplate'); // 引入 SmsTemplate 模型
+const twilioSms = require('../utils/plivo'); // 引入 Twilio SMS 發送工具（文件名保持不變以保持兼容性）
+const emailTracking = require('../utils/emailTracking'); // 引入郵件追蹤工具
+const EmailRecord = require('../model/EmailRecord'); // 引入 EmailRecord 模型
 const multer = require('multer');
 const fs = require('fs');
 const { getSocket } = require('../socket'); // 引入 socket 以發送實時更新
@@ -166,10 +170,12 @@ exports.addUserToEvent = async (req, res) => {
         const savedUser = event.users[event.users.length - 1]; // 獲取剛剛添加的用戶
         newUser._id = savedUser._id; // 將 _id 添加到 newUser 對象中
 
-        // 發送郵件
-        if(newUser.role !== 'guest'){
-            await this.sendEmail(newUser, event); // 傳遞 newUser（現在包含 _id）和事件
+        // 根據設置決定是否發送歡迎消息（email/sms/both）
+        if(newUser.role !== 'guest' && event.emailSettings && event.emailSettings.sendWelcomeEmail){
+            await exports.sendWelcomeMessage(newUser, event); // 根據設置發送 email/sms/both
         }
+
+
         res.status(201).json({ attendee: newUser }); // 返回新用戶資料
     } catch (error) {
         console.error('Error adding user:', error);
@@ -177,10 +183,78 @@ exports.addUserToEvent = async (req, res) => {
     }
 };
 
+// 發送 SMS
+exports.sendSMS = async (user, event, type = 'welcome') => {
+    try {
+        if (!user.phone) {
+            console.log('User does not have a phone number, skipping SMS');
+            return;
+        }
+
+        // 生成 QR 碼 URL
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
+        const loginUrl = `${process.env.DOMAIN || 'http://localhost:3377'}/events/${event._id}/login`;
+        
+        // 查找對應事件的 SMS 模板
+        let smsTemplate = await SmsTemplate.findOne({ 
+            eventId: event._id, 
+            type: type 
+        });
+        
+        // 如果沒有找到模板，使用默認的 SMS 模板
+        if (!smsTemplate) {
+            smsTemplate = await SmsTemplate.findOne({ 
+                eventId: null, 
+                type: type 
+            });
+        }
+        
+        let messageBody = '';
+        
+        // 如果找到了 SMS 模板，使用模板的內容
+        if (smsTemplate && smsTemplate.content) {
+            messageBody = smsTemplate.content
+                .replace(/\{\{user\.name\}\}/g, user.name || '')
+                .replace(/\{\{user\.email\}\}/g, user.email || '')
+                .replace(/\{\{user\.company\}\}/g, user.company || '')
+                .replace(/\{\{user\.phone\}\}/g, user.phone || '')
+                .replace(/\{\{user\.phone_code\}\}/g, user.phone_code || '')
+                .replace(/\{\{event\.name\}\}/g, event.name)
+                .replace(/\{\{qrCodeUrl\}\}/g, qrCodeUrl)
+                .replace(/\{\{loginUrl\}\}/g, loginUrl);
+        } else {
+            // 使用默認模板
+            messageBody = `歡迎 ${user.name || ''} 參加 ${event.name}！您的登入連結：${loginUrl}`;
+        }
+        
+        // 發送 SMS
+        // 組合電話號碼：phone_code + phone（如果都有）
+        let phoneNumber = '';
+        if (user.phone_code && user.phone) {
+            // 移除 phone_code 中可能存在的 + 號
+            const phoneCode = user.phone_code.startsWith('+') ? user.phone_code : `+${user.phone_code}`;
+            phoneNumber = `${phoneCode}${user.phone}`;
+        } else if (user.phone) {
+            // 如果只有 phone，確保有 + 號
+            phoneNumber = user.phone.startsWith('+') ? user.phone : `+${user.phone}`;
+        } else {
+            throw new Error('User phone number is missing');
+        }
+        
+        await twilioSms.sendSMS(phoneNumber, messageBody);
+        console.log('SMS sent successfully to:', phoneNumber);
+        
+    } catch (error) {
+        console.error('Error sending SMS:', error);
+        throw error;
+    }
+}
+
 exports.sendEmail = async (user, event) => {
     try {
         // 生成 QR 碼
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
+        const loginUrl = `${process.env.DOMAIN || 'http://localhost:3377'}/events/${event._id}/login`;
         
         // 查找對應事件的歡迎郵件模板
         let emailTemplate = await EmailTemplate.findOne({ 
@@ -207,24 +281,77 @@ exports.sendEmail = async (user, event) => {
                 .replace(/\{\{user\.email\}\}/g, user.email)
                 .replace(/\{\{user\.company\}\}/g, user.company || '')
                 .replace(/\{\{event\.name\}\}/g, event.name)
-                .replace(/\{\{qrCodeUrl\}\}/g, qrCodeUrl);
+                .replace(/\{\{qrCodeUrl\}\}/g, qrCodeUrl)
+                .replace(/\{\{loginUrl\}\}/g, loginUrl);
+        }
+        
+        // 創建郵件記錄並獲取追蹤 ID
+        const trackingId = await emailTracking.createEmailRecord({
+            recipient: user.email,
+            subject: subject,
+            emailTemplateId: emailTemplate ? emailTemplate._id : null,
+            eventId: event._id,
+            userId: user._id ? user._id.toString() : null
+        });
+        
+        // 添加追蹤到郵件內容
+        if (trackingId) {
+            messageBody = emailTracking.addTrackingToEmail(messageBody, trackingId);
         }
         
         // 發送郵件
-        ses.sendEmail(user.email, subject, messageBody);
+        const result = await ses.sendEmail(user.email, subject, messageBody);
+        
+        // 更新郵件記錄狀態
+        if (trackingId && result && result.MessageId) {
+            await emailTracking.updateEmailRecordStatus(trackingId, 'sent', result.MessageId);
+        } else if (trackingId && result instanceof Error) {
+            await emailTracking.updateEmailRecordStatus(trackingId, 'failed');
+        }
         
     } catch (error) {
         console.error('Error sending welcome email:', error);
         // 如果出現錯誤，使用默認的歡迎郵件
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
         const messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl);
-        ses.sendEmail(user.email, '歡迎加入我們的活動', messageBody);
+        try {
+            await ses.sendEmail(user.email, '歡迎加入我們的活動', messageBody);
+        } catch (sendError) {
+            console.error('Error sending fallback email:', sendError);
+        }
     }
 }
 
-// 重新發送歡迎郵件
-exports.resendWelcomeEmail = async (req, res) => {
+// 發送歡迎消息（根據設置決定發送 email/sms/both）
+exports.sendWelcomeMessage = async (user, event) => {
+    try {
+        const method = event.emailSettings?.welcomeMessageMethod || 'email';
+        
+        if (method === 'email' || method === 'both') {
+            if (user.email) {
+                await exports.sendEmail(user, event);
+            } else {
+                console.log('User does not have email, skipping email');
+            }
+        }
+        
+        if (method === 'sms' || method === 'both') {
+            if (user.phone) {
+                await exports.sendSMS(user, event, 'welcome');
+            } else {
+                console.log('User does not have phone, skipping SMS');
+            }
+        }
+    } catch (error) {
+        console.error('Error sending welcome message:', error);
+        throw error;
+    }
+}
+
+// 重新發送郵件（支持多種類型）
+exports.resendEmail = async (req, res) => {
     const { eventId, userId } = req.params;
+    const { emailType } = req.body; // welcome, confirmation, reminder, thankYou
 
     try {
         const event = await Event.findById(eventId);
@@ -242,12 +369,87 @@ exports.resendWelcomeEmail = async (req, res) => {
         }
 
         const userData = typeof user.toObject === 'function' ? user.toObject() : user;
-        await exports.sendEmail(userData, event);
+        
+        // 根據 emailType 發送不同類型的郵件
+        const type = emailType || 'welcome';
+        
+        if (type === 'welcome') {
+            await exports.sendEmail(userData, event);
+        } else {
+            // 發送其他類型的郵件（confirmation, reminder, thankYou）
+            await exports.sendEmailByType(userData, event, type);
+        }
 
-        res.status(200).json({ message: 'Welcome email resent successfully' });
+        res.status(200).json({ message: `${type} email resent successfully` });
     } catch (error) {
-        console.error('Error resending welcome email:', error);
-        res.status(500).json({ message: 'Error resending welcome email' });
+        console.error('Error resending email:', error);
+        res.status(500).json({ message: 'Error resending email' });
+    }
+};
+
+// 根據類型發送郵件
+exports.sendEmailByType = async (user, event, type = 'welcome') => {
+    try {
+        // 生成 QR 碼
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
+        const loginUrl = `${process.env.DOMAIN || 'http://localhost:3377'}/events/${event._id}/login`;
+        
+        // 查找對應類型的郵件模板
+        let emailTemplate = await EmailTemplate.findOne({ 
+            eventId: event._id, 
+            type: type 
+        });
+        
+        // 如果沒有找到模板，使用默認模板
+        if (!emailTemplate) {
+            emailTemplate = await EmailTemplate.findOne({ 
+                eventId: null, 
+                type: type 
+            });
+        }
+        
+        let subject = '歡迎加入我們的活動';
+        let messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl); // 使用默認模板
+        
+        // 如果找到了郵件模板，使用模板的內容
+        if (emailTemplate) {
+            subject = emailTemplate.subject;
+            messageBody = emailTemplate.content
+                .replace(/\{\{user\.name\}\}/g, user.name)
+                .replace(/\{\{user\.email\}\}/g, user.email)
+                .replace(/\{\{user\.company\}\}/g, user.company || '')
+                .replace(/\{\{event\.name\}\}/g, event.name)
+                .replace(/\{\{qrCodeUrl\}\}/g, qrCodeUrl)
+                .replace(/\{\{loginUrl\}\}/g, loginUrl);
+        }
+        
+        // 創建郵件記錄並獲取追蹤 ID
+        const trackingId = await emailTracking.createEmailRecord({
+            recipient: user.email,
+            subject: subject,
+            emailTemplateId: emailTemplate ? emailTemplate._id : null,
+            eventId: event._id,
+            userId: user._id ? user._id.toString() : null
+        });
+        
+        // 添加追蹤到郵件內容
+        if (trackingId) {
+            messageBody = emailTracking.addTrackingToEmail(messageBody, trackingId);
+        }
+        
+        // 發送郵件
+        const result = await ses.sendEmail(user.email, subject, messageBody);
+        
+        // 更新郵件記錄狀態
+        if (trackingId && result && result.MessageId) {
+            await emailTracking.updateEmailRecordStatus(trackingId, 'sent', result.MessageId);
+        } else if (trackingId && result instanceof Error) {
+            await emailTracking.updateEmailRecordStatus(trackingId, 'failed');
+        }
+        
+    } catch (error) {
+        console.error(`Error sending ${type} email:`, error);
+        throw error;
     }
 };
 
@@ -731,7 +933,7 @@ exports.renderCreateAttendeePage = async (req, res) => {
     }
 };
 
-// 渲染參展商列表頁面
+// 渲染參展商列表頁面（舊的 attendees 功能）
 exports.renderAttendeesListPage = async (req, res) => {
     const { eventId } = req.params; // 獲取事件 ID
     try {
@@ -739,9 +941,278 @@ exports.renderAttendeesListPage = async (req, res) => {
         if (!event) {
             return res.status(404).json({ message: '找不到該事件' });
         }
-        res.render('admin/event_attendees_list', { eventId, attendees: event.attendees }); // 返回整個 attendees 列表
+        res.render('admin/event_attendees_list', { eventId, attendees: event.attendees || [] }); // 返回整個 attendees 列表
     } catch (error) {
         console.error('Error rendering attendees list page:', error);
+        res.status(500).json({ message: '伺服器錯誤' });
+    }
+};
+
+// 渲染 Guest List 頁面（顯示預先準備的來賓列表，尚未註冊為 RSVP）
+exports.renderGuestListPage = async (req, res) => {
+    const { eventId } = req.params; // 獲取事件 ID
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+        res.render('admin/guest_list', { eventId, guests: event.guestList || [] }); // 返回 guestList 列表
+    } catch (error) {
+        console.error('Error rendering guest list page:', error);
+        res.status(500).json({ message: '伺服器錯誤' });
+    }
+};
+
+// 添加來賓到 Guest List
+exports.addGuestToList = async (req, res) => {
+    const { eventId } = req.params;
+    const { name, email, company, phone } = req.body;
+
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        if (!name || !name.trim()) {
+            return res.status(400).json({ message: 'Name is required' });
+        }
+
+        // 檢查是否已存在（根據 email）
+        if (email && email.trim()) {
+            const existingGuest = event.guestList && event.guestList.find(g => g.email && g.email.toLowerCase() === email.toLowerCase());
+            if (existingGuest) {
+                return res.status(400).json({ message: 'Guest with this email already exists in Guest List' });
+            }
+        }
+
+        // 創建新的來賓（只包含必要字段）
+        const newGuest = {
+            name: name.trim(),
+            email: email ? email.trim() : '',
+            company: company ? company.trim() : '',
+            phone: phone ? phone.trim() : '',
+            create_at: new Date()
+        };
+
+        // 將來賓添加到 guestList
+        if (!event.guestList) {
+            event.guestList = [];
+        }
+        event.guestList.push(newGuest);
+        await event.save();
+
+        // 獲取新來賓的 _id
+        const savedGuest = event.guestList[event.guestList.length - 1];
+        newGuest._id = savedGuest._id;
+
+        res.status(201).json({ message: 'Guest added to list successfully', guest: newGuest });
+    } catch (error) {
+        console.error('Error adding guest to list:', error);
+        res.status(500).json({ message: '伺服器錯誤' });
+    }
+};
+
+// 從 Guest List 刪除來賓
+exports.deleteGuestFromList = async (req, res) => {
+    const { eventId, guestId } = req.params;
+
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        if (!event.guestList) {
+            return res.status(404).json({ message: 'Guest List is empty' });
+        }
+
+        const guest = event.guestList.id(guestId);
+        if (!guest) {
+            return res.status(404).json({ message: 'Guest not found' });
+        }
+
+        event.guestList.pull(guestId);
+        await event.save();
+
+        res.status(200).json({ message: 'Guest deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting guest from list:', error);
+        res.status(500).json({ message: '伺服器錯誤' });
+    }
+};
+
+// 導入 Excel 到 Guest List
+exports.importGuestListFromExcel = async (req, res) => {
+    const { eventId } = req.params;
+
+    try {
+        // 確保 req.file 存在
+        if (!req.file) {
+            return res.status(400).json({ message: 'No file uploaded!' });
+        }
+
+        // 查詢事件以確保存在
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        // 解析 Excel 文件
+        const XLSX = require('xlsx');
+        const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+        if (!rows || rows.length === 0) {
+            return res.status(400).json({ message: 'Uploaded file is empty.' });
+        }
+
+        // 第一行是標題行
+        const headerRow = rows[0].map(header => (header !== null && header !== undefined ? String(header).trim() : ''));
+        const headerIndexMap = new Map();
+        headerRow.forEach((header, index) => {
+            if (header && !headerIndexMap.has(header.toLowerCase())) {
+                headerIndexMap.set(header.toLowerCase(), index);
+            }
+        });
+
+        // 檢查必填欄位
+        const nameIndex = headerIndexMap.get('name');
+        if (nameIndex === undefined) {
+            return res.status(400).json({ message: 'Missing required column: Name' });
+        }
+
+        // 處理數據行
+        const dataRows = rows.slice(1).filter(row => {
+            return row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== '');
+        });
+
+        if (dataRows.length === 0) {
+            return res.status(400).json({ message: 'No data rows found in the uploaded file.' });
+        }
+
+        // 初始化 guestList
+        if (!event.guestList) {
+            event.guestList = [];
+        }
+
+        const now = new Date();
+        let importedCount = 0;
+        let skippedCount = 0;
+        const errors = [];
+
+        for (let i = 0; i < dataRows.length; i++) {
+            const row = dataRows[i];
+            const name = row[nameIndex] ? String(row[nameIndex]).trim() : '';
+            
+            if (!name) {
+                skippedCount++;
+                errors.push(`Row ${i + 2}: Name is required`);
+                continue;
+            }
+
+            const emailIndex = headerIndexMap.get('email');
+            const companyIndex = headerIndexMap.get('company');
+            const phoneIndex = headerIndexMap.get('phone');
+
+            const email = emailIndex !== undefined && row[emailIndex] ? String(row[emailIndex]).trim() : '';
+            const company = companyIndex !== undefined && row[companyIndex] ? String(row[companyIndex]).trim() : '';
+            const phone = phoneIndex !== undefined && row[phoneIndex] ? String(row[phoneIndex]).trim() : '';
+
+            // 檢查是否已存在（根據 email）
+            if (email) {
+                const existingGuest = event.guestList.find(g => g.email && g.email.toLowerCase() === email.toLowerCase());
+                if (existingGuest) {
+                    skippedCount++;
+                    errors.push(`Row ${i + 2}: Guest with email ${email} already exists`);
+                    continue;
+                }
+            }
+
+            // 創建新的來賓
+            const newGuest = {
+                name,
+                email,
+                company,
+                phone,
+                create_at: now
+            };
+
+            event.guestList.push(newGuest);
+            importedCount++;
+        }
+
+        await event.save();
+
+        res.status(201).json({ 
+            message: `Import completed. ${importedCount} guest(s) imported, ${skippedCount} skipped.`,
+            importedCount,
+            skippedCount,
+            errors: errors.length > 0 ? errors : undefined
+        });
+    } catch (error) {
+        console.error('Error importing guest list:', error);
+        res.status(500).json({ message: 'Error during import process: ' + error.message });
+    }
+};
+
+// 將 Guest List 中的來賓添加到 RSVP
+exports.addGuestToRSVP = async (req, res) => {
+    const { eventId, guestId } = req.params;
+
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        if (!event.guestList) {
+            return res.status(404).json({ message: 'Guest List is empty' });
+        }
+
+        const guest = event.guestList.id(guestId);
+        if (!guest) {
+            return res.status(404).json({ message: 'Guest not found' });
+        }
+
+        // 檢查 RSVP 列表中是否已存在（根據 email）
+        if (guest.email) {
+            const existingUser = event.users.find(u => u.email === guest.email);
+            if (existingUser) {
+                return res.status(400).json({ message: 'User with this email already exists in RSVP list' });
+            }
+        }
+
+        // 將來賓轉換為用戶對象
+        const guestData = guest.toObject ? guest.toObject() : guest;
+        delete guestData._id; // 移除原來的 _id，讓 MongoDB 生成新的
+
+        // 添加到 RSVP 列表
+        event.users.push(guestData);
+
+        // 從 Guest List 中移除
+        event.guestList.pull(guestId);
+
+        await event.save();
+
+        // 獲取新用戶的 _id
+        const newUser = event.users[event.users.length - 1];
+
+        // 根據設置決定是否發送歡迎消息
+        if (newUser.role !== 'guest' && event.emailSettings && event.emailSettings.sendWelcomeEmail) {
+            try {
+                await exports.sendWelcomeMessage(newUser, event);
+            } catch (emailError) {
+                console.error('Error sending welcome message:', emailError);
+                // 不阻止添加，只記錄錯誤
+            }
+        }
+
+        res.status(200).json({ message: 'Guest added to RSVP successfully', user: newUser });
+    } catch (error) {
+        console.error('Error adding guest to RSVP:', error);
         res.status(500).json({ message: '伺服器錯誤' });
     }
 };
@@ -2184,6 +2655,51 @@ exports.updatePaymentEvent = async (req, res) => {
     }
 };
 
+// 更新電郵設置
+exports.updateEmailSettings = async (req, res) => {
+    const { eventId } = req.params;
+    const { emailSettings } = req.body;
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+        if (emailSettings) {
+            // 如果 emailSettings 不存在，初始化它
+            if (!event.emailSettings) {
+                event.emailSettings = {
+                    sendWelcomeEmail: false,
+                    sendConfirmationEmail: false,
+                    sendReminderEmail: false,
+                    sendThankYouEmail: false,
+                    welcomeMessageMethod: 'email'
+                };
+            }
+            // 更新設置
+            if (typeof emailSettings.sendWelcomeEmail !== 'undefined') {
+                event.emailSettings.sendWelcomeEmail = emailSettings.sendWelcomeEmail;
+            }
+            if (typeof emailSettings.sendConfirmationEmail !== 'undefined') {
+                event.emailSettings.sendConfirmationEmail = emailSettings.sendConfirmationEmail;
+            }
+            if (typeof emailSettings.sendReminderEmail !== 'undefined') {
+                event.emailSettings.sendReminderEmail = emailSettings.sendReminderEmail;
+            }
+            if (typeof emailSettings.sendThankYouEmail !== 'undefined') {
+                event.emailSettings.sendThankYouEmail = emailSettings.sendThankYouEmail;
+            }
+            if (typeof emailSettings.welcomeMessageMethod !== 'undefined') {
+                event.emailSettings.welcomeMessageMethod = emailSettings.welcomeMessageMethod;
+            }
+        }
+        await event.save();
+        res.status(200).json({ message: 'Email settings updated', event });
+    } catch (error) {
+        console.error('Error updating email settings:', error);
+        res.status(500).json({ message: 'Error updating email settings' });
+    }
+};
+
 // Stripe Checkout
 exports.stripeCheckout = async (req, res) => {
     const { event_id } = req.params;
@@ -2320,12 +2836,14 @@ exports.stripeWebhook = async (req, res) => {
             await eventDoc.save();
             console.log('Event updated successfully:', eventDoc._id);
             
-            // Send payment confirmation email
+            // Send payment confirmation email (根據設置決定是否發送)
             try {
                 const user = eventDoc.users.find(u => u.email === transaction.userEmail);
-                if (user) {
+                if (user && eventDoc.emailSettings && eventDoc.emailSettings.sendConfirmationEmail) {
                     await exports.sendPaymentConfirmationEmail(user, eventDoc, transaction);
                     console.log('Payment confirmation email sent to:', transaction.userEmail);
+                } else if (user && (!eventDoc.emailSettings || !eventDoc.emailSettings.sendConfirmationEmail)) {
+                    console.log('Payment confirmation email skipped (setting disabled)');
                 }
             } catch (emailError) {
                 console.error('Error sending payment confirmation email:', emailError);

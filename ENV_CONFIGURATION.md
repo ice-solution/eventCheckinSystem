@@ -61,6 +61,7 @@
 ### SendGrid
 ```env
 SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxx
+SENDER_EMAIL=noreply@yourdomain.com
 ```
 
 ### AWS SES
@@ -68,7 +69,35 @@ SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxx
 AWS_ACCESS_KEY_ID=xxxxxxxxxxxxxxxxxxxxx
 AWS_SECRET_ACCESS_KEY=xxxxxxxxxxxxxxxxxxxxx
 AWS_REGION=us-east-1
+SENDER_EMAIL=noreply@yourdomain.com
 ```
+
+## 📱 SMS 配置（選填 - 使用 Twilio）
+
+### Twilio
+```env
+TWILIO_ACCOUNT_SID=your_twilio_account_sid
+TWILIO_AUTH_TOKEN=your_twilio_auth_token
+TWILIO_PHONE_NUMBER=+1234567890
+```
+
+**或者使用舊的環境變數名稱（向後兼容）**：
+```env
+twiliosid=your_twilio_account_sid
+twilioauthtoken=your_twilio_auth_token
+TWILIO_PHONE_NUMBER=+1234567890
+```
+
+**獲取方式**：
+1. 註冊 [Twilio 帳號](https://www.twilio.com/)
+2. 在 Twilio Console Dashboard 獲取 Account SID 和 Auth Token
+3. 購買或使用 Twilio 提供的電話號碼作為發送號碼
+4. 電話號碼格式必須包含國家代碼（例如：+85212345678）
+
+**注意**：
+- `TWILIO_PHONE_NUMBER` 必須是已驗證的 Twilio 號碼
+- 電話號碼格式：`+[國家代碼][號碼]`（例如：`+85212345678`）
+- 支持使用 `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN` 或 `twiliosid`/`twilioauthtoken`（向後兼容）
 
 ---
 
@@ -117,6 +146,16 @@ STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxxxxxxx
 
 # Email Configuration
 SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxx
+# 或使用 AWS SES
+AWS_ACCESS_KEY_ID=xxxxxxxxxxxxxxxxxxxxx
+AWS_SECRET_ACCESS_KEY=xxxxxxxxxxxxxxxxxxxxx
+AWS_REGION=us-east-1
+SENDER_EMAIL=noreply@yourdomain.com
+
+# SMS Configuration (Twilio)
+TWILIO_ACCOUNT_SID=your_twilio_account_sid
+TWILIO_AUTH_TOKEN=your_twilio_auth_token
+TWILIO_PHONE_NUMBER=+1234567890
 
 # Session Secret
 SESSION_SECRET=your_production_secret_key_here

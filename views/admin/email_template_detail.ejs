@@ -110,18 +110,69 @@
                         </div>
                     </div>
                     
+                    <!-- 郵件追蹤統計 -->
+                    <% if (stats) { %>
                     <div class="card mt-3">
                         <div class="card-header">
-                            <strong class="card-title">Send Records</strong>
+                            <strong class="card-title">郵件追蹤統計 (Email Tracking Statistics)</strong>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="card bg-primary text-white">
+                                        <div class="card-body">
+                                            <h5>總發送數</h5>
+                                            <h3><%= stats.total %></h3>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card bg-success text-white">
+                                        <div class="card-body">
+                                            <h5>成功發送</h5>
+                                            <h3><%= stats.sent %></h3>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card bg-info text-white">
+                                        <div class="card-body">
+                                            <h5>打開數</h5>
+                                            <h3><%= stats.opened %></h3>
+                                            <small>打開率: <%= stats.openRate %>%</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card bg-warning text-white">
+                                        <div class="card-body">
+                                            <h5>點擊數</h5>
+                                            <h3><%= stats.clicked %></h3>
+                                            <small>點擊率: <%= stats.clickRate %>%</small>
+                                            <br>
+                                            <small>點擊打開比: <%= stats.clickToOpenRate %>%</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <% } %>
+
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <strong class="card-title">Send Records (發送記錄)</strong>
                         </div>
                         <div class="card-body">
 
                             <table id="email-records-data-table" class="table table-bordered">
                                 <thead>
                                     <tr>
-                                        <th>Send Time</th>
-                                        <th>Recipients</th>
-                                        <th>Status</th>
+                                        <th>Send Time (發送時間)</th>
+                                        <th>Recipients (收件人)</th>
+                                        <th>Status (狀態)</th>
+                                        <th>Opened (打開)</th>
+                                        <th>Clicked (點擊)</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -134,7 +185,31 @@
                                                 <%= record.recipient %>
                                             </td>
                                             <td>
-                                                <%= record.status %>
+                                                <span class="badge badge-<%= record.status === '成功' || record.status === 'sent' || record.status === 'delivered' ? 'success' : 'danger' %>">
+                                                    <%= record.status %>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <% if (record.opened_at) { %>
+                                                    <span class="badge badge-info">
+                                                        ✓ <%= record.opened_count || 1 %> 次
+                                                    </span>
+                                                    <br>
+                                                    <small><%= new Date(record.opened_at).toLocaleString("en-GB") %></small>
+                                                <% } else { %>
+                                                    <span class="badge badge-secondary">未打開</span>
+                                                <% } %>
+                                            </td>
+                                            <td>
+                                                <% if (record.clicked_at) { %>
+                                                    <span class="badge badge-warning">
+                                                        ✓ <%= record.clicked_count || 1 %> 次
+                                                    </span>
+                                                    <br>
+                                                    <small><%= new Date(record.clicked_at).toLocaleString("en-GB") %></small>
+                                                <% } else { %>
+                                                    <span class="badge badge-secondary">未點擊</span>
+                                                <% } %>
                                             </td>
                                         </tr>
                                     <% }); %>

@@ -78,7 +78,8 @@ const eventSchema = new mongoose.Schema({
     created_at: { type: Date, default: Date.now }, // 創建時間
     modified_at: { type: Date, default: Date.now }, // 修改時間
     emailTemplate: { type: mongoose.Schema.Types.ObjectId, ref: 'EmailTemplate' }, // 引用 EmailTemplate
-    users:[userSchema],
+    users:[userSchema], // RSVP 註冊用戶
+    guestList: [userSchema], // Guest List（預先準備的來賓列表，尚未註冊為 RSVP）
     points: [pointSchema],
     winners: [winnerSchema], // 新增 winners 字段
     maxLuckydrawOrder: { type: Number, default: 0 }, // 追蹤最大的中獎編號（即使刪除也不會減少，確保唯一性）
@@ -86,7 +87,15 @@ const eventSchema = new mongoose.Schema({
     PaymentTickets: [ticketSchema], // 票券陣列
     gameIds: [{ type: String }], // 新增 gameIds 陣列，存儲該事件開放的遊戲ID
     scanPointUsers: [scanPointUserSchema], // 掃瞄加分用戶列表
-    treasureHuntItems: [treasureHuntItemSchema] // Treasure Hunt 項目列表
+    treasureHuntItems: [treasureHuntItemSchema], // Treasure Hunt 項目列表
+    // 電郵發送設置
+    emailSettings: {
+        sendWelcomeEmail: { type: Boolean, default: false }, // 是否立即發送歡迎電郵
+        sendConfirmationEmail: { type: Boolean, default: false }, // 是否立即發送確認電郵
+        sendReminderEmail: { type: Boolean, default: false }, // 是否立即發送提示電郵
+        sendThankYouEmail: { type: Boolean, default: false }, // 是否立即發送感謝電郵
+        welcomeMessageMethod: { type: String, enum: ['email', 'sms', 'both'], default: 'email' } // 歡迎消息發送方式：email/sms/both
+    }
 });
 
 // 在保存之前更新 modified_at 字段

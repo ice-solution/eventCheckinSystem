@@ -3,6 +3,7 @@ const EmailTemplate = require("../model/EmailTemplate")
 const sendGrid = require("../utils/sendGrid")
 const ses = require("../utils/ses")
 const EmailRecord = require("../model/EmailRecord")
+const emailTracking = require("../utils/emailTracking")
 
 const {sampleHtmlTemplate} = require("../template/sample");
 
@@ -58,10 +59,33 @@ exports.renderEmailTemplateDetail = async (req, res) => {
       (await EmailRecord.find({ emailTemplate: id }).sort({
         created_at: -1,
       })) || []
+    
+    // 計算統計數據
+    const stats = {
+      total: emailRecords.length,
+      sent: emailRecords.filter(r => r.status === 'sent' || r.status === 'delivered' || r.status === '成功').length,
+      failed: emailRecords.filter(r => r.status === 'failed' || r.status === '失敗').length,
+      opened: emailRecords.filter(r => r.opened_at).length,
+      clicked: emailRecords.filter(r => r.clicked_at).length,
+      openRate: 0,
+      clickRate: 0,
+      clickToOpenRate: 0
+    };
+    
+    const sentCount = stats.sent;
+    if (sentCount > 0) {
+      stats.openRate = ((stats.opened / sentCount) * 100).toFixed(2);
+      stats.clickRate = ((stats.clicked / sentCount) * 100).toFixed(2);
+    }
+    
+    if (stats.opened > 0) {
+      stats.clickToOpenRate = ((stats.clicked / stats.opened) * 100).toFixed(2);
+    }
+    
     if (!template) {
       return res.status(404).send("電子郵件模板未找到！")
     }
-    res.render("admin/email_template_detail", { template, emailRecords, eventId })
+    res.render("admin/email_template_detail", { template, emailRecords, eventId, stats })
   } catch (error) {
     console.error("Error fetching email template:", error)
     res.status(500).send("獲取電子郵件模板時出現錯誤！")
@@ -143,48 +167,64 @@ exports.sendEmailById = async (req, res) => {
       const subject = template.subject
       const body = template.content
 
-      // send email
+      // send email with tracking
       console.log("send my template");
       const results = await Promise.all(
-        to.map((email) => {
-          // send email
-          return ses.sendEmail(email, subject, body)
+        to.map(async (email) => {
+          try {
+            // 創建郵件記錄並獲取追蹤 ID
+            const trackingId = await emailTracking.createEmailRecord({
+              recipient: email,
+              subject: subject,
+              emailTemplateId: id,
+              eventId: null,
+              userId: null
+            });
+            
+            // 添加追蹤到郵件內容
+            let trackedBody = body;
+            if (trackingId) {
+              trackedBody = emailTracking.addTrackingToEmail(body, trackingId);
+            }
+            
+            // 發送郵件
+            const result = await ses.sendEmail(email, subject, trackedBody);
+            
+            // 更新郵件記錄狀態
+            if (trackingId && result && result.MessageId) {
+              await emailTracking.updateEmailRecordStatus(trackingId, 'sent', result.MessageId);
+            } else if (trackingId && result instanceof Error) {
+              await emailTracking.updateEmailRecordStatus(trackingId, 'failed');
+            }
+            
+            return result;
+          } catch (error) {
+            console.error(`Error sending email to ${email}:`, error);
+            return error;
+          }
         })
       )
 
-      // save email record with status
-      /**
-       * Result sent:  {
-          '$metadata': {
-            httpStatusCode: 200,
-            requestId: '7696f044-eb19-417d-a3ec-c9352343f23e',
-            extendedRequestId: undefined,
-            cfId: undefined,
-            attempts: 1,
-            totalRetryDelay: 0
-          },
-          MessageId: '010e019827c73c33-d88e5f97-b23e-494b-ac16-deda3d99c0c8-000000'
-        }
-       */
+      // 記錄發送結果（用於向後兼容，實際記錄已在上面創建）
       const emailRecords = results.map((result, index) => {
         if (result instanceof Error) {
-          return new EmailRecord({
+          return {
             recipient: to[index],
             emailTemplate: id,
             status: "失敗",
             errorLog: result.message,
             created_at: Date.now(),
-          })
-        }else{
-          return new EmailRecord({
+          }
+        } else {
+          return {
             recipient: to[index],
             emailTemplate: id,
             status: "成功",
             created_at: Date.now(),
-          })
+          }
         }
       })
-      await EmailRecord.insertMany(emailRecords)
+      // 注意：實際的 EmailRecord 已經在上面創建，這裡只是為了向後兼容
 
       return res.status(200).send("電子郵件發送成功！")
     } catch (error) {

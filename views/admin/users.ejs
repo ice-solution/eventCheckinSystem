@@ -134,6 +134,7 @@
                                     <input class="form-check-input" type="checkbox" role="switch" id="paymentEvent">
                                     <label class="form-check-label" for="paymentEvent">Payment Event</label>
                                 </div>
+                                <button id="emailSettingsBtn" class="btn btn-info btn-sm ml-2">Email Settings</button>
                             </div>
                             <div class="clearfix" style="margin-top:20px"></div>
 
@@ -322,9 +323,17 @@
                                             </td>
                                             <td>
                                                 <div class="user-action-buttons">
-                                                    <button class="btn btn-outline-primary resend-email" data-_id="<%= user._id %>" title="Resend welcome email">
-                                                        <i class="fa fa-envelope mr-1"></i> Resend Welcome Email
-                                                    </button>
+                                                    <div class="btn-group">
+                                                        <button type="button" class="btn btn-outline-primary dropdown-toggle resend-email-btn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-_id="<%= user._id %>">
+                                                            <i class="fa fa-envelope mr-1"></i> Resend...
+                                                        </button>
+                                                        <div class="dropdown-menu">
+                                                            <a class="dropdown-item resend-email-option" href="#" data-type="welcome">Welcome Email</a>
+                                                            <a class="dropdown-item resend-email-option" href="#" data-type="confirmation">Confirmation Email</a>
+                                                            <a class="dropdown-item resend-email-option" href="#" data-type="reminder">Reminder Email</a>
+                                                            <a class="dropdown-item resend-email-option" href="#" data-type="thankYou">Thank You Email</a>
+                                                        </div>
+                                                    </div>
                                                     <button class="btn btn-danger delete-user" data-_id="<%= user._id %>">Delete</button>
                                                 </div>
                                             </td>
@@ -382,11 +391,13 @@
             ]
         });
 
-        // Resend welcome email functionality
-        $('#usersTable tbody').on('click', '.resend-email', function() {
-            const _id = $(this).data('_id');
+        // Resend email functionality (支持選擇類型)
+        $('#usersTable tbody').on('click', '.resend-email-option', function(e) {
+            e.preventDefault();
+            const _id = $(this).closest('.btn-group').find('.resend-email-btn').data('_id');
+            const emailType = $(this).data('type');
             const event_id = '<%= event._id %>';
-            const button = $(this);
+            const button = $(this).closest('.btn-group').find('.resend-email-btn');
             const originalHtml = button.html();
 
             button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
@@ -394,8 +405,10 @@
             $.ajax({
                 url: `/events/${event_id}/users/${_id}/resend-email`,
                 type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ emailType: emailType }),
                 success: function() {
-                    showAlert('success', 'Welcome email resent successfully!');
+                    showAlert('success', `${emailType} email resent successfully!`);
                 },
                 error: function(xhr) {
                     console.error('Error resending email:', xhr.responseText);
@@ -676,10 +689,122 @@
         // Initialize ticket data
         let paymentTickets = <%- JSON.stringify(event.PaymentTickets || []) %>;
         let isPaymentEvent = <%- event.isPaymentEvent ? 'true' : 'false' %>;
+        // Initialize email settings
+        const emailSettings = <%- JSON.stringify(event.emailSettings || { sendWelcomeEmail: false, sendConfirmationEmail: false, sendReminderEmail: false, sendThankYouEmail: false, welcomeMessageMethod: 'email' }) %>;
 
         // Payment Event checkbox status initialization
         $('#paymentEvent').prop('checked', isPaymentEvent);
         if(isPaymentEvent) showTicketFields();
+
+        // Email Settings functionality
+        $('#emailSettingsBtn').on('click', function() {
+            showEmailSettings();
+        });
+
+        function showEmailSettings() {
+            if($('#emailSettingsForm').length) {
+                $('#emailSettingsForm').toggle();
+                return;
+            }
+            const html = `
+                <div id="emailSettingsForm" class="card mt-3">
+                    <div class="card-header">
+                        <h5>電郵發送設置 (Email Settings)</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="emailSettingsFormContent">
+                            <div class="form-group">
+                                <label for="welcomeMessageMethod">歡迎消息發送方式 (Welcome Message Method):</label>
+                                <select class="form-control" id="welcomeMessageMethod">
+                                    <option value="email" ${emailSettings.welcomeMessageMethod === 'email' ? 'selected' : ''}>Email 電郵</option>
+                                    <option value="sms" ${emailSettings.welcomeMessageMethod === 'sms' ? 'selected' : ''}>SMS 短信</option>
+                                    <option value="both" ${emailSettings.welcomeMessageMethod === 'both' ? 'selected' : ''}>Both 兩者</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="sendWelcomeEmail" ${emailSettings.sendWelcomeEmail ? 'checked' : ''}>
+                                    <label class="form-check-label" for="sendWelcomeEmail">立即發送歡迎消息 (Send Welcome Message Immediately)</label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="sendConfirmationEmail" ${emailSettings.sendConfirmationEmail ? 'checked' : ''}>
+                                    <label class="form-check-label" for="sendConfirmationEmail">立即發送確認電郵 (Send Confirmation Email Immediately)</label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="sendReminderEmail" ${emailSettings.sendReminderEmail ? 'checked' : ''}>
+                                    <label class="form-check-label" for="sendReminderEmail">立即發送提示電郵 (Send Reminder Email Immediately)</label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="sendThankYouEmail" ${emailSettings.sendThankYouEmail ? 'checked' : ''}>
+                                    <label class="form-check-label" for="sendThankYouEmail">立即發送感謝電郵 (Send Thank You Email Immediately)</label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <a href="/events/${eventId}/smsTemplate" class="btn btn-info btn-sm">管理 SMS 模板 (Manage SMS Templates)</a>
+                            </div>
+                            <button type="submit" class="btn btn-success btn-sm">Save Email Settings</button>
+                            <button type="button" class="btn btn-secondary btn-sm ml-2" id="closeEmailSettings">Close</button>
+                        </form>
+                    </div>
+                </div>
+            `;
+            $('#emailSettingsBtn').after(html);
+        }
+
+        $(document).on('submit', '#emailSettingsFormContent', function(e) {
+            e.preventDefault();
+            const emailSettingsData = {
+                sendWelcomeEmail: $('#sendWelcomeEmail').is(':checked'),
+                sendConfirmationEmail: $('#sendConfirmationEmail').is(':checked'),
+                sendReminderEmail: $('#sendReminderEmail').is(':checked'),
+                sendThankYouEmail: $('#sendThankYouEmail').is(':checked'),
+                welcomeMessageMethod: $('#welcomeMessageMethod').val()
+            };
+            $.ajax({
+                url: `/events/${eventId}/emailSettings`,
+                type: 'PATCH',
+                contentType: 'application/json',
+                data: JSON.stringify({ 
+                    emailSettings: emailSettingsData
+                }),
+                success: function(res) {
+                    const alertHtml = `
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            電郵設置已更新！
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    `;
+                    $('#alertContainer').append(alertHtml);
+                    setTimeout(() => { $('.alert').alert('close'); }, 1500);
+                    // 更新本地變量
+                    Object.assign(emailSettings, emailSettingsData);
+                },
+                error: function(error) {
+                    console.error('更新電郵設置失敗:', error);
+                    const alertHtml = `
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            更新電郵設置失敗，請重試！
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    `;
+                    $('#alertContainer').append(alertHtml);
+                }
+            });
+        });
+
+        $(document).on('click', '#closeEmailSettings', function() {
+            $('#emailSettingsForm').hide();
+        });
 
         // Dynamically display ticket fields
         function showTicketFields() {
@@ -825,7 +950,7 @@
                     
                     // 添加Checked In和Actions列
                     newRow.push('<input type="checkbox" class="checkin-toggle" data-_id="' + response._id + '" />');
-                    newRow.push('<div class="user-action-buttons"><button class="btn btn-outline-primary resend-email" data-_id="' + response._id + '" title="Resend welcome email"><i class="fa fa-envelope mr-1"></i> Resend Welcome Email</button><button class="btn btn-danger delete-user" data-_id="' + response._id + '">Delete</button></div>');
+                    newRow.push('<div class="user-action-buttons"><div class="btn-group"><button type="button" class="btn btn-outline-primary dropdown-toggle resend-email-btn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-_id="' + response._id + '"><i class="fa fa-envelope mr-1"></i> Resend...</button><div class="dropdown-menu"><a class="dropdown-item resend-email-option" href="#" data-type="welcome">Welcome Email</a><a class="dropdown-item resend-email-option" href="#" data-type="confirmation">Confirmation Email</a><a class="dropdown-item resend-email-option" href="#" data-type="reminder">Reminder Email</a><a class="dropdown-item resend-email-option" href="#" data-type="thankYou">Thank You Email</a></div></div><button class="btn btn-danger delete-user" data-_id="' + response._id + '">Delete</button></div>');
                     
                     const rowNode = table.row.add(newRow).draw().node();
                     $(rowNode).addClass('checkin-false').attr('data-id', response._id);
