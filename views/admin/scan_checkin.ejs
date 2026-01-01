@@ -157,7 +157,7 @@
                                 <% } %>
                             <% }); %>
                         <% } else { %>
-                            <!-- 預設列（如果沒有formConfig） -->
+                            <!-- Default columns (if no formConfig) -->
                             <th>Email</th>
                         <th>Name</th>
                         <th>Phone</th>
@@ -169,7 +169,7 @@
                 <tbody id="userList">
                     <% event.users.forEach(user => { %>
                         <% 
-                        // 構建參數字符串用於 showDetails 函數
+                        // Build parameter string for showDetails function
                         let detailParams = '';
                         if (formConfig && formConfig.sections) {
                             const params = [];
@@ -199,7 +199,7 @@
                                     <% } %>
                                 <% }); %>
                             <% } else { %>
-                                <!-- 預設列（如果沒有formConfig） -->
+                                <!-- Default columns (if no formConfig) -->
                                 <td><%= user.email || '-' %></td>
                                 <td><%= user.name || '-' %></td>
                                 <td><%= user.phone || '-' %></td>
@@ -337,6 +337,9 @@
                 if ($.fn.DataTable.isDataTable('#userTable')) {
                     const table = $('#userTable').DataTable();
                     table.clear();
+                    
+                    // Collect all row data first
+                    const rowsData = [];
                     users.forEach(user => {
                         const rowData = [];
                         
@@ -357,10 +360,17 @@
                         rowData.push(user.point || 0);
                         rowData.push(`<span class="${user.isCheckIn ? 'text-primary' : 'text-secondary'}">${user.isCheckIn ? 'Checked In' : 'Check In'}</span>`);
                         
-                        // Create row with user ID stored in data attribute
-                        const rowNode = table.row.add(rowData).draw().node();
-                        $(rowNode).attr('data-user-id', user._id);
+                        rowsData.push({ data: rowData, userId: user._id });
                     });
+                    
+                    // Add all rows at once for better performance
+                    rowsData.forEach(rowInfo => {
+                        const rowNode = table.row.add(rowInfo.data).node();
+                        $(rowNode).attr('data-user-id', rowInfo.userId);
+                    });
+                    
+                    // Draw the table once after adding all rows
+                    table.draw(false); // false = don't reset paging
                     
                     // Add click event handlers for table rows
                     $('#userTable tbody').off('click', 'tr').on('click', 'tr', function() {
@@ -430,13 +440,13 @@
             return;
         }
         
-        // 構建詳細信息HTML，根據formConfig動態顯示欄位
+        // Build details HTML, dynamically display fields based on formConfig
         let detailsHTML = `<h4>${user.name || '-'}</h4>`;
         
         const visibleFields = getVisibleFields();
         
         if (visibleFields.length > 0) {
-            // 根據formConfig顯示欄位
+            // Display fields based on formConfig
             visibleFields.forEach(field => {
                 const fieldValue = user[field.fieldName];
                 if (fieldValue && fieldValue !== 'undefined' && fieldValue !== '-') {
@@ -445,7 +455,7 @@
                 }
             });
         } else {
-            // 預設欄位（如果沒有formConfig）
+            // Default fields (if no formConfig)
             if (user.email && user.email !== 'undefined') {
                 detailsHTML += `<p>Email: ${user.email}</p>`;
             }
@@ -471,7 +481,7 @@
     
     // Show user details (legacy function for compatibility)
     function showDetails(name, table, company, phone, isCheckIn, userId, point) {
-        // 這是一個兼容性函數，現在直接從API獲取完整用戶數據
+        // This is a compatibility function, now directly fetches complete user data from API
         if (userId) {
             fetch(`/events/${eventId}/users/${userId}`)
                 .then(response => response.json())
@@ -496,9 +506,34 @@
             contentType: 'application/json',
             data: JSON.stringify({ isCheckIn: true }), // Add isCheckIn: true
             success: function(response) {
+                // Update button states immediately
+                document.getElementById('checkInButton').style.display = 'none';
+                document.getElementById('printButton').style.display = 'inline-block';
+                
+                // Update user details display with the response data
+                if (response && response._id) {
+                    showDetailsFromUser(response);
+                } else {
+                    // If response doesn't have full user data, fetch it
+                    fetch(`/events/${eventId}/users/${currentUserId}`)
+                        .then(res => res.json())
+                        .then(user => {
+                            showDetailsFromUser(user);
+                        })
+                        .catch(err => {
+                            console.error('Error fetching updated user:', err);
+                        });
+                }
+                
+                // Refresh user list after a short delay to ensure server has updated
+                setTimeout(function() {
+                    fetchUsers().then(function() {
+                        console.log('User list refreshed after check-in');
+                    });
+                }, 200);
+                
                 alert('User checked in successfully!');
-                $('#addGuestModal').modal('hide'); // 關閉模態框
-                fetchUsers(); // Refresh user list
+                $('#addGuestModal').modal('hide'); // Close modal
             },
             error: function(err) {
                 console.error('Error checking in user:', err);
@@ -605,7 +640,7 @@
 
     // Print user details
     function printDetails() {
-        // 只獲取姓名和公司信息，不包含 Table、Phone、Checked In
+        // Only get name and company information, excluding Table, Phone, Checked In
         const detailsElement = document.getElementById('detailsContent');
         const name = detailsElement.querySelector('h4').textContent;
         const company = detailsElement.querySelector('p:nth-of-type(2)').textContent.replace('Company: ', '');
@@ -624,7 +659,7 @@
                     font-family: Arial, sans-serif;
                     display: flex;
                     flex-direction: column;
-                    justify-content: space-between;
+                    justify-content: center;
                     align-items: stretch;
                     box-sizing: border-box;
                 }
@@ -632,34 +667,18 @@
                     display: flex;
                     flex-direction: column;
                     justify-content: center;
-                    align-items: stretch;
+                    align-items: center;
                     width: 100%;
                     height: 100%;
-                    gap: 3mm;
-                }
-                .top-section {
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                }
-                .bottom-section {
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    align-items: center;
                     text-align: center;
                 }
                 h1 {
                     font-size: 22px;
-                    margin: 0 0 1mm 0;
+                    margin: 0 0 3mm 0;
                     font-weight: bold;
                     line-height: 1.1;
                     text-align: center;
                     width: 100%;
-                }
-                .qrcode {
-                    width: 38mm;
-                    height: 38mm;
                 }
                 h3 {
                     font-size: 16px;
@@ -672,15 +691,8 @@
                 }
             </style>
             <div class="content-container">
-                <div class="top-section">
-                    <div class="qrcode">
-                        <img src="https://api.qrserver.com/v1/create-qr-code/?data=${name}&size=150x150" alt="QR Code" style="width: 100%; height: 100%;">
-                    </div>
-                </div>
-                <div class="bottom-section">
-                    <h1>${name}</h1>
-                    <h3>${company}</h3>
-                </div>
+                <h1>${name}</h1>
+                <h3>${company}</h3>
             </div>
         `;
         
@@ -699,22 +711,22 @@
         const name = detailsElement.querySelector('h4').textContent;
         const company = detailsElement.querySelector('p:nth-of-type(2)').textContent.replace('Company: ', '');
         
-        const printUrl = `brotherwebprint://print?filename=rsvp_label.lbx&size=62x100&copies=1&name=${encodeURIComponent(name)}&qrcode=${encodeURIComponent(name)}&company=${encodeURIComponent(company)}`;
+        const printUrl = `brotherwebprint://print?filename=rsvp_label.lbx&size=62x100&copies=1&name=${encodeURIComponent(name)}&company=${encodeURIComponent(company)}`;
         
         window.location.href = printUrl; // Use URL scheme to send print request
     }
 
-    // 添加用戶的功能
+    // Add user functionality
     $('#addGuestForm').on('submit', function(event) {
-        event.preventDefault(); // 防止表單默認提交
+        event.preventDefault(); // Prevent default form submission
 
         const name = $('#guestName').val();
         const company = $('#guestCompany').val();
         const phone = $('#guestPhone').val();
 
-        // 這裡可以發送 AJAX 請求到後端以添加用戶
+        // Send AJAX request to backend to add user
         $.ajax({
-            url: '/events/<%= event._id %>/users', // 根據您的路由設置調整 URL
+            url: '/events/<%= event._id %>/users', // Adjust URL according to your route settings
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({ 
@@ -722,13 +734,13 @@
                 table, 
                 company, 
                 phone, 
-                role: 'guest', // 添加 role
-                isCheckIn: true // 添加 checkin
+                role: 'guest', // Add role
+                isCheckIn: true // Add checkin
             }),
             success: function(response) {
                 alert('Guest added successfully!');
-                $('#addGuestModal').modal('hide'); // 關閉模態框
-                fetchUsers(); // 刷新用戶列表
+                $('#addGuestModal').modal('hide'); // Close modal
+                fetchUsers(); // Refresh user list
             },
             error: function(err) {
                 console.error('Error adding guest:', err);

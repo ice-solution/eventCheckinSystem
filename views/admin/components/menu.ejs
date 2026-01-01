@@ -4,7 +4,7 @@
             <ul class="nav navbar-nav">
                 <li class="menu-title">Admin</li><!-- /.menu-title -->
                 <li>
-                    <a href="/events/list"> <i class="menu-icon ti-server"></i>Events </a>
+                    <a href="/events/list"> <i class="menu-icon fa fa-calendar-alt"></i>Events </a>
                 </li>
                 <li>
                     <!-- <a href="/auth/add"> <i class="menu-icon ti-server"></i>Create auth </a> -->
@@ -18,25 +18,25 @@
                 <% if(eventId) { %>
                 <li class="menu-title">Event Items</li><!-- /.menu-title -->
                 <li>
-                    <a href="/events/<%=eventId%>"> <i class="menu-icon ti-email"></i>RSVP </a>
+                    <a href="/events/<%=eventId%>"> <i class="menu-icon fa fa-clipboard-list"></i>RSVP </a>
                 </li>
                 <li>
                     <a href="/events/<%=eventId%>/guest-list"> <i class="menu-icon fa fa-users"></i>Guest List </a>
                 </li>
                 <li>
-                    <a href="/events/<%=eventId%>/emailTemplate"> <i class="menu-icon ti-email"></i>Event template email </a>
+                    <a href="/events/<%=eventId%>/emailTemplate"> <i class="menu-icon fa fa-envelope"></i>Event template email </a>
                 </li>
                 <li>
-                    <a href="/events/<%=eventId%>/smsTemplate"> <i class="menu-icon fa fa-sms"></i>SMS Template </a>
+                    <a href="/events/<%=eventId%>/smsTemplate"> <i class="menu-icon fa fa-comment"></i>SMS Template </a>
                 </li>
                 <li>
                     <a href="/events/<%=eventId%>/qrcodeLogin" target="_blank"> <i class="menu-icon fa fa-qrcode"></i>QR code login page</a>
                 </li>
                 <li>
-                    <a href="/events/<%=eventId%>/scan-point-users"> <i class="menu-icon fa fa-scan"></i>掃瞄加分管理</a>
+                    <a href="/events/<%=eventId%>/scan-point-users"> <i class="menu-icon fa fa-barcode"></i>Scan Point Management</a>
                 </li>
                 <li>
-                    <a href="/events/<%=eventId%>/treasure-hunt"> <i class="menu-icon fa fa-map-marker-alt"></i>Treasure Hunt</a>
+                    <a href="/events/<%=eventId%>/treasure-hunt"> <i class="menu-icon fa fa-compass"></i>Treasure Hunt</a>
                 </li>
                 <li class="menu-item-has-children dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <i class="menu-icon fa fa-bar-chart"></i>Lucky Draw</a>
@@ -49,7 +49,7 @@
                     </ul>
                 </li>
                 <li>
-                    <a href="/votes/<%=eventId%>/admin"> <i class="menu-icon fa fa-vote-yea"></i>Vote Management</a>
+                    <a href="/votes/<%=eventId%>/admin"> <i class="menu-icon fa fa-check-square-o"></i>Vote Management</a>
                 </li>
                 <li class="menu-item-has-children dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <i class="menu-icon fa fa-globe"></i>Website Content</a>
@@ -62,6 +62,9 @@
                 </li>
                 <li>
                     <a href="/events/<%=eventId%>/transactions"> <i class="menu-icon fa fa-credit-card"></i>Transaction record</a>
+                </li>
+                <li>
+                    <a href="/events/<%=eventId%>/attachments"> <i class="menu-icon fa fa-paperclip"></i>Attachments</a>
                 </li>
                 
                 <% } %>

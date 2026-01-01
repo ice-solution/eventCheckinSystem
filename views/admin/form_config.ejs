@@ -47,6 +47,13 @@
                             <strong class="card-title">表單配置管理 - <%= event.name %></strong>
                             <div class="btn-toolbar mb-2 mb-md-0" style="float: right;">
                                 <div class="btn-group me-2">
+                                    <button type="button" class="btn btn-sm btn-outline-info" onclick="exportConfig()">
+                                        <i class="fas fa-download"></i> 導出 JSON
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-info" onclick="document.getElementById('importFileInput').click()">
+                                        <i class="fas fa-upload"></i> 導入 JSON
+                                    </button>
+                                    <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="importConfig(event)">
                                     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetToDefault()">
                                         <i class="fas fa-undo"></i> 重置為預設
                                     </button>
@@ -91,30 +98,62 @@
                             <!-- 表單配置區域 -->
                             <div id="formConfigContainer">
                                 <% if (formConfig && formConfig.sections) { %>
-                                    <% formConfig.sections.forEach((section, sectionIndex) => { %>
-                                        <div class="form-section <%= section.visible ? '' : 'hidden-section' %>" data-section-index="<%= sectionIndex %>">
+                                    <% 
+                                    // 根據 order 排序 sections
+                                    const sortedSections = formConfig.sections.slice().sort((a, b) => {
+                                        const orderA = a.order || 0;
+                                        const orderB = b.order || 0;
+                                        return orderA - orderB;
+                                    });
+                                    %>
+                                    <% sortedSections.forEach((section, sectionIndex) => { %>
+                                        <% 
+                                        // 找到原始索引
+                                        const originalSectionIndex = formConfig.sections.findIndex(s => s._id ? s._id.toString() === section._id.toString() : s.sectionName === section.sectionName);
+                                        const actualSectionIndex = originalSectionIndex >= 0 ? originalSectionIndex : sectionIndex;
+                                        %>
+                                        <div class="form-section <%= section.visible ? '' : 'hidden-section' %>" data-section-index="<%= actualSectionIndex %>">
                                             <div class="section-controls">
                                                 <div class="form-check form-switch">
                                                     <input class="form-check-input" type="checkbox" 
                                                            <%= section.visible ? 'checked' : '' %>
-                                                           onchange="toggleSection(<%= sectionIndex %>)">
+                                                           onchange="toggleSection(<%= actualSectionIndex %>)">
                                                     <label class="form-check-label">
                                                         <strong><%= section.sectionTitle %></strong>
                                                     </label>
                                                 </div>
-                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSection(<%= sectionIndex %>)">
+                                                <div class="col-md-2">
+                                                    <label class="form-label">排序</label>
+                                                    <input type="number" class="form-control form-control-sm" 
+                                                           value="<%= section.order || 0 %>" 
+                                                           onchange="updateSectionProperty(<%= actualSectionIndex %>, 'order', parseInt(this.value) || 0); updatePreview();">
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSection(<%= actualSectionIndex %>)">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </div>
                                             
                                             <% if (section.fields) { %>
-                                                <% section.fields.forEach((field, fieldIndex) => { %>
-                                                    <div class="field-item <%= field.visible ? '' : 'hidden-field' %>" data-field-index="<%= fieldIndex %>">
+                                                <% 
+                                                // 根據 order 排序 fields
+                                                const sortedFields = section.fields.slice().sort((a, b) => {
+                                                    const orderA = a.order || 0;
+                                                    const orderB = b.order || 0;
+                                                    return orderA - orderB;
+                                                });
+                                                %>
+                                                <% sortedFields.forEach((field, fieldIndex) => { %>
+                                                    <% 
+                                                    // 找到原始索引
+                                                    const originalFieldIndex = section.fields.findIndex(f => f._id ? f._id.toString() === field._id.toString() : f.fieldName === field.fieldName);
+                                                    const actualFieldIndex = originalFieldIndex >= 0 ? originalFieldIndex : fieldIndex;
+                                                    %>
+                                                    <div class="field-item <%= field.visible ? '' : 'hidden-field' %>" data-field-index="<%= actualFieldIndex %>">
                                                         <div class="field-controls">
                                                             <div class="form-check form-switch">
                                                                 <input class="form-check-input" type="checkbox" 
                                                                        <%= field.visible ? 'checked' : '' %>
-                                                                       onchange="toggleField(<%= sectionIndex %>, <%= fieldIndex %>)">
+                                                                       onchange="toggleField(<%= actualSectionIndex %>, <%= actualFieldIndex %>)">
                                                                 <label class="form-check-label">
                                                                     <strong><%= field.label %></strong>
                                                                     <% if (field.required) { %>
@@ -122,7 +161,7 @@
                                                                     <% } %>
                                                                 </label>
                                                             </div>
-                                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeField(<%= sectionIndex %>, <%= fieldIndex %>)">
+                                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeField(<%= actualSectionIndex %>, <%= actualFieldIndex %>)">
                                                                 <i class="fas fa-trash"></i>
                                                             </button>
                                                         </div>
@@ -132,24 +171,24 @@
                                                                 <label class="form-label">字段名稱</label>
                                                                 <input type="text" class="form-control form-control-sm" 
                                                                        value="<%= field.fieldName %>" 
-                                                                       onchange="updateFieldProperty(<%= sectionIndex %>, <%= fieldIndex %>, 'fieldName', this.value)">
+                                                                       onchange="updateFieldProperty(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'fieldName', this.value)">
                                                             </div>
                                                             <div class="col-md-2">
                                                                 <label class="form-label">中文標籤</label>
                                                                 <input type="text" class="form-control form-control-sm" 
                                                                        value="<%= field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '') %>" 
-                                                                       onchange="updateFieldLabel(<%= sectionIndex %>, <%= fieldIndex %>, 'zh', this.value)">
+                                                                       onchange="updateFieldLabel(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'zh', this.value)">
                                                             </div>
                                                             <div class="col-md-2">
                                                                 <label class="form-label">English Label</label>
                                                                 <input type="text" class="form-control form-control-sm" 
                                                                        value="<%= field.label && field.label.en ? field.label.en : '' %>" 
-                                                                       onchange="updateFieldLabel(<%= sectionIndex %>, <%= fieldIndex %>, 'en', this.value)">
+                                                                       onchange="updateFieldLabel(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'en', this.value)">
                                                             </div>
                                                             <div class="col-md-2">
                                                                 <label class="form-label">字段類型</label>
                                                                 <select class="form-select form-select-sm" 
-                                                                        onchange="updateFieldProperty(<%= sectionIndex %>, <%= fieldIndex %>, 'type', this.value)">
+                                                                        onchange="updateFieldProperty(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'type', this.value)">
                                                                     <option value="text" <%= field.type === 'text' ? 'selected' : '' %>>文字</option>
                                                                     <option value="email" <%= field.type === 'email' ? 'selected' : '' %>>電子郵件</option>
                                                                     <option value="tel" <%= field.type === 'tel' ? 'selected' : '' %>>電話</option>
@@ -162,14 +201,14 @@
                                                                 <div class="form-check">
                                                                     <input class="form-check-input" type="checkbox" 
                                                                            <%= field.required ? 'checked' : '' %>
-                                                                           onchange="updateFieldProperty(<%= sectionIndex %>, <%= fieldIndex %>, 'required', this.checked)">
+                                                                           onchange="updateFieldProperty(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'required', this.checked)">
                                                                 </div>
                                                             </div>
                                                             <div class="col-md-2">
                                                                 <label class="form-label">排序</label>
                                                                 <input type="number" class="form-control form-control-sm" 
-                                                                       value="<%= field.order %>" 
-                                                                       onchange="updateFieldProperty(<%= sectionIndex %>, <%= fieldIndex %>, 'order', parseInt(this.value))">
+                                                                       value="<%= field.order || 0 %>" 
+                                                                       onchange="updateFieldProperty(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'order', parseInt(this.value) || 0); updatePreview();">
                                                             </div>
                                                         </div>
                                                         
@@ -178,42 +217,42 @@
                                                                 <label class="form-label">中文佔位符</label>
                                                                 <input type="text" class="form-control form-control-sm" 
                                                                        value="<%= field.placeholder && field.placeholder.zh ? field.placeholder.zh : (typeof field.placeholder === 'string' ? field.placeholder : '') %>" 
-                                                                       onchange="updateFieldPlaceholder(<%= sectionIndex %>, <%= fieldIndex %>, 'zh', this.value)">
+                                                                       onchange="updateFieldPlaceholder(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'zh', this.value)">
                                                             </div>
                                                             <div class="col-md-3">
                                                                 <label class="form-label">English Placeholder</label>
                                                                 <input type="text" class="form-control form-control-sm" 
                                                                        value="<%= field.placeholder && field.placeholder.en ? field.placeholder.en : '' %>" 
-                                                                       onchange="updateFieldPlaceholder(<%= sectionIndex %>, <%= fieldIndex %>, 'en', this.value)">
+                                                                       onchange="updateFieldPlaceholder(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'en', this.value)">
                                                             </div>
                                                         </div>
                                                         
                                                         <% if (field.type === 'select' && field.options) { %>
                                                             <div class="mt-2">
                                                                 <label class="form-label">選項設定</label>
-                                                                <div id="options-<%= sectionIndex %>-<%= fieldIndex %>">
+                                                                <div id="options-<%= actualSectionIndex %>-<%= actualFieldIndex %>">
                                                                     <% field.options.forEach((option, optionIndex) => { %>
                                                                         <div class="row mb-2">
                                                                             <div class="col-md-3">
                                                                                 <input type="text" class="form-control form-control-sm" 
                                                                                        placeholder="選項值" value="<%= option.value %>"
-                                                                                       onchange="updateOption(<%= sectionIndex %>, <%= fieldIndex %>, <%= optionIndex %>, 'value', this.value)">
+                                                                                       onchange="updateOption(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>, 'value', this.value)">
                                                                             </div>
                                                                             <div class="col-md-3">
                                                                                 <input type="text" class="form-control form-control-sm" 
                                                                                        placeholder="中文標籤" 
                                                                                        value="<%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>"
-                                                                                       onchange="updateOptionLabel(<%= sectionIndex %>, <%= fieldIndex %>, <%= optionIndex %>, 'zh', this.value)">
+                                                                                       onchange="updateOptionLabel(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>, 'zh', this.value)">
                                                                             </div>
                                                                             <div class="col-md-3">
                                                                                 <input type="text" class="form-control form-control-sm" 
                                                                                        placeholder="English Label" 
                                                                                        value="<%= option.label && option.label.en ? option.label.en : '' %>"
-                                                                                       onchange="updateOptionLabel(<%= sectionIndex %>, <%= fieldIndex %>, <%= optionIndex %>, 'en', this.value)">
+                                                                                       onchange="updateOptionLabel(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>, 'en', this.value)">
                                                                             </div>
                                                                             <div class="col-md-3">
                                                                                 <button type="button" class="btn btn-outline-danger btn-sm" 
-                                                                                        onclick="removeOption(<%= sectionIndex %>, <%= fieldIndex %>, <%= optionIndex %>)">
+                                                                                        onclick="removeOption(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>)">
                                                                                     <i class="fas fa-trash"></i>
                                                                                 </button>
                                                                             </div>
@@ -221,7 +260,7 @@
                                                                     <% }); %>
                                                                 </div>
                                                                 <button type="button" class="btn btn-sm btn-outline-primary" 
-                                                                        onclick="addOption(<%= sectionIndex %>, <%= fieldIndex %>)">
+                                                                        onclick="addOption(<%= actualSectionIndex %>, <%= actualFieldIndex %>)">
                                                                     <i class="fas fa-plus"></i> 添加選項
                                                                 </button>
                                                             </div>
@@ -231,7 +270,7 @@
                                             <% } %>
                                             
                                             <button type="button" class="btn btn-sm btn-outline-primary mt-2" 
-                                                    onclick="addField(<%= sectionIndex %>)">
+                                                    onclick="addField(<%= actualSectionIndex %>)">
                                                 <i class="fas fa-plus"></i> 添加字段
                                             </button>
                                         </div>
@@ -718,6 +757,119 @@
                 alert('重置失敗：' + error.message);
             }
         }
+    }
+
+    // 更新區塊屬性
+    function updateSectionProperty(sectionIndex, property, value) {
+        if (formConfig.sections[sectionIndex]) {
+            formConfig.sections[sectionIndex][property] = value;
+            updatePreview();
+        }
+    }
+
+    // 導出配置為 JSON
+    function exportConfig() {
+        try {
+            // 創建要導出的配置對象（移除 MongoDB 相關字段）
+            const exportData = {
+                defaultLanguage: formConfig.defaultLanguage,
+                sections: formConfig.sections.map(section => ({
+                    sectionName: section.sectionName,
+                    sectionTitle: section.sectionTitle,
+                    visible: section.visible,
+                    order: section.order || 0,
+                    fields: (section.fields || []).map(field => ({
+                        fieldName: field.fieldName,
+                        label: field.label,
+                        type: field.type,
+                        required: field.required,
+                        visible: field.visible,
+                        placeholder: field.placeholder,
+                        options: field.options || [],
+                        validation: field.validation || {},
+                        order: field.order || 0
+                    }))
+                }))
+            };
+            
+            // 轉換為 JSON 字符串
+            const jsonString = JSON.stringify(exportData, null, 2);
+            
+            // 創建下載鏈接
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `formConfig_${eventId}_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            alert('配置已成功導出！');
+        } catch (error) {
+            console.error('導出失敗:', error);
+            alert('導出失敗：' + error.message);
+        }
+    }
+
+    // 導入配置從 JSON
+    function importConfig(event) {
+        const file = event.target.files[0];
+        if (!file) {
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importedData = JSON.parse(e.target.result);
+                
+                // 驗證導入的數據結構
+                if (!importedData.sections || !Array.isArray(importedData.sections)) {
+                    throw new Error('無效的配置文件格式：缺少 sections 數組');
+                }
+                
+                // 確認導入
+                if (confirm('確定要導入此配置嗎？這將覆蓋現有的表單配置。')) {
+                    // 更新 formConfig
+                    formConfig.defaultLanguage = importedData.defaultLanguage || formConfig.defaultLanguage;
+                    formConfig.sections = importedData.sections.map(section => ({
+                        sectionName: section.sectionName || '新區塊',
+                        sectionTitle: section.sectionTitle || { zh: '新區塊', en: 'New Section' },
+                        visible: section.visible !== undefined ? section.visible : true,
+                        order: section.order || 0,
+                        fields: (section.fields || []).map(field => ({
+                            fieldName: field.fieldName || 'newField',
+                            label: field.label || { zh: '', en: '' },
+                            type: field.type || 'text',
+                            required: field.required || false,
+                            visible: field.visible !== undefined ? field.visible : true,
+                            placeholder: field.placeholder || { zh: '', en: '' },
+                            options: field.options || [],
+                            validation: field.validation || {},
+                            order: field.order || 0
+                        }))
+                    }));
+                    
+                    // 保存配置
+                    saveConfig().then(() => {
+                        alert('配置已成功導入！');
+                        location.reload();
+                    }).catch(error => {
+                        console.error('保存失敗:', error);
+                        alert('導入失敗：' + error.message);
+                    });
+                }
+            } catch (error) {
+                console.error('導入失敗:', error);
+                alert('導入失敗：' + error.message + '\n請確保文件是有效的 JSON 格式。');
+            }
+        };
+        
+        reader.readAsText(file);
+        // 重置文件輸入，以便可以再次選擇同一個文件
+        event.target.value = '';
     }
 
     // 初始化預覽

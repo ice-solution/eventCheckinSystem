@@ -31,6 +31,169 @@
             gap: 6px;
             align-items: center;
         }
+        .qrcode-container {
+            position: relative;
+            display: inline-block;
+        }
+        .qrcode-popup {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 10px;
+            z-index: 9999;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            min-width: 230px;
+            text-align: center;
+        }
+        .qrcode-popup::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            border-top-color: white;
+            z-index: 10000;
+        }
+        .qrcode-popup::before {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 9px solid transparent;
+            border-top-color: #ddd;
+            z-index: 9998;
+            margin-top: -1px;
+        }
+        .qrcode-image {
+            width: 200px;
+            height: 200px;
+            display: block;
+            margin: 0 auto 10px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+        }
+        .qrcode-download-btn {
+            width: 100%;
+            margin-top: 10px;
+        }
+        /* 確保在 DataTable 中 popup 能正確顯示 */
+        .dataTables_wrapper .qrcode-popup {
+            position: fixed !important;
+        }
+        .qrcode-container:hover .qrcode-popup {
+            display: block !important;
+        }
+        /* 按鈕區域樣式優化 */
+        .action-buttons-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        .action-buttons-container .btn {
+            margin: 0;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .action-buttons-container .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .action-buttons-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+        .action-buttons-group .btn {
+            margin: 0;
+        }
+        /* Payment Event 單獨容器 */
+        .payment-event-container {
+            margin-top: 15px;
+            padding: 12px 15px;
+            background-color: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            border-left: 4px solid #007bff;
+        }
+        .payment-event-container .form-check.form-switch {
+            display: flex;
+            align-items: flex-start;
+            margin: 0;
+            padding: 0;
+        }
+        .payment-event-container .form-check-input {
+            margin: 0 !important;
+            margin-right: 25px !important;
+            margin-top: 3px !important;
+            width: 2.25rem !important;
+            min-width: 2.25rem !important;
+            max-width: 2.25rem !important;
+            height: 1.375rem !important;
+            flex-shrink: 0 !important;
+            cursor: pointer;
+            position: relative;
+            z-index: 1;
+            float: none !important;
+        }
+        .payment-event-container .form-check-label {
+            margin: 0 !important;
+            margin-left: 0 !important;
+            padding: 0 !important;
+            padding-left: 0 !important;
+            cursor: pointer;
+            flex: 1;
+            line-height: 1.5;
+            min-width: 0;
+            display: block;
+            overflow: visible;
+        }
+        .payment-event-container .form-check-label strong {
+            display: block;
+            font-size: 15px;
+            color: #212529;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        .payment-event-container .form-check-label small {
+            display: block;
+            font-size: 12px;
+            color: #6c757d;
+            line-height: 1.4;
+        }
+        /* 響應式設計 */
+        @media (max-width: 768px) {
+            .action-buttons-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .action-buttons-group {
+                width: 100%;
+                justify-content: flex-start;
+            }
+            .action-buttons-group .btn {
+                flex: 1;
+                min-width: 120px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -115,27 +278,62 @@
                             <strong class="card-title"><%= event.name %> User List</strong>
                         </div>
                         <div class="card-body">
-                            <div>
-                                <a href="/events/<%= event._id %>" class="btn btn-outline-secondary">User List</a>
-                                <a href="/events/<%= event._id%>/scan" class="btn btn-outline-secondary">Scan QR Code</a>
-                                <a href="/events/<%= event._id%>/import" class="btn btn-outline-secondary">Import Data</a>
-                                <a href="/events/<%= event._id%>/banner" class="btn btn-outline-info ml-2">
-                                    <i class="fas fa-image"></i> Banner Management
-                                </a>
-
-                                <a href="/events/<%= event._id %>/report" class="btn btn-outline-success ml-2">Download Report</a>
-                                <a href="/events/<%= event._id %>/transactions" class="btn btn-outline-warning ml-2">
-                                    <i class="fa fa-credit-card"></i> Transaction Records
-                                </a>
-                                <button id="batchDeleteBtn" class="btn btn-danger ml-2" style="display: none;">Batch Delete Selected</button>
-                                <button id="batchCheckInBtn" class="btn btn-success ml-2">Batch Check In All</button>
-                                <button id="addUserBtn" class="btn btn-primary ml-2">Add User</button>
+                            <!-- 主要操作按鈕區域 -->
+                            <div class="action-buttons-container">
+                                <!-- 主要操作按鈕組 -->
+                                <div class="action-buttons-group">
+                                    <a href="/events/<%= event._id %>" class="btn btn-outline-secondary">
+                                        <i class="fas fa-list"></i> User List
+                                    </a>
+                                    <a href="/events/<%= event._id%>/scan" class="btn btn-outline-secondary">
+                                        <i class="fas fa-qrcode"></i> Scan QR Code
+                                    </a>
+                                    <a href="/events/<%= event._id%>/import" class="btn btn-outline-secondary">
+                                        <i class="fas fa-file-upload"></i> Import Data
+                                    </a>
+                                    <a href="/events/<%= event._id%>/banner" class="btn btn-outline-info">
+                                        <i class="fas fa-image"></i> Banner Management
+                                    </a>
+                                    <a href="/events/<%= event._id %>/report" class="btn btn-outline-success">
+                                        <i class="fas fa-download"></i> Download Report
+                                    </a>
+                                    <a href="/events/<%= event._id %>/transactions" class="btn btn-outline-warning">
+                                        <i class="fa fa-credit-card"></i> Transaction Records
+                                    </a>
+                                </div>
+                                
+                                <!-- 批量操作按鈕組 -->
+                                <div class="action-buttons-group">
+                                    <button id="batchDeleteBtn" class="btn btn-danger" style="display: none;">
+                                        <i class="fas fa-trash-alt"></i> Batch Delete Selected
+                                    </button>
+                                    <button id="batchCheckInBtn" class="btn btn-success">
+                                        <i class="fas fa-check-circle"></i> Batch Check In All
+                                    </button>
+                                    <button id="addUserBtn" class="btn btn-primary">
+                                        <i class="fas fa-user-plus"></i> Add User
+                                    </button>
+                                </div>
+                                
+                                <!-- 設置按鈕組 -->
+                                <div class="action-buttons-group">
+                                    <button id="emailSettingsBtn" class="btn btn-info">
+                                        <i class="fas fa-envelope"></i> Email Settings
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Payment Event Settings (Separated) -->
+                            <div class="payment-event-container">
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" role="switch" id="paymentEvent">
-                                    <label class="form-check-label" for="paymentEvent">Payment Event</label>
+                                    <label class="form-check-label" for="paymentEvent">
+                                        <strong>Payment Event</strong>
+                                        <small class="text-muted d-block">Enable paid event functionality</small>
+                                    </label>
                                 </div>
-                                <button id="emailSettingsBtn" class="btn btn-info btn-sm ml-2">Email Settings</button>
                             </div>
+                            
                             <div class="clearfix" style="margin-top:20px"></div>
 
                             <!-- Add User Form -->
@@ -186,7 +384,7 @@
                                                                         </label>
                                                                         <% if (field.type === 'select' && field.options) { %>
                                                                             <select class="form-control" id="newUser<%= field.fieldName %>" name="<%= field.fieldName %>" <%= field.required ? 'required' : '' %>>
-                                                                                <option value="">--- 請選擇 ---</option>
+                                                                                <option value="">--- Please Select ---</option>
                                                                                 <% field.options.forEach((option) => { %>
                                                                                     <option value="<%= option.value %>">
                                                                                         <% 
@@ -323,6 +521,17 @@
                                             </td>
                                             <td>
                                                 <div class="user-action-buttons">
+                                                    <div class="qrcode-container">
+                                                        <button type="button" class="btn btn-outline-info qrcode-btn" data-user-id="<%= user._id %>" title="View QR Code">
+                                                            <i class="fa fa-qrcode"></i>
+                                                        </button>
+                                                        <div class="qrcode-popup">
+                                                            <img src="https://api.qrserver.com/v1/create-qr-code/?data=<%= user._id %>&size=200x200" alt="QR Code" class="qrcode-image" id="qrcode-<%= user._id %>">
+                                                            <button type="button" class="btn btn-primary btn-sm qrcode-download-btn" data-user-id="<%= user._id %>" data-user-name="<%= user.name || user.email %>">
+                                                                <i class="fa fa-download"></i> Download QR Code
+                                                            </button>
+                                                        </div>
+                                                    </div>
                                                     <div class="btn-group">
                                                         <button type="button" class="btn btn-outline-primary dropdown-toggle resend-email-btn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-_id="<%= user._id %>">
                                                             <i class="fa fa-envelope mr-1"></i> Resend...
@@ -507,17 +716,17 @@
                 return;
             }
 
-            if (confirm(`確定要將所有 ${totalUsers} 位用戶設為已簽到嗎？\n（目前已有 ${alreadyCheckedIn} 位已簽到，將新增 ${toCheckIn} 位）`)) {
+            if (confirm(`Are you sure you want to set all ${totalUsers} users as checked in?\n(Currently ${alreadyCheckedIn} users are checked in, will add ${toCheckIn} more)`)) {
                 const button = $(this);
                 const originalText = button.text();
-                button.prop('disabled', true).text('處理中...');
+                button.prop('disabled', true).text('Processing...');
 
                 $.ajax({
                     url: `/events/<%= event._id %>/users/batch-checkin`,
                     type: 'PUT',
                     contentType: 'application/json',
                     success: function(response) {
-                        // 更新所有行的 check in 狀態
+                        // Update all rows' check in status
                         $('#usersTable tbody tr').each(function() {
                             const row = $(this);
                             const checkInCheckbox = row.find('.checkin-toggle');
@@ -528,12 +737,12 @@
                             }
                         });
                         
-                        showAlert('success', `成功將 ${response.checkedInCount} 位用戶設為已簽到！`);
+                        showAlert('success', `Successfully set ${response.checkedInCount} users as checked in!`);
                         button.prop('disabled', false).text(originalText);
                     },
                     error: function(xhr, status, error) {
                         console.error('Error batch checking in users:', error);
-                        showAlert('danger', '批量簽到失敗，請重試。');
+                        showAlert('danger', 'Batch check-in failed, please try again.');
                         button.prop('disabled', false).text(originalText);
                     }
                 });
@@ -544,13 +753,28 @@
         $('#usersTable tbody').on('dblclick', 'td:not(:last-child):not(:nth-last-child(2)):not(:first-child)', function() {
             const cell = $(this);
             const currentText = cell.text().trim();
-            const fieldName = cell.data('field-name'); // 從 data-field-name 屬性獲取欄位名稱
+            // Try multiple ways to get field-name (compatible with data-field-name and data-fieldName)
+            let fieldName = cell.attr('data-field-name') || cell.data('field-name') || cell.data('fieldName');
             const row = cell.closest('tr');
-            const userId = row.data('id');
+            const userId = row.data('id') || row.attr('data-id');
             
-            // 如果沒有 field-name 屬性，跳過編輯
+            // Debug log
+            console.log('Double-click detected:', {
+                cell: cell[0],
+                fieldName: fieldName,
+                userId: userId,
+                currentText: currentText,
+                allAttributes: cell[0] ? Array.from(cell[0].attributes).map(attr => `${attr.name}="${attr.value}"`).join(', ') : 'N/A'
+            });
+            
+            // If no field-name attribute, skip editing
             if (!fieldName) {
-                console.log('No field-name attribute found for this cell');
+                console.warn('No field-name attribute found for this cell. Cell HTML:', cell[0] ? cell[0].outerHTML : 'N/A');
+                return;
+            }
+            
+            if (!userId) {
+                console.warn('No user ID found for this row');
                 return;
             }
             
@@ -580,24 +804,50 @@
         // Function to update user field
         function updateUserField(userId, fieldName, newValue) {
             if (!fieldName) {
-                console.log('No field name provided');
+                console.error('No field name provided');
+                showAlert('danger', 'Error: Cannot identify field name');
                 return;
             }
             
-            console.log('Updating field:', fieldName, 'with value:', newValue, 'for user:', userId);
+            if (!userId) {
+                console.error('No user ID provided');
+                showAlert('danger', 'Error: Cannot identify user ID');
+                return;
+            }
+            
+            // Build request data
+            const updateData = {};
+            updateData[fieldName] = newValue;
+            
+            console.log('Updating field:', {
+                userId: userId,
+                fieldName: fieldName,
+                newValue: newValue,
+                requestData: updateData
+            });
             
             $.ajax({
                 url: `/events/<%= event._id %>/users/${userId}`,
                 type: 'PUT',
                 contentType: 'application/json',
-                data: JSON.stringify({ [fieldName]: newValue }),
+                data: JSON.stringify(updateData),
                 success: function(response) {
                     console.log('Update successful:', response);
+                    // 檢查響應中是否包含更新的字段
+                    if (response && response[fieldName] !== undefined) {
+                        console.log(`Field ${fieldName} updated to:`, response[fieldName]);
+                    }
                     showAlert('success', 'User updated successfully!');
                 },
                 error: function(xhr) {
-                    console.error('Update failed:', xhr.responseText);
-                    showAlert('danger', 'Update failed: ' + xhr.responseText);
+                    console.error('Update failed:', {
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        responseText: xhr.responseText,
+                        fieldName: fieldName,
+                        newValue: newValue
+                    });
+                    showAlert('danger', 'Update failed: ' + (xhr.responseText || xhr.statusText));
                 }
             });
         }
@@ -827,10 +1077,10 @@
             paymentTickets.forEach((ticket, idx) => {
                 html += `
                     <div class="ticket-item mb-2" data-idx="${idx}">
-                        <input type="text" class="form-control d-inline-block w-auto mr-2 ticket-title" placeholder="票券名稱" value="${ticket.title || ''}" style="width:120px;">
-                        <input type="number" class="form-control d-inline-block w-auto mr-2 ticket-price" placeholder="價格" value="${ticket.price || ''}" style="width:100px;">
+                        <input type="text" class="form-control d-inline-block w-auto mr-2 ticket-title" placeholder="Ticket Name" value="${ticket.title || ''}" style="width:120px;">
+                        <input type="number" class="form-control d-inline-block w-auto mr-2 ticket-price" placeholder="Price" value="${ticket.price || ''}" style="width:100px;">
                         <input type="datetime-local" class="form-control d-inline-block w-auto mr-2 ticket-datetime" value="${ticket.datetime ? new Date(ticket.datetime).toISOString().slice(0,16) : ''}" style="width:180px;">
-                        <button type="button" class="btn btn-danger btn-sm remove-ticket">刪除</button>
+                        <button type="button" class="btn btn-danger btn-sm remove-ticket">Delete</button>
                     </div>
                 `;
             });
@@ -872,7 +1122,7 @@
                 success: function(res) {
                     const alertHtml = `
                         <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            付費活動設定已更新！
+                            Payment event settings updated!
                             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
@@ -899,7 +1149,7 @@
         $('#newUserForm').on('submit', function(e) {
             e.preventDefault();
             
-            // 動態收集表單數據
+            // Dynamically collect form data
             const userData = {
                 isCheckIn: false
             };
@@ -950,7 +1200,27 @@
                     
                     // 添加Checked In和Actions列
                     newRow.push('<input type="checkbox" class="checkin-toggle" data-_id="' + response._id + '" />');
-                    newRow.push('<div class="user-action-buttons"><div class="btn-group"><button type="button" class="btn btn-outline-primary dropdown-toggle resend-email-btn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-_id="' + response._id + '"><i class="fa fa-envelope mr-1"></i> Resend...</button><div class="dropdown-menu"><a class="dropdown-item resend-email-option" href="#" data-type="welcome">Welcome Email</a><a class="dropdown-item resend-email-option" href="#" data-type="confirmation">Confirmation Email</a><a class="dropdown-item resend-email-option" href="#" data-type="reminder">Reminder Email</a><a class="dropdown-item resend-email-option" href="#" data-type="thankYou">Thank You Email</a></div></div><button class="btn btn-danger delete-user" data-_id="' + response._id + '">Delete</button></div>');
+                    const userNameForQR = userData.name || userData.email || 'user';
+                    const actionsHtml = '<div class="user-action-buttons">' +
+                        '<div class="qrcode-container">' +
+                        '<button type="button" class="btn btn-outline-info qrcode-btn" data-user-id="' + response._id + '" title="查看 QR Code"><i class="fa fa-qrcode"></i></button>' +
+                        '<div class="qrcode-popup">' +
+                        '<img src="https://api.qrserver.com/v1/create-qr-code/?data=' + response._id + '&size=200x200" alt="QR Code" class="qrcode-image" id="qrcode-' + response._id + '">' +
+                        '<button type="button" class="btn btn-primary btn-sm qrcode-download-btn" data-user-id="' + response._id + '" data-user-name="' + userNameForQR + '"><i class="fa fa-download"></i> Download QR Code</button>' +
+                        '</div>' +
+                        '</div>' +
+                        '<div class="btn-group">' +
+                        '<button type="button" class="btn btn-outline-primary dropdown-toggle resend-email-btn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-_id="' + response._id + '"><i class="fa fa-envelope mr-1"></i> Resend...</button>' +
+                        '<div class="dropdown-menu">' +
+                        '<a class="dropdown-item resend-email-option" href="#" data-type="welcome">Welcome Email</a>' +
+                        '<a class="dropdown-item resend-email-option" href="#" data-type="confirmation">Confirmation Email</a>' +
+                        '<a class="dropdown-item resend-email-option" href="#" data-type="reminder">Reminder Email</a>' +
+                        '<a class="dropdown-item resend-email-option" href="#" data-type="thankYou">Thank You Email</a>' +
+                        '</div>' +
+                        '</div>' +
+                        '<button class="btn btn-danger delete-user" data-_id="' + response._id + '">Delete</button>' +
+                        '</div>';
+                    newRow.push(actionsHtml);
                     
                     const rowNode = table.row.add(newRow).draw().node();
                     $(rowNode).addClass('checkin-false').attr('data-id', response._id);
@@ -975,6 +1245,92 @@
                     showAlert('danger', 'Failed to add user. Please try again.');
                 }
             });
+        });
+
+        // QR Code hover 顯示功能（使用 mouseenter/mouseleave 確保穩定性）
+        $(document).on('mouseenter', '.qrcode-container', function(e) {
+            e.stopPropagation();
+            const $popup = $(this).find('.qrcode-popup');
+            if ($popup.length) {
+                // 計算 popup 位置
+                const $container = $(this);
+                const containerOffset = $container.offset();
+                const containerWidth = $container.outerWidth();
+                const popupWidth = 230;
+                
+                // 設置 fixed 位置以避免表格滾動問題
+                $popup.css({
+                    'position': 'fixed',
+                    'left': (containerOffset.left + containerWidth / 2 - popupWidth / 2) + 'px',
+                    'bottom': ($(window).height() - containerOffset.top + 10) + 'px',
+                    'display': 'block'
+                });
+            }
+        });
+        
+        $(document).on('mouseleave', '.qrcode-container', function(e) {
+            e.stopPropagation();
+            const $popup = $(this).find('.qrcode-popup');
+            // 稍微延遲隱藏，以便用戶可以移動到 popup
+            setTimeout(function() {
+                if (!$popup.is(':hover')) {
+                    $popup.css('display', 'none');
+                }
+            }, 200);
+        });
+        
+        $(document).on('mouseenter', '.qrcode-popup', function(e) {
+            e.stopPropagation();
+        });
+        
+        $(document).on('mouseleave', '.qrcode-popup', function(e) {
+            e.stopPropagation();
+            $(this).css('display', 'none');
+        });
+
+        // QR Code 下載功能
+        $(document).on('click', '.qrcode-download-btn', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const userId = $(this).data('user-id');
+            const userName = $(this).data('user-name') || 'user';
+            // 清理文件名中的特殊字符
+            const cleanUserName = userName.replace(/[^a-zA-Z0-9\-_]/g, '_');
+            const qrcodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${userId}&size=500x500`;
+            
+            // 創建臨時圖片元素以下載
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                
+                // 轉換為 blob 並下載
+                canvas.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `qrcode-${cleanUserName}-${userId}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 'image/png');
+            };
+            img.onerror = function() {
+                // 如果 crossOrigin 失敗，直接下載 URL
+                const a = document.createElement('a');
+                a.href = qrcodeUrl;
+                a.download = `qrcode-${cleanUserName}-${userId}.png`;
+                a.target = '_blank';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            };
+            img.src = qrcodeUrl;
         });
 
         // 監聽 Payment Event checkbox，顯示/隱藏票券欄位

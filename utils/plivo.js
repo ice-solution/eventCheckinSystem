@@ -4,6 +4,7 @@ const twilio = require('twilio');
 const accountSid = process.env.TWILIO_ACCOUNT_SID || process.env.twiliosid; // 支持兩種環境變數名稱
 const authToken = process.env.TWILIO_AUTH_TOKEN || process.env.twilioauthtoken; // 支持兩種環境變數名稱
 const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER; // 發送 SMS 的號碼
+const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID; // Messaging Service SID（可選，優先使用）
 
 // 創建 Twilio 客戶端
 let client = null;
@@ -30,11 +31,24 @@ exports.sendSMS = async (to, message) => {
         // 確保電話號碼格式正確（需要包含國家代碼）
         const formattedTo = to.startsWith('+') ? to : `+${to}`;
 
-        const response = await client.messages.create({
+        // 構建消息參數
+        const messageParams = {
             body: message,
-            from: twilioPhoneNumber,
             to: formattedTo
-        });
+        };
+
+        // 優先使用 Messaging Service（如果配置了），否則使用直接號碼
+        if (messagingServiceSid) {
+            messageParams.messagingServiceSid = messagingServiceSid;
+            console.log('使用 Messaging Service 發送 SMS');
+        } else {
+            if (!twilioPhoneNumber) {
+                throw new Error('TWILIO_PHONE_NUMBER 或 TWILIO_MESSAGING_SERVICE_SID 必須設置其中一個');
+            }
+            messageParams.from = twilioPhoneNumber;
+        }
+
+        const response = await client.messages.create(messageParams);
 
         console.log('SMS sent successfully:', response.sid);
         return response;

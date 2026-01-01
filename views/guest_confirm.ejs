@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>確認資料 - <%= event.name %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .confirm-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+        .confirm-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .confirm-header h1 {
+            color: #333;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .confirm-header p {
+            color: #666;
+            font-size: 16px;
+        }
+        .guest-info {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        .info-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #495057;
+            width: 120px;
+            flex-shrink: 0;
+        }
+        .info-value {
+            color: #212529;
+            flex: 1;
+        }
+        .role-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            background: #667eea;
+            color: white;
+        }
+        .role-badge.premium {
+            background: #ffd700;
+            color: #333;
+        }
+        .role-badge.VVIP {
+            background: #ff6b6b;
+            color: white;
+        }
+        .role-badge.VIP {
+            background: #4ecdc4;
+            color: white;
+        }
+        .btn-confirm {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 50px;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+        .btn-confirm:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .alert-info {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            color: #004085;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .alert-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            border-width: 0.3em;
+        }
+    </style>
+</head>
+<body>
+    <div class="confirm-card">
+        <div class="confirm-header">
+            <h1><i class="fas fa-user-check me-2"></i>確認資料</h1>
+            <p>請確認以下資料是否正確</p>
+        </div>
+
+        <% if (alreadyInRSVP) { %>
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle me-2"></i>
+                <strong>您已經在 RSVP 列表中！</strong><br>
+                您的資料已經確認並添加到活動的 RSVP 列表中了。
+            </div>
+        <% } else { %>
+            <div class="guest-info">
+                <div class="info-item">
+                    <div class="info-label">
+                        <i class="fas fa-user me-2"></i>姓名
+                    </div>
+                    <div class="info-value">
+                        <strong><%= guest.name || '-' %></strong>
+                    </div>
+                </div>
+                
+                <% if (guest.email) { %>
+                <div class="info-item">
+                    <div class="info-label">
+                        <i class="fas fa-envelope me-2"></i>電郵
+                    </div>
+                    <div class="info-value">
+                        <%= guest.email %>
+                    </div>
+                </div>
+                <% } %>
+                
+                <% if (guest.company) { %>
+                <div class="info-item">
+                    <div class="info-label">
+                        <i class="fas fa-building me-2"></i>公司
+                    </div>
+                    <div class="info-value">
+                        <%= guest.company %>
+                    </div>
+                </div>
+                <% } %>
+                
+                <% if (guest.phone) { %>
+                <div class="info-item">
+                    <div class="info-label">
+                        <i class="fas fa-phone me-2"></i>電話
+                    </div>
+                    <div class="info-value">
+                        <%= guest.phone %>
+                    </div>
+                </div>
+                <% } %>
+                
+                <% if (guest.role) { %>
+                <div class="info-item">
+                    <div class="info-label">
+                        <i class="fas fa-star me-2"></i>角色
+                    </div>
+                    <div class="info-value">
+                        <span class="role-badge <%= guest.role.toLowerCase() %>"><%= guest.role %></span>
+                    </div>
+                </div>
+                <% } %>
+            </div>
+
+            <div id="alertContainer"></div>
+
+            <button type="button" class="btn btn-confirm" id="confirmBtn" onclick="confirmAndTransfer()">
+                <i class="fas fa-check-circle me-2"></i>確認並轉移到 RSVP
+            </button>
+
+            <div class="loading-spinner" id="loadingSpinner">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">處理中...</span>
+                </div>
+                <p class="mt-3 text-muted">正在處理您的確認...</p>
+            </div>
+        <% } %>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const eventId = '<%= eventId %>';
+        const guestId = '<%= guestId %>';
+
+        function showAlert(type, message) {
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            document.getElementById('alertContainer').innerHTML = alertHtml;
+        }
+
+        async function confirmAndTransfer() {
+            const confirmBtn = document.getElementById('confirmBtn');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            
+            // 禁用按鈕並顯示載入動畫
+            confirmBtn.disabled = true;
+            loadingSpinner.style.display = 'block';
+            
+            try {
+                const response = await fetch(`/events/${eventId}/guest-list/${guestId}/add-to-rsvp`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showAlert('success', '<i class="fas fa-check-circle me-2"></i><strong>確認成功！</strong> 您的資料已成功轉移到 RSVP 列表。');
+                    confirmBtn.style.display = 'none';
+                    
+                    // 3秒後重新載入頁面
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 3000);
+                } else {
+                    showAlert('danger', `<i class="fas fa-exclamation-circle me-2"></i><strong>錯誤：</strong> ${data.message || '處理失敗，請稍後再試'}`);
+                    confirmBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('danger', '<i class="fas fa-exclamation-circle me-2"></i><strong>錯誤：</strong> 網路連線問題，請稍後再試');
+                confirmBtn.disabled = false;
+            } finally {
+                loadingSpinner.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
+

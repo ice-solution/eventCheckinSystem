@@ -32,6 +32,8 @@ const userSchema = new mongoose.Schema({
     remarks: { type: String }, // 備註
     paymentStatus: { type: String, enum: ['unpaid', 'pending', 'paid', 'failed'], default: 'unpaid' }, // 付款狀態
     scannedTreasureItems: [{ type: mongoose.Schema.Types.ObjectId }] // 已掃描的 Treasure Hunt 項目 ID 列表
+}, {
+    strict: false // 允許保存 formConfig 中定義的動態字段（如 funcation_unit 等）
 });
 
 const winnerSchema = new mongoose.Schema({
@@ -95,7 +97,16 @@ const eventSchema = new mongoose.Schema({
         sendReminderEmail: { type: Boolean, default: false }, // 是否立即發送提示電郵
         sendThankYouEmail: { type: Boolean, default: false }, // 是否立即發送感謝電郵
         welcomeMessageMethod: { type: String, enum: ['email', 'sms', 'both'], default: 'email' } // 歡迎消息發送方式：email/sms/both
-    }
+    },
+    // 附件列表
+    attachments: [{
+        filename: { type: String, required: true }, // 原始文件名
+        storedFilename: { type: String, required: true }, // 存儲的文件名
+        url: { type: String, required: true }, // 文件訪問 URL
+        size: { type: Number, required: true }, // 文件大小（字節）
+        mimeType: { type: String, required: true }, // MIME 類型
+        uploadedAt: { type: Date, default: Date.now } // 上傳時間
+    }]
 });
 
 // 在保存之前更新 modified_at 字段

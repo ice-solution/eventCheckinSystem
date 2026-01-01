@@ -28,6 +28,39 @@ const uploadBackground = multer.diskStorage({
 
 const uploadBackgroundMulter = multer({ storage: uploadBackground }); // 使用自定義的 storage
 
+// 設置文件上傳配置（用於 event attachments）
+const fs = require('fs');
+const uploadAttachmentsStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = 'public/events/attachments';
+        // 確保目錄存在
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const eventId = req.params.eventId;
+        const timestamp = Date.now();
+        const ext = path.extname(file.originalname);
+        const baseName = path.basename(file.originalname, ext);
+        // 使用 eventId_timestamp_原文件名 作為存儲文件名
+        const storedFilename = `${eventId}_${timestamp}_${baseName}${ext}`;
+        cb(null, storedFilename);
+    }
+});
+
+const uploadAttachments = multer({
+    storage: uploadAttachmentsStorage,
+    limits: {
+        fileSize: 1024 * 1024 * 10 // 10MB 限制
+    },
+    fileFilter: (req, file, cb) => {
+        // 允許所有文件類型（可以根據需要限制）
+        cb(null, true);
+    }
+});
+
 // 定義路由
 // router.post('/register', usersController.createUser);
 // router.get('/register', usersController.getCreateUserPage);
@@ -94,8 +127,10 @@ router.get('/:eventId/guest-list', eventsController.renderGuestListPage); // Gue
 
 // Guest List 管理路由
 router.post('/:eventId/guest-list', eventsController.addGuestToList); // 添加來賓到 Guest List
+router.put('/:eventId/guest-list/:guestId', eventsController.updateGuestInList); // 更新 Guest List 中的來賓
 router.delete('/:eventId/guest-list/:guestId', eventsController.deleteGuestFromList); // 從 Guest List 刪除來賓
 router.post('/:eventId/guest-list/:guestId/add-to-rsvp', eventsController.addGuestToRSVP); // 將 Guest List 中的來賓添加到 RSVP
+router.post('/:eventId/guest-list/send-sms', eventsController.sendSmsToGuestList); // 發送 SMS 給 Guest List
 
 // Guest List Excel 導入路由
 const guestListStorage = multer.memoryStorage();
@@ -224,6 +259,12 @@ router.get('/:eventId/email/:userId', eventsController.renderEmailHtml);
 router.patch('/:eventId/paymentEvent', eventsController.updatePaymentEvent);
 router.patch('/:eventId/emailSettings', eventsController.updateEmailSettings);
 
+// 文件上傳相關路由
+router.get('/:eventId/attachments', eventsController.renderAttachmentsPage); // 渲染附件管理頁面
+router.get('/:eventId/attachments/api', eventsController.getAttachments); // API: 獲取附件列表
+router.post('/:eventId/attachments', uploadAttachments.single('file'), eventsController.uploadAttachment); // 上傳文件
+router.delete('/:eventId/attachments/:attachmentId', eventsController.deleteAttachment); // 刪除附件
+
 router.get('/:eventId/report', eventsController.outputReport);
 // Transaction Records
 router.get('/:eventId/transactions', eventsController.renderTransactionRecords);
@@ -239,6 +280,7 @@ router.get('/:eventId/smsTemplate/:id', smsTemplateController.renderSmsTemplateD
 router.post('/:eventId/smsTemplate', smsTemplateController.createSmsTemplate); // 創建 SMS 模板
 router.put('/:eventId/smsTemplate/:id', smsTemplateController.updateSmsTemplate); // 更新 SMS 模板
 router.delete('/:eventId/smsTemplate/:id', smsTemplateController.deleteSmsTemplate); // 刪除 SMS 模板
+router.get('/api/:eventId/smsTemplates', smsTemplateController.getSmsTemplates); // 獲取 SMS 模板列表 (API)
 
 // Banner 管理路由
 router.get('/:eventId/banner', eventsController.showBannerManagement);
@@ -269,5 +311,10 @@ router.put('/:eventId/treasure-hunt/:itemId', eventsController.updateTreasureHun
 router.delete('/:eventId/treasure-hunt/:itemId', eventsController.deleteTreasureHuntItem); // 刪除項目
 router.get('/:eventId/treasure-hunt/scan', eventsController.renderTreasureHuntScanPage); // 用戶掃描頁面
 router.post('/:eventId/treasure-hunt/scan', eventsController.scanTreasureHuntQRCode); // 掃描 QR Code 並添加積分
+
+// 渲染 Guest 確認頁面（公開頁面，讓用戶確認資料並轉移到 RSVP）
+// 注意：這個路由必須放在所有其他 /:eventId/xxx 路由之後，避免攔截其他路由（如 smsTemplate）
+router.get('/:eventId/:guestId/invitation', eventsController.renderGuestConfirmPage); // Guest 邀請頁面路由（用於 invitation SMS）
+router.get('/:eventId/:guestId', eventsController.renderGuestConfirmPage); // Guest 確認頁面路由
 
 module.exports = router;

@@ -23,6 +23,48 @@ const multer = require('multer');
 const fs = require('fs');
 const { getSocket } = require('../socket'); // 引入 socket 以發送實時更新
 
+// 動態替換 email template 中的所有 user 字段
+function replaceTemplateVariables(content, user, event, additionalVars = {}) {
+    let result = content;
+    
+    // 將 user 轉換為普通對象（如果是 Mongoose document）
+    const userObj = user.toObject ? user.toObject() : user;
+    
+    // 替換基本字段（優先處理，確保覆蓋）
+    result = result.replace(/\{\{user\.name\}\}/g, userObj.name || '');
+    result = result.replace(/\{\{user\.email\}\}/g, userObj.email || '');
+    result = result.replace(/\{\{user\.company\}\}/g, userObj.company || '');
+    result = result.replace(/\{\{user\.phone\}\}/g, userObj.phone || '');
+    result = result.replace(/\{\{user\.phone_code\}\}/g, userObj.phone_code || '');
+    result = result.replace(/\{\{event\.name\}\}/g, event.name || '');
+    
+    // 動態替換所有 user 對象中的其他字段（包括 formConfig 中定義的字段）
+    Object.keys(userObj).forEach(key => {
+        // 跳過 MongoDB 內部字段
+        if (key.startsWith('_')) {
+            return;
+        }
+        
+        // 替換 {{user.fieldName}} 格式（轉義特殊字符）
+        const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`\\{\\{user\\.${escapedKey}\\}\\}`, 'g');
+        const value = userObj[key];
+        // 如果值存在，轉換為字符串；否則為空字符串
+        const replacement = value !== undefined && value !== null ? String(value) : '';
+        result = result.replace(regex, replacement);
+    });
+    
+    // 替換額外變量（如 qrCodeUrl, loginUrl, transaction.* 等）
+    Object.keys(additionalVars).forEach(key => {
+        // 轉義特殊字符以支持 transaction.ticketTitle 這樣的鍵
+        const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`\\{\\{${escapedKey}\\}\\}`, 'g');
+        result = result.replace(regex, additionalVars[key] || '');
+    });
+    
+    return result;
+}
+
 // 創建事件
 exports.createEvent = async (req, res) => {
     const { name, from, to } = req.body;
@@ -139,31 +181,43 @@ exports.fetchUsersByEvent = async (req, res) => {
 // 向事件中添加用戶
 exports.addUserToEvent = async (req, res) => {
     const { eventId } = req.params; // 獲取事件 ID
-    const { email, name, company, table, phone, role, saluation, industry, transport, meal, remarks, isCheckIn } = req.body; // 獲取用戶資料
+    const userData = req.body; // 獲取用戶資料（包括所有動態字段）
 
     try {
         const event = await Event.findById(eventId); // 查找事件
         if (!event) {
             return res.status(404).json({ message: 'Event not found' });
         }
-        // 創建新的用戶
+        
+        // 創建新的用戶對象，動態包含所有傳入的字段
         const newUser = {
-            email,
-            name,
-            table,
-            company,
-            phone,
-            role, // 添加角色
-            saluation, // 添加稱謂
-            industry, // 添加行業
-            transport, // 添加交通方式
-            meal, // 添加餐飲選擇
-            remarks, // 添加備註
-            isCheckIn // 默認為未登記進場
+            create_at: new Date(),
+            modified_at: new Date(),
+            isCheckIn: userData.isCheckIn || false // 默認為未登記進場
         };
+        
+        // 動態添加所有傳入的字段（包括 formConfig 中定義的動態字段）
+        // 排除 MongoDB 內部字段和已處理的字段
+        const excludedFields = ['_id', '__v', 'create_at', 'modified_at'];
+        
+        Object.keys(userData).forEach(key => {
+            // 跳過排除的字段
+            if (excludedFields.includes(key)) {
+                return;
+            }
+            
+            // 添加字段值（包括空字符串和 null，但不包括 undefined）
+            if (userData[key] !== undefined) {
+                newUser[key] = userData[key];
+            }
+        });
 
         // 將用戶添加到事件中
         event.users.push(newUser); // 將用戶添加到事件中
+        
+        // 標記整個 users 數組為已修改，確保動態字段被保存
+        event.markModified('users');
+        
         await event.save(); // 保存事件
 
         // 獲取新用戶的 _id
@@ -175,11 +229,15 @@ exports.addUserToEvent = async (req, res) => {
             await exports.sendWelcomeMessage(newUser, event); // 根據設置發送 email/sms/both
         }
 
-
-        res.status(201).json({ attendee: newUser }); // 返回新用戶資料
+        // 返回新用戶資料（包含 _id），保持向後兼容
+        const responseData = { 
+            _id: savedUser._id,
+            ...newUser
+        };
+        res.status(201).json(responseData); // 返回新用戶資料
     } catch (error) {
         console.error('Error adding user:', error);
-        res.status(500).json({ message: '伺服器錯誤' });
+        res.status(500).json({ message: '伺服器錯誤', error: error.message });
     }
 };
 
@@ -213,15 +271,11 @@ exports.sendSMS = async (user, event, type = 'welcome') => {
         
         // 如果找到了 SMS 模板，使用模板的內容
         if (smsTemplate && smsTemplate.content) {
-            messageBody = smsTemplate.content
-                .replace(/\{\{user\.name\}\}/g, user.name || '')
-                .replace(/\{\{user\.email\}\}/g, user.email || '')
-                .replace(/\{\{user\.company\}\}/g, user.company || '')
-                .replace(/\{\{user\.phone\}\}/g, user.phone || '')
-                .replace(/\{\{user\.phone_code\}\}/g, user.phone_code || '')
-                .replace(/\{\{event\.name\}\}/g, event.name)
-                .replace(/\{\{qrCodeUrl\}\}/g, qrCodeUrl)
-                .replace(/\{\{loginUrl\}\}/g, loginUrl);
+            // 使用動態替換函數，支持所有 user 字段
+            messageBody = replaceTemplateVariables(smsTemplate.content, user, event, {
+                qrCodeUrl: qrCodeUrl,
+                loginUrl: loginUrl
+            });
         } else {
             // 使用默認模板
             messageBody = `歡迎 ${user.name || ''} 參加 ${event.name}！您的登入連結：${loginUrl}`;
@@ -250,6 +304,103 @@ exports.sendSMS = async (user, event, type = 'welcome') => {
     }
 }
 
+// 批量發送 SMS
+exports.sendBulkSMS = async (req, res) => {
+    const { eventId } = req.params;
+    const { roles, templateId, userIds, sendToSelectedOnly } = req.body;
+
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        // 獲取 SMS 模板
+        const smsTemplate = await SmsTemplate.findById(templateId);
+        if (!smsTemplate) {
+            return res.status(404).json({ message: 'SMS template not found' });
+        }
+
+        // 過濾用戶
+        let targetUsers = [];
+        if (sendToSelectedOnly && userIds && userIds.length > 0) {
+            // 只發送給選中的用戶
+            targetUsers = event.users.filter(user => userIds.includes(user._id.toString()));
+        } else {
+            // 根據角色過濾
+            if (roles && roles.length > 0 && !roles.includes('')) {
+                targetUsers = event.users.filter(user => {
+                    const userRole = user.role || '';
+                    return roles.includes(userRole);
+                });
+            } else {
+                // 發送給所有用戶
+                targetUsers = event.users;
+            }
+        }
+
+        // 過濾有電話號碼的用戶
+        targetUsers = targetUsers.filter(user => user.phone);
+
+        if (targetUsers.length === 0) {
+            return res.status(400).json({ message: '沒有符合條件的用戶或用戶沒有電話號碼' });
+        }
+
+        // 生成消息內容
+        const loginUrl = `${process.env.DOMAIN || 'http://localhost:3377'}/events/${event._id}/login`;
+
+        const results = [];
+        let successCount = 0;
+        let failCount = 0;
+
+        // 發送 SMS
+        for (const user of targetUsers) {
+            try {
+                // 生成 QR 碼 URL
+                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
+                
+                // 使用動態替換函數，支持所有 user 字段
+                let messageBody = replaceTemplateVariables(smsTemplate.content, user, event, {
+                    qrCodeUrl: qrCodeUrl,
+                    loginUrl: loginUrl
+                });
+
+                // 組合電話號碼
+                let phoneNumber = '';
+                if (user.phone_code && user.phone) {
+                    const phoneCode = user.phone_code.startsWith('+') ? user.phone_code : `+${user.phone_code}`;
+                    phoneNumber = `${phoneCode}${user.phone}`;
+                } else if (user.phone) {
+                    phoneNumber = user.phone.startsWith('+') ? user.phone : `+${user.phone}`;
+                }
+
+                if (phoneNumber) {
+                    await twilioSms.sendSMS(phoneNumber, messageBody);
+                    successCount++;
+                    results.push({ userId: user._id, name: user.name, phone: phoneNumber, success: true });
+                } else {
+                    failCount++;
+                    results.push({ userId: user._id, name: user.name, phone: '', success: false, error: 'No phone number' });
+                }
+            } catch (error) {
+                failCount++;
+                results.push({ userId: user._id, name: user.name, phone: user.phone || '', success: false, error: error.message });
+            }
+        }
+
+        res.json({
+            message: `SMS 發送完成：成功 ${successCount} 條，失敗 ${failCount} 條`,
+            successCount,
+            failCount,
+            total: targetUsers.length,
+            results
+        });
+    } catch (error) {
+        console.error('Error sending bulk SMS:', error);
+        res.status(500).json({ message: '發送 SMS 時出現錯誤：' + error.message });
+    }
+};
+
 exports.sendEmail = async (user, event) => {
     try {
         // 生成 QR 碼
@@ -276,13 +427,11 @@ exports.sendEmail = async (user, event) => {
         // 如果找到了郵件模板，使用模板的內容
         if (emailTemplate) {
             subject = emailTemplate.subject;
-            messageBody = emailTemplate.content
-                .replace(/\{\{user\.name\}\}/g, user.name)
-                .replace(/\{\{user\.email\}\}/g, user.email)
-                .replace(/\{\{user\.company\}\}/g, user.company || '')
-                .replace(/\{\{event\.name\}\}/g, event.name)
-                .replace(/\{\{qrCodeUrl\}\}/g, qrCodeUrl)
-                .replace(/\{\{loginUrl\}\}/g, loginUrl);
+            // 使用動態替換函數，支持所有 user 字段
+            messageBody = replaceTemplateVariables(emailTemplate.content, user, event, {
+                qrCodeUrl: qrCodeUrl,
+                loginUrl: loginUrl
+            });
         }
         
         // 創建郵件記錄並獲取追蹤 ID
@@ -414,13 +563,11 @@ exports.sendEmailByType = async (user, event, type = 'welcome') => {
         // 如果找到了郵件模板，使用模板的內容
         if (emailTemplate) {
             subject = emailTemplate.subject;
-            messageBody = emailTemplate.content
-                .replace(/\{\{user\.name\}\}/g, user.name)
-                .replace(/\{\{user\.email\}\}/g, user.email)
-                .replace(/\{\{user\.company\}\}/g, user.company || '')
-                .replace(/\{\{event\.name\}\}/g, event.name)
-                .replace(/\{\{qrCodeUrl\}\}/g, qrCodeUrl)
-                .replace(/\{\{loginUrl\}\}/g, loginUrl);
+            // 使用動態替換函數，支持所有 user 字段
+            messageBody = replaceTemplateVariables(emailTemplate.content, user, event, {
+                qrCodeUrl: qrCodeUrl,
+                loginUrl: loginUrl
+            });
         }
         
         // 創建郵件記錄並獲取追蹤 ID
@@ -479,15 +626,13 @@ exports.sendPaymentConfirmationEmail = async (user, event, transaction) => {
         // 如果找到了郵件模板，使用模板的內容
         if (emailTemplate) {
             subject = emailTemplate.subject;
-            messageBody = emailTemplate.content
-                .replace(/\{\{user\.name\}\}/g, user.name)
-                .replace(/\{\{user\.email\}\}/g, user.email)
-                .replace(/\{\{user\.company\}\}/g, user.company || '')
-                .replace(/\{\{event\.name\}\}/g, event.name)
-                .replace(/\{\{qrCodeUrl\}\}/g, qrCodeUrl)
-                .replace(/\{\{transaction\.ticketTitle\}\}/g, transaction.ticketTitle || '')
-                .replace(/\{\{transaction\.ticketPrice\}\}/g, transaction.ticketPrice || '')
-                .replace(/\{\{transaction\.amount\}\}/g, transaction.ticketPrice || '');
+            // 使用動態替換函數，支持所有 user 字段和 transaction 字段
+            messageBody = replaceTemplateVariables(emailTemplate.content, user, event, {
+                qrCodeUrl: qrCodeUrl,
+                'transaction.ticketTitle': transaction.ticketTitle || '',
+                'transaction.ticketPrice': transaction.ticketPrice || '',
+                'transaction.amount': transaction.ticketPrice || ''
+            });
         }
         
         // 發送郵件
@@ -664,21 +809,7 @@ exports.getUserById = async (req, res) => {
 };
 exports.updateUser = async (req, res) => {
     const { eventId, userId } = req.params; // 從請求參數中獲取事件 ID 和用戶的 _id
-    const { 
-        name, 
-        email,
-        phone_code, 
-        phone, 
-        company, 
-        table,
-        role,
-        saluation,
-        industry,
-        transport,
-        meal,
-        remarks,
-        isCheckIn 
-    } = req.body; // 從請求中獲取更新的用戶信息
+    const updateData = req.body; // 從請求中獲取更新的用戶信息
 
     try {
         // 查詢事件以確保存在
@@ -693,38 +824,103 @@ exports.updateUser = async (req, res) => {
             return res.status(404).send('找不到該用戶'); // 如果用戶不存在，返回 404 錯誤
         }
         
-        // 更新用戶信息
-        if (typeof isCheckIn !== 'undefined') {
-            if (!user.isCheckIn && isCheckIn === true) {
+        // 處理 isCheckIn 特殊邏輯
+        if (typeof updateData.isCheckIn !== 'undefined') {
+            if (!user.isCheckIn && updateData.isCheckIn === true) {
                 user.isCheckIn = true;
                 user.checkInAt = new Date();
-            } else if (isCheckIn === false) {
+            } else if (updateData.isCheckIn === false) {
                 user.isCheckIn = false;
                 user.checkInAt = undefined;
             }
         }
         
-        // 更新所有欄位
-        if (name !== undefined) user.name = name;
-        if (email !== undefined) user.email = email;
-        if (phone_code !== undefined) user.phone_code = phone_code;
-        if (phone !== undefined) user.phone = phone;
-        if (company !== undefined) user.company = company;
-        if (table !== undefined) user.table = table;
-        if (role !== undefined) user.role = role;
-        if (saluation !== undefined) user.saluation = saluation;
-        if (industry !== undefined) user.industry = industry;
-        if (transport !== undefined) user.transport = transport;
-        if (meal !== undefined) user.meal = meal;
-        if (remarks !== undefined) user.remarks = remarks;
+        // 動態更新所有傳入的欄位（包括 formConfig 中定義的動態字段）
+        // 排除 MongoDB 內部字段和特殊處理的字段
+        const excludedFields = ['_id', '__v', 'isCheckIn', 'checkInAt', 'create_at', 'modified_at'];
         
-        user.modified_at = Date.now(); // 更新修改時間
-        await event.save(); // 保存事件以更新用戶資料
-
-        res.status(200).send(user); // 返回更新後的用戶資料
+        // 記錄更新前的字段值（用於調試）
+        const updatedFields = [];
+        
+        // 構建更新對象，用於直接更新 MongoDB
+        const updateFields = {};
+        
+        Object.keys(updateData).forEach(key => {
+            // 跳過排除的字段
+            if (excludedFields.includes(key)) {
+                return;
+            }
+            
+            // 更新字段值（包括 undefined 的情況，允許清空字段）
+            if (updateData[key] !== undefined) {
+                const oldValue = user[key];
+                // 直接設置字段值
+                user[key] = updateData[key];
+                // 構建 MongoDB 更新路徑
+                const userIndex = event.users.findIndex(u => u._id.toString() === userId.toString());
+                if (userIndex !== -1) {
+                    updateFields[`users.${userIndex}.${key}`] = updateData[key];
+                }
+                updatedFields.push({ key, oldValue, newValue: updateData[key] });
+                console.log(`Updating field "${key}": ${oldValue} -> ${updateData[key]}`);
+            }
+        });
+        
+        user.modified_at = new Date(); // 更新修改時間
+        const userIndex = event.users.findIndex(u => u._id.toString() === userId.toString());
+        if (userIndex !== -1) {
+            updateFields[`users.${userIndex}.modified_at`] = user.modified_at;
+        }
+        
+        // 標記整個文檔為已修改，確保 Mongoose 保存所有字段
+        user.markModified('modified_at');
+        if (updatedFields.length > 0) {
+            // 標記每個更新的字段為已修改
+            updatedFields.forEach(field => {
+                user.markModified(field.key);
+            });
+        }
+        
+        // 關鍵：標記整個 users 數組為已修改，確保嵌套子文檔的動態字段被保存
+        event.markModified('users');
+        
+        // 調試：檢查更新後的用戶對象
+        const userBeforeSave = user.toObject ? user.toObject() : user;
+        console.log('User object before save:', JSON.stringify(userBeforeSave, null, 2));
+        console.log('Update fields for MongoDB:', updateFields);
+        
+        // 使用 findByIdAndUpdate 直接更新，避免 Mongoose 序列化問題
+        if (Object.keys(updateFields).length > 0) {
+            await Event.findByIdAndUpdate(eventId, {
+                $set: updateFields,
+                $setOnInsert: { modified_at: new Date() }
+            }, { new: true });
+        } else {
+            await event.save(); // 如果沒有動態字段，使用正常保存
+        }
+        
+        // 重新從數據庫獲取事件，確保獲取最新數據
+        const refreshedEvent = await Event.findById(eventId);
+        if (!refreshedEvent) {
+            return res.status(404).send('找不到事件');
+        }
+        
+        const updatedUser = refreshedEvent.users.id(userId);
+        if (!updatedUser) {
+            return res.status(404).send('找不到更新後的用戶');
+        }
+        
+        // 使用 toObject() 確保所有字段都被序列化（包括動態字段）
+        // 使用 { minimize: false } 確保包含所有字段，即使是 undefined
+        const userObject = updatedUser.toObject ? updatedUser.toObject({ minimize: false }) : updatedUser;
+        
+        console.log('Updated user object after save:', JSON.stringify(userObject, null, 2));
+        console.log('Updated fields:', updatedFields);
+        
+        res.status(200).json(userObject); // 返回更新後的用戶資料（包含所有字段）
     } catch (error) {
         console.error('Error updating user:', error);
-        res.status(400).send('更新用戶時出現錯誤'); // 返回錯誤信息
+        res.status(400).json({ message: '更新用戶時出現錯誤', error: error.message }); // 返回錯誤信息
     }
 };
 exports.scanEventUsers = async (req, res) => {
@@ -963,6 +1159,49 @@ exports.renderGuestListPage = async (req, res) => {
     }
 };
 
+// 渲染 Guest 確認頁面（公開頁面，讓用戶確認資料並轉移到 RSVP）
+exports.renderGuestConfirmPage = async (req, res) => {
+    const { eventId, guestId } = req.params; // 獲取事件 ID 和來賓 ID
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found (找不到活動)');
+        }
+
+        if (!event.guestList || event.guestList.length === 0) {
+            return res.status(404).send('Guest List is empty (來賓列表為空)');
+        }
+
+        const guest = event.guestList.id(guestId);
+        if (!guest) {
+            return res.status(404).send('Guest not found (找不到來賓資料)');
+        }
+
+        // 檢查是否已經在 RSVP 列表中
+        let alreadyInRSVP = false;
+        if (guest.email) {
+            const existingUser = event.users.find(u => u.email === guest.email);
+            if (existingUser) {
+                alreadyInRSVP = true;
+            }
+        }
+
+        res.render('guest_confirm', { 
+            eventId, 
+            guestId, 
+            guest: guest.toObject ? guest.toObject() : guest,
+            event: {
+                name: event.name || 'Event',
+                description: event.description || ''
+            },
+            alreadyInRSVP
+        });
+    } catch (error) {
+        console.error('Error rendering guest confirm page:', error);
+        res.status(500).render('error', { message: '伺服器錯誤 (Server Error)' });
+    }
+};
+
 // 添加來賓到 Guest List
 exports.addGuestToList = async (req, res) => {
     const { eventId } = req.params;
@@ -1009,6 +1248,54 @@ exports.addGuestToList = async (req, res) => {
         res.status(201).json({ message: 'Guest added to list successfully', guest: newGuest });
     } catch (error) {
         console.error('Error adding guest to list:', error);
+        res.status(500).json({ message: '伺服器錯誤' });
+    }
+};
+
+// 更新 Guest List 中的來賓
+exports.updateGuestInList = async (req, res) => {
+    const { eventId, guestId } = req.params;
+    const { name, email, company, phone, role } = req.body;
+
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        if (!event.guestList) {
+            return res.status(404).json({ message: 'Guest List is empty' });
+        }
+
+        const guest = event.guestList.id(guestId);
+        if (!guest) {
+            return res.status(404).json({ message: 'Guest not found' });
+        }
+
+        // 檢查 email 是否已被其他來賓使用
+        if (email && email.trim()) {
+            const existingGuest = event.guestList.find(g => 
+                g._id.toString() !== guestId && 
+                g.email && 
+                g.email.toLowerCase() === email.toLowerCase()
+            );
+            if (existingGuest) {
+                return res.status(400).json({ message: 'Guest with this email already exists in Guest List' });
+            }
+        }
+
+        // 更新來賓資料
+        if (name) guest.name = name.trim();
+        if (email !== undefined) guest.email = email ? email.trim() : '';
+        if (company !== undefined) guest.company = company ? company.trim() : '';
+        if (phone !== undefined) guest.phone = phone ? phone.trim() : '';
+        if (role !== undefined) guest.role = role ? role.trim() : '';
+
+        await event.save();
+
+        res.status(200).json({ message: 'Guest updated successfully', guest: guest.toObject ? guest.toObject() : guest });
+    } catch (error) {
+        console.error('Error updating guest in list:', error);
         res.status(500).json({ message: '伺服器錯誤' });
     }
 };
@@ -1214,6 +1501,118 @@ exports.addGuestToRSVP = async (req, res) => {
     } catch (error) {
         console.error('Error adding guest to RSVP:', error);
         res.status(500).json({ message: '伺服器錯誤' });
+    }
+};
+
+// 發送 SMS 給 Guest List
+exports.sendSmsToGuestList = async (req, res) => {
+    const { eventId } = req.params;
+    const { roles, templateId } = req.body;
+
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        if (!event.guestList || event.guestList.length === 0) {
+            return res.status(400).json({ message: 'Guest List is empty' });
+        }
+
+        // 獲取 SMS 模板
+        const smsTemplate = await SmsTemplate.findById(templateId);
+        if (!smsTemplate) {
+            return res.status(404).json({ message: 'SMS template not found' });
+        }
+
+        // 過濾 Guest List 中的來賓
+        let targetGuests = [];
+        if (roles && roles.length > 0 && !roles.includes('')) {
+            // 根據角色過濾
+            targetGuests = event.guestList.filter(guest => {
+                const guestRole = guest.role || '';
+                return roles.includes(guestRole);
+            });
+        } else {
+            // 發送給所有來賓
+            targetGuests = event.guestList;
+        }
+
+        // 過濾有電話號碼的來賓
+        targetGuests = targetGuests.filter(guest => guest.phone);
+
+        if (targetGuests.length === 0) {
+            return res.status(400).json({ message: '沒有符合條件的來賓或來賓沒有電話號碼' });
+        }
+
+        const results = [];
+        let successCount = 0;
+        let failCount = 0;
+
+        // 發送 SMS
+        for (const guest of targetGuests) {
+            try {
+                // 根據 SMS 模板類型決定 loginUrl
+                let loginUrl;
+                if (smsTemplate.type === 'invitation') {
+                    // invitation 類型使用 /:eventId/:guestId/invitation
+                    loginUrl = `${process.env.DOMAIN || 'http://localhost:3377'}/events/${event._id}/${guest._id}/invitation`;
+                } else {
+                    // 其他類型使用默認的 login URL
+                    loginUrl = `${process.env.DOMAIN || 'http://localhost:3377'}/events/${event._id}/login`;
+                }
+                
+                // 生成確認頁面 URL
+                const confirmUrl = `${process.env.DOMAIN || 'http://localhost:3377'}/events/${event._id}/${guest._id}`;
+                
+                let messageBody = smsTemplate.content
+                    .replace(/\{\{user\.name\}\}/g, guest.name || '')
+                    .replace(/\{\{guest\.name\}\}/g, guest.name || '')
+                    .replace(/\{\{user\.email\}\}/g, guest.email || '')
+                    .replace(/\{\{guest\.email\}\}/g, guest.email || '')
+                    .replace(/\{\{user\.company\}\}/g, guest.company || '')
+                    .replace(/\{\{guest\.company\}\}/g, guest.company || '')
+                    .replace(/\{\{user\.phone\}\}/g, guest.phone || '')
+                    .replace(/\{\{guest\.phone\}\}/g, guest.phone || '')
+                    .replace(/\{\{user\.phone_code\}\}/g, guest.phone_code || '')
+                    .replace(/\{\{guest\.phone_code\}\}/g, guest.phone_code || '')
+                    .replace(/\{\{event\.name\}\}/g, event.name)
+                    .replace(/\{\{loginUrl\}\}/g, loginUrl)
+                    .replace(/\{\{confirmUrl\}\}/g, confirmUrl);
+
+                // 組合電話號碼
+                let phoneNumber = '';
+                if (guest.phone_code && guest.phone) {
+                    const phoneCode = guest.phone_code.startsWith('+') ? guest.phone_code : `+${guest.phone_code}`;
+                    phoneNumber = `${phoneCode}${guest.phone}`;
+                } else if (guest.phone) {
+                    phoneNumber = guest.phone.startsWith('+') ? guest.phone : `+${guest.phone}`;
+                }
+
+                if (phoneNumber) {
+                    await twilioSms.sendSMS(phoneNumber, messageBody);
+                    successCount++;
+                    results.push({ guestId: guest._id, name: guest.name, phone: phoneNumber, success: true });
+                } else {
+                    failCount++;
+                    results.push({ guestId: guest._id, name: guest.name, phone: '', success: false, error: 'No phone number' });
+                }
+            } catch (error) {
+                failCount++;
+                results.push({ guestId: guest._id, name: guest.name, phone: guest.phone || '', success: false, error: error.message });
+            }
+        }
+
+        res.json({
+            message: `SMS 發送完成：成功 ${successCount} 條，失敗 ${failCount} 條`,
+            successCount,
+            failCount,
+            total: targetGuests.length,
+            results
+        });
+    } catch (error) {
+        console.error('Error sending SMS to guest list:', error);
+        res.status(500).json({ message: '發送 SMS 時出現錯誤：' + error.message });
     }
 };
 
@@ -2333,6 +2732,196 @@ exports.updateTreasureHuntItem = async (req, res) => {
 
 // 刪除 Treasure Hunt 項目
 exports.deleteTreasureHuntItem = async (req, res) => {
+    const { eventId, itemId } = req.params;
+    
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ success: false, message: '找不到該事件' });
+        }
+        
+        const item = event.treasureHuntItems.id(itemId);
+        if (!item) {
+            return res.status(404).json({ success: false, message: '找不到該項目' });
+        }
+        
+        event.treasureHuntItems.pull(itemId);
+        await event.save();
+        
+        res.status(200).json({ success: true, message: '項目刪除成功' });
+    } catch (error) {
+        console.error('Error deleting treasure hunt item:', error);
+        res.status(500).json({ success: false, message: '刪除項目時發生錯誤' });
+    }
+};
+
+// 上傳附件
+exports.uploadAttachment = async (req, res) => {
+    const { eventId } = req.params;
+    const fs = require('fs');
+    const path = require('path');
+    
+    try {
+        if (!req.file) {
+            return res.status(400).json({ 
+                success: false, 
+                message: '沒有上傳文件' 
+            });
+        }
+        
+        const event = await Event.findById(eventId);
+        if (!event) {
+            // 如果事件不存在，刪除已上傳的文件
+            const filePath = req.file.path;
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+            return res.status(404).json({ 
+                success: false, 
+                message: '找不到該事件' 
+            });
+        }
+        
+        // 構建文件 URL
+        const fileUrl = `/events/attachments/${req.file.filename}`;
+        
+        // 創建附件對象
+        const attachment = {
+            filename: req.file.originalname,
+            storedFilename: req.file.filename,
+            url: fileUrl,
+            size: req.file.size,
+            mimeType: req.file.mimetype,
+            uploadedAt: new Date()
+        };
+        
+        // 添加到事件的 attachments 數組
+        if (!event.attachments) {
+            event.attachments = [];
+        }
+        event.attachments.push(attachment);
+        await event.save();
+        
+        res.status(200).json({
+            success: true,
+            message: '文件上傳成功',
+            attachment: attachment
+        });
+    } catch (error) {
+        console.error('Error uploading attachment:', error);
+        
+        // 如果出錯，刪除已上傳的文件
+        if (req.file && req.file.path) {
+            const fs = require('fs');
+            if (fs.existsSync(req.file.path)) {
+                fs.unlinkSync(req.file.path);
+            }
+        }
+        
+        res.status(500).json({ 
+            success: false, 
+            message: '上傳文件時發生錯誤',
+            error: error.message 
+        });
+    }
+};
+
+// 渲染附件管理頁面
+exports.renderAttachmentsPage = async (req, res) => {
+    const { eventId } = req.params;
+    
+    try {
+        // 檢查認證
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.redirect('/login');
+        }
+        
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found');
+        }
+        
+        res.render('admin/attachments', { 
+            event: event,
+            eventId: eventId
+        });
+    } catch (error) {
+        console.error('Error rendering attachments page:', error);
+        res.status(500).send('Error rendering attachments page.');
+    }
+};
+
+// 獲取附件列表
+exports.getAttachments = async (req, res) => {
+    const { eventId } = req.params;
+    
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ 
+                success: false, 
+                message: '找不到該事件' 
+            });
+        }
+        
+        res.status(200).json({
+            success: true,
+            attachments: event.attachments || []
+        });
+    } catch (error) {
+        console.error('Error getting attachments:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '獲取附件列表時發生錯誤' 
+        });
+    }
+};
+
+// 刪除附件
+exports.deleteAttachment = async (req, res) => {
+    const { eventId, attachmentId } = req.params;
+    const fs = require('fs');
+    const path = require('path');
+    
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ 
+                success: false, 
+                message: '找不到該事件' 
+            });
+        }
+        
+        const attachment = event.attachments.id(attachmentId);
+        if (!attachment) {
+            return res.status(404).json({ 
+                success: false, 
+                message: '找不到該附件' 
+            });
+        }
+        
+        // 刪除物理文件
+        const filePath = path.join('public/events/attachments', attachment.storedFilename);
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+        
+        // 從數據庫中刪除附件記錄
+        event.attachments.pull(attachmentId);
+        await event.save();
+        
+        res.status(200).json({
+            success: true,
+            message: '附件刪除成功'
+        });
+    } catch (error) {
+        console.error('Error deleting attachment:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '刪除附件時發生錯誤' 
+        });
+    }
+}; async (req, res) => {
     const { eventId, itemId } = req.params;
     
     try {

@@ -104,3 +104,19 @@ exports.deleteSmsTemplate = async (req, res) => {
     }
 };
 
+// 獲取 SMS 模板列表 (API)
+exports.getSmsTemplates = async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        // 同時查詢該事件的模板和全局模板（eventId 為 null）
+        const query = eventId 
+            ? { $or: [{ eventId: eventId }, { eventId: null }] }
+            : {};
+        const smsTemplates = await SmsTemplate.find(query).sort({ eventId: 1, type: 1 }); // 先顯示事件特定模板，再顯示全局模板
+        res.json(smsTemplates);
+    } catch (error) {
+        console.error("Error fetching SMS templates:", error);
+        res.status(500).json({ message: "Error fetching SMS templates" });
+    }
+};
+

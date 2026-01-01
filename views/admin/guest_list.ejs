@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
 <link rel="stylesheet" href="/admin/assets/css/style.css">
 
-<div id="right-panel" class="right-panel">
+<div id="right-panel" class="right-panel" data-event-id="<%= eventId %>">
     <%- include ("components/rightpanel_header") %>
     <div class="content">
         <div class="animated fadeIn">
@@ -13,25 +13,29 @@
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <strong class="card-title">Guest List (來賓列表)</strong>
+                            <strong class="card-title">Guest List</strong>
                             <div class="float-right">
-                                <button id="addGuestBtn" class="btn btn-primary btn-sm">Add Guest (添加來賓)</button>
-                                <button id="importExcelBtn" class="btn btn-success btn-sm ml-2">Import Excel (導入 Excel)</button>
+                                <button id="addGuestBtn" class="btn btn-primary btn-sm" type="button" onclick="if(window.showAddGuestModal){window.showAddGuestModal();} return false;">Add Guest</button>
+                                <button id="importExcelBtn" class="btn btn-success btn-sm ml-2" type="button" onclick="if(window.showImportExcelModal){window.showImportExcelModal();} return false;">Import Excel</button>
+                                <button id="sendSmsBtn" class="btn btn-warning btn-sm ml-2" type="button" onclick="if(window.showSendSmsModal){window.showSendSmsModal();} return false;">
+                                    <i class="fa fa-sms"></i> Send SMS
+                                </button>
                             </div>
                         </div>
                         <div class="card-body">
                             <div class="alert alert-info">
-                                <strong>說明：</strong> Guest List 是預先準備的來賓列表，這些來賓尚未通過 RSVP 註冊。您可以將他們添加到 RSVP 列表中。
+                                <strong>Note:</strong> Guest List is a pre-prepared list of guests who have not yet registered through RSVP. You can add them to the RSVP list.
                             </div>
                             <table id="guestListTable" class="table table-bordered table-striped">
                                 <thead>
                                     <tr>
-                                        <th>Name (姓名)</th>
-                                        <th>Email (電郵)</th>
-                                        <th>Company (公司)</th>
-                                        <th>Phone (電話)</th>
-                                        <th>Created At (創建時間)</th>
-                                        <th>Actions (操作)</th>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Company</th>
+                                        <th>Phone</th>
+                                        <th>Role</th>
+                                        <th>Created At</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -43,9 +47,19 @@
                                                 <td><%= guest.company || '-' %></td>
                                                 <td><%= guest.phone || '-' %></td>
                                                 <td>
+                                                    <% if (guest.role) { %>
+                                                        <span class="badge badge-info"><%= guest.role %></span>
+                                                    <% } else { %>
+                                                        -
+                                                    <% } %>
+                                                </td>
+                                                <td>
                                                     <%= guest.create_at ? new Date(guest.create_at).toLocaleString() : '-' %>
                                                 </td>
                                                 <td>
+                                                    <button class="btn btn-sm btn-primary edit-guest" data-guest-id="<%= guest._id %>" title="Edit" onclick="if(window.showEditGuestModal){window.showEditGuestModal('<%= guest._id %>');} return false;">
+                                                        <i class="fa fa-edit"></i> Edit
+                                                    </button>
                                                     <button class="btn btn-sm btn-success add-to-rsvp" data-guest-id="<%= guest._id %>" title="Add to RSVP">
                                                         <i class="fa fa-user-plus"></i> Add to RSVP
                                                     </button>
@@ -57,6 +71,7 @@
                                         <% }); %>
                                     <% } else { %>
                                         <tr>
+                                            <td></td>
                                             <td></td>
                                             <td></td>
                                             <td></td>
@@ -80,34 +95,43 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Add Guest (添加來賓)</h5>
+                <h5 class="modal-title">Add Guest</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
-                <form id="addGuestForm">
+                <form id="addGuestForm" onsubmit="if(window.submitAddGuestForm){window.submitAddGuestForm();} return false;">
                     <div class="form-group">
-                        <label for="guestName">Name (姓名) *</label>
-                        <input type="text" class="form-control" id="guestName" required>
+                        <label for="guestName">Name *</label>
+                        <input type="text" class="form-control" id="guestName" name="name" required>
                     </div>
                     <div class="form-group">
-                        <label for="guestEmail">Email (電郵)</label>
-                        <input type="email" class="form-control" id="guestEmail">
+                        <label for="guestEmail">Email</label>
+                        <input type="email" class="form-control" id="guestEmail" name="email">
                     </div>
                     <div class="form-group">
-                        <label for="guestCompany">Company (公司)</label>
-                        <input type="text" class="form-control" id="guestCompany">
+                        <label for="guestCompany">Company</label>
+                        <input type="text" class="form-control" id="guestCompany" name="company">
                     </div>
                     <div class="form-group">
-                        <label for="guestPhone">Phone (電話)</label>
-                        <input type="text" class="form-control" id="guestPhone">
+                        <label for="guestPhone">Phone</label>
+                        <input type="text" class="form-control" id="guestPhone" name="phone">
+                    </div>
+                    <div class="form-group">
+                        <label for="guestRole">Role</label>
+                        <select class="form-control" id="guestRole" name="role">
+                            <option value="">--- Please Select ---</option>
+                            <option value="premium">Premium</option>
+                            <option value="VVIP">VVIP</option>
+                            <option value="VIP">VIP</option>
+                        </select>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel (取消)</button>
-                <button type="button" class="btn btn-primary" id="submitGuestBtn">Add Guest (添加來賓)</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="submitGuestBtn" onclick="if(window.submitAddGuestForm){window.submitAddGuestForm();} return false;">Add Guest</button>
             </div>
         </div>
     </div>
@@ -118,230 +142,1125 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Import Excel (導入 Excel)</h5>
+                <h5 class="modal-title">Import Excel</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
                 <div class="alert alert-info">
-                    <strong>Excel 格式要求：</strong>
+                    <strong>Excel Format Requirements:</strong>
                     <ul>
-                        <li>第一行必須包含標題：Name, Email, Company, Phone</li>
-                        <li>Name 是必填欄位</li>
-                        <li>其他欄位可選</li>
+                        <li>First row must contain headers: Name, Email, Company, Phone</li>
+                        <li>Name is a required field</li>
+                        <li>Other fields are optional</li>
                     </ul>
                 </div>
                 <form id="importExcelForm" enctype="multipart/form-data">
                     <div class="form-group">
-                        <label for="excelFile">選擇 Excel 文件</label>
+                        <label for="excelFile">Select Excel File</label>
                         <input type="file" class="form-control-file" id="excelFile" name="file" accept=".xlsx,.xls" required>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel (取消)</button>
-                <button type="button" class="btn btn-primary" id="submitImportBtn">Import (導入)</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="submitImportBtn">Import</button>
             </div>
         </div>
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Edit Guest Modal -->
+<div class="modal fade" id="editGuestModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Guest</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="editGuestForm" onsubmit="if(window.submitEditGuestForm){window.submitEditGuestForm();} return false;">
+                    <input type="hidden" id="editGuestId" name="guestId">
+                    <div class="form-group">
+                        <label for="editGuestName">Name *</label>
+                        <input type="text" class="form-control" id="editGuestName" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editGuestEmail">Email</label>
+                        <input type="email" class="form-control" id="editGuestEmail" name="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="editGuestCompany">Company</label>
+                        <input type="text" class="form-control" id="editGuestCompany" name="company">
+                    </div>
+                    <div class="form-group">
+                        <label for="editGuestPhone">Phone</label>
+                        <input type="text" class="form-control" id="editGuestPhone" name="phone">
+                    </div>
+                    <div class="form-group">
+                        <label for="editGuestRole">Role</label>
+                        <select class="form-control" id="editGuestRole" name="role">
+                            <option value="">--- Please Select ---</option>
+                            <option value="premium">Premium</option>
+                            <option value="VVIP">VVIP</option>
+                            <option value="VIP">VIP</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="submitEditGuestBtn" onclick="if(window.submitEditGuestForm){window.submitEditGuestForm();} return false;">Update Guest</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
 <script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
+<%- include ("components/footer") %>
 <script>
-    $(document).ready(function() {
-        console.log('Guest list page loaded');
+    // ============================================
+    // 所有全局函數定義（在 jQuery ready 之前）
+    // ============================================
+    
+    // 顯示 Add Guest Modal
+    window.showAddGuestModal = function() {
+        console.log('showAddGuestModal called');
+        var $ = window.jQuery || window.$;
+        if (!$) {
+            alert('System error: jQuery not loaded, please refresh the page and try again');
+            return;
+        }
+        const $modal = $('#addGuestModal');
+        const $form = $('#addGuestForm');
+        
+        if ($form.length) {
+            $form[0].reset();
+            $('#guestRole').val('');
+        }
+        
+        if ($modal.length) {
+            $modal.modal('show');
+        } else {
+            alert('Modal not found!');
+        }
+    };
+    
+    // 顯示 Import Excel Modal
+    window.showImportExcelModal = function() {
+        console.log('showImportExcelModal called');
+        var $ = window.jQuery || window.$;
+        if (!$) {
+            alert('System error: jQuery not loaded, please refresh the page and try again');
+            return;
+        }
+        const $modal = $('#importExcelModal');
+        const $form = $('#importExcelForm');
+        
+        if ($form.length) {
+            $form[0].reset();
+        }
+        
+        if ($modal.length) {
+            $modal.modal('show');
+        } else {
+            alert('Import Excel Modal not found!');
+        }
+    };
+    
+    // 顯示發送 SMS Modal
+    window.showSendSmsModal = function() {
+        console.log('showSendSmsModal called');
+        var $ = window.jQuery || window.$;
+        if (!$) {
+            alert('System error: jQuery not loaded, please refresh the page and try again');
+            return;
+        }
+        
+        const eventId = document.querySelector('[data-event-id]')?.getAttribute('data-event-id') || 
+                       window.location.pathname.match(/\/events\/([^\/]+)/)?.[1];
+        
+        if (!eventId) {
+            alert('無法獲取活動 ID，請刷新頁面重試');
+            return;
+        }
+        
+        $.ajax({
+            url: `/events/api/${eventId}/smsTemplates`,
+            type: 'GET',
+            success: function(templates) {
+                console.log('SMS templates fetched:', templates);
+                showSendSmsModalContent(templates, eventId);
+            },
+            error: function(xhr, status, error) {
+                console.error('Error fetching SMS templates:', xhr, status, error);
+                showSendSmsModalContent([], eventId);
+            }
+        });
+    };
+    
+    function showSendSmsModalContent(templates, eventId) {
+        var $ = window.jQuery || window.$;
+        
+        const modalHtml = `
+            <div class="modal fade" id="sendSmsModal" tabindex="-1" role="dialog">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">發送 SMS 給 Guest List (Send SMS to Guest List)</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="sendSmsForm">
+                                <div class="form-group">
+                                    <label for="smsRoleFilter">Select Role:</label>
+                                    <select class="form-control" id="smsRoleFilter" multiple>
+                                        <option value="premium">Premium</option>
+                                        <option value="VVIP">VVIP</option>
+                                        <option value="VIP">VIP</option>
+                                        <option value="">All Roles</option>
+                                    </select>
+                                    <small class="form-text text-muted">You can select multiple roles, or select "All Roles" to send to everyone</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="smsTemplateSelect">Select SMS Template:</label>
+                                    <select class="form-control" id="smsTemplateSelect" required>
+                                        <option value="">--- Please Select Template ---</option>
+                                        ${templates.map(t => {
+                                            const typeLabel = t.type || 'welcome';
+                                            const typeNames = {
+                                                'welcome': 'Welcome',
+                                                'confirmation': 'Confirmation',
+                                                'reminder': 'Reminder',
+                                                'thankYou': 'Thank You',
+                                                'invitation': 'Invitation'
+                                            };
+                                            const typeName = typeNames[typeLabel] || typeLabel;
+                                            const scope = t.eventId ? '' : ' (Global)';
+                                            return `<option value="${t._id}">${typeName}${scope} - ${(t.content || '').substring(0, 50)}...</option>`;
+                                        }).join('')}
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>預覽 (Preview):</label>
+                                    <div id="smsPreview" class="alert alert-info" style="display: none;"></div>
+                                </div>
+                                <div id="smsStatus" class="alert" style="display: none;"></div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" id="confirmSendSmsBtn">Send SMS</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        $('#sendSmsModal').remove();
+        $('body').append(modalHtml);
+        $('#sendSmsModal').modal('show');
+
+        $('#smsTemplateSelect').on('change', function() {
+            const templateId = $(this).val();
+            if (templateId) {
+                const template = templates.find(t => t._id === templateId);
+                if (template) {
+                    $('#smsPreview').html(`<strong>模板內容:</strong><br>${template.content || ''}`).show();
+                }
+            } else {
+                $('#smsPreview').hide();
+            }
+        });
+
+        $('#confirmSendSmsBtn').on('click', function() {
+            const selectedRoles = $('#smsRoleFilter').val() || [];
+            const templateId = $('#smsTemplateSelect').val();
+
+            if (!templateId) {
+                alert('請選擇 SMS 模板 (Please select SMS template)');
+                return;
+            }
+
+            const button = $(this);
+            button.prop('disabled', true).text('發送中... (Sending...)');
+
+            $.ajax({
+                url: `/events/${eventId}/guest-list/send-sms`,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    roles: selectedRoles,
+                    templateId: templateId
+                }),
+                success: function(response) {
+                    $('#smsStatus').removeClass('alert-danger').addClass('alert-success')
+                        .html(`<i class="fa fa-check-circle"></i> ${response.message || 'SMS 發送成功！'}`).show();
+                    setTimeout(() => {
+                        $('#sendSmsModal').modal('hide');
+                        location.reload();
+                    }, 2000);
+                },
+                error: function(xhr) {
+                    const errorMsg = xhr.responseJSON && xhr.responseJSON.message 
+                        ? xhr.responseJSON.message 
+                        : 'Failed to send SMS, please try again later';
+                    $('#smsStatus').removeClass('alert-success').addClass('alert-danger')
+                        .html(`<i class="fa fa-exclamation-circle"></i> ${errorMsg}`).show();
+                    button.prop('disabled', false).text('Send SMS');
+                }
+            });
+        });
+    }
+    
+    // 顯示編輯來賓 Modal
+    window.showEditGuestModal = function(guestId) {
+        console.log('showEditGuestModal called for guest:', guestId);
+        var $ = window.jQuery || window.$;
+        if (!$) {
+            alert('System error: jQuery not loaded, please refresh the page and try again');
+            return;
+        }
+        
+        const row = $(`.edit-guest[data-guest-id="${guestId}"]`).closest('tr');
+        if (row.length === 0) {
+            alert('無法找到來賓資料，請刷新頁面重試');
+            return;
+        }
+        
+        const guest = {
+            id: guestId,
+            name: row.find('td:eq(0)').text().trim(),
+            email: row.find('td:eq(1)').text().trim(),
+            company: row.find('td:eq(2)').text().trim(),
+            phone: row.find('td:eq(3)').text().trim(),
+            role: row.find('td:eq(4) .badge').text().trim() || row.find('td:eq(4)').text().trim() || ''
+        };
+        
+        $('#editGuestId').val(guestId);
+        $('#editGuestName').val(guest.name);
+        $('#editGuestEmail').val(guest.email);
+        $('#editGuestCompany').val(guest.company);
+        $('#editGuestPhone').val(guest.phone);
+        $('#editGuestRole').val(guest.role);
+        
+        $('#editGuestModal').modal('show');
+    };
+    
+    // 提交編輯來賓表單
+    window.submitEditGuestForm = function() {
+        console.log('submitEditGuestForm called');
+        var $ = window.jQuery || window.$;
+        if (!$) {
+            alert('System error: jQuery not loaded, please refresh the page and try again');
+            return;
+        }
+        
+        const eventId = document.querySelector('[data-event-id]')?.getAttribute('data-event-id') || 
+                       window.location.pathname.match(/\/events\/([^\/]+)/)?.[1];
+        const guestId = $('#editGuestId').val();
+        
+        if (!eventId || !guestId) {
+            alert('無法獲取活動 ID 或來賓 ID，請刷新頁面重試');
+            return;
+        }
+        
+        const name = $('#editGuestName').val().trim();
+        if (!name) {
+            alert('Name is required (姓名是必填的)');
+            $('#editGuestName').focus();
+            return;
+        }
+
+        const email = $('#editGuestEmail').val().trim();
+        const company = $('#editGuestCompany').val().trim();
+        const phone = $('#editGuestPhone').val().trim();
+        const role = $('#editGuestRole').val().trim();
+
+        const button = $('#submitEditGuestBtn');
+        const originalText = button.text();
+        button.prop('disabled', true).text('Updating...');
+
+        $.ajax({
+            url: `/events/${eventId}/guest-list/${guestId}`,
+            type: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({ name, email, company, phone, role }),
+            success: function(response) {
+                $('#editGuestModal').modal('hide');
+                const alertHtml = `
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        Guest updated successfully!
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                `;
+                const alertContainer = document.getElementById('alertContainer');
+                if (alertContainer) {
+                    alertContainer.innerHTML = alertHtml;
+                }
+                setTimeout(() => location.reload(), 1000);
+            },
+            error: function(xhr) {
+                const errorMsg = xhr.responseJSON && xhr.responseJSON.message 
+                    ? xhr.responseJSON.message 
+                    : 'Failed to update guest. Please try again.';
+                alert(errorMsg);
+            },
+            complete: function() {
+                button.prop('disabled', false).text(originalText);
+            }
+        });
+    };
+    
+    // 提交添加來賓表單
+    window.submitAddGuestForm = function() {
+        console.log('submitAddGuestForm called');
+        var $ = window.jQuery || window.$;
+        if (!$) {
+            alert('System error: jQuery not loaded, please refresh the page and try again');
+            return;
+        }
+        
+        const eventId = document.querySelector('[data-event-id]')?.getAttribute('data-event-id') || 
+                       window.location.pathname.match(/\/events\/([^\/]+)/)?.[1];
+        
+        if (!eventId) {
+            alert('無法獲取活動 ID，請刷新頁面重試');
+            return;
+        }
+        
+        const name = $('#guestName').val().trim();
+        if (!name) {
+            alert('Name is required (姓名是必填的)');
+            $('#guestName').focus();
+            return;
+        }
+
+        const email = $('#guestEmail').val().trim();
+        const company = $('#guestCompany').val().trim();
+        const phone = $('#guestPhone').val().trim();
+        const role = $('#guestRole').val().trim();
+
+        const button = $('#submitGuestBtn');
+        const originalText = button.text();
+        button.prop('disabled', true).text('Adding...');
+
+        $.ajax({
+            url: `/events/${eventId}/guest-list`,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ name, email, company, phone, role }),
+            success: function(response) {
+                $('#addGuestModal').modal('hide');
+                const alertHtml = `
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        Guest added successfully!
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                `;
+                const alertContainer = document.getElementById('alertContainer');
+                if (alertContainer) {
+                    alertContainer.innerHTML = alertHtml;
+                }
+                setTimeout(() => location.reload(), 1000);
+            },
+            error: function(xhr) {
+                const errorMsg = xhr.responseJSON && xhr.responseJSON.message 
+                    ? xhr.responseJSON.message 
+                    : 'Failed to add guest. Please try again.';
+                alert(errorMsg);
+            },
+            complete: function() {
+                button.prop('disabled', false).text(originalText);
+            }
+        });
+    };
+    
+    // 顯示編輯來賓 Modal
+    window.showEditGuestModal = function(guestId) {
+        console.log('showEditGuestModal called for guest:', guestId);
+        var $ = window.jQuery || window.$;
+        if (!$) {
+            alert('System error: jQuery not loaded, please refresh the page and try again');
+            return;
+        }
+        
+        const row = $(`.edit-guest[data-guest-id="${guestId}"]`).closest('tr');
+        if (row.length === 0) {
+            alert('無法找到來賓資料，請刷新頁面重試');
+            return;
+        }
+        
+        const guest = {
+            id: guestId,
+            name: row.find('td:eq(0)').text().trim(),
+            email: row.find('td:eq(1)').text().trim(),
+            company: row.find('td:eq(2)').text().trim(),
+            phone: row.find('td:eq(3)').text().trim(),
+            role: row.find('td:eq(4) .badge').text().trim() || row.find('td:eq(4)').text().trim() || ''
+        };
+        
+        $('#editGuestId').val(guestId);
+        $('#editGuestName').val(guest.name);
+        $('#editGuestEmail').val(guest.email);
+        $('#editGuestCompany').val(guest.company);
+        $('#editGuestPhone').val(guest.phone);
+        $('#editGuestRole').val(guest.role);
+        
+        $('#editGuestModal').modal('show');
+    };
+    
+    // 提交編輯來賓表單
+    window.submitEditGuestForm = function() {
+        console.log('submitEditGuestForm called');
+        var $ = window.jQuery || window.$;
+        if (!$) {
+            alert('System error: jQuery not loaded, please refresh the page and try again');
+            return;
+        }
+        
+        const eventId = document.querySelector('[data-event-id]')?.getAttribute('data-event-id') || 
+                       window.location.pathname.match(/\/events\/([^\/]+)/)?.[1];
+        const guestId = $('#editGuestId').val();
+        
+        if (!eventId || !guestId) {
+            alert('無法獲取活動 ID 或來賓 ID，請刷新頁面重試');
+            return;
+        }
+        
+        const name = $('#editGuestName').val().trim();
+        if (!name) {
+            alert('Name is required (姓名是必填的)');
+            $('#editGuestName').focus();
+            return;
+        }
+
+        const email = $('#editGuestEmail').val().trim();
+        const company = $('#editGuestCompany').val().trim();
+        const phone = $('#editGuestPhone').val().trim();
+        const role = $('#editGuestRole').val().trim();
+
+        const button = $('#submitEditGuestBtn');
+        const originalText = button.text();
+        button.prop('disabled', true).text('Updating...');
+
+        $.ajax({
+            url: `/events/${eventId}/guest-list/${guestId}`,
+            type: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({ name, email, company, phone, role }),
+            success: function(response) {
+                $('#editGuestModal').modal('hide');
+                const alertHtml = `
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        Guest updated successfully!
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                `;
+                const alertContainer = document.getElementById('alertContainer');
+                if (alertContainer) {
+                    alertContainer.innerHTML = alertHtml;
+                }
+                setTimeout(() => location.reload(), 1000);
+            },
+            error: function(xhr) {
+                const errorMsg = xhr.responseJSON && xhr.responseJSON.message 
+                    ? xhr.responseJSON.message 
+                    : 'Failed to update guest. Please try again.';
+                alert(errorMsg);
+            },
+            complete: function() {
+                button.prop('disabled', false).text(originalText);
+            }
+        });
+    };
+    
+    console.log('Global functions defined:', {
+        showAddGuestModal: typeof window.showAddGuestModal,
+        showImportExcelModal: typeof window.showImportExcelModal,
+        showSendSmsModal: typeof window.showSendSmsModal,
+        showEditGuestModal: typeof window.showEditGuestModal,
+        submitAddGuestForm: typeof window.submitAddGuestForm,
+        submitEditGuestForm: typeof window.submitEditGuestForm
+    });
+    
+    // 確保在 footer 載入 jQuery 和 Bootstrap 之後執行
+    console.log('Script tag executed - waiting for jQuery...');
+    
+    (function() {
+        // 等待 jQuery 載入
+        function waitForJQuery(callback) {
+            if (window.jQuery || window.$) {
+                var $ = window.jQuery || window.$;
+                console.log('jQuery found, version:', $.fn.jquery);
+                callback($);
+            } else {
+                console.log('jQuery not found yet, retrying...');
+                setTimeout(function() {
+                    waitForJQuery(callback);
+                }, 50);
+            }
+        }
+        
+        waitForJQuery(function($) {
+            console.log('=== Guest List Script Started ===');
+            console.log('jQuery version:', $.fn.jquery);
+            console.log('Bootstrap available:', typeof $.fn.modal !== 'undefined');
+            
+            $(document).ready(function() {
+                console.log('Document ready - Guest list page loaded');
+        
         const eventId = '<%= eventId %>';
         const hasData = <%= (guests && guests.length > 0) ? 'true' : 'false' %>;
         
-        if (hasData) {
-            $('#guestListTable').DataTable({
-                "order": [[4, "desc"]], // 按創建時間降序排列
-                "pageLength": 25,
-                "language": {
-                    "search": "搜尋:",
-                    "lengthMenu": "顯示 _MENU_ 筆記錄",
-                    "info": "顯示第 _START_ 至 _END_ 筆，共 _TOTAL_ 筆",
-                    "infoEmpty": "沒有記錄",
-                    "infoFiltered": "(從 _MAX_ 筆記錄中過濾)",
-                    "paginate": {
-                        "first": "首頁",
-                        "last": "末頁",
-                        "next": "下一頁",
-                        "previous": "上一頁"
+        try {
+            if (hasData) {
+                $('#guestListTable').DataTable({
+                            "order": [[5, "desc"]], // 按創建時間降序排列（Role 是第 5 列，Created At 是第 6 列）
+                            "pageLength": 25,
+                            "language": {
+                                "search": "搜尋:",
+                                "lengthMenu": "顯示 _MENU_ 筆記錄",
+                                "info": "顯示第 _START_ 至 _END_ 筆，共 _TOTAL_ 筆",
+                                "infoEmpty": "沒有記錄",
+                                "infoFiltered": "(從 _MAX_ 筆記錄中過濾)",
+                                "paginate": {
+                                    "first": "首頁",
+                                    "last": "末頁",
+                                    "next": "下一頁",
+                                    "previous": "上一頁"
+                                }
+                            }
+                        });
+                    } else {
+                        // 當沒有數據時，顯示提示訊息
+                        $('#guestListTable tbody').html('<tr><td colspan="6" class="text-center">No guests found (沒有來賓)</td></tr>');
+                    }
+                } catch (error) {
+                    console.error('Error initializing DataTable:', error);
+                }
+
+                // 提交添加來賓表單 - 使用事件委託確保能觸發
+                function submitAddGuestForm() {
+                    console.log('submitAddGuestForm called');
+                    var $ = window.jQuery || window.$;
+                    const name = $('#guestName').val().trim();
+                    if (!name) {
+                        alert('Name is required (姓名是必填的)');
+                        return;
+                    }
+
+                    const email = $('#guestEmail').val().trim();
+                    const company = $('#guestCompany').val().trim();
+                    const phone = $('#guestPhone').val().trim();
+                    const role = $('#guestRole').val().trim();
+
+                    const button = $('#submitGuestBtn');
+                    const originalText = button.text();
+                    button.prop('disabled', true).text('Adding...');
+
+                    $.ajax({
+                        url: `/events/${eventId}/guest-list`,
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ name, email, company, phone, role }),
+                        success: function(response) {
+                            $('#addGuestModal').modal('hide');
+                            showAlert('success', 'Guest added successfully!');
+                            setTimeout(() => location.reload(), 1000);
+                        },
+                        error: function(xhr) {
+                            console.error('Error adding guest:', xhr.responseText);
+                            const errorMsg = xhr.responseJSON && xhr.responseJSON.message 
+                                ? xhr.responseJSON.message 
+                                : 'Failed to add guest. Please try again.';
+                            showAlert('danger', errorMsg);
+                        },
+                        complete: function() {
+                            button.prop('disabled', false).text(originalText);
+                        }
+                    });
+                }
+                
+                // 暴露到全局作用域
+                window.submitAddGuestForm = submitAddGuestForm;
+                
+                // 使用事件委託綁定（確保動態元素也能觸發）
+                $(document).off('click', '#submitGuestBtn').on('click', '#submitGuestBtn', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Submit Guest button clicked (delegated event)');
+                    submitAddGuestForm();
+                });
+                
+                // 直接綁定
+                $('#submitGuestBtn').off('click').on('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Submit Guest button clicked (direct binding)');
+                    submitAddGuestForm();
+                });
+
+                // 顯示導入 Excel Modal - 使用多種方式確保能觸發
+                $('#importExcelBtn').off('click').on('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    console.log('Import Excel button clicked (jQuery direct binding)');
+                    if (window.showImportExcelModal) {
+                        window.showImportExcelModal();
+                    }
+                    return false;
+                });
+                
+                $(document).off('click', '#importExcelBtn').on('click', '#importExcelBtn', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    console.log('Import Excel button clicked (jQuery delegated event)');
+                    if (window.showImportExcelModal) {
+                        window.showImportExcelModal();
+                    }
+                    return false;
+                });
+                
+                // 局部函數（使用全局函數）
+                function showImportExcelModal() {
+                    if (window.showImportExcelModal) {
+                        window.showImportExcelModal();
+                    } else {
+                        console.error('window.showImportExcelModal is not defined!');
                     }
                 }
-            });
-        } else {
-            // 當沒有數據時，顯示提示訊息
-            $('#guestListTable tbody').html('<tr><td colspan="6" class="text-center">No guests found (沒有來賓)</td></tr>');
-        }
 
-        // 顯示添加來賓 Modal
-        $('#addGuestBtn').on('click', function(e) {
-            e.preventDefault();
-            console.log('Add Guest button clicked');
-            $('#addGuestForm')[0].reset();
-            $('#addGuestModal').modal('show');
-        });
+                // 提交導入 Excel 表單
+                $('#submitImportBtn').on('click', function() {
+                    const fileInput = $('#excelFile')[0];
+                    if (!fileInput.files || !fileInput.files[0]) {
+                        alert('Please select a file (請選擇文件)');
+                        return;
+                    }
 
-        // 提交添加來賓表單
-        $('#submitGuestBtn').on('click', function() {
-            const name = $('#guestName').val().trim();
-            if (!name) {
-                alert('Name is required (姓名是必填的)');
-                return;
-            }
+                    const formData = new FormData();
+                    formData.append('file', fileInput.files[0]);
 
-            const email = $('#guestEmail').val().trim();
-            const company = $('#guestCompany').val().trim();
-            const phone = $('#guestPhone').val().trim();
+                    const button = $(this);
+                    button.prop('disabled', true).text('Importing...');
 
-            const button = $(this);
-            button.prop('disabled', true).text('Adding...');
+                    $.ajax({
+                        url: `/events/${eventId}/guest-list/import`,
+                        type: 'POST',
+                        data: formData,
+                        processData: false,
+                        contentType: false,
+                        success: function(response) {
+                            $('#importExcelModal').modal('hide');
+                            showAlert('success', 'Guests imported successfully!');
+                            setTimeout(() => location.reload(), 1000);
+                        },
+                        error: function(xhr) {
+                            console.error('Error importing guests:', xhr.responseText);
+                            const errorMsg = xhr.responseJSON && xhr.responseJSON.message 
+                                ? xhr.responseJSON.message 
+                                : 'Failed to import guests. Please check the file format.';
+                            showAlert('danger', errorMsg);
+                        },
+                        complete: function() {
+                            button.prop('disabled', false).text('Import (導入)');
+                        }
+                    });
+                });
 
-            $.ajax({
-                url: `/events/${eventId}/guest-list`,
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({ name, email, company, phone }),
-                success: function(response) {
-                    $('#addGuestModal').modal('hide');
-                    showAlert('success', 'Guest added successfully!');
-                    setTimeout(() => location.reload(), 1000);
-                },
-                error: function(xhr) {
-                    console.error('Error adding guest:', xhr.responseText);
-                    const errorMsg = xhr.responseJSON && xhr.responseJSON.message 
-                        ? xhr.responseJSON.message 
-                        : 'Failed to add guest. Please try again.';
-                    showAlert('danger', errorMsg);
-                },
-                complete: function() {
-                    button.prop('disabled', false).text('Add Guest (添加來賓)');
+                // 編輯來賓
+                $('#guestListTable').on('click', '.edit-guest', function() {
+                    const guestId = $(this).data('guest-id');
+                    console.log('Edit guest clicked, guestId:', guestId);
+                    if (window.showEditGuestModal) {
+                        window.showEditGuestModal(guestId);
+                    } else {
+                        console.error('window.showEditGuestModal is not defined!');
+                    }
+                });
+                
+                // 添加到 RSVP
+                $('#guestListTable').on('click', '.add-to-rsvp', function() {
+                    const guestId = $(this).data('guest-id');
+                    if (!confirm('確定要將此來賓添加到 RSVP 列表嗎？(Are you sure you want to add this guest to RSVP list?)')) {
+                        return;
+                    }
+
+                    $.ajax({
+                        url: `/events/${eventId}/guest-list/${guestId}/add-to-rsvp`,
+                        type: 'POST',
+                        success: function() {
+                            showAlert('success', 'Guest added to RSVP successfully!');
+                            setTimeout(() => location.reload(), 1000);
+                        },
+                        error: function(xhr) {
+                            console.error('Error adding guest to RSVP:', xhr.responseText);
+                            const errorMsg = xhr.responseJSON && xhr.responseJSON.message 
+                                ? xhr.responseJSON.message 
+                                : 'Failed to add guest to RSVP. Please try again.';
+                            showAlert('danger', errorMsg);
+                        }
+                    });
+                });
+
+                // 刪除來賓
+                $('#guestListTable').on('click', '.delete-guest', function() {
+                    const guestId = $(this).data('guest-id');
+                    if (!confirm('確定要刪除此來賓嗎？(Are you sure you want to delete this guest?)')) {
+                        return;
+                    }
+
+                    $.ajax({
+                        url: `/events/${eventId}/guest-list/${guestId}`,
+                        type: 'DELETE',
+                        success: function() {
+                            showAlert('success', 'Guest deleted successfully!');
+                            setTimeout(() => location.reload(), 1000);
+                        },
+                        error: function(xhr) {
+                            console.error('Error deleting guest:', xhr.responseText);
+                            showAlert('danger', 'Failed to delete guest. Please try again.');
+                        }
+                    });
+                });
+
+                // 顯示提示訊息
+                function showAlert(type, message) {
+                    const alertHtml = `
+                        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                            ${message}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    `;
+                    $('#alertContainer').html(alertHtml);
                 }
-            });
-        });
 
-        // 顯示導入 Excel Modal
-        $('#importExcelBtn').on('click', function() {
-            $('#importExcelForm')[0].reset();
-            $('#importExcelModal').modal('show');
-        });
-
-        // 提交導入 Excel 表單
-        $('#submitImportBtn').on('click', function() {
-            const fileInput = $('#excelFile')[0];
-            if (!fileInput.files || !fileInput.files[0]) {
-                alert('Please select a file (請選擇文件)');
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-
-            const button = $(this);
-            button.prop('disabled', true).text('Importing...');
-
-            $.ajax({
-                url: `/events/${eventId}/guest-list/import`,
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(response) {
-                    $('#importExcelModal').modal('hide');
-                    showAlert('success', 'Guests imported successfully!');
-                    setTimeout(() => location.reload(), 1000);
-                },
-                error: function(xhr) {
-                    console.error('Error importing guests:', xhr.responseText);
-                    const errorMsg = xhr.responseJSON && xhr.responseJSON.message 
-                        ? xhr.responseJSON.message 
-                        : 'Failed to import guests. Please check the file format.';
-                    showAlert('danger', errorMsg);
-                },
-                complete: function() {
-                    button.prop('disabled', false).text('Import (導入)');
+                // 直接綁定 Add Guest 按鈕事件
+                $('#addGuestBtn').on('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Add Guest button clicked (direct binding)');
+                    showAddGuestModal();
+                });
+                
+                // 同時使用事件委託作為備用
+                $(document).on('click', '#addGuestBtn', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Add Guest button clicked (delegated event)');
+                    showAddGuestModal();
+                });
+                
+                // 局部函數（使用全局函數）
+                function showAddGuestModal() {
+                    if (window.showAddGuestModal) {
+                        window.showAddGuestModal();
+                    } else {
+                        console.error('window.showAddGuestModal is not defined!');
+                    }
                 }
-            });
-        });
+                
+                // 測試：檢查按鈕和 Modal 是否存在
+                console.log('Add Guest button exists:', $('#addGuestBtn').length);
+                console.log('Add Guest Modal exists:', $('#addGuestModal').length);
+                console.log('Import Excel button exists:', $('#importExcelBtn').length);
+                console.log('Import Excel Modal exists:', $('#importExcelModal').length);
+                
+                // 確保按鈕可以點擊
+                $('#addGuestBtn, #importExcelBtn').css({
+                    'position': 'relative',
+                    'z-index': '1000',
+                    'pointer-events': 'auto',
+                    'cursor': 'pointer'
+                });
+                
+                // 測試按鈕是否真的存在並且可以訪問
+                setTimeout(function() {
+                    const addBtn = document.getElementById('addGuestBtn');
+                    const importBtn = document.getElementById('importExcelBtn');
+                    
+                    console.log('=== Button Debug Info ===');
+                    console.log('Native DOM - Add Guest button:', addBtn);
+                    console.log('Native DOM - Import Excel button:', importBtn);
+                    console.log('window.showAddGuestModal exists:', typeof window.showAddGuestModal);
+                    console.log('window.showImportExcelModal exists:', typeof window.showImportExcelModal);
+                    
+                    if (addBtn) {
+                        const style = window.getComputedStyle(addBtn);
+                        console.log('Add Guest button computed style:', {
+                            display: style.display,
+                            visibility: style.visibility,
+                            pointerEvents: style.pointerEvents,
+                            zIndex: style.zIndex,
+                            position: style.position
+                        });
+                        console.log('Add Guest button offsetParent:', addBtn.offsetParent);
+                        console.log('Add Guest button disabled:', addBtn.disabled);
+                        console.log('Add Guest button onclick:', addBtn.onclick);
+                        
+                        // 移除所有可能阻止點擊的樣式
+                        addBtn.style.pointerEvents = 'auto';
+                        addBtn.style.zIndex = '9999';
+                        addBtn.style.position = 'relative';
+                        addBtn.style.cursor = 'pointer';
+                        addBtn.disabled = false;
+                        
+                        // 移除所有舊的事件監聽器
+                        var newAddBtn = addBtn.cloneNode(true);
+                        addBtn.parentNode.replaceChild(newAddBtn, addBtn);
+                        addBtn = newAddBtn;
+                        
+                        // 直接設置 onclick（最簡單的方式，優先級最高）
+                        addBtn.setAttribute('onclick', 'if(window.showAddGuestModal){window.showAddGuestModal();} return false;');
+                        addBtn.onclick = function(e) {
+                            console.log('Add Guest button clicked (onclick handler)');
+                            if (window.showAddGuestModal) {
+                                window.showAddGuestModal();
+                            }
+                            return false;
+                        };
+                        
+                        // 使用原生 JavaScript 添加事件監聽器（capture phase，優先級高）
+                        addBtn.addEventListener('click', function(e) {
+                            console.log('Add Guest button clicked (native event listener - capture)');
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.stopImmediatePropagation();
+                            if (window.showAddGuestModal) {
+                                window.showAddGuestModal();
+                            }
+                            return false;
+                        }, true);
+                        
+                        // 使用原生 JavaScript 添加事件監聽器（bubble phase）
+                        addBtn.addEventListener('click', function(e) {
+                            console.log('Add Guest button clicked (native event listener - bubble)');
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.stopImmediatePropagation();
+                            if (window.showAddGuestModal) {
+                                window.showAddGuestModal();
+                            }
+                            return false;
+                        }, false);
+                        
+                        // 測試：直接調用函數
+                        console.log('Testing direct function call...');
+                        if (window.showAddGuestModal) {
+                            console.log('Function exists, can be called');
+                        } else {
+                            console.error('Function does not exist!');
+                        }
+                    } else {
+                        console.error('Add Guest button not found in DOM!');
+                    }
+                    
+                    if (importBtn) {
+                        const style = window.getComputedStyle(importBtn);
+                        console.log('Import Excel button computed style:', {
+                            display: style.display,
+                            visibility: style.visibility,
+                            pointerEvents: style.pointerEvents,
+                            zIndex: style.zIndex,
+                            position: style.position
+                        });
+                        console.log('Import Excel button offsetParent:', importBtn.offsetParent);
+                        console.log('Import Excel button disabled:', importBtn.disabled);
+                        
+                        importBtn.style.pointerEvents = 'auto';
+                        importBtn.style.zIndex = '9999';
+                        importBtn.style.position = 'relative';
+                        importBtn.style.cursor = 'pointer';
+                        importBtn.disabled = false;
+                        
+                        // 移除所有舊的事件監聽器
+                        var newImportBtn = importBtn.cloneNode(true);
+                        importBtn.parentNode.replaceChild(newImportBtn, importBtn);
+                        importBtn = newImportBtn;
+                        
+                        // 直接設置 onclick
+                        importBtn.setAttribute('onclick', 'if(window.showImportExcelModal){window.showImportExcelModal();} return false;');
+                        importBtn.onclick = function(e) {
+                            console.log('Import Excel button clicked (onclick handler)');
+                            if (window.showImportExcelModal) {
+                                window.showImportExcelModal();
+                            }
+                            return false;
+                        };
+                        
+                        importBtn.addEventListener('click', function(e) {
+                            console.log('Import Excel button clicked (native event listener)');
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.stopImmediatePropagation();
+                            if (window.showImportExcelModal) {
+                                window.showImportExcelModal();
+                            }
+                            return false;
+                        }, true);
+                    } else {
+                        console.error('Import Excel button not found in DOM!');
+                    }
+                    
+                    console.log('=== End Button Debug Info ===');
+                }, 500);
 
-        // 添加到 RSVP
-        $('#guestListTable').on('click', '.add-to-rsvp', function() {
-            const guestId = $(this).data('guest-id');
-            if (!confirm('確定要將此來賓添加到 RSVP 列表嗎？(Are you sure you want to add this guest to RSVP list?)')) {
-                return;
-            }
+                // Send SMS functionality for Guest List
+                $('#sendSmsBtn').on('click', function() {
+                    loadSmsTemplates();
+                });
 
-            $.ajax({
-                url: `/events/${eventId}/guest-list/${guestId}/add-to-rsvp`,
-                type: 'POST',
-                success: function() {
-                    showAlert('success', 'Guest added to RSVP successfully!');
-                    setTimeout(() => location.reload(), 1000);
-                },
-                error: function(xhr) {
-                    console.error('Error adding guest to RSVP:', xhr.responseText);
-                    const errorMsg = xhr.responseJSON && xhr.responseJSON.message 
-                        ? xhr.responseJSON.message 
-                        : 'Failed to add guest to RSVP. Please try again.';
-                    showAlert('danger', errorMsg);
+                function loadSmsTemplates() {
+                    // Fetch SMS templates via API
+                    $.ajax({
+                        url: `/events/api/${eventId}/smsTemplates`,
+                        type: 'GET',
+                        success: function(templates) {
+                            console.log('SMS templates fetched:', templates);
+                            showSendSmsModal(templates);
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Error fetching SMS templates:', xhr, status, error);
+                            // If API doesn't exist, show modal with empty template list
+                            showSendSmsModal([]);
+                        }
+                    });
                 }
-            });
-        });
 
-        // 刪除來賓
-        $('#guestListTable').on('click', '.delete-guest', function() {
-            const guestId = $(this).data('guest-id');
-            if (!confirm('確定要刪除此來賓嗎？(Are you sure you want to delete this guest?)')) {
-                return;
-            }
+                function showSendSmsModal(templates) {
+                    const modalHtml = `
+                        <div class="modal fade" id="sendSmsModal" tabindex="-1" role="dialog">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">發送 SMS 給 Guest List (Send SMS to Guest List)</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <form id="sendSmsForm">
+                                            <div class="form-group">
+                                                <label for="smsRoleFilter">選擇角色 (Select Role):</label>
+                                                <select class="form-control" id="smsRoleFilter" multiple>
+                                                    <option value="premium">Premium</option>
+                                                    <option value="VVIP">VVIP</option>
+                                                    <option value="VIP">VIP</option>
+                                                    <option value="">所有角色 (All Roles)</option>
+                                                </select>
+                                                <small class="form-text text-muted">可以選擇多個角色，或選擇"所有角色"發送給所有人</small>
+                                            </div>
+                                            <div class="form-group">
+                                    <label for="smsTemplateSelect">Select SMS Template:</label>
+                                    <select class="form-control" id="smsTemplateSelect" required>
+                                        <option value="">--- Please Select Template ---</option>
+                                                    ${templates.map(t => {
+                                                        const typeLabel = t.type || 'welcome';
+                                            const typeNames = {
+                                                'welcome': 'Welcome',
+                                                'confirmation': 'Confirmation',
+                                                'reminder': 'Reminder',
+                                                'thankYou': 'Thank You',
+                                                'invitation': 'Invitation'
+                                            };
+                                            const typeName = typeNames[typeLabel] || typeLabel;
+                                            const scope = t.eventId ? '' : ' (Global)';
+                                                        return `<option value="${t._id}">${typeName}${scope} - ${(t.content || '').substring(0, 50)}...</option>`;
+                                                    }).join('')}
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>預覽 (Preview):</label>
+                                                <div id="smsPreview" class="alert alert-info" style="display: none;"></div>
+                                            </div>
+                                            <div id="smsStatus" class="alert" style="display: none;"></div>
+                                        </form>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">取消 (Cancel)</button>
+                                        <button type="button" class="btn btn-primary" id="confirmSendSmsBtn">發送 SMS (Send SMS)</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Remove existing modal if any
+                    $('#sendSmsModal').remove();
+                    $('body').append(modalHtml);
+                    $('#sendSmsModal').modal('show');
 
-            $.ajax({
-                url: `/events/${eventId}/guest-list/${guestId}`,
-                type: 'DELETE',
-                success: function() {
-                    showAlert('success', 'Guest deleted successfully!');
-                    setTimeout(() => location.reload(), 1000);
-                },
-                error: function(xhr) {
-                    console.error('Error deleting guest:', xhr.responseText);
-                    showAlert('danger', 'Failed to delete guest. Please try again.');
+                    // Preview template content
+                    $('#smsTemplateSelect').on('change', function() {
+                        const templateId = $(this).val();
+                        if (templateId) {
+                            const template = templates.find(t => t._id === templateId);
+                            if (template) {
+                                $('#smsPreview').html(`<strong>模板內容:</strong><br>${template.content || ''}`).show();
+                            }
+                        } else {
+                            $('#smsPreview').hide();
+                        }
+                    });
+
+                    // Confirm send SMS
+                    $('#confirmSendSmsBtn').on('click', function() {
+                        const selectedRoles = $('#smsRoleFilter').val() || [];
+                        const templateId = $('#smsTemplateSelect').val();
+
+                        if (!templateId) {
+                            alert('請選擇 SMS 模板 (Please select SMS template)');
+                            return;
+                        }
+
+                        const button = $(this);
+                        button.prop('disabled', true).text('發送中... (Sending...)');
+
+                        $.ajax({
+                            url: `/events/${eventId}/guest-list/send-sms`,
+                            type: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({
+                                roles: selectedRoles,
+                                templateId: templateId
+                            }),
+                            success: function(response) {
+                                $('#smsStatus').removeClass('alert-danger').addClass('alert-success')
+                                    .html(`<i class="fa fa-check-circle"></i> ${response.message || 'SMS 發送成功！'}`).show();
+                                setTimeout(() => {
+                                    $('#sendSmsModal').modal('hide');
+                                    location.reload();
+                                }, 2000);
+                            },
+                            error: function(xhr) {
+                                const errorMsg = xhr.responseJSON && xhr.responseJSON.message 
+                                    ? xhr.responseJSON.message 
+                                    : '發送 SMS 失敗，請稍後再試';
+                                $('#smsStatus').removeClass('alert-success').addClass('alert-danger')
+                                    .html(`<i class="fa fa-exclamation-circle"></i> ${errorMsg}`).show();
+                                button.prop('disabled', false).text('發送 SMS (Send SMS)');
+                            }
+                        });
+                    });
                 }
-            });
-        });
-
-        // 顯示提示訊息
-        function showAlert(type, message) {
-            const alertHtml = `
-                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                    ${message}
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-            `;
-            $('#alertContainer').html(alertHtml);
-        }
-
-        // 使用事件委託確保按鈕事件綁定（防止 footer 中的 jQuery 覆蓋）
-        $(document).on('click', '#addGuestBtn', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Add Guest button clicked (delegated event)');
-            if ($('#addGuestForm').length) {
-                $('#addGuestForm')[0].reset();
-            }
-            if ($('#addGuestModal').length) {
-                $('#addGuestModal').modal('show');
-            } else {
-                console.error('Modal not found');
-            }
-        });
-    });
+            }); // $(document).ready 結束
+        }); // waitForJQuery callback 結束
+    })(); // 立即執行函數結束
 </script>
-<%- include ("components/footer") %>

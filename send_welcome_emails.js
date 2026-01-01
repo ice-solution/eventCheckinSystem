@@ -14,6 +14,48 @@ const EmailTemplate = require('./model/EmailTemplate');
 const ses = require('./utils/ses');
 const { getWelcomeEmailTemplate } = require('./template/welcomeEmail');
 
+// 動態替換 email template 中的所有 user 字段
+function replaceTemplateVariables(content, user, event, additionalVars = {}) {
+    let result = content;
+    
+    // 將 user 轉換為普通對象（如果是 Mongoose document）
+    const userObj = user.toObject ? user.toObject() : user;
+    
+    // 替換基本字段（優先處理，確保覆蓋）
+    result = result.replace(/\{\{user\.name\}\}/g, userObj.name || '');
+    result = result.replace(/\{\{user\.email\}\}/g, userObj.email || '');
+    result = result.replace(/\{\{user\.company\}\}/g, userObj.company || '');
+    result = result.replace(/\{\{user\.phone\}\}/g, userObj.phone || '');
+    result = result.replace(/\{\{user\.phone_code\}\}/g, userObj.phone_code || '');
+    result = result.replace(/\{\{event\.name\}\}/g, event.name || '');
+    
+    // 動態替換所有 user 對象中的其他字段（包括 formConfig 中定義的字段）
+    Object.keys(userObj).forEach(key => {
+        // 跳過 MongoDB 內部字段
+        if (key.startsWith('_')) {
+            return;
+        }
+        
+        // 替換 {{user.fieldName}} 格式（轉義特殊字符）
+        const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`\\{\\{user\\.${escapedKey}\\}\\}`, 'g');
+        const value = userObj[key];
+        // 如果值存在，轉換為字符串；否則為空字符串
+        const replacement = value !== undefined && value !== null ? String(value) : '';
+        result = result.replace(regex, replacement);
+    });
+    
+    // 替換額外變量（如 qrCodeUrl, loginUrl, transaction.* 等）
+    Object.keys(additionalVars).forEach(key => {
+        // 轉義特殊字符以支持 transaction.ticketTitle 這樣的鍵
+        const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`\\{\\{${escapedKey}\\}\\}`, 'g');
+        result = result.replace(regex, additionalVars[key] || '');
+    });
+    
+    return result;
+}
+
 // 連接到 MongoDB
 mongoose.connect(process.env.mongodb || 'mongodb://localhost:27017/checkinSystem', {
     useNewUrlParser: true,
@@ -85,12 +127,10 @@ mongoose.connect(process.env.mongodb || 'mongodb://localhost:27017/checkinSystem
                 
                 if (emailTemplate) {
                     subject = emailTemplate.subject;
-                    messageBody = emailTemplate.content
-                        .replace(/\{\{user\.name\}\}/g, user.name)
-                        .replace(/\{\{user\.email\}\}/g, user.email)
-                        .replace(/\{\{user\.company\}\}/g, user.company || '')
-                        .replace(/\{\{event\.name\}\}/g, event.name)
-                        .replace(/\{\{qrCodeUrl\}\}/g, qrCodeUrl);
+                    // 使用動態替換函數，支持所有 user 字段
+                    messageBody = replaceTemplateVariables(emailTemplate.content, user, event, {
+                        qrCodeUrl: qrCodeUrl
+                    });
                 } else {
                     messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl);
                 }
