@@ -58,14 +58,25 @@
         #reader {
             text-align: center !important;
             margin: 0 auto !important;
+            position: relative;
+            width: 100%;
+            height: auto;
         }
         #reader > div {
             margin: 0 auto !important;
             text-align: center !important;
             display: inline-block !important;
         }
-        #reader video,
-        #reader canvas,
+        #reader video {
+            margin: 0 auto !important;
+            display: block !important;
+            max-width: 100% !important;
+        }
+        /* Hide canvas - it's only used for processing, not display */
+        #reader canvas {
+            display: none !important;
+            visibility: hidden !important;
+        }
         #reader img {
             margin: 0 auto !important;
             display: block !important;
@@ -76,6 +87,11 @@
         #reader__scan_region {
             margin: 0 auto !important;
             text-align: center !important;
+        }
+        /* Hide scanner when lightbox is closed */
+        .lightbox:not([style*="flex"]) #reader,
+        .lightbox[style*="none"] #reader {
+            display: none !important;
         }
         #checkInButton {
             display: none;
@@ -554,87 +570,169 @@
 
     // Open Lightbox
     function openLightbox() {
+        // Reset scanning state before opening
+        scanning = false;
         document.getElementById('lightbox').style.display = 'flex';
-        startScanning(); // Start scanning
+        
+        // Small delay to ensure lightbox is visible before starting camera
+        setTimeout(() => {
+            startScanning(); // Start scanning
+        }, 100);
     }
 
     // Close Lightbox
     function closeLightbox() {
         document.getElementById('lightbox').style.display = 'none';
-        if (scanning) {
-            html5QrCode.stop(); // Stop scanning
+        // Always try to stop scanner, but catch errors silently
+        html5QrCode.stop().then(() => {
+            console.log('Scanner stopped when closing lightbox');
             scanning = false;
+            // Clear the reader div to remove any leftover elements
+            clearReader();
+        }).catch(err => {
+            // Ignore errors - scanner might not be running
+            // This is expected if scanner wasn't started or already stopped
+            console.log('Scanner stop (may not have been running)');
+            scanning = false; // Reset flag even if stop fails
+            // Clear the reader div anyway
+            clearReader();
+        });
+    }
+    
+    // Clear reader div content
+    function clearReader() {
+        const readerElement = document.getElementById('reader');
+        if (readerElement) {
+            // Remove all child elements
+            while (readerElement.firstChild) {
+                readerElement.removeChild(readerElement.firstChild);
+            }
+            // Also clear any innerHTML to ensure complete cleanup
+            readerElement.innerHTML = '';
         }
     }
 
     // Start scanning QR code
     function startScanning() {
-        if (scanning) return; // If already scanning, do not start again
+        if (scanning) {
+            console.log('Already scanning, skipping...');
+            return; // If already scanning, do not start again
+        }
+        
+        // Clear reader before starting to avoid duplicate elements
+        clearReader();
+        
         scanning = true;
+        
         html5QrCode.start(
             { facingMode: "environment" }, // Use rear camera
             {
                 fps: 10, // Frames per second
-                qrbox: 250 // Size of QR code box
+                qrbox: { width: 250, height: 250 } // Size of QR code box (updated format)
             },
             (decodedText, decodedResult) => {
                 // When QR code is scanned
-                scanning = false; // Stop scanning
-                html5QrCode.stop(); // Stop scanning
+                console.log('QR Code scanned:', decodedText);
+                scanning = false; // Stop scanning flag
+                
+                // Stop scanning immediately
+                html5QrCode.stop().then(() => {
+                    console.log('Scanner stopped after successful scan');
+                    // Clear the reader div
+                    clearReader();
+                }).catch(err => {
+                    // Ignore errors - scanner might have already stopped
+                    // This is expected in some cases
+                    console.log('Scanner stop (may have already stopped)');
+                    // Clear the reader div anyway
+                    clearReader();
+                });
+                
                 // Assume QR code contains user ID
-                const userId = decodedText.split(',')[0];
+                const userId = decodedText.split(',')[0].trim();
+                if (!userId) {
+                    alert('Invalid QR code format');
+                    closeLightbox();
+                    return;
+                }
+                
                 fetch(`/events/${eventId}/users/${userId}`)
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) {
+                            // If response is not ok, try to get error message
+                            return response.text().then(text => {
+                                throw new Error(text || 'User not found');
+                            });
+                        }
+                        return response.json();
+                    })
                     .then(user => {
-                        if (user) {
-                            // If user is not checked in, perform check-in
-                            if (!user.isCheckIn) {
-                                $.ajax({
-                                    url: `/events/${eventId}/users/${userId}`,
-                                    method: 'PUT',
-                                    contentType: 'application/json',
-                                    data: JSON.stringify({ isCheckIn: true }),
-                                    success: function(response) {
-                                        console.log('Check-in successful:', response); // Debug log
-                                        // Update the user object with new check-in status
-                                        const updatedUser = { ...user, isCheckIn: true };
-                                        showDetails(updatedUser.name, updatedUser.table, updatedUser.company, updatedUser.phone, true, updatedUser._id, updatedUser.point || 0);
-                                        alert('User checked in successfully!');
-                                        // Update button states first
-                                        document.getElementById('checkInButton').style.display = 'none';
-                                        document.getElementById('printButton').style.display = 'inline-block';
-                                        // Then refresh the user list to update the table
-                                        setTimeout(() => {
-                                            fetchUsers();
-                                        }, 100); // Small delay to ensure server update
-                                    },
-                                    error: function(err) {
-                                        console.error('Error checking in user:', err);
-                                        alert('Failed to check in user.');
-                                    }
-                                });
-                            } else {
-                                // User is already checked in
-                                showDetails(user.name, user.table, user.company, user.phone, user.isCheckIn, user._id, user.point || 0);
-                                alert('User is already checked in.');
-                                fetchUsers();
-                            }
-                        } else {
+                        // Check if user object is valid and has required fields
+                        if (!user || !user._id) {
                             alert('User not found');
+                            closeLightbox();
+                            return;
+                        }
+                        
+                        // If user is not checked in, perform check-in
+                        if (!user.isCheckIn) {
+                            $.ajax({
+                                url: `/events/${eventId}/users/${userId}`,
+                                method: 'PUT',
+                                contentType: 'application/json',
+                                data: JSON.stringify({ isCheckIn: true }),
+                                success: function(response) {
+                                    console.log('Check-in successful:', response); // Debug log
+                                    // Use response data if available, otherwise use original user data
+                                    const updatedUser = (response && response._id) ? response : { ...user, isCheckIn: true };
+                                    showDetails(updatedUser.name, updatedUser.table, updatedUser.company, updatedUser.phone, true, updatedUser._id, updatedUser.point || 0);
+                                    alert('User checked in successfully!');
+                                    // Update button states first
+                                    document.getElementById('checkInButton').style.display = 'none';
+                                    document.getElementById('printButton').style.display = 'inline-block';
+                                    // Then refresh the user list to update the table
+                                    setTimeout(() => {
+                                        fetchUsers();
+                                    }, 100); // Small delay to ensure server update
+                                    closeLightbox(); // Close Lightbox after success
+                                },
+                                error: function(err) {
+                                    console.error('Error checking in user:', err);
+                                    const errorMsg = err.responseJSON && err.responseJSON.message 
+                                        ? err.responseJSON.message 
+                                        : 'Failed to check in user.';
+                                    alert(errorMsg);
+                                    closeLightbox();
+                                }
+                            });
+                        } else {
+                            // User is already checked in
+                            showDetails(user.name, user.table, user.company, user.phone, user.isCheckIn, user._id, user.point || 0);
+                            alert('User is already checked in.');
+                            fetchUsers();
+                            closeLightbox(); // Close Lightbox
                         }
                     })
                     .catch(error => {
                         console.error('Error fetching user:', error);
-                        alert('User not found');
+                        alert('User not found. Please check the QR code.');
+                        closeLightbox();
                     });
-                closeLightbox(); // Close Lightbox
             },
             (errorMessage) => {
-                // When scan fails
-                console.warn(`QR Code scan error: ${errorMessage}`);
+                // When scan fails (this is called continuously during scanning)
+                // Don't log every error message to avoid console spam
+                // Only log if it's a significant error
+                if (errorMessage && !errorMessage.includes('NotFoundException')) {
+                    // Ignore common "not found" errors during scanning
+                }
             }
         ).catch(err => {
             console.error('Unable to start scanning:', err);
+            scanning = false; // Reset scanning flag on error
+            clearReader(); // Clear reader on error
+            alert('Unable to start camera. Please check camera permissions and try again.');
+            closeLightbox();
         });
     }
 

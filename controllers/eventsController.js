@@ -781,30 +781,23 @@ exports.getUserById = async (req, res) => {
         // 查詢事件以確保存在
         const event = await Event.findById(eventId); // 根據事件 ID 查詢事件
         if (!event) {
-            return res.status(404).send('找不到該事件 ID'); // 如果事件不存在，返回 404 錯誤
+            return res.status(404).json({ message: 'Event not found' }); // 如果事件不存在，返回 404 錯誤
         }
 
         // 查找用戶
         const user = event.users.id(userId); // 使用 _id 查找用戶
         if (!user) {
-            return res.status(404).send('找不到該用戶'); // 如果用戶不存在，返回 404 錯誤
+            return res.status(404).json({ message: 'User not found' }); // 如果用戶不存在，返回 404 錯誤
         }
 
-        // 更新用戶的 isCheckIn 屬性
-        if (!user.isCheckIn && req.body.isCheckIn === true) {
-            user.isCheckIn = true;
-            user.checkInAt = new Date();
-            console.log('User check-in updated:', user.name, 'isCheckIn:', user.isCheckIn); // Debug log
-        } else if (req.body.isCheckIn === false) {
-            user.isCheckIn = false;
-            user.checkInAt = undefined;
-        }
-        await event.save(); // 保存事件以更新用戶資料
+        // GET 請求不應該修改數據，只返回用戶資料
+        // 使用 toObject() 確保所有字段都被序列化（包括動態字段）
+        const userObject = user.toObject ? user.toObject({ minimize: false }) : user;
 
-        res.status(200).json(user); // 返回更新後的用戶資料
+        res.status(200).json(userObject); // 返回用戶資料（JSON 格式）
     } catch (error) {
         console.error('Error fetching user:', error);
-        res.status(500).send('伺服器錯誤'); // 返回伺服器錯誤
+        res.status(500).json({ message: 'Server error' }); // 返回伺服器錯誤（JSON 格式）
     }
 };
 exports.updateUser = async (req, res) => {
