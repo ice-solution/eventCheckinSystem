@@ -825,13 +825,16 @@ exports.updateUser = async (req, res) => {
         }
         
         // 處理 isCheckIn 特殊邏輯
+        let checkInUpdated = false;
         if (typeof updateData.isCheckIn !== 'undefined') {
             if (!user.isCheckIn && updateData.isCheckIn === true) {
                 user.isCheckIn = true;
                 user.checkInAt = new Date();
+                checkInUpdated = true;
             } else if (updateData.isCheckIn === false) {
                 user.isCheckIn = false;
                 user.checkInAt = undefined;
+                checkInUpdated = true;
             }
         }
         
@@ -845,6 +848,20 @@ exports.updateUser = async (req, res) => {
         // 構建更新對象，用於直接更新 MongoDB
         const updateFields = {};
         
+        // 獲取用戶索引（用於構建 MongoDB 更新路徑）
+        const userIndex = event.users.findIndex(u => u._id.toString() === userId.toString());
+        
+        // 如果 isCheckIn 被更新，需要加入到 updateFields 中
+        if (checkInUpdated && userIndex !== -1) {
+            updateFields[`users.${userIndex}.isCheckIn`] = user.isCheckIn;
+            if (user.checkInAt) {
+                updateFields[`users.${userIndex}.checkInAt`] = user.checkInAt;
+            } else {
+                updateFields[`users.${userIndex}.checkInAt`] = null;
+            }
+            console.log(`Updating isCheckIn: ${user.isCheckIn}, checkInAt: ${user.checkInAt}`);
+        }
+        
         Object.keys(updateData).forEach(key => {
             // 跳過排除的字段
             if (excludedFields.includes(key)) {
@@ -857,7 +874,6 @@ exports.updateUser = async (req, res) => {
                 // 直接設置字段值
                 user[key] = updateData[key];
                 // 構建 MongoDB 更新路徑
-                const userIndex = event.users.findIndex(u => u._id.toString() === userId.toString());
                 if (userIndex !== -1) {
                     updateFields[`users.${userIndex}.${key}`] = updateData[key];
                 }
@@ -867,13 +883,18 @@ exports.updateUser = async (req, res) => {
         });
         
         user.modified_at = new Date(); // 更新修改時間
-        const userIndex = event.users.findIndex(u => u._id.toString() === userId.toString());
         if (userIndex !== -1) {
             updateFields[`users.${userIndex}.modified_at`] = user.modified_at;
         }
         
         // 標記整個文檔為已修改，確保 Mongoose 保存所有字段
         user.markModified('modified_at');
+        if (checkInUpdated) {
+            user.markModified('isCheckIn');
+            if (user.checkInAt) {
+                user.markModified('checkInAt');
+            }
+        }
         if (updatedFields.length > 0) {
             // 標記每個更新的字段為已修改
             updatedFields.forEach(field => {
@@ -890,6 +911,7 @@ exports.updateUser = async (req, res) => {
         console.log('Update fields for MongoDB:', updateFields);
         
         // 使用 findByIdAndUpdate 直接更新，避免 Mongoose 序列化問題
+        // 確保 isCheckIn 和 checkInAt 也被包含在更新中
         if (Object.keys(updateFields).length > 0) {
             await Event.findByIdAndUpdate(eventId, {
                 $set: updateFields,

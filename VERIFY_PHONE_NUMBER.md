@@ -45,10 +45,10 @@
 運行以下命令檢查您的帳號類型：
 
 ```bash
-node -e "require('dotenv').config(); const sid = process.env.TWILIO_ACCOUNT_SID || process.env.twiliosid; console.log('Account SID:', sid); console.log('帳號類型:', sid && sid.startsWith('ACtest') ? '測試帳號 ✅' : '正式帳號 ❌');"
+node -e "require('dotenv').config(); const sid = process.env.TWILIO_ACCOUNT_SID || process.env.twiliosid; console.log('Account SID:', sid); console.log('帳號類型:',e sid && sid.startsWith('ACtest') ? '測試帳號 ✅' : '正式帳號 ❌');"
 ```
 
-## 測試帳號 vs 正式帳號
+## 測試帳號 vs 正式帳號f
 
 ### 測試帳號（ACtest...）
 - ✅ 可以驗證接收號碼
