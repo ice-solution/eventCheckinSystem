@@ -123,6 +123,7 @@ router.get('/:eventId/attendees/create', eventsController.renderCreateAttendeePa
 // router.get('/:eventId/attendees', eventsController.renderAttendeesListPage); // 已改為 guest list
 
 // 渲染 Guest List 頁面（預先準備的來賓列表，尚未註冊為 RSVP）
+router.get('/:eventId/guest-list/export', eventsController.exportGuestList); // 導出 Guest List 為 Excel（必須在 guest-list 路由之前）
 router.get('/:eventId/guest-list', eventsController.renderGuestListPage); // Guest List 路由
 
 // Guest List 管理路由

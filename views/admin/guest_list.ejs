@@ -17,6 +17,9 @@
                             <div class="float-right">
                                 <button id="addGuestBtn" class="btn btn-primary btn-sm" type="button" onclick="if(window.showAddGuestModal){window.showAddGuestModal();} return false;">Add Guest</button>
                                 <button id="importExcelBtn" class="btn btn-success btn-sm ml-2" type="button" onclick="if(window.showImportExcelModal){window.showImportExcelModal();} return false;">Import Excel</button>
+                                <a href="/events/<%= eventId %>/guest-list/export" class="btn btn-info btn-sm ml-2" type="button">
+                                    <i class="fa fa-download"></i> Export Excel
+                                </a>
                                 <button id="sendSmsBtn" class="btn btn-warning btn-sm ml-2" type="button" onclick="if(window.showSendSmsModal){window.showSendSmsModal();} return false;">
                                     <i class="fa fa-sms"></i> Send SMS
                                 </button>

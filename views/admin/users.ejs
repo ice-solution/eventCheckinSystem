@@ -403,6 +403,32 @@
                                                                                     </option>
                                                                                 <% }); %>
                                                                             </select>
+                                                                        <% } else if (field.type === 'checkbox' && field.options) { %>
+                                                                            <div class="checkbox-group">
+                                                                                <% field.options.forEach((option, optionIndex) => { %>
+                                                                                    <div class="form-check">
+                                                                                        <input class="form-check-input" type="checkbox" 
+                                                                                               id="newUser<%= field.fieldName %>_<%= optionIndex %>" 
+                                                                                               name="<%= field.fieldName %>[]" 
+                                                                                               value="<%= option.value %>">
+                                                                                        <label class="form-check-label" for="newUser<%= field.fieldName %>_<%= optionIndex %>">
+                                                                                            <% 
+                                                                                            let optionLabel = '';
+                                                                                            if (typeof option.label === 'string') {
+                                                                                                optionLabel = option.label;
+                                                                                            } else if (option.label && option.label[formConfig.defaultLanguage]) {
+                                                                                                optionLabel = option.label[formConfig.defaultLanguage];
+                                                                                            } else if (option.label && option.label.zh) {
+                                                                                                optionLabel = option.label.zh;
+                                                                                            } else {
+                                                                                                optionLabel = option.value || '';
+                                                                                            }
+                                                                                            %>
+                                                                                            <%= optionLabel %>
+                                                                                        </label>
+                                                                                    </div>
+                                                                                <% }); %>
+                                                                            </div>
                                                                         <% } else if (field.type === 'textarea') { %>
                                                                             <textarea class="form-control" id="newUser<%= field.fieldName %>" name="<%= field.fieldName %>" 
                                                                                       placeholder="<%= (typeof field.placeholder === 'string' ? field.placeholder : (field.placeholder && field.placeholder[formConfig.defaultLanguage] ? field.placeholder[formConfig.defaultLanguage] : (field.placeholder && field.placeholder.zh ? field.placeholder.zh : ''))) || '' %>" <%= field.required ? 'required' : '' %> rows="3"></textarea>
@@ -1153,13 +1179,39 @@
             const userData = {
                 isCheckIn: false
             };
+            const checkboxFields = {}; // 用於收集 checkbox 字段
             
             $('#newUserForm').find('input, select, textarea').each(function() {
-                const fieldName = $(this).attr('name');
+                const $field = $(this);
+                const fieldName = $field.attr('name');
+                const fieldType = $field.attr('type');
+                
                 if (fieldName) {
-                    userData[fieldName] = $(this).val();
+                    // 處理 checkbox 字段（name 以 [] 結尾）
+                    if (fieldType === 'checkbox') {
+                        const baseName = fieldName.replace(/\[\]$/, '');
+                        if (!checkboxFields[baseName]) {
+                            checkboxFields[baseName] = [];
+                        }
+                        if ($field.is(':checked')) {
+                            checkboxFields[baseName].push($field.val());
+                        }
+                    } else {
+                        // 處理其他字段類型
+                        userData[fieldName] = $field.val();
+                    }
                 }
             });
+            
+            // 合併 checkbox 字段到 userData（如果沒有選中任何選項，設為空數組）
+            Object.keys(checkboxFields).forEach(function(baseName) {
+                userData[baseName] = checkboxFields[baseName].length > 0 ? checkboxFields[baseName] : [];
+            });
+            
+            // 確保必填字段 name 有值（如果表單中沒有 name 字段）
+            if (!userData.name || userData.name === '') {
+                userData.name = userData.email || userData.company || '未提供姓名';
+            }
 
             $.ajax({
                 url: `/events/<%= event._id %>/users`,

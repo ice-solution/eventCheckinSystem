@@ -196,6 +196,11 @@ exports.addUserToEvent = async (req, res) => {
             isCheckIn: userData.isCheckIn || false // 默認為未登記進場
         };
         
+        // 確保必填字段 name 有值（如果表單中沒有 name 字段）
+        if (!userData.name || userData.name === '' || userData.name === null) {
+            newUser.name = userData.email || userData.company || '未提供姓名';
+        }
+        
         // 動態添加所有傳入的字段（包括 formConfig 中定義的動態字段）
         // 排除 MongoDB 內部字段和已處理的字段
         const excludedFields = ['_id', '__v', 'create_at', 'modified_at'];
@@ -206,8 +211,12 @@ exports.addUserToEvent = async (req, res) => {
                 return;
             }
             
+            // 處理 checkbox 字段（數組類型）
+            if (Array.isArray(userData[key])) {
+                newUser[key] = userData[key];
+            }
             // 添加字段值（包括空字符串和 null，但不包括 undefined）
-            if (userData[key] !== undefined) {
+            else if (userData[key] !== undefined) {
                 newUser[key] = userData[key];
             }
         });
@@ -1457,6 +1466,68 @@ exports.importGuestListFromExcel = async (req, res) => {
     } catch (error) {
         console.error('Error importing guest list:', error);
         res.status(500).json({ message: 'Error during import process: ' + error.message });
+    }
+};
+
+// 導出 Guest List 為 Excel
+exports.exportGuestList = async (req, res) => {
+    const { eventId } = req.params;
+    
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+        
+        const guests = event.guestList || [];
+        
+        if (guests.length === 0) {
+            return res.status(404).json({ message: 'Guest List is empty' });
+        }
+        
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Guest List');
+        
+        // 設置列標題
+        worksheet.columns = [
+            { header: 'Name', key: 'name', width: 25 },
+            { header: 'Email', key: 'email', width: 30 },
+            { header: 'Company', key: 'company', width: 25 },
+            { header: 'Phone', key: 'phone', width: 15 },
+            { header: 'Role', key: 'role', width: 15 },
+            { header: 'Created At', key: 'create_at', width: 20 }
+        ];
+        
+        // 添加數據行
+        guests.forEach(guest => {
+            worksheet.addRow({
+                name: guest.name || '',
+                email: guest.email || '',
+                company: guest.company || '',
+                phone: guest.phone || '',
+                role: guest.role || '',
+                create_at: guest.create_at ? new Date(guest.create_at).toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                }) : ''
+            });
+        });
+        
+        // 設置響應頭
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=guest_list_${eventId}_${Date.now()}.xlsx`);
+        
+        // 寫入並發送文件
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (error) {
+        console.error('Error exporting guest list:', error);
+        res.status(500).json({ message: 'Error exporting guest list' });
     }
 };
 
