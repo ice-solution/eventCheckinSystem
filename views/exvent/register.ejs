@@ -281,6 +281,25 @@
                                                             })();
                                                         </script>
                                                     <% } %>
+                                                <% } else if (field.type === 'radio' && field.options) { %>
+                                                    <div class="radio-group" id="<%= field.fieldName %>-group">
+                                                        <% field.options.forEach((option, optionIndex) => { %>
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="radio" 
+                                                                       id="<%= field.fieldName %>_<%= optionIndex %>" 
+                                                                       name="<%= field.fieldName %>" 
+                                                                       value="<%= option.value %>"
+                                                                       data-zh="<%= option.label && option.label.zh ? option.label.zh : option.label %>" 
+                                                                       data-en="<%= option.label && option.label.en ? option.label.en : '' %>"
+                                                                       <%= field.required ? 'required' : '' %>>
+                                                                <label class="form-check-label" for="<%= field.fieldName %>_<%= optionIndex %>"
+                                                                       data-zh="<%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>" 
+                                                                       data-en="<%= option.label && option.label.en ? option.label.en : '' %>">
+                                                                    <%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>
+                                                                </label>
+                                                            </div>
+                                                        <% }); %>
+                                                    </div>
                                                 <% } else if (field.type === 'textarea') { %>
                                                     <textarea class="form-control" id="<%= field.fieldName %>" name="<%= field.fieldName %>" 
                                                               placeholder="<%= field.placeholder && field.placeholder.zh ? field.placeholder.zh : (typeof field.placeholder === 'string' ? field.placeholder : '') %>" 

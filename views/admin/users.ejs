@@ -429,6 +429,33 @@
                                                                                     </div>
                                                                                 <% }); %>
                                                                             </div>
+                                                                        <% } else if (field.type === 'radio' && field.options) { %>
+                                                                            <div class="radio-group">
+                                                                                <% field.options.forEach((option, optionIndex) => { %>
+                                                                                    <div class="form-check">
+                                                                                        <input class="form-check-input" type="radio" 
+                                                                                               id="newUser<%= field.fieldName %>_<%= optionIndex %>" 
+                                                                                               name="<%= field.fieldName %>" 
+                                                                                               value="<%= option.value %>"
+                                                                                               <%= field.required ? 'required' : '' %>>
+                                                                                        <label class="form-check-label" for="newUser<%= field.fieldName %>_<%= optionIndex %>">
+                                                                                            <% 
+                                                                                            let optionLabel = '';
+                                                                                            if (typeof option.label === 'string') {
+                                                                                                optionLabel = option.label;
+                                                                                            } else if (option.label && option.label[formConfig.defaultLanguage]) {
+                                                                                                optionLabel = option.label[formConfig.defaultLanguage];
+                                                                                            } else if (option.label && option.label.zh) {
+                                                                                                optionLabel = option.label.zh;
+                                                                                            } else {
+                                                                                                optionLabel = option.value || '';
+                                                                                            }
+                                                                                            %>
+                                                                                            <%= optionLabel %>
+                                                                                        </label>
+                                                                                    </div>
+                                                                                <% }); %>
+                                                                            </div>
                                                                         <% } else if (field.type === 'textarea') { %>
                                                                             <textarea class="form-control" id="newUser<%= field.fieldName %>" name="<%= field.fieldName %>" 
                                                                                       placeholder="<%= (typeof field.placeholder === 'string' ? field.placeholder : (field.placeholder && field.placeholder[formConfig.defaultLanguage] ? field.placeholder[formConfig.defaultLanguage] : (field.placeholder && field.placeholder.zh ? field.placeholder.zh : ''))) || '' %>" <%= field.required ? 'required' : '' %> rows="3"></textarea>
