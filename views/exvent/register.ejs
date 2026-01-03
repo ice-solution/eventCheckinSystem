@@ -187,24 +187,31 @@
 
         <form id="userForm" method="POST">
             <% if (formConfig && formConfig.sections && formConfig.sections.length > 0) { %>
-                <% formConfig.sections.forEach((section, sectionIndex) => { %>
+                <% 
+                // 根據 order 排序 sections
+                const sortedSections = formConfig.sections.slice().sort((a, b) => {
+                    const orderA = a.order || 0;
+                    const orderB = b.order || 0;
+                    return orderA - orderB;
+                });
+                %>
+                <% sortedSections.forEach((section, sectionIndex) => { %>
                     <% if (section.visible) { %>
                         <div class="form-section">
                             <h3 class="section-title" data-zh="<%= section.sectionTitle && section.sectionTitle.zh ? section.sectionTitle.zh : section.sectionTitle %>" data-en="<%= section.sectionTitle && section.sectionTitle.en ? section.sectionTitle.en : '' %>">
                                 <%= section.sectionTitle && section.sectionTitle.zh ? section.sectionTitle.zh : (typeof section.sectionTitle === 'string' ? section.sectionTitle : '') %>
                             </h3>
-                            <% if (sectionIndex === 0) { %>
-                                <div class="form-note">
-                                    <strong class="note-text" data-zh="注意：" data-en="Note: ">注意：</strong>
-                                    <span class="note-content" data-zh="聯絡人可在付款完成後登入編輯參加者資料。所有參加者資料必須在付款前填寫完成。" data-en="Contact person can login to edit participant information after payment completion. All participant information must be completed before payment.">聯絡人可在付款完成後登入編輯參加者資料。所有參加者資料必須在付款前填寫完成。</span>
-                                </div>
-                                <div class="form-note">
-                                    <strong class="required-note" data-zh="（* 為必填欄位）" data-en="(* Required fields)">（* 為必填欄位）</strong>
-                                </div>
-                            <% } %>
                             
                             <% if (section.fields && section.fields.length > 0) { %>
-                                <% section.fields.forEach((field, fieldIndex) => { %>
+                                <% 
+                                // 根據 order 排序 fields
+                                const sortedFields = section.fields.slice().sort((a, b) => {
+                                    const orderA = a.order || 0;
+                                    const orderB = b.order || 0;
+                                    return orderA - orderB;
+                                });
+                                %>
+                                <% sortedFields.forEach((field, fieldIndex) => { %>
                                     <% if (field.visible) { %>
                                         <div class="form-row">
                                             <label class="form-label field-label" for="<%= field.fieldName %>" 
@@ -325,12 +332,6 @@
                 <!-- 預設表單結構（如果沒有配置） -->
                 <div class="form-section">
                     <h3>聯絡人資料</h3>
-                    <div class="form-note">
-                        <strong>注意：</strong>聯絡人可在付款完成後登入編輯參加者資料。所有參加者資料必須在付款前填寫完成。
-                    </div>
-                    <div class="form-note">
-                        <strong>（* 為必填欄位）</strong>
-                    </div>
 
                     <!-- 預設表單字段將在這裡顯示（如果沒有動態配置） -->
                     <div class="form-row">
@@ -486,36 +487,6 @@
                 }
             });
 
-            // 更新提示文本
-            $('.note-text').each(function() {
-                const zhText = $(this).data('zh');
-                const enText = $(this).data('en');
-                if (currentLanguage === 'zh' && zhText) {
-                    $(this).text(zhText);
-                } else if (currentLanguage === 'en' && enText) {
-                    $(this).text(enText);
-                }
-            });
-
-            $('.note-content').each(function() {
-                const zhText = $(this).data('zh');
-                const enText = $(this).data('en');
-                if (currentLanguage === 'zh' && zhText) {
-                    $(this).text(zhText);
-                } else if (currentLanguage === 'en' && enText) {
-                    $(this).text(enText);
-                }
-            });
-
-            $('.required-note').each(function() {
-                const zhText = $(this).data('zh');
-                const enText = $(this).data('en');
-                if (currentLanguage === 'zh' && zhText) {
-                    $(this).text(zhText);
-                } else if (currentLanguage === 'en' && enText) {
-                    $(this).text(enText);
-                }
-            });
         }
 
         // stripe public key
