@@ -404,13 +404,25 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
-        // 語言設置
-        let currentLanguage = '<%= formConfig.defaultLanguage || "zh" %>';
+        // 從 URL 參數獲取語言
+        function getLanguageFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const lang = urlParams.get('lang');
+            // 如果 URL 中有 lang 參數，且為 'zh' 或 'en'，則使用該語言
+            if (lang === 'zh' || lang === 'en') {
+                return lang;
+            }
+            return null;
+        }
+        
+        // 語言設置：優先使用 URL 參數，否則使用默認語言
+        const urlLanguage = getLanguageFromURL();
+        let currentLanguage = urlLanguage || '<%= formConfig.defaultLanguage || "zh" %>';
         
         // 初始化語言按鈕狀態
         $(document).ready(function() {
             updateLanguageButtons();
-            // 如果默認語言不是中文，直接更新頁面語言
+            // 如果語言不是中文（包括 URL 參數指定的英文），直接更新頁面語言
             if (currentLanguage !== 'zh') {
                 updatePageLanguage();
             }
@@ -498,6 +510,18 @@
                     $(this).text(zhText);
                 } else if (currentLanguage === 'en' && enText) {
                     $(this).text(enText);
+                }
+            });
+
+            // 更新 checkbox 和 radio 選項標籤
+            $('.form-check-label').each(function() {
+                const $label = $(this);
+                const zhText = $label.data('zh');
+                const enText = $label.data('en');
+                if (currentLanguage === 'zh' && zhText) {
+                    $label.text(zhText);
+                } else if (currentLanguage === 'en' && enText) {
+                    $label.text(enText);
                 }
             });
 
