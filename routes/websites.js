@@ -63,23 +63,23 @@ router.get('/:event_id/register', async (req, res) => {
 // 路由到註冊成功頁面
 router.get('/:event_id/register/success', async (req, res) => {
     const { event_id } = req.params;
-    const { session_id } = req.query;
+    const { session_id, lang } = req.query;
     let transaction = null;
     if (session_id) {
         transaction = await Transaction.findOne({ stripeSessionId: session_id });
     }
-    res.render('exvent/success', { event_id, transaction });
+    res.render('exvent/success', { event_id, transaction, lang: lang || null });
 });
 
 // 路由到付款失敗頁面
 router.get('/:event_id/register/fail', async (req, res) => {
     const { event_id } = req.params;
-    const { session_id, errorMsg } = req.query;
+    const { session_id, errorMsg, lang } = req.query;
     let transaction = null;
     if (session_id) {
         transaction = await Transaction.findOne({ stripeSessionId: session_id });
     }
-    res.render('exvent/fail', { event_id, transaction, errorMsg });
+    res.render('exvent/fail', { event_id, transaction, errorMsg, lang: lang || null });
 });
 
 // Stripe Checkout

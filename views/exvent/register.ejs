@@ -263,8 +263,16 @@
                                                                 
                                                                 function validateCheckboxGroup() {
                                                                     const checked = Array.from(checkboxes).some(cb => cb.checked);
+                                                                    const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh';
+                                                                    const fieldLabelZh = '<%= field.label && field.label.zh ? field.label.zh : (typeof field.label === "string" ? field.label : "") %>';
+                                                                    const fieldLabelEn = '<%= field.label && field.label.en ? field.label.en : "" %>';
+                                                                    
                                                                     if (!checked) {
-                                                                        group.setCustomValidity('<%= field.label && field.label.zh ? field.label.zh : (typeof field.label === "string" ? field.label : "") %> 為必填欄位');
+                                                                        if (currentLang === 'en' && fieldLabelEn) {
+                                                                            group.setCustomValidity('Please select at least one option for ' + fieldLabelEn + '.');
+                                                                        } else {
+                                                                            group.setCustomValidity(fieldLabelZh + ' 為必填欄位');
+                                                                        }
                                                                     } else {
                                                                         group.setCustomValidity('');
                                                                     }
@@ -422,10 +430,26 @@
         // 初始化語言按鈕狀態
         $(document).ready(function() {
             updateLanguageButtons();
-            // 如果語言不是中文（包括 URL 參數指定的英文），直接更新頁面語言
-            if (currentLanguage !== 'zh') {
-                updatePageLanguage();
-            }
+            // 總是更新頁面語言（確保初始狀態正確）
+            updatePageLanguage();
+            
+            // 頁面載入後，清除所有有效字段的驗證訊息
+            setTimeout(function() {
+                $('input[required], textarea[required], select[required]').each(function() {
+                    const field = this;
+                    const $field = $(field);
+                    const fieldType = $field.attr('type');
+                    
+                    if (fieldType === 'checkbox' || fieldType === 'radio') {
+                        return;
+                    }
+                    
+                    // 如果字段有效，清除驗證訊息
+                    if (field.validity.valid) {
+                        field.setCustomValidity('');
+                    }
+                });
+            }, 100);
         });
 
         // 切換語言
@@ -525,6 +549,107 @@
                 }
             });
 
+            // 設置驗證訊息的函數（只在驗證失敗時調用）
+            function setValidationMessage(field) {
+                const $field = $(field);
+                const fieldType = $field.attr('type');
+                
+                // 如果是 checkbox 或 radio，跳過（它們有特殊的驗證邏輯）
+                if (fieldType === 'checkbox' || fieldType === 'radio') {
+                    return;
+                }
+                
+                // 根據語言設置驗證訊息
+                if (currentLanguage === 'zh') {
+                    if (field.validity.valueMissing) {
+                        field.setCustomValidity('請填寫這個欄位。');
+                    } else if (fieldType === 'email' && field.validity.typeMismatch) {
+                        field.setCustomValidity('請輸入有效的電子郵件地址。');
+                    } else {
+                        field.setCustomValidity('請填寫這個欄位。');
+                    }
+                } else {
+                    if (field.validity.valueMissing) {
+                        field.setCustomValidity('Please fill in this field.');
+                    } else if (fieldType === 'email' && field.validity.typeMismatch) {
+                        field.setCustomValidity('Please enter a valid email address.');
+                    } else {
+                        field.setCustomValidity('Please fill in this field.');
+                    }
+                }
+            }
+
+            // 為所有必填字段設置驗證訊息處理
+            $('input[required], textarea[required], select[required]').each(function() {
+                const field = this;
+                const $field = $(field);
+                const fieldType = $field.attr('type');
+                
+                // 跳過 checkbox 和 radio（它們有特殊的驗證邏輯）
+                if (fieldType === 'checkbox' || fieldType === 'radio') {
+                    return;
+                }
+                
+                // 監聽輸入事件，清除驗證訊息（如果字段有效）
+                $(field).on('input', function() {
+                    // 立即清除驗證訊息，讓瀏覽器重新驗證
+                    this.setCustomValidity('');
+                    // 如果字段有效，確保保持清除狀態
+                    if (this.validity.valid) {
+                        this.setCustomValidity('');
+                    }
+                });
+                
+                // 監聽改變事件，清除驗證訊息（如果字段有效）
+                $(field).on('change', function() {
+                    // 立即清除驗證訊息
+                    this.setCustomValidity('');
+                    if (this.validity.valid) {
+                        this.setCustomValidity('');
+                    }
+                });
+                
+                // 在驗證失敗時設置訊息
+                $(field).on('invalid', function(e) {
+                    // 只在字段確實無效時設置訊息
+                    if (!this.validity.valid) {
+                        setValidationMessage(this);
+                    }
+                });
+            });
+            
+            // 在語言切換後，更新所有字段的驗證訊息（只在字段無效時）
+            const originalUpdatePageLanguage = updatePageLanguage;
+            updatePageLanguage = function() {
+                originalUpdatePageLanguage.call(this);
+                
+                // 更新所有無效字段的驗證訊息（只在字段已經有自定義驗證訊息時才更新）
+                $('input[required], textarea[required], select[required]').each(function() {
+                    const field = this;
+                    const $field = $(field);
+                    const fieldType = $field.attr('type');
+                    
+                    if (fieldType === 'checkbox' || fieldType === 'radio') {
+                        return;
+                    }
+                    
+                    // 如果字段有效，清除所有驗證訊息
+                    if (field.validity.valid) {
+                        field.setCustomValidity('');
+                    } else {
+                        // 只有當字段確實無效且已經有驗證訊息時才更新（避免在頁面載入時設置）
+                        // 檢查字段是否有值，如果有值但無效，才更新訊息
+                        if (field.value && field.value.trim() !== '') {
+                            // 字段有值但驗證失敗（如 email 格式錯誤），更新訊息
+                            setValidationMessage(field);
+                        } else {
+                            // 字段為空，但只在已經觸發過驗證時才設置訊息
+                            // 這裡不設置，讓瀏覽器在實際驗證時才設置
+                        }
+                    }
+                });
+            };
+
         }
 
         // stripe public key
@@ -550,6 +675,9 @@
             if (ticketId) {
                 // Stripe checkout
 
+                // 添加語言參數到請求數據
+                newUser.lang = currentLanguage;
+                
                 $.ajax({
                     type: 'POST',
                     url: '/web/<%= event_id %>/stripe-checkout',
@@ -574,7 +702,8 @@
                     url: '/events/<%= event_id %>/users',
                     data: newUser,
                     success: function(response) {
-                        window.location.href = `/web/<%= event_id %>/register/success`;
+                        const langParam = currentLanguage !== 'zh' ? '?lang=' + currentLanguage : '';
+                        window.location.href = `/web/<%= event_id %>/register/success${langParam}`;
                     },
                     error: function(error) {
                         var errMsg = error.responseJSON.message;

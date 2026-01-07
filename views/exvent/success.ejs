@@ -5,66 +5,181 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>登記成功</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .container {
+            max-width: 800px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            padding: 30px;
+            margin-top: 30px;
+            margin-bottom: 30px;
+        }
+        .form-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        .form-header h1 {
+            color: #2c3e50;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .success-content {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        .success-icon {
+            font-size: 64px;
+            color: #28a745;
+            margin-bottom: 20px;
+        }
+        .success-title {
+            color: #2c3e50;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .success-message {
+            color: #6c757d;
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+        }
+        .btn-container {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #e9ecef;
+        }
+        .btn {
+            padding: 12px 30px;
+            font-weight: 500;
+            border-radius: 5px;
+            margin: 0 10px;
+            min-width: 120px;
+        }
+        .btn-primary {
+            background-color: #3498db;
+            border-color: #3498db;
+        }
+        .btn-primary:hover {
+            background-color: #2980b9;
+            border-color: #2980b9;
+        }
+        .transaction-details {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .transaction-details h5 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+        .transaction-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .transaction-item:last-child {
+            border-bottom: none;
+        }
+    </style>
 </head>
 <body>
-    <div id="carouselExampleCaptions" class="carousel slide" data-ride="carousel">
-        <div class="carousel-inner">
-            <div class="carousel-item active">
-                <img src="/exvent/<%= event_id %>.jpg" class="d-block w-100" alt="第一張圖片" 
-                     onerror="this.src='/exvent/banner.jpg'">
-                <div class="carousel-caption d-none d-md-block">
+    <div class="container">
+        <!-- 輪播 -->
+        <div id="carouselExampleCaptions" class="carousel slide" data-ride="carousel">
+            <div class="carousel-inner">
+                <div class="carousel-item active">
+                    <img src="/exvent/<%= event_id %>.jpg" class="d-block w-100" alt="第一張圖片" 
+                         onerror="this.src='/exvent/banner.jpg'">
+                    <div class="carousel-caption d-none d-md-block">
+                    </div>
                 </div>
+            </div>
+        </div>
+
+        <div class="form-header">
+            <div class="success-icon">✓</div>
+            <h1 id="successTitle" data-zh="登記成功" data-en="Registration Successful">登記成功</h1>
+        </div>
+
+        <div class="success-content">
+            <% if (transaction) { %>
+                <h5 id="thankYouTitle" data-zh="感謝您的購票！" data-en="Thank you for your purchase!">感謝您的購票！</h5>
+                <p id="emailMessage" data-zh="您的付款已成功，以下是您的交易紀錄：" data-en="Your payment was successful. Here are your transaction details:">您的付款已成功，以下是您的交易紀錄：</p>
+                
+                <div class="transaction-details">
+                    <h5 id="transactionTitle" data-zh="交易詳情" data-en="Transaction Details">交易詳情</h5>
+                    <div class="transaction-item">
+                        <strong id="orderLabel" data-zh="訂單編號：" data-en="Order Number: ">訂單編號：</strong>
+                        <span><%= transaction && transaction._id ? transaction._id : '' %></span>
+                    </div>
+                    <div class="transaction-item">
+                        <strong id="ticketLabel" data-zh="票券名稱：" data-en="Ticket Name: ">票券名稱：</strong>
+                        <span><%= transaction && transaction.ticketTitle ? transaction.ticketTitle : '' %></span>
+                    </div>
+                    <div class="transaction-item">
+                        <strong id="priceLabel" data-zh="票券價格：" data-en="Ticket Price: ">票券價格：</strong>
+                        <span>$<%= transaction && transaction.ticketPrice ? transaction.ticketPrice : '' %></span>
+                    </div>
+                    <div class="transaction-item">
+                        <strong id="statusLabel" data-zh="付款狀態：" data-en="Payment Status: ">付款狀態：</strong>
+                        <span><%= transaction && transaction.status ? transaction.status : '' %></span>
+                    </div>
+                </div>
+            <% } else { %>
+                <h5 id="thankYouTitle" data-zh="感謝你參加！" data-en="Thank you for participating!">感謝你參加！</h5>
+                <p id="emailMessage" data-zh="我們會透過 Email 把資訊發送給你。" data-en="We will send the information to you via Email.">我們會透過 Email 把資訊發送給你。</p>
+            <% } %>
+
+            <div class="btn-container">
+                <a href="/web/<%= event_id %>/register<%= lang ? '?lang=' + lang : '' %>" class="btn btn-primary" id="backBtn" data-zh="返回主頁" data-en="Return to Homepage">返回主頁</a>
             </div>
         </div>
     </div>
-    <% if (transaction) { %>
-        <div class="container mt-5">
-            <div class="row justify-content-center">
-                <div class="col-md-8">
-                    <div class="card">
-                        <div class="card-header bg-success text-white">
-                            <h4 class="mb-0">付款成功</h4>
-                        </div>
-                        <div class="card-body">
-                            <h5 class="card-title">感謝您的購票！</h5>
-                            <p class="card-text">您的付款已成功，以下是您的交易紀錄：</p>
-                            <ul class="list-group list-group-flush">
-                                <li class="list-group-item">訂單編號：<%= transaction && transaction._id ? transaction._id : '' %></li>
-                                <li class="list-group-item">票券名稱：<%= transaction && transaction.ticketTitle ? transaction.ticketTitle : '' %></li>
-                                <li class="list-group-item">票券價格：$<%= transaction && transaction.ticketPrice ? transaction.ticketPrice : '' %></li>
-                                <li class="list-group-item">付款狀態：<%= transaction && transaction.status ? transaction.status : '' %></li>
-                            </ul>
-                            <div class="mt-4 text-center">
-                                <a href="/web/<%= event_id %>/register" class="btn btn-primary">返回主頁</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    <% } else { %>
-        <div class="container mt-5">
-            <div class="row justify-content-center">
-                <div class="col-md-8">
-                    <div class="card">
-                        <div class="card-header bg-info text-white">
-                            <h4 class="mb-0">登記成功</h4>
-                        </div>
-                        <div class="card-body">
-                            <h5 class="card-title">感謝你參加！</h5>
-                            <p class="card-text">我們會透過 Email 把資訊發送給你。</p>
-                            <div class="mt-4 text-center">
-                                <a href="/web/<%= event_id %>/register" class="btn btn-primary">返回主頁</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    <% } %>
 
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        // 從 URL 參數獲取語言
+        function getLanguageFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const lang = urlParams.get('lang');
+            if (lang === 'zh' || lang === 'en') {
+                return lang;
+            }
+            return null;
+        }
+        
+        const urlLanguage = getLanguageFromURL();
+        const currentLanguage = urlLanguage || 'zh';
+        
+        $(document).ready(function() {
+            updatePageLanguage();
+        });
+        
+        function updatePageLanguage() {
+            // 更新所有帶有 data-zh 和 data-en 屬性的元素
+            $('[data-zh][data-en]').each(function() {
+                const $el = $(this);
+                const zhText = $el.data('zh');
+                const enText = $el.data('en');
+                
+                if (currentLanguage === 'zh' && zhText) {
+                    $el.text(zhText);
+                } else if (currentLanguage === 'en' && enText) {
+                    $el.text(enText);
+                }
+            });
+        }
+    </script>
 </body>
 </html>

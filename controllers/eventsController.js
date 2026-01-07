@@ -3378,7 +3378,7 @@ exports.updateEmailSettings = async (req, res) => {
 // Stripe Checkout
 exports.stripeCheckout = async (req, res) => {
     const { event_id } = req.params;
-    const { ticketId, email, name, company, phone_code, phone } = req.body;
+    const { ticketId, email, name, company, phone_code, phone, lang } = req.body;
     try {
         const event = await Event.findById(event_id);
         if (!event) return res.status(404).json({ message: 'Event not found' });
@@ -3407,8 +3407,8 @@ exports.stripeCheckout = async (req, res) => {
                 },
             ],
             mode: 'payment',
-            success_url: `${baseUrl}/web/${event_id}/register/success?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${baseUrl}/web/${event_id}/register/fail?session_id={CHECKOUT_SESSION_ID}`,
+            success_url: `${baseUrl}/web/${event_id}/register/success?session_id={CHECKOUT_SESSION_ID}${lang && lang !== 'zh' ? '&lang=' + lang : ''}`,
+            cancel_url: `${baseUrl}/web/${event_id}/register/fail?session_id={CHECKOUT_SESSION_ID}${lang && lang !== 'zh' ? '&lang=' + lang : ''}`,
             metadata: {
                 event_id,
                 ticketId,
