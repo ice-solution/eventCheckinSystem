@@ -310,6 +310,9 @@
                                     <button id="batchCheckInBtn" class="btn btn-success">
                                         <i class="fas fa-check-circle"></i> Batch Check In All
                                     </button>
+                                    <button id="batchSendEmailBtn" class="btn btn-warning" style="display: none;">
+                                        <i class="fas fa-envelope"></i> Batch Send Email
+                                    </button>
                                     <button id="addUserBtn" class="btn btn-primary">
                                         <i class="fas fa-user-plus"></i> Add User
                                     </button>
@@ -335,6 +338,41 @@
                             </div>
                             
                             <div class="clearfix" style="margin-top:20px"></div>
+
+                            <!-- Batch Send Email Modal -->
+                            <div class="modal fade" id="batchSendEmailModal" tabindex="-1" role="dialog" aria-labelledby="batchSendEmailModalLabel" aria-hidden="true">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="batchSendEmailModalLabel">批量發送郵件 (Batch Send Email)</h5>
+                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>已選擇 <strong id="selectedUsersCount">0</strong> 位用戶</p>
+                                            <div class="form-group">
+                                                <label for="batchEmailType">選擇郵件類型 (Select Email Type):</label>
+                                                <select class="form-control" id="batchEmailType">
+                                                    <option value="invitation">Invitation Email (邀請郵件)</option>
+                                                    <option value="welcome">Welcome Email (歡迎郵件)</option>
+                                                    <option value="knowledge">Knowledge Email (知識郵件)</option>
+                                                    <option value="reminder">Reminder Email (提醒郵件)</option>
+                                                </select>
+                                            </div>
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle"></i> 郵件將發送給所有選中的用戶
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">取消 (Cancel)</button>
+                                            <button type="button" class="btn btn-primary" id="confirmBatchSendEmail">
+                                                <i class="fas fa-paper-plane"></i> 確認發送 (Confirm Send)
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
                             <!-- Add User Form -->
                             <div id="addUserForm" class="add-user-form" style="display: none;">
@@ -687,11 +725,14 @@
             const isChecked = $(this).is(':checked');
             $('.user-select').prop('checked', isChecked);
             updateBatchDeleteButton();
+            updateBatchSendEmailButton();
+            updateSelectAllCheckbox();
         });
 
         // Individual checkbox change
         $('#usersTable tbody').on('change', '.user-select', function() {
             updateBatchDeleteButton();
+            updateBatchSendEmailButton();
             updateSelectAllCheckbox();
         });
 
@@ -702,6 +743,16 @@
                 $('#batchDeleteBtn').show().text(`Batch Delete Selected (${selectedCount})`);
             } else {
                 $('#batchDeleteBtn').hide();
+            }
+        }
+
+        // Update batch send email button visibility
+        function updateBatchSendEmailButton() {
+            const selectedCount = $('.user-select:checked').length;
+            if (selectedCount > 0) {
+                $('#batchSendEmailBtn').show().text(`Batch Send Email (${selectedCount})`);
+            } else {
+                $('#batchSendEmailBtn').hide();
             }
         }
 
@@ -748,6 +799,7 @@
                         
                         showAlert('success', `Successfully deleted ${response.deletedCount} user(s)!`);
                         updateBatchDeleteButton();
+                        updateBatchSendEmailButton();
                         updateSelectAllCheckbox();
                     },
                     error: function(xhr, status, error) {
@@ -756,6 +808,83 @@
                     }
                 });
             }
+        });
+
+        // Batch send email button click
+        $('#batchSendEmailBtn').on('click', function() {
+            const selectedIds = [];
+            $('.user-select:checked').each(function() {
+                selectedIds.push($(this).data('_id'));
+            });
+
+            if (selectedIds.length === 0) {
+                showAlert('warning', 'Please select users to send email.');
+                return;
+            }
+
+            // Update modal with selected count
+            $('#selectedUsersCount').text(selectedIds.length);
+            // Reset email type to default
+            $('#batchEmailType').val('invitation');
+            // Show modal
+            $('#batchSendEmailModal').modal('show');
+        });
+
+        // Confirm batch send email
+        $('#confirmBatchSendEmail').on('click', function() {
+            const selectedIds = [];
+            $('.user-select:checked').each(function() {
+                selectedIds.push($(this).data('_id'));
+            });
+
+            if (selectedIds.length === 0) {
+                showAlert('warning', 'Please select users to send email.');
+                $('#batchSendEmailModal').modal('hide');
+                return;
+            }
+
+            const emailType = $('#batchEmailType').val();
+            if (!emailType) {
+                showAlert('warning', 'Please select an email type.');
+                return;
+            }
+
+            const button = $(this);
+            const originalText = button.html();
+            button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 發送中...');
+
+            $.ajax({
+                url: `/events/<%= event._id %>/users/batch-send-email`,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ 
+                    userIds: selectedIds,
+                    emailType: emailType
+                }),
+                success: function(response) {
+                    $('#batchSendEmailModal').modal('hide');
+                    const results = response.results || {};
+                    let message = `批量發送完成！成功: ${results.success}, 失敗: ${results.failed}`;
+                    if (results.skipped > 0) {
+                        message += `, 跳過: ${results.skipped}`;
+                    }
+                    showAlert('success', message);
+                    
+                    // Uncheck all checkboxes
+                    $('.user-select:checked').prop('checked', false);
+                    $('#selectAll').prop('checked', false).prop('indeterminate', false);
+                    updateBatchDeleteButton();
+                    updateBatchSendEmailButton();
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error batch sending emails:', error);
+                    const errorMsg = xhr.responseJSON?.message || 'Failed to send emails. Please try again.';
+                    showAlert('danger', errorMsg);
+                },
+                complete: function() {
+                    button.prop('disabled', false).html(originalText);
+                }
+            });
         });
 
         // Batch check in button click

@@ -100,6 +100,9 @@ router.delete('/:eventId/users/batch', eventsController.batchDeleteUsers);
 // Batch check in users
 router.put('/:eventId/users/batch-checkin', eventsController.batchCheckInUsers);
 
+// Batch send emails
+router.post('/:eventId/users/batch-send-email', eventsController.batchSendEmails);
+
 router.get('/:eventId/scan', eventsController.scanEventUsers);
 
 

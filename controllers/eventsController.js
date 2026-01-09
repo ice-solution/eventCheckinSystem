@@ -3749,6 +3749,75 @@ exports.batchCheckInUsers = async (req, res) => {
     }
 };
 
+// Batch send emails
+exports.batchSendEmails = async (req, res) => {
+    const { eventId } = req.params;
+    const { userIds, emailType } = req.body; // userIds: 用戶ID數組, emailType: 郵件類型
+
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+            return res.status(400).json({ message: 'User IDs are required' });
+        }
+
+        if (!emailType) {
+            return res.status(400).json({ message: 'Email type is required' });
+        }
+
+        const results = {
+            success: 0,
+            failed: 0,
+            skipped: 0,
+            errors: []
+        };
+
+        // 遍歷所有選中的用戶
+        for (const userId of userIds) {
+            try {
+                const user = event.users.id(userId);
+                if (!user) {
+                    results.skipped++;
+                    results.errors.push({ userId, error: 'User not found' });
+                    continue;
+                }
+
+                if (!user.email) {
+                    results.skipped++;
+                    results.errors.push({ userId, error: 'User does not have an email address' });
+                    continue;
+                }
+
+                const userData = typeof user.toObject === 'function' ? user.toObject() : user;
+                
+                // 根據 emailType 發送不同類型的郵件
+                if (emailType === 'welcome') {
+                    await exports.sendEmail(userData, event);
+                } else {
+                    await exports.sendEmailByType(userData, event, emailType);
+                }
+
+                results.success++;
+            } catch (error) {
+                results.failed++;
+                results.errors.push({ userId, error: error.message });
+                console.error(`Error sending email to user ${userId}:`, error);
+            }
+        }
+
+        res.status(200).json({
+            message: `Batch email sending completed. Success: ${results.success}, Failed: ${results.failed}, Skipped: ${results.skipped}`,
+            results: results
+        });
+    } catch (error) {
+        console.error('Error batch sending emails:', error);
+        res.status(500).json({ message: 'Error batch sending emails' });
+    }
+};
+
 // Banner 管理功能
 // 配置 multer 用於文件上傳
 const storage = multer.diskStorage({
