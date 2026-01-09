@@ -1186,6 +1186,17 @@ exports.renderGuestListPage = async (req, res) => {
 // 渲染 Guest 確認頁面（公開頁面，讓用戶確認資料並轉移到 RSVP）
 exports.renderGuestConfirmPage = async (req, res) => {
     const { eventId, guestId } = req.params; // 獲取事件 ID 和來賓 ID
+    
+    // 檢查是否為特殊路由（不應該被當作 guestId 處理）
+    const reservedRoutes = ['email-records', 'transactions', 'report', 'emailTemplate', 'smsTemplate', 
+                          'banner', 'scan-point-users', 'attendee', 'treasure-hunt', 'guest-list',
+                          'scan', 'import', 'luckydraw', 'points', 'attachments', 'profile', 'login'];
+    
+    if (reservedRoutes.includes(guestId)) {
+        // 這是一個保留路由，不應該被當作 guestId 處理
+        return res.status(404).send('Page not found (頁面未找到)');
+    }
+    
     try {
         const event = await Event.findById(eventId);
         if (!event) {
@@ -3772,7 +3783,8 @@ exports.batchSendEmails = async (req, res) => {
             success: 0,
             failed: 0,
             skipped: 0,
-            errors: []
+            errors: [],
+            details: [] // 詳細發送記錄
         };
 
         // 遍歷所有選中的用戶
@@ -3782,12 +3794,26 @@ exports.batchSendEmails = async (req, res) => {
                 if (!user) {
                     results.skipped++;
                     results.errors.push({ userId, error: 'User not found' });
+                    results.details.push({
+                        userId: userId,
+                        email: null,
+                        name: null,
+                        status: 'skipped',
+                        error: 'User not found'
+                    });
                     continue;
                 }
 
                 if (!user.email) {
                     results.skipped++;
                     results.errors.push({ userId, error: 'User does not have an email address' });
+                    results.details.push({
+                        userId: userId,
+                        email: null,
+                        name: user.name || user.email || 'Unknown',
+                        status: 'skipped',
+                        error: 'User does not have an email address'
+                    });
                     continue;
                 }
 
@@ -3801,20 +3827,184 @@ exports.batchSendEmails = async (req, res) => {
                 }
 
                 results.success++;
+                results.details.push({
+                    userId: userId,
+                    email: user.email,
+                    name: user.name || user.email || 'Unknown',
+                    status: 'success',
+                    emailType: emailType
+                });
             } catch (error) {
                 results.failed++;
                 results.errors.push({ userId, error: error.message });
+                const user = event.users.id(userId);
+                results.details.push({
+                    userId: userId,
+                    email: user ? (user.email || null) : null,
+                    name: user ? (user.name || user.email || 'Unknown') : 'Unknown',
+                    status: 'failed',
+                    error: error.message,
+                    emailType: emailType
+                });
                 console.error(`Error sending email to user ${userId}:`, error);
             }
         }
 
         res.status(200).json({
             message: `Batch email sending completed. Success: ${results.success}, Failed: ${results.failed}, Skipped: ${results.skipped}`,
-            results: results
+            results: results,
+            emailType: emailType
         });
     } catch (error) {
         console.error('Error batch sending emails:', error);
         res.status(500).json({ message: 'Error batch sending emails' });
+    }
+};
+
+// Get Email Record Details by Tracking ID
+exports.getEmailRecordDetails = async (req, res) => {
+    const { eventId, trackingId } = req.params;
+    try {
+        // Check authentication
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        // Find event to verify access
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        // Find email record by tracking ID
+        const emailRecord = await EmailRecord.findOne({ trackingId, eventId: eventId })
+            .populate('emailTemplate', 'subject type content')
+            .lean();
+
+        if (!emailRecord) {
+            return res.status(404).json({ message: 'Email record not found' });
+        }
+
+        // Get user information if userId exists
+        let userInfo = null;
+        let user = null;
+        if (emailRecord.userId) {
+            user = event.users.id(emailRecord.userId);
+            if (user) {
+                userInfo = {
+                    name: user.name || user.email || 'Unknown',
+                    email: user.email,
+                    company: user.company,
+                    phone: user.phone
+                };
+            }
+        }
+
+        // Reconstruct email HTML content (template with replaced variables)
+        let emailHtml = null;
+        if (emailRecord.emailTemplate && emailRecord.emailTemplate.content && user) {
+            try {
+                const userData = typeof user.toObject === 'function' ? user.toObject() : user;
+                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
+                const loginUrl = `${process.env.DOMAIN || 'http://localhost:3377'}/events/${event._id}/login`;
+                
+                // Use the same replaceTemplateVariables function to reconstruct the email
+                emailHtml = replaceTemplateVariables(emailRecord.emailTemplate.content, userData, event, {
+                    qrCodeUrl: qrCodeUrl,
+                    loginUrl: loginUrl
+                });
+                
+                // Add tracking pixel if trackingId exists (same as when sending)
+                if (trackingId) {
+                    const trackingPixelUrl = `${process.env.DOMAIN || 'http://localhost:3377'}/track/email/${trackingId}/open.gif`;
+                    emailHtml = emailTracking.addTrackingToEmail(emailHtml, trackingId);
+                }
+            } catch (error) {
+                console.error('Error reconstructing email HTML:', error);
+                emailHtml = '<p>無法重建郵件內容</p>';
+            }
+        } else if (!emailRecord.emailTemplate && user) {
+            // Use default welcome email template
+            try {
+                const userData = typeof user.toObject === 'function' ? user.toObject() : user;
+                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
+                emailHtml = getWelcomeEmailTemplate(userData, event, qrCodeUrl);
+            } catch (error) {
+                console.error('Error generating default email HTML:', error);
+                emailHtml = '<p>無法生成默認郵件內容</p>';
+            }
+        }
+
+        res.json({
+            success: true,
+            record: {
+                ...emailRecord,
+                userInfo: userInfo,
+                emailHtml: emailHtml
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching email record details:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// Render Email Records Page
+exports.renderEmailRecords = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        // Check authentication
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.redirect('/login');
+        }
+
+        // Find event
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found');
+        }
+
+        // Find all email records for this event (確保 eventId 類型正確)
+        const mongoose = require('mongoose');
+        const eventObjectId = mongoose.Types.ObjectId.isValid(eventId) ? new mongoose.Types.ObjectId(eventId) : eventId;
+        
+        const emailRecords = await EmailRecord.find({ 
+            $or: [
+                { eventId: eventObjectId },
+                { eventId: eventId }
+            ]
+        })
+            .sort({ created_at: -1 })
+            .populate('emailTemplate', 'subject type')
+            .lean();
+
+        // Calculate statistics
+        const stats = {
+            total: emailRecords.length,
+            sent: emailRecords.filter(r => r.status === 'sent' || r.status === 'delivered').length,
+            failed: emailRecords.filter(r => r.status === 'failed').length,
+            pending: emailRecords.filter(r => r.status === 'pending').length,
+            opened: emailRecords.filter(r => r.opened_at).length,
+            clicked: emailRecords.filter(r => r.clicked_at).length
+        };
+
+        if (stats.sent > 0) {
+            stats.openRate = ((stats.opened / stats.sent) * 100).toFixed(2);
+            stats.clickRate = ((stats.clicked / stats.sent) * 100).toFixed(2);
+        } else {
+            stats.openRate = '0.00';
+            stats.clickRate = '0.00';
+        }
+
+        res.render('admin/email_records', { 
+            event, 
+            emailRecords,
+            stats,
+            eventId: eventId 
+        });
+    } catch (error) {
+        console.error('Error fetching email records:', error);
+        res.status(500).send('Server error');
     }
 };
 

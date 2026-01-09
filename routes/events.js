@@ -272,6 +272,9 @@ router.delete('/:eventId/attachments/:attachmentId', eventsController.deleteAtta
 router.get('/:eventId/report', eventsController.outputReport);
 // Transaction Records
 router.get('/:eventId/transactions', eventsController.renderTransactionRecords);
+// Email Records
+router.get('/:eventId/email-records', eventsController.renderEmailRecords);
+router.get('/:eventId/email-records/:trackingId', eventsController.getEmailRecordDetails);
 // Email Template
 router.get('/:eventId/emailTemplate', emailTemplateController.renderEmailTemplateList); // 渲染電子郵件模板列表頁面
 router.get('/:eventId/emailTemplate/create', emailTemplateController.renderCreateEmailTemplatePage); // 渲染創建電子郵件模板頁面

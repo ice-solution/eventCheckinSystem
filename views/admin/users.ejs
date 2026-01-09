@@ -180,19 +180,31 @@
             line-height: 1.4;
         }
         /* Modal 樣式修復 - 確保背景和內容不透明 */
+        #batchSendEmailModal {
+            z-index: 1055 !important;
+        }
+        #batchSendEmailModal .modal-backdrop {
+            z-index: 1050 !important;
+            background-color: rgba(0, 0, 0, 0.5) !important;
+        }
         .modal-backdrop {
             background-color: rgba(0, 0, 0, 0.5) !important;
-            opacity: 1 !important;
+            opacity: 0.5 !important;
             z-index: 1040 !important;
         }
         .modal-backdrop.show {
             opacity: 0.5 !important;
         }
-        .modal {
-            z-index: 1050 !important;
-        }
         .modal.show {
             display: block !important;
+            opacity: 1 !important;
+        }
+        .modal.fade.show {
+            opacity: 1 !important;
+        }
+        #batchSendEmailModal.show {
+            display: block !important;
+            opacity: 1 !important;
         }
         .modal-content {
             background-color: #ffffff !important;
@@ -210,6 +222,7 @@
         }
         .modal-title {
             color: #212529 !important;
+            font-weight: 600 !important;
         }
         .modal-body {
             background-color: #ffffff !important;
@@ -345,6 +358,9 @@
                                     <a href="/events/<%= event._id %>/transactions" class="btn btn-outline-warning">
                                         <i class="fa fa-credit-card"></i> Transaction Records
                                     </a>
+                                    <a href="/events/<%= event._id %>/email-records" class="btn btn-outline-info">
+                                        <i class="fas fa-envelope-open"></i> Email Records
+                                    </a>
                                 </div>
                                 
                                 <!-- 批量操作按鈕組 -->
@@ -392,7 +408,7 @@
 
                             <!-- Batch Send Email Modal -->
                             <div class="modal fade" id="batchSendEmailModal" tabindex="-1" role="dialog" aria-labelledby="batchSendEmailModalLabel" aria-hidden="true">
-                                <div class="modal-dialog" role="document">
+                                <div class="modal-dialog modal-dialog-centered" role="document">
                                     <div class="modal-content">
                                         <div class="modal-header">
                                             <h5 class="modal-title" id="batchSendEmailModalLabel">批量發送郵件 (Batch Send Email)</h5>
@@ -420,6 +436,31 @@
                                             <button type="button" class="btn btn-primary" id="confirmBatchSendEmail">
                                                 <i class="fas fa-paper-plane"></i> 確認發送 (Confirm Send)
                                             </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Batch Send Email Results Modal -->
+                            <div class="modal fade" id="batchSendEmailResultsModal" tabindex="-1" role="dialog" aria-labelledby="batchSendEmailResultsModalLabel" aria-hidden="true">
+                                <div class="modal-dialog modal-lg" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="batchSendEmailResultsModalLabel">批量發送結果 (Batch Send Results)</h5>
+                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div id="batchSendResultsContent">
+                                                <!-- Results will be inserted here -->
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <a href="/events/<%= event._id %>/email-records" class="btn btn-info">
+                                                <i class="fas fa-envelope-open"></i> View All Email Records
+                                            </a>
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">關閉 (Close)</button>
                                         </div>
                                     </div>
                                 </div>
@@ -924,6 +965,35 @@
             }
         });
 
+        // Function to properly close modal
+        function closeBatchSendEmailModal() {
+            const $modal = $('#batchSendEmailModal');
+            
+            // Try Bootstrap method first
+            if (typeof $modal.modal === 'function') {
+                try {
+                    $modal.modal('hide');
+                } catch(e) {
+                    console.log('Bootstrap modal hide failed, using manual close');
+                }
+            }
+            
+            // Force cleanup after a short delay to allow animation
+            setTimeout(function() {
+                // Remove modal classes and hide
+                $modal.removeClass('show').css('display', 'none').attr('aria-hidden', 'true');
+                
+                // Remove all backdrops
+                $('.modal-backdrop').remove();
+                
+                // Clean up body
+                $('body').removeClass('modal-open').css({
+                    'padding-right': '',
+                    'overflow': ''
+                });
+            }, 300);
+        }
+
         // Batch send email button click
         $('#batchSendEmailBtn').on('click', function() {
             // Get all selected user IDs from the Set (includes all pages)
@@ -934,16 +1004,80 @@
                 return;
             }
 
+            // Clean up any existing modal state first
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('padding-right', '');
+            
             // Update modal with selected count
             $('#selectedUsersCount').text(selectedIds.length);
             // Reset email type to default
             $('#batchEmailType').val('invitation');
-            // Show modal with proper backdrop
-            $('#batchSendEmailModal').modal({
-                backdrop: true,
-                keyboard: true,
-                show: true
+            
+            // Ensure modal exists and show it
+            const $modal = $('#batchSendEmailModal');
+            if ($modal.length === 0) {
+                console.error('Modal element not found!');
+                showAlert('danger', 'Modal 元素未找到，請刷新頁面。');
+                return;
+            }
+            
+            // Reset modal state before showing
+            $modal.removeClass('show').attr('aria-hidden', 'false');
+            
+            // Show modal - Bootstrap 4 syntax
+            $modal.modal('show');
+            
+            // Ensure modal is visible (fallback if Bootstrap doesn't work)
+            setTimeout(function() {
+                if (!$modal.hasClass('show') || $modal.css('display') === 'none') {
+                    $modal.addClass('show').css('display', 'block');
+                    $('body').addClass('modal-open');
+                    if ($('.modal-backdrop').length === 0) {
+                        $('<div class="modal-backdrop fade show"></div>').appendTo('body');
+                    }
+                }
+            }, 200);
+        });
+
+        // Handle modal close events
+        $('#batchSendEmailModal').on('hidden.bs.modal', function() {
+            // Cleanup when modal is fully hidden
+            const $modal = $(this);
+            $modal.removeClass('show').attr('aria-hidden', 'true');
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css({
+                'padding-right': '',
+                'overflow': ''
             });
+        });
+
+        // Handle close button clicks - prevent event bubbling
+        $(document).off('click', '#batchSendEmailModal .close, #batchSendEmailModal [data-dismiss="modal"]');
+        $(document).on('click', '#batchSendEmailModal .close, #batchSendEmailModal [data-dismiss="modal"]', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeBatchSendEmailModal();
+        });
+
+        // Handle ESC key to close modal
+        $(document).off('keydown.modal-close');
+        $(document).on('keydown.modal-close', function(e) {
+            if (e.key === 'Escape' || e.keyCode === 27) {
+                if ($('#batchSendEmailModal').hasClass('show')) {
+                    e.preventDefault();
+                    closeBatchSendEmailModal();
+                }
+            }
+        });
+
+        // Handle backdrop click to close modal
+        $('#batchSendEmailModal').off('click.backdrop');
+        $('#batchSendEmailModal').on('click.backdrop', function(e) {
+            // Only close if clicking directly on the modal backdrop, not on modal-content
+            if ($(e.target).is('#batchSendEmailModal') && !$(e.target).closest('.modal-content').length) {
+                e.preventDefault();
+                closeBatchSendEmailModal();
+            }
         });
 
         // Confirm batch send email
@@ -953,7 +1087,7 @@
 
             if (selectedIds.length === 0) {
                 showAlert('warning', '請選擇要發送郵件的用戶。');
-                $('#batchSendEmailModal').modal('hide');
+                closeBatchSendEmailModal();
                 return;
             }
 
@@ -976,8 +1110,68 @@
                     emailType: emailType
                 }),
                 success: function(response) {
-                    $('#batchSendEmailModal').modal('hide');
+                    closeBatchSendEmailModal();
                     const results = response.results || {};
+                    const emailType = response.emailType || 'unknown';
+                    
+                    // Build results HTML
+                    let resultsHtml = `
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle"></i> 發送摘要 (Summary)</h6>
+                            <p><strong>郵件類型 (Email Type):</strong> ${emailType}</p>
+                            <p><strong>成功 (Success):</strong> <span class="badge badge-success">${results.success}</span></p>
+                            <p><strong>失敗 (Failed):</strong> <span class="badge badge-danger">${results.failed}</span></p>
+                            <p><strong>跳過 (Skipped):</strong> <span class="badge badge-warning">${results.skipped}</span></p>
+                        </div>
+                    `;
+                    
+                    // Show detailed results if available
+                    if (results.details && results.details.length > 0) {
+                        resultsHtml += `
+                            <h6>詳細發送記錄 (Detailed Send Records)</h6>
+                            <div style="max-height: 400px; overflow-y: auto;">
+                                <table class="table table-sm table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>Name (姓名)</th>
+                                            <th>Email (郵箱)</th>
+                                            <th>Status (狀態)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                        `;
+                        
+                        results.details.forEach(function(detail) {
+                            let statusBadge = '';
+                            if (detail.status === 'success') {
+                                statusBadge = '<span class="badge badge-success">成功</span>';
+                            } else if (detail.status === 'failed') {
+                                statusBadge = `<span class="badge badge-danger">失敗: ${detail.error || 'Unknown error'}</span>`;
+                            } else {
+                                statusBadge = `<span class="badge badge-warning">跳過: ${detail.error || 'N/A'}</span>`;
+                            }
+                            
+                            resultsHtml += `
+                                <tr>
+                                    <td>${detail.name || '-'}</td>
+                                    <td>${detail.email || '-'}</td>
+                                    <td>${statusBadge}</td>
+                                </tr>
+                            `;
+                        });
+                        
+                        resultsHtml += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                    }
+                    
+                    // Show results modal
+                    $('#batchSendResultsContent').html(resultsHtml);
+                    $('#batchSendEmailResultsModal').modal('show');
+                    
+                    // Show alert
                     let message = `批量發送完成！成功: ${results.success}, 失敗: ${results.failed}`;
                     if (results.skipped > 0) {
                         message += `, 跳過: ${results.skipped}`;

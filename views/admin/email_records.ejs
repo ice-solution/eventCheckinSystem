@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <title>Email Records</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.24/css/dataTables.bootstrap4.min.css">
+    <style>
+        .status-sent, .status-delivered {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .status-failed {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .status-pending {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        /* Modal 樣式修復 - 確保背景和內容不透明 */
+        #emailDetailsModal {
+            z-index: 1055 !important;
+        }
+        #emailDetailsModal .modal-backdrop {
+            z-index: 1050 !important;
+            background-color: rgba(0, 0, 0, 0.5) !important;
+        }
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.5) !important;
+            opacity: 0.5 !important;
+            z-index: 1040 !important;
+        }
+        .modal-backdrop.show {
+            opacity: 0.5 !important;
+        }
+        .modal.show {
+            display: block !important;
+            opacity: 1 !important;
+        }
+        .modal.fade.show {
+            opacity: 1 !important;
+        }
+        #emailDetailsModal.show {
+            display: block !important;
+            opacity: 1 !important;
+        }
+        .modal-content {
+            background-color: #ffffff !important;
+            opacity: 1 !important;
+            border: 1px solid rgba(0, 0, 0, 0.2) !important;
+            border-radius: 0.3rem !important;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+            color: #212529 !important;
+        }
+        .modal-header {
+            background-color: #ffffff !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            padding: 1rem !important;
+            color: #212529 !important;
+        }
+        .modal-title {
+            color: #212529 !important;
+            font-weight: 600 !important;
+        }
+        .modal-body {
+            background-color: #ffffff !important;
+            padding: 1rem !important;
+            color: #212529 !important;
+        }
+        .modal-body p, .modal-body label, .modal-body strong, .modal-body th, .modal-body td {
+            color: #212529 !important;
+        }
+        .modal-footer {
+            background-color: #ffffff !important;
+            border-top: 1px solid #dee2e6 !important;
+            padding: 1rem !important;
+        }
+    </style>
+</head>
+<body>
+
+<%- include ("components/header") %>
+<%- include ("components/menu", { eventId: eventId }) %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+
+<div id="right-panel" class="right-panel">
+    <%- include ("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div id="alertContainer"></div>
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title">Email Records for <%= event.name %></strong>
+                            <a href="/events/<%= eventId %>" class="btn btn-outline-secondary btn-sm float-right">
+                                <i class="fas fa-arrow-left"></i> Back to User List
+                            </a>
+                        </div>
+                        <div class="card-body">
+                            <!-- Summary Statistics -->
+                            <div class="row mb-4">
+                                <div class="col-md-3">
+                                    <div class="card bg-primary text-white">
+                                        <div class="card-body">
+                                            <h5 class="card-title">Total Sent</h5>
+                                            <h3><%= stats.total %></h3>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card bg-success text-white">
+                                        <div class="card-body">
+                                            <h5 class="card-title">Success</h5>
+                                            <h3><%= stats.sent %></h3>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card bg-danger text-white">
+                                        <div class="card-body">
+                                            <h5 class="card-title">Failed</h5>
+                                            <h3><%= stats.failed %></h3>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card bg-info text-white">
+                                        <div class="card-body">
+                                            <h5 class="card-title">Open Rate</h5>
+                                            <h3><%= stats.openRate %>%</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Email Records Table -->
+                            <table id="emailRecordsTable" class="table table-striped table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Send Time (發送時間)</th>
+                                        <th>Recipient (收件人)</th>
+                                        <th>Subject (主題)</th>
+                                        <th>Email Type (郵件類型)</th>
+                                        <th>Status (狀態)</th>
+                                        <th>Opened (打開)</th>
+                                        <th>Clicked (點擊)</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% emailRecords.forEach(record => { %>
+                                        <tr>
+                                            <td><%= new Date(record.created_at).toLocaleString('zh-HK', { 
+                                                year: 'numeric', 
+                                                month: '2-digit', 
+                                                day: '2-digit', 
+                                                hour: '2-digit', 
+                                                minute: '2-digit' 
+                                            }) %></td>
+                                            <td><%= record.recipient %></td>
+                                            <td><%= record.subject || '-' %></td>
+                                            <td>
+                                                <% if (record.emailTemplate && record.emailTemplate.type) { %>
+                                                    <span class="badge badge-info"><%= record.emailTemplate.type %></span>
+                                                <% } else { %>
+                                                    <span class="badge badge-secondary">-</span>
+                                                <% } %>
+                                            </td>
+                                            <td>
+                                                <% 
+                                                let statusClass = 'status-pending';
+                                                let statusText = record.status;
+                                                if (record.status === 'sent' || record.status === 'delivered') {
+                                                    statusClass = 'status-sent';
+                                                } else if (record.status === 'failed') {
+                                                    statusClass = 'status-failed';
+                                                }
+                                                %>
+                                                <span class="<%= statusClass %>"><%= statusText %></span>
+                                            </td>
+                                            <td>
+                                                <% if (record.opened_at) { %>
+                                                    <span class="badge badge-success">
+                                                        ✓ <%= record.opened_count || 1 %> 次
+                                                    </span>
+                                                    <br>
+                                                    <small><%= new Date(record.opened_at).toLocaleString('zh-HK', { 
+                                                        year: 'numeric', 
+                                                        month: '2-digit', 
+                                                        day: '2-digit', 
+                                                        hour: '2-digit', 
+                                                        minute: '2-digit' 
+                                                    }) %></small>
+                                                <% } else { %>
+                                                    <span class="badge badge-secondary">未打開</span>
+                                                <% } %>
+                                            </td>
+                                            <td>
+                                                <% if (record.clicked_at) { %>
+                                                    <span class="badge badge-info">
+                                                        ✓ <%= record.clicked_count || 1 %> 次
+                                                    </span>
+                                                    <br>
+                                                    <small><%= new Date(record.clicked_at).toLocaleString('zh-HK', { 
+                                                        year: 'numeric', 
+                                                        month: '2-digit', 
+                                                        day: '2-digit', 
+                                                        hour: '2-digit', 
+                                                        minute: '2-digit' 
+                                                    }) %></small>
+                                                <% } else { %>
+                                                    <span class="badge badge-secondary">未點擊</span>
+                                                <% } %>
+                                            </td>
+                                            <td>
+                                                <% if (record.trackingId) { %>
+                                                    <button type="button" class="btn btn-sm btn-info view-email-details" data-tracking-id="<%= record.trackingId %>">
+                                                        <i class="fas fa-eye"></i> View Details
+                                                    </button>
+                                                <% } else { %>
+                                                    <span class="text-muted">無 Tracking ID</span>
+                                                <% } %>
+                                            </td>
+                                        </tr>
+                                    <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Email Details Modal -->
+<div class="modal fade" id="emailDetailsModal" tabindex="-1" role="dialog" aria-labelledby="emailDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="emailDetailsModalLabel">郵件詳情 (Email Details)</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="emailDetailsContent">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">關閉 (Close)</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include ("components/footer") %>
+<script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
+<script>
+    $(document).ready(function() {
+        console.log('Email Records page script loaded');
+        
+        const table = $('#emailRecordsTable').DataTable({
+            pageLength: 50,
+            order: [[0, 'desc']], // Sort by send time descending
+            drawCallback: function() {
+                // Ensure buttons are clickable after table redraw
+                console.log('Table redrawn, button count:', $('.view-email-details').length);
+            }
+        });
+        
+        console.log('DataTable initialized, total buttons:', $('.view-email-details').length);
+        
+        // Test button click - verify buttons exist
+        setTimeout(function() {
+            console.log('Checking buttons after 1 second, count:', $('.view-email-details').length);
+            $('.view-email-details').each(function(index) {
+                const tid = $(this).attr('data-tracking-id') || $(this).data('tracking-id');
+                console.log('Button ' + index + ' trackingId:', tid);
+            });
+        }, 1000);
+
+        // Function to properly close email details modal
+        function closeEmailDetailsModal() {
+            const $modal = $('#emailDetailsModal');
+            
+            // Try Bootstrap method first
+            if (typeof $modal.modal === 'function') {
+                try {
+                    $modal.modal('hide');
+                } catch(e) {
+                    console.log('Bootstrap modal hide failed, using manual close');
+                }
+            }
+            
+            // Force cleanup after a short delay to allow animation
+            setTimeout(function() {
+                // Remove modal classes and hide
+                $modal.removeClass('show').css('display', 'none').attr('aria-hidden', 'true');
+                
+                // Remove all backdrops
+                $('.modal-backdrop').remove();
+                
+                // Clean up body
+                $('body').removeClass('modal-open').css({
+                    'padding-right': '',
+                    'overflow': ''
+                });
+            }, 300);
+        }
+
+        // Handle modal close events
+        $('#emailDetailsModal').on('hidden.bs.modal', function() {
+            // Cleanup when modal is fully hidden
+            const $modal = $(this);
+            $modal.removeClass('show').attr('aria-hidden', 'true');
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css({
+                'padding-right': '',
+                'overflow': ''
+            });
+        });
+
+        // Handle close button clicks - prevent event bubbling
+        $(document).off('click', '#emailDetailsModal .close, #emailDetailsModal [data-dismiss="modal"]');
+        $(document).on('click', '#emailDetailsModal .close, #emailDetailsModal [data-dismiss="modal"]', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeEmailDetailsModal();
+        });
+
+        // Handle ESC key to close modal
+        $(document).off('keydown.email-details-modal');
+        $(document).on('keydown.email-details-modal', function(e) {
+            if (e.key === 'Escape' || e.keyCode === 27) {
+                if ($('#emailDetailsModal').hasClass('show')) {
+                    e.preventDefault();
+                    closeEmailDetailsModal();
+                }
+            }
+        });
+
+        // Handle backdrop click to close modal
+        $('#emailDetailsModal').off('click.backdrop');
+        $('#emailDetailsModal').on('click.backdrop', function(e) {
+            // Only close if clicking directly on the modal backdrop, not on modal-content
+            if ($(e.target).is('#emailDetailsModal') && !$(e.target).closest('.modal-content').length) {
+                e.preventDefault();
+                closeEmailDetailsModal();
+            }
+        });
+
+        // Handle View Details button click - use event delegation
+        // This ensures it works even after DataTable redraws
+        console.log('Setting up view-email-details click handler');
+        
+        // Use table tbody for event delegation (more reliable with DataTable)
+        $('#emailRecordsTable tbody').on('click', '.view-email-details', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('=== View Details button clicked ===');
+            const $btn = $(this);
+            console.log('Button element:', $btn[0]);
+            console.log('Button classes:', $btn.attr('class'));
+            
+            // Get tracking ID - try multiple methods
+            let trackingId = $btn.attr('data-tracking-id');
+            if (!trackingId) {
+                trackingId = $btn.data('tracking-id');
+            }
+            if (!trackingId) {
+                // Check all data attributes
+                const allAttrs = $btn[0] ? Array.from($btn[0].attributes) : [];
+                console.log('All button attributes:', allAttrs.map(a => a.name + '=' + a.value));
+                for (let attr of allAttrs) {
+                    if (attr.name.indexOf('tracking') !== -1) {
+                        trackingId = attr.value;
+                        break;
+                    }
+                }
+            }
+            
+            const eventId = '<%= eventId %>';
+            
+            console.log('Tracking ID found:', trackingId);
+            console.log('Event ID:', eventId);
+            
+            if (!trackingId || trackingId === 'undefined' || trackingId === 'null' || trackingId === '') {
+                console.error('No valid tracking ID found!');
+                alert('無法獲取郵件追蹤 ID。請刷新頁面並重試。');
+                return false;
+            }
+
+            // Clean up any existing modal state first
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('padding-right', '');
+            
+            // Show modal with loading
+            $('#emailDetailsContent').html('<div class="text-center"><div class="spinner-border" role="status"><span class="sr-only">載入中...</span></div></div>');
+            
+            // Show modal - Bootstrap 4 syntax
+            $('#emailDetailsModal').modal({
+                backdrop: true,
+                keyboard: true,
+                show: true
+            });
+            
+            // Ensure modal is visible (fallback if Bootstrap doesn't work)
+            setTimeout(function() {
+                const $modal = $('#emailDetailsModal');
+                if (!$modal.hasClass('show') || $modal.css('display') === 'none') {
+                    $modal.addClass('show').css('display', 'block');
+                    $('body').addClass('modal-open');
+                    if ($('.modal-backdrop').length === 0) {
+                        $('<div class="modal-backdrop fade show"></div>').appendTo('body');
+                    }
+                }
+            }, 200);
+
+            // Fetch email details
+            const ajaxUrl = '/events/' + eventId + '/email-records/' + trackingId;
+            console.log('Sending AJAX request to:', ajaxUrl);
+            
+            $.ajax({
+                url: ajaxUrl,
+                type: 'GET',
+                beforeSend: function() {
+                    console.log('AJAX request started');
+                },
+                success: function(response) {
+                    console.log('AJAX success, response received');
+                    if (response.success && response.record) {
+                        const record = response.record;
+                        
+                        // Build HTML step by step to avoid template string issues
+                        let html = '<div class="card"><div class="card-header"><h6 class="mb-0">基本資訊 (Basic Information)</h6></div><div class="card-body"><table class="table table-sm">';
+                        
+                        html += '<tr><th width="150">收件人 (Recipient):</th><td>' + (record.recipient || '-') + '</td></tr>';
+                        
+                        if (record.userInfo) {
+                            html += '<tr><th>用戶姓名 (Name):</th><td>' + (record.userInfo.name || '-') + '</td></tr>';
+                            html += '<tr><th>公司 (Company):</th><td>' + (record.userInfo.company || '-') + '</td></tr>';
+                            html += '<tr><th>電話 (Phone):</th><td>' + (record.userInfo.phone || '-') + '</td></tr>';
+                        }
+                        
+                        html += '<tr><th>主題 (Subject):</th><td>' + (record.subject || '-') + '</td></tr>';
+                        html += '<tr><th>郵件類型 (Email Type):</th><td>' + (record.emailTemplate && record.emailTemplate.type ? record.emailTemplate.type : '-') + '</td></tr>';
+                        
+                        const statusClass = (record.status === 'sent' || record.status === 'delivered') ? 'success' : (record.status === 'failed' ? 'danger' : 'warning');
+                        html += '<tr><th>狀態 (Status):</th><td><span class="badge badge-' + statusClass + '">' + (record.status || 'pending') + '</span></td></tr>';
+                        html += '<tr><th>發送時間 (Send Time):</th><td>' + (record.created_at ? new Date(record.created_at).toLocaleString('zh-HK') : '-') + '</td></tr>';
+                        
+                        if (record.sent_at) {
+                            html += '<tr><th>已發送時間 (Sent At):</th><td>' + new Date(record.sent_at).toLocaleString('zh-HK') + '</td></tr>';
+                        }
+                        
+                        if (record.messageId) {
+                            html += '<tr><th>Message ID:</th><td><small>' + record.messageId + '</small></td></tr>';
+                        }
+                        
+                        if (record.errorLog) {
+                            html += '<tr><th>錯誤訊息 (Error):</th><td><span class="text-danger">' + record.errorLog + '</span></td></tr>';
+                        }
+                        
+                        html += '</table></div></div>';
+                        
+                        // Tracking Information
+                        html += '<div class="card mt-3"><div class="card-header"><h6 class="mb-0">追蹤資訊 (Tracking Information)</h6></div><div class="card-body"><table class="table table-sm">';
+                        html += '<tr><th width="150">Tracking ID:</th><td><small>' + (record.trackingId || '-') + '</small></td></tr>';
+                        
+                        html += '<tr><th>打開狀態 (Opened):</th><td>';
+                        if (record.opened_at) {
+                            html += '<span class="badge badge-success">已打開</span><br><small>首次打開: ' + new Date(record.opened_at).toLocaleString('zh-HK') + '</small><br><small>打開次數: ' + (record.opened_count || 1) + ' 次</small>';
+                        } else {
+                            html += '<span class="badge badge-secondary">未打開</span>';
+                        }
+                        html += '</td></tr>';
+                        
+                        html += '<tr><th>點擊狀態 (Clicked):</th><td>';
+                        if (record.clicked_at) {
+                            html += '<span class="badge badge-info">已點擊</span><br><small>首次點擊: ' + new Date(record.clicked_at).toLocaleString('zh-HK') + '</small><br><small>點擊次數: ' + (record.clicked_count || 1) + ' 次</small>';
+                            
+                            if (record.clicked_links && record.clicked_links.length > 0) {
+                                html += '<br><small>點擊的連結:</small><ul class="list-unstyled ml-3">';
+                                record.clicked_links.forEach(function(link) {
+                                    html += '<li><small>' + (link.url || '-') + ' (' + new Date(link.clicked_at).toLocaleString('zh-HK') + ')</small></li>';
+                                });
+                                html += '</ul>';
+                            }
+                        } else {
+                            html += '<span class="badge badge-secondary">未點擊</span>';
+                        }
+                        html += '</td></tr>';
+                        
+                        html += '</table></div></div>';
+                        
+                        // Add Email HTML Preview section
+                        if (record.emailHtml) {
+                            html += '<div class="card mt-3"><div class="card-header"><h6 class="mb-0">郵件內容預覽 (Email Content Preview)</h6></div><div class="card-body" style="padding: 0;">';
+                            html += '<div style="border: 1px solid #dee2e6; border-radius: 0.25rem; overflow: hidden; background: #fff;">';
+                            html += '<div id="emailPreviewContainer" style="max-height: 600px; overflow-y: auto; padding: 20px; background: #fff;">';
+                            html += '<div id="emailPreviewContent"></div>';
+                            html += '</div>';
+                            html += '<div class="p-3 border-top bg-light"><button class="btn btn-sm btn-secondary" id="toggleEmailPreview">展開/收起</button></div>';
+                            html += '</div></div>';
+                        } else {
+                            html += '<div class="card mt-3"><div class="card-body"><p class="text-muted">無法顯示郵件內容預覽（郵件模板或用戶信息不可用）</p></div></div>';
+                        }
+                        
+                        $('#emailDetailsContent').html(html);
+                        
+                        // Load email HTML preview after modal content is set
+                        if (record.emailHtml) {
+                            // Use setTimeout to ensure DOM is ready
+                            setTimeout(function() {
+                                const previewContent = $('#emailPreviewContent');
+                                if (previewContent.length) {
+                                    // Directly set the HTML content
+                                    previewContent.html(record.emailHtml);
+                                }
+                                
+                                // Toggle preview height - use event delegation
+                                $(document).off('click', '#toggleEmailPreview');
+                                $(document).on('click', '#toggleEmailPreview', function() {
+                                    const container = $('#emailPreviewContainer');
+                                    if (container.css('max-height') === '600px' || container.css('max-height') === 'none') {
+                                        const currentHeight = container.css('max-height');
+                                        if (currentHeight === '600px' || currentHeight === 'none') {
+                                            container.css('max-height', 'none');
+                                            $(this).text('收起');
+                                        } else {
+                                            container.css('max-height', '600px');
+                                            $(this).text('展開');
+                                        }
+                                    } else {
+                                        container.css('max-height', 'none');
+                                        $(this).text('收起');
+                                    }
+                                });
+                            }, 100);
+                        }
+                    } else {
+                        $('#emailDetailsContent').html('<div class="alert alert-danger">無法獲取郵件詳情</div>');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error fetching email details:', {
+                        status: status,
+                        error: error,
+                        response: xhr.responseText,
+                        xhr: xhr
+                    });
+                    let errorMsg = 'Unknown error';
+                    try {
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMsg = xhr.responseJSON.message;
+                        } else if (xhr.responseText) {
+                            errorMsg = xhr.responseText;
+                        }
+                    } catch(e) {
+                        errorMsg = xhr.statusText || 'Network error';
+                    }
+                    $('#emailDetailsContent').html('<div class="alert alert-danger">獲取郵件詳情失敗: ' + errorMsg + '</div>');
+                }
+            });
+        });
+    });
+</script>
+
+</body>
+</html>
+
