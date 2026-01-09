@@ -179,6 +179,51 @@
             color: #6c757d;
             line-height: 1.4;
         }
+        /* Modal 樣式修復 - 確保背景和內容不透明 */
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.5) !important;
+            opacity: 1 !important;
+            z-index: 1040 !important;
+        }
+        .modal-backdrop.show {
+            opacity: 0.5 !important;
+        }
+        .modal {
+            z-index: 1050 !important;
+        }
+        .modal.show {
+            display: block !important;
+        }
+        .modal-content {
+            background-color: #ffffff !important;
+            opacity: 1 !important;
+            border: 1px solid rgba(0, 0, 0, 0.2) !important;
+            border-radius: 0.3rem !important;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+            color: #212529 !important;
+        }
+        .modal-header {
+            background-color: #ffffff !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            padding: 1rem !important;
+            color: #212529 !important;
+        }
+        .modal-title {
+            color: #212529 !important;
+        }
+        .modal-body {
+            background-color: #ffffff !important;
+            padding: 1rem !important;
+            color: #212529 !important;
+        }
+        .modal-body p, .modal-body label, .modal-body strong {
+            color: #212529 !important;
+        }
+        .modal-footer {
+            background-color: #ffffff !important;
+            border-top: 1px solid #dee2e6 !important;
+            padding: 1rem !important;
+        }
         /* 響應式設計 */
         @media (max-width: 768px) {
             .action-buttons-container {
@@ -304,6 +349,12 @@
                                 
                                 <!-- 批量操作按鈕組 -->
                                 <div class="action-buttons-group">
+                                    <button id="selectAllUsersBtn" class="btn btn-info">
+                                        <i class="fas fa-check-square"></i> Select All Users
+                                    </button>
+                                    <button id="deselectAllUsersBtn" class="btn btn-secondary">
+                                        <i class="fas fa-square"></i> Deselect All
+                                    </button>
                                     <button id="batchDeleteBtn" class="btn btn-danger" style="display: none;">
                                         <i class="fas fa-trash-alt"></i> Batch Delete Selected
                                     </button>
@@ -668,6 +719,15 @@
             return;
         }
         
+        // Store all user IDs for select all functionality
+        const allUserIds = [];
+        <% event.users.forEach(user => { %>
+            allUserIds.push('<%= user._id %>');
+        <% }); %>
+
+        // Global set to track selected user IDs across all pages
+        const selectedUserIds = new Set();
+
         // Initialize DataTable with inline editing
         const table = $('#usersTable').DataTable({
             pageLength: 50,
@@ -688,7 +748,45 @@
                     orderable: false,
                     searchable: false
                 }
-            ]
+            ],
+            drawCallback: function() {
+                // Restore checkbox states after table redraw
+                $('.user-select').each(function() {
+                    const userId = $(this).data('_id');
+                    if (selectedUserIds.has(userId)) {
+                        $(this).prop('checked', true);
+                    }
+                });
+                updateSelectAllCheckbox();
+                updateBatchDeleteButton();
+                updateBatchSendEmailButton();
+            }
+        });
+
+        // Select All Users button - selects all users across all pages
+        $('#selectAllUsersBtn').on('click', function() {
+            // Add all user IDs to selected set
+            allUserIds.forEach(userId => {
+                selectedUserIds.add(userId);
+            });
+            // Select all checkboxes in current view
+            $('.user-select').prop('checked', true);
+            $('#selectAll').prop('checked', true).prop('indeterminate', false);
+            updateBatchDeleteButton();
+            updateBatchSendEmailButton();
+            showAlert('success', `已選擇所有 ${allUserIds.length} 位用戶`);
+        });
+
+        // Deselect All Users button - unchecks all checkboxes
+        $('#deselectAllUsersBtn').on('click', function() {
+            // Clear selected set
+            selectedUserIds.clear();
+            // Uncheck all checkboxes in current view
+            $('.user-select').prop('checked', false);
+            $('#selectAll').prop('checked', false).prop('indeterminate', false);
+            updateBatchDeleteButton();
+            updateBatchSendEmailButton();
+            showAlert('info', '已取消所有選擇');
         });
 
         // Resend email functionality (支持選擇類型)
@@ -723,7 +821,15 @@
         // Batch delete functionality
         $('#selectAll').on('change', function() {
             const isChecked = $(this).is(':checked');
-            $('.user-select').prop('checked', isChecked);
+            $('.user-select').each(function() {
+                const userId = $(this).data('_id');
+                if (isChecked) {
+                    selectedUserIds.add(userId);
+                } else {
+                    selectedUserIds.delete(userId);
+                }
+                $(this).prop('checked', isChecked);
+            });
             updateBatchDeleteButton();
             updateBatchSendEmailButton();
             updateSelectAllCheckbox();
@@ -731,6 +837,12 @@
 
         // Individual checkbox change
         $('#usersTable tbody').on('change', '.user-select', function() {
+            const userId = $(this).data('_id');
+            if ($(this).is(':checked')) {
+                selectedUserIds.add(userId);
+            } else {
+                selectedUserIds.delete(userId);
+            }
             updateBatchDeleteButton();
             updateBatchSendEmailButton();
             updateSelectAllCheckbox();
@@ -738,7 +850,7 @@
 
         // Update batch delete button visibility
         function updateBatchDeleteButton() {
-            const selectedCount = $('.user-select:checked').length;
+            const selectedCount = selectedUserIds.size;
             if (selectedCount > 0) {
                 $('#batchDeleteBtn').show().text(`Batch Delete Selected (${selectedCount})`);
             } else {
@@ -748,7 +860,7 @@
 
         // Update batch send email button visibility
         function updateBatchSendEmailButton() {
-            const selectedCount = $('.user-select:checked').length;
+            const selectedCount = selectedUserIds.size;
             if (selectedCount > 0) {
                 $('#batchSendEmailBtn').show().text(`Batch Send Email (${selectedCount})`);
             } else {
@@ -772,17 +884,15 @@
 
         // Batch delete button click
         $('#batchDeleteBtn').on('click', function() {
-            const selectedIds = [];
-            $('.user-select:checked').each(function() {
-                selectedIds.push($(this).data('_id'));
-            });
+            // Get all selected user IDs from the Set (includes all pages)
+            const selectedIds = Array.from(selectedUserIds);
 
             if (selectedIds.length === 0) {
-                showAlert('warning', 'Please select users to delete.');
+                showAlert('warning', '請選擇要刪除的用戶。');
                 return;
             }
 
-            if (confirm(`Are you sure you want to delete ${selectedIds.length} selected user(s)?`)) {
+            if (confirm(`確定要刪除 ${selectedIds.length} 位選中的用戶嗎？`)) {
                 // Send all user IDs in one request
                 $.ajax({
                     url: `/events/<%= event._id %>/users/batch`,
@@ -790,21 +900,25 @@
                     contentType: 'application/json',
                     data: JSON.stringify({ userIds: selectedIds }),
                     success: function(response) {
-                        // Remove all selected rows from DataTable
+                        // Remove all selected user IDs from the set
                         selectedIds.forEach(userId => {
+                            selectedUserIds.delete(userId);
+                            // Try to remove from table if visible
                             const row = $(`.user-select[data-_id="${userId}"]`).closest('tr');
-                            table.row(row).remove();
+                            if (row.length) {
+                                table.row(row).remove();
+                            }
                         });
                         table.draw();
                         
-                        showAlert('success', `Successfully deleted ${response.deletedCount} user(s)!`);
+                        showAlert('success', `成功刪除 ${response.deletedCount} 位用戶！`);
                         updateBatchDeleteButton();
                         updateBatchSendEmailButton();
                         updateSelectAllCheckbox();
                     },
                     error: function(xhr, status, error) {
                         console.error('Error batch deleting users:', error);
-                        showAlert('danger', 'Failed to delete users. Please try again.');
+                        showAlert('danger', '刪除用戶失敗，請重試。');
                     }
                 });
             }
@@ -812,13 +926,11 @@
 
         // Batch send email button click
         $('#batchSendEmailBtn').on('click', function() {
-            const selectedIds = [];
-            $('.user-select:checked').each(function() {
-                selectedIds.push($(this).data('_id'));
-            });
+            // Get all selected user IDs from the Set (includes all pages)
+            const selectedIds = Array.from(selectedUserIds);
 
             if (selectedIds.length === 0) {
-                showAlert('warning', 'Please select users to send email.');
+                showAlert('warning', '請選擇要發送郵件的用戶。');
                 return;
             }
 
@@ -826,26 +938,28 @@
             $('#selectedUsersCount').text(selectedIds.length);
             // Reset email type to default
             $('#batchEmailType').val('invitation');
-            // Show modal
-            $('#batchSendEmailModal').modal('show');
+            // Show modal with proper backdrop
+            $('#batchSendEmailModal').modal({
+                backdrop: true,
+                keyboard: true,
+                show: true
+            });
         });
 
         // Confirm batch send email
         $('#confirmBatchSendEmail').on('click', function() {
-            const selectedIds = [];
-            $('.user-select:checked').each(function() {
-                selectedIds.push($(this).data('_id'));
-            });
+            // Get all selected user IDs from the Set (includes all pages)
+            const selectedIds = Array.from(selectedUserIds);
 
             if (selectedIds.length === 0) {
-                showAlert('warning', 'Please select users to send email.');
+                showAlert('warning', '請選擇要發送郵件的用戶。');
                 $('#batchSendEmailModal').modal('hide');
                 return;
             }
 
             const emailType = $('#batchEmailType').val();
             if (!emailType) {
-                showAlert('warning', 'Please select an email type.');
+                showAlert('warning', '請選擇郵件類型。');
                 return;
             }
 
@@ -870,15 +984,16 @@
                     }
                     showAlert('success', message);
                     
-                    // Uncheck all checkboxes
-                    $('.user-select:checked').prop('checked', false);
+                    // Clear selected set and uncheck all checkboxes
+                    selectedUserIds.clear();
+                    $('.user-select').prop('checked', false);
                     $('#selectAll').prop('checked', false).prop('indeterminate', false);
                     updateBatchDeleteButton();
                     updateBatchSendEmailButton();
                 },
                 error: function(xhr, status, error) {
                     console.error('Error batch sending emails:', error);
-                    const errorMsg = xhr.responseJSON?.message || 'Failed to send emails. Please try again.';
+                    const errorMsg = xhr.responseJSON?.message || '發送郵件失敗，請重試。';
                     showAlert('danger', errorMsg);
                 },
                 complete: function() {
