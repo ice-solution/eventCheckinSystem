@@ -22,6 +22,8 @@ const EmailRecord = require('../model/EmailRecord'); // 引入 EmailRecord 模�
 const multer = require('multer');
 const fs = require('fs');
 const { getSocket } = require('../socket'); // 引入 socket 以發送實時更新
+const { embedKaitiFontInEmail } = require('../utils/embedEmailFonts'); // 引入字型嵌入功能
+const { embedKaitiFontInEmail } = require('../utils/embedEmailFonts'); // 引入字型嵌入功能
 
 // 動態替換 email template 中的所有 user 字段
 function replaceTemplateVariables(content, user, event, additionalVars = {}) {
@@ -452,6 +454,9 @@ exports.sendEmail = async (user, event) => {
             userId: user._id ? user._id.toString() : null
         });
         
+        // 嵌入標楷體字型到郵件 HTML（如果使用了標楷體）
+        messageBody = embedKaitiFontInEmail(messageBody);
+        
         // 添加追蹤到郵件內容
         if (trackingId) {
             messageBody = emailTracking.addTrackingToEmail(messageBody, trackingId);
@@ -471,7 +476,8 @@ exports.sendEmail = async (user, event) => {
         console.error('Error sending welcome email:', error);
         // 如果出現錯誤，使用默認的歡迎郵件
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
-        const messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl);
+        let messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl);
+        messageBody = embedKaitiFontInEmail(messageBody);
         try {
             await ses.sendEmail(user.email, '歡迎加入我們的活動', messageBody);
         } catch (sendError) {
@@ -661,6 +667,9 @@ exports.sendPaymentConfirmationEmail = async (user, event, transaction) => {
             });
         }
         
+        // 嵌入標楷體字型到郵件 HTML（如果使用了標楷體）
+        messageBody = embedKaitiFontInEmail(messageBody);
+        
         // 發送郵件
         await ses.sendEmail(user.email, subject, messageBody);
         console.log('Payment confirmation email sent successfully to:', user.email);
@@ -669,7 +678,8 @@ exports.sendPaymentConfirmationEmail = async (user, event, transaction) => {
         console.error('Error sending payment confirmation email:', error);
         // 如果出現錯誤，使用默認的歡迎郵件
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
-        const messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl);
+        let messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl);
+        messageBody = embedKaitiFontInEmail(messageBody);
         await ses.sendEmail(user.email, '歡迎加入我們的活動', messageBody);
     }
 }

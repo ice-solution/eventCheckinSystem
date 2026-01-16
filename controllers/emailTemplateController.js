@@ -211,10 +211,13 @@ exports.sendEmailById = async (req, res) => {
               userId: null
             });
             
-            // 添加追蹤到郵件內容
+            // 嵌入標楷體字型到郵件 HTML（如果使用了標楷體）
             let trackedBody = body;
+            trackedBody = require('../utils/embedEmailFonts').embedKaitiFontInEmail(trackedBody);
+            
+            // 添加追蹤到郵件內容
             if (trackingId) {
-              trackedBody = emailTracking.addTrackingToEmail(body, trackingId);
+              trackedBody = emailTracking.addTrackingToEmail(trackedBody, trackingId);
             }
             
             // 發送郵件
