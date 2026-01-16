@@ -12,7 +12,11 @@
         tinymce.init({
             selector: '#content', // WYSIWYG 編輯器的選擇器
             plugins: 'image code link',
-            toolbar: 'undo redo | styleselect | bold italic | alignleft aligncenter alignright | image link | code',
+            toolbar: 'undo redo | fontselect | styleselect | bold italic | alignleft aligncenter alignright | image link | code',
+            font_formats: '標楷體=DFKai-SB,BiauKai,標楷體,AR PL UKai TW,STKaiti;微軟正黑體=Microsoft JhengHei,微軟正黑體;新細明體=PMingLiU,新細明體;細明體=MingLiU,細明體;Arial=arial,helvetica,sans-serif;Comic Sans MS=comic sans ms,sans-serif;Courier New=courier new,courier;Georgia=georgia,palatino;Helvetica=helvetica;Impact=impact,chicago;Symbol=symbol;Tahoma=tahoma,arial,helvetica,sans-serif;Terminal=terminal,monaco;Times New Roman=times new roman,times;Trebuchet MS=trebuchet ms,geneva;Verdana=verdana,geneva;Webdings=webdings;Wingdings=wingdings,zapf dingbats',
+            font_family_formats: '標楷體=DFKai-SB,BiauKai,標楷體,AR PL UKai TW,STKaiti;微軟正黑體=Microsoft JhengHei,微軟正黑體;新細明體=PMingLiU,新細明體;細明體=MingLiU,細明體;Arial=arial,helvetica,sans-serif;Comic Sans MS=comic sans ms,sans-serif;Courier New=courier new,courier;Georgia=georgia,palatino;Helvetica=helvetica;Impact=impact,chicago;Symbol=symbol;Tahoma=tahoma,arial,helvetica,sans-serif;Terminal=terminal,monaco;Times New Roman=times new roman,times;Trebuchet MS=trebuchet ms,geneva;Verdana=verdana,geneva;Webdings=webdings;Wingdings=wingdings,zapf dingbats',
+            content_css: '/admin/assets/css/tinymce-custom-fonts.css',
+            content_style: 'body { font-family: Arial, sans-serif; }',
             images_upload_url: '/emailTemplate/upload', // 圖片上傳的路由
             automatic_uploads: true,
             convert_urls: true, // 啟用 URL 轉換
@@ -57,6 +61,35 @@
                 }
                 // 其他圖片（如 QR code）保持相對路徑
                 return url;
+            },
+            setup: function(editor) {
+                // 字型檢測腳本
+                editor.on('init', function() {
+                    // 檢測系統上可用的標楷體字型
+                    var fontsToCheck = ['AR PL UKai TW', 'STKaiti', 'ST Kaiti', 'BiauKai', 'DFKai-SB', '標楷體', 'Kaiti SC', 'Kaiti TC'];
+                    var availableFonts = [];
+                    
+                    var canvas = document.createElement('canvas');
+                    var context = canvas.getContext('2d');
+                    var baseString = '標楷體測試';
+                    var baseWidth = context.measureText(baseString).width;
+                    
+                    fontsToCheck.forEach(function(font) {
+                        context.font = '12px "' + font + '"';
+                        var width = context.measureText(baseString).width;
+                        if (width !== baseWidth) {
+                            availableFonts.push(font);
+                        }
+                    });
+                    
+                    if (availableFonts.length > 0) {
+                        console.log('系統上可用的標楷體字型:', availableFonts);
+                    } else {
+                        console.warn('警告：系統上未檢測到標楷體字型。文字將使用 serif 作為後備字型。');
+                        console.log('建議：在 Mac 上，標楷體通常稱為 "STKaiti" 或 "ST Kaiti"。');
+                        console.log('建議：在 Linux 上，您可能需要安裝中文字型包。');
+                    }
+                });
             }
         });
     </script>

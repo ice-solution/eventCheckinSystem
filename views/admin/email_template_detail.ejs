@@ -9,7 +9,11 @@
         tinymce.init({
             selector: '#content', // WYSIWYG 編輯器的選擇器
             plugins: 'image code link',
-            toolbar: 'undo redo | styleselect | bold italic | alignleft aligncenter alignright | image link | code',
+            toolbar: 'undo redo | fontselect | styleselect | bold italic | alignleft aligncenter alignright | image link | code',
+            font_formats: '標楷體=DFKai-SB,BiauKai,AR PL UKai TW;微軟正黑體=Microsoft JhengHei,微軟正黑體;新細明體=PMingLiU,新細明體;細明體=MingLiU,細明體;Arial=arial,helvetica,sans-serif;Comic Sans MS=comic sans ms,sans-serif;Courier New=courier new,courier;Georgia=georgia,palatino;Helvetica=helvetica;Impact=impact,chicago;Symbol=symbol;Tahoma=tahoma,arial,helvetica,sans-serif;Terminal=terminal,monaco;Times New Roman=times new roman,times;Trebuchet MS=trebuchet ms,geneva;Verdana=verdana,geneva;Webdings=webdings;Wingdings=wingdings,zapf dingbats',
+            font_family_formats: '標楷體=DFKai-SB,BiauKai,AR PL UKai TW;微軟正黑體=Microsoft JhengHei,微軟正黑體;新細明體=PMingLiU,新細明體;細明體=MingLiU,細明體;Arial=arial,helvetica,sans-serif;Comic Sans MS=comic sans ms,sans-serif;Courier New=courier new,courier;Georgia=georgia,palatino;Helvetica=helvetica;Impact=impact,chicago;Symbol=symbol;Tahoma=tahoma,arial,helvetica,sans-serif;Terminal=terminal,monaco;Times New Roman=times new roman,times;Trebuchet MS=trebuchet ms,geneva;Verdana=verdana,geneva;Webdings=webdings;Wingdings=wingdings,zapf dingbats',
+            content_css: '/admin/assets/css/tinymce-custom-fonts.css',
+            content_style: 'body { font-family: Arial, sans-serif; } * { font-family: inherit; }',
             images_upload_url: '/emailTemplate/upload', // 圖片上傳的路由
             automatic_uploads: true,
             convert_urls: true, // 啟用 URL 轉換

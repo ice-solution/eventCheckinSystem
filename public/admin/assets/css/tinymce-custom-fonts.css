@@ -1,0 +1,66 @@
+/* TinyMCE 自訂字型樣式 - 標楷體 */
+
+/* 使用下載的芫荽字體作為標楷體替代 */
+@font-face {
+    font-family: 'DFKai-SB';
+    src: url('/admin/assets/fonts/kaiti/Iansui-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'BiauKai';
+    src: url('/admin/assets/fonts/kaiti/Iansui-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: '標楷體';
+    src: url('/admin/assets/fonts/kaiti/Iansui-Regular.ttf') format('truetype'),
+         local('AR PL UKai TW'), 
+         local('DFKai-SB'), 
+         local('BiauKai'), 
+         local('STKaiti'), 
+         local('ST Kaiti'), 
+         local('標楷體'),
+         local('Kaiti SC'), 
+         local('Kaiti TC');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* 確保標楷體能正確應用 - 只在沒有內聯樣式時才應用 */
+body {
+    font-family: Arial, sans-serif;
+}
+/* 移除強制字型設置，讓內聯樣式優先 */
+
+/* 微軟正黑體 */
+@font-face {
+    font-family: '微軟正黑體';
+    src: local('微軟正黑體'), local('Microsoft JhengHei');
+    font-weight: normal;
+    font-style: normal;
+}
+
+/* 新細明體 */
+@font-face {
+    font-family: '新細明體';
+    src: local('新細明體'), local('PMingLiU');
+    font-weight: normal;
+    font-style: normal;
+}
+
+/* 細明體 */
+@font-face {
+    font-family: '細明體';
+    src: local('細明體'), local('MingLiU');
+    font-weight: normal;
+    font-style: normal;
+}
+
+

@@ -50,6 +50,36 @@ exports.renderEmailTemplateList = async (req, res) => {
   }
 }
 
+// 獲取指定類型的郵件模板列表 (API)
+exports.getEmailTemplatesByType = async (req, res) => {
+  try {
+    const { eventId } = req.params
+    const { type } = req.query // 郵件類型：welcome, invitation, knowledge, reminder
+    
+    if (!type) {
+      return res.status(400).json({ message: "Email type is required" })
+    }
+    
+    // 查詢該事件和全局的指定類型模板
+    const query = {
+      type: type,
+      $or: [
+        { eventId: eventId },
+        { eventId: null } // 全局模板
+      ]
+    }
+    
+    const emailTemplates = await EmailTemplate.find(query)
+      .sort({ eventId: 1, createdAt: -1 }) // 先顯示事件特定模板，再顯示全局模板，按創建時間倒序
+      .select('_id subject type eventId') // 只返回需要的字段
+    
+    res.json(emailTemplates)
+  } catch (error) {
+    console.error("Error fetching email templates by type:", error)
+    res.status(500).json({ message: "Error fetching email templates" })
+  }
+}
+
 exports.renderEmailTemplateDetail = async (req, res) => {
   const { eventId, id } = req.params
 

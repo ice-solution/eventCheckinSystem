@@ -509,7 +509,7 @@ exports.sendWelcomeMessage = async (user, event) => {
 // 重新發送郵件（支持多種類型）
 exports.resendEmail = async (req, res) => {
     const { eventId, userId } = req.params;
-    const { emailType } = req.body; // welcome, confirmation, reminder, thankYou
+    const { emailType, emailTemplateId } = req.body; // welcome, confirmation, reminder, thankYou, emailTemplateId (可選)
 
     try {
         const event = await Event.findById(eventId);
@@ -532,10 +532,15 @@ exports.resendEmail = async (req, res) => {
         const type = emailType || 'welcome';
         
         if (type === 'welcome') {
-            await exports.sendEmail(userData, event);
+            // 如果指定了模板 ID，使用 sendEmailByType 並傳入模板 ID
+            if (emailTemplateId) {
+                await exports.sendEmailByType(userData, event, type, emailTemplateId);
+            } else {
+                await exports.sendEmail(userData, event);
+            }
         } else {
             // 發送其他類型的郵件（confirmation, reminder, thankYou）
-            await exports.sendEmailByType(userData, event, type);
+            await exports.sendEmailByType(userData, event, type, emailTemplateId);
         }
 
         res.status(200).json({ message: `${type} email resent successfully` });
@@ -546,17 +551,29 @@ exports.resendEmail = async (req, res) => {
 };
 
 // 根據類型發送郵件
-exports.sendEmailByType = async (user, event, type = 'welcome') => {
+exports.sendEmailByType = async (user, event, type = 'welcome', emailTemplateId = null) => {
     try {
         // 生成 QR 碼
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
         const loginUrl = `${process.env.DOMAIN || 'http://localhost:3377'}/events/${event._id}/login`;
         
-        // 查找對應類型的郵件模板
-        let emailTemplate = await EmailTemplate.findOne({ 
-            eventId: event._id, 
-            type: type 
-        });
+        // 如果指定了模板 ID，使用指定的模板
+        let emailTemplate = null;
+        if (emailTemplateId) {
+            emailTemplate = await EmailTemplate.findById(emailTemplateId);
+            // 驗證模板類型是否匹配
+            if (emailTemplate && emailTemplate.type !== type) {
+                console.warn(`Template type mismatch: requested ${type}, but template is ${emailTemplate.type}`);
+            }
+        }
+        
+        // 如果沒有指定模板或找不到，查找對應類型的郵件模板
+        if (!emailTemplate) {
+            emailTemplate = await EmailTemplate.findOne({ 
+                eventId: event._id, 
+                type: type 
+            });
+        }
         
         // 如果沒有找到模板，使用默認模板
         if (!emailTemplate) {
@@ -3763,7 +3780,7 @@ exports.batchCheckInUsers = async (req, res) => {
 // Batch send emails
 exports.batchSendEmails = async (req, res) => {
     const { eventId } = req.params;
-    const { userIds, emailType } = req.body; // userIds: 用戶ID數組, emailType: 郵件類型
+    const { userIds, emailType, emailTemplateId } = req.body; // userIds: 用戶ID數組, emailType: 郵件類型, emailTemplateId: 可選的模板ID
 
     try {
         const event = await Event.findById(eventId);

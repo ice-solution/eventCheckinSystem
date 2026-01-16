@@ -427,6 +427,13 @@
                                                     <option value="reminder">Reminder Email (提醒郵件)</option>
                                                 </select>
                                             </div>
+                                            <div class="form-group" id="batchEmailTemplateGroup" style="display: none;">
+                                                <label for="batchEmailTemplate">選擇郵件模板 (Select Email Template):</label>
+                                                <select class="form-control" id="batchEmailTemplate">
+                                                    <option value="">使用默認模板 (Use Default Template)</option>
+                                                </select>
+                                                <small class="form-text text-muted">如果有多個同類型的模板，請選擇要使用的模板</small>
+                                            </div>
                                             <div class="alert alert-info">
                                                 <i class="fas fa-info-circle"></i> 郵件將發送給所有選中的用戶
                                             </div>
@@ -434,6 +441,38 @@
                                         <div class="modal-footer">
                                             <button type="button" class="btn btn-secondary" data-dismiss="modal">取消 (Cancel)</button>
                                             <button type="button" class="btn btn-primary" id="confirmBatchSendEmail">
+                                                <i class="fas fa-paper-plane"></i> 確認發送 (Confirm Send)
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Resend Email Template Selection Modal -->
+                            <div class="modal fade" id="resendEmailModal" tabindex="-1" role="dialog" aria-labelledby="resendEmailModalLabel" aria-hidden="true">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="resendEmailModalLabel">選擇郵件模板 (Select Email Template)</h5>
+                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="form-group" id="resendEmailTemplateGroup" style="display: none;">
+                                                <label for="resendEmailTemplate">選擇郵件模板 (Select Email Template):</label>
+                                                <select class="form-control" id="resendEmailTemplate">
+                                                    <option value="">使用默認模板 (Use Default Template)</option>
+                                                </select>
+                                                <small class="form-text text-muted">如果有多個同類型的模板，請選擇要使用的模板</small>
+                                            </div>
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle"></i> 將重新發送郵件給選中的用戶
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">取消 (Cancel)</button>
+                                            <button type="button" class="btn btn-primary" id="confirmResendEmail">
                                                 <i class="fas fa-paper-plane"></i> 確認發送 (Confirm Send)
                                             </button>
                                         </div>
@@ -830,6 +869,14 @@
             showAlert('info', '已取消所有選擇');
         });
 
+        // Store resend email context
+        let resendEmailContext = {
+            userId: null,
+            emailType: null,
+            button: null,
+            originalHtml: null
+        };
+
         // Resend email functionality (支持選擇類型)
         $('#usersTable tbody').on('click', '.resend-email-option', function(e) {
             e.preventDefault();
@@ -839,15 +886,71 @@
             const button = $(this).closest('.btn-group').find('.resend-email-btn');
             const originalHtml = button.html();
 
+            // Store context for later use
+            resendEmailContext = {
+                userId: _id,
+                emailType: emailType,
+                button: button,
+                originalHtml: originalHtml
+            };
+
+            // Load templates for this type
+            const $templateSelect = $('#resendEmailTemplate');
+            const $templateGroup = $('#resendEmailTemplateGroup');
+            
+            $templateSelect.html('<option value="">使用默認模板 (Use Default Template)</option>');
+            $templateGroup.hide();
+
+            $.ajax({
+                url: `/events/api/${event_id}/emailTemplates`,
+                type: 'GET',
+                data: { type: emailType },
+                success: function(templates) {
+                    if (templates && templates.length > 0) {
+                        templates.forEach(function(template) {
+                            const label = template.eventId ? 
+                                `${template.subject} (Event Template)` : 
+                                `${template.subject} (Global Template)`;
+                            $templateSelect.append(`<option value="${template._id}">${label}</option>`);
+                        });
+                        $templateGroup.show();
+                    }
+                    
+                    // Show modal for template selection
+                    $('#resendEmailModal').modal('show');
+                },
+                error: function(xhr) {
+                    console.error('Error fetching email templates:', xhr);
+                    // If error, proceed with default template
+                    confirmResendEmail();
+                }
+            });
+        });
+
+        // Confirm resend email (with template selection)
+        function confirmResendEmail() {
+            const emailTemplateId = $('#resendEmailTemplate').val() || null;
+            const event_id = '<%= event._id %>';
+            const { userId, emailType, button, originalHtml } = resendEmailContext;
+
+            if (!userId || !emailType) {
+                showAlert('danger', 'Missing user or email type information.');
+                return;
+            }
+
             button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
 
             $.ajax({
-                url: `/events/${event_id}/users/${_id}/resend-email`,
+                url: `/events/${event_id}/users/${userId}/resend-email`,
                 type: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify({ emailType: emailType }),
+                data: JSON.stringify({ 
+                    emailType: emailType,
+                    emailTemplateId: emailTemplateId
+                }),
                 success: function() {
                     showAlert('success', `${emailType} email resent successfully!`);
+                    $('#resendEmailModal').modal('hide');
                 },
                 error: function(xhr) {
                     console.error('Error resending email:', xhr.responseText);
@@ -857,6 +960,11 @@
                     button.prop('disabled', false).html(originalHtml);
                 }
             });
+        }
+
+        // Confirm button in resend email modal
+        $('#confirmResendEmail').on('click', function() {
+            confirmResendEmail();
         });
 
         // Batch delete functionality
@@ -1097,6 +1205,8 @@
                 return;
             }
 
+            const emailTemplateId = $('#batchEmailTemplate').val() || null; // 可選的模板 ID
+
             const button = $(this);
             const originalText = button.html();
             button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 發送中...');
@@ -1107,7 +1217,8 @@
                 contentType: 'application/json',
                 data: JSON.stringify({ 
                     userIds: selectedIds,
-                    emailType: emailType
+                    emailType: emailType,
+                    emailTemplateId: emailTemplateId
                 }),
                 success: function(response) {
                     closeBatchSendEmailModal();

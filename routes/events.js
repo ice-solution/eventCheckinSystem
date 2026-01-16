@@ -279,6 +279,7 @@ router.get('/:eventId/email-records/:trackingId', eventsController.getEmailRecor
 router.get('/:eventId/emailTemplate', emailTemplateController.renderEmailTemplateList); // 渲染電子郵件模板列表頁面
 router.get('/:eventId/emailTemplate/create', emailTemplateController.renderCreateEmailTemplatePage); // 渲染創建電子郵件模板頁面
 router.get('/:eventId/emailTemplate/:id', emailTemplateController.renderEmailTemplateDetail); // 渲染創建電子郵件模板頁面
+router.get('/api/:eventId/emailTemplates', emailTemplateController.getEmailTemplatesByType); // 獲取指定類型的郵件模板列表 (API)
 
 // SMS Template
 router.get('/:eventId/smsTemplate', smsTemplateController.renderSmsTemplateList); // 渲染 SMS 模板列表頁面

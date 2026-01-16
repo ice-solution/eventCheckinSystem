@@ -741,7 +741,27 @@
         // Only get name and company information, excluding Table, Phone, Checked In
         const detailsElement = document.getElementById('detailsContent');
         const name = detailsElement.querySelector('h4').textContent;
-        const company = detailsElement.querySelector('p:nth-of-type(2)').textContent.replace('Company: ', '');
+        const company = detailsElement.querySelector('p:nth-of-type(3)').textContent.replace('Company Name: ', '').trim();
+        const unit = detailsElement.querySelector('p:nth-of-type(4)').textContent.replace('Functional Unit:', '').trim();
+        const title = detailsElement.querySelector('p:nth-of-type(6)').textContent.replace('Job Title:', '').trim();
+        const award = detailsElement.querySelector('p:nth-of-type(8)').textContent.replace('Award name:', '').trim();
+        const seat = detailsElement.querySelector('p:nth-of-type(5)').textContent.replace('Seat Number:', 'Seat No:').trim();
+        
+        // Build content dynamically based on whether title exists
+        let contentItems = [];
+        contentItems.push(`<h1>${name}</h1>`);
+        contentItems.push(`<h3>${company}</h3>`);
+        contentItems.push(`<h3>${unit}</h3>`);
+        
+        // Only add title if it's not empty
+        if (title && title !== '-' && title !== '') {
+            contentItems.push(`<h3>${title}</h3>`);
+        }
+        
+        // Always add award (it will automatically move up if title is not shown)
+        if (award && award !== '-' && award !== '') {
+            contentItems.push(`<h3>${award}</h3>`);
+        }
         
         const printContent = `
             <style>
@@ -769,7 +789,7 @@
                     width: 100%;
                     height: 100%;
                     text-align: center;
-                    padding-top:60px;
+                    padding-top:0px;
                     padding-left:30px;
                 }
                 h1 {
@@ -781,7 +801,7 @@
                     width: 100%;
                 }
                 h3 {
-                    font-size: 22px;
+                    font-size: 10px;
                     margin: 0 0 3mm 0;
                     font-weight: bold;
                     line-height: 1.1;
@@ -790,9 +810,9 @@
                 }
             </style>
             <div class="content-container">
-                <h1>${name}</h1>
-                <h3>${company}</h3>
+                ${contentItems.join('\n                ')}
             </div>
+            <h5 style="position:fixed; font-size:12px; top:170;text-align:left;left:15">${seat}</h5>
         `;
         
         const printWindow = window.open('', '', 'height=600,width=800');
