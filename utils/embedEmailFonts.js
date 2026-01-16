@@ -40,42 +40,61 @@ function hasKaitiFont(html) {
 }
 
 /**
- * 在 HTML 的 <head> 中添加嵌入的字型樣式
+ * 在 HTML 的 <head> 中添加字型樣式（使用系統內建字型，不嵌入字型檔案）
+ * 這樣可以避免郵件大小超過 AWS SES 的 10MB 限制
  * @param {string} html - HTML 內容
- * @param {string} base64Font - base64 編碼的字型
  * @returns {string} 添加了字型樣式的 HTML
  */
-function injectFontStyle(html, base64Font) {
+function injectFontStyle(html) {
+    // 使用系統內建字型，不嵌入字型檔案
+    // 這樣可以確保郵件大小不會超過限制，同時讓有標楷體的系統能正確顯示
     const fontStyle = `
     <style type="text/css">
+        /* 標楷體字型樣式 - 使用系統內建字型 */
+        /* 注意：由於字型檔案太大（9MB），我們不嵌入字型檔案 */
+        /* 而是依賴收件人系統上已有的標楷體字型 */
+        /* 如果系統沒有標楷體，會使用 serif 作為後備 */
         @font-face {
             font-family: 'DFKai-SB';
-            src: url(data:font/truetype;charset=utf-8;base64,${base64Font}) format('truetype');
-            font-weight: normal;
-            font-style: normal;
-            font-display: swap;
-        }
-        @font-face {
-            font-family: 'BiauKai';
-            src: url(data:font/truetype;charset=utf-8;base64,${base64Font}) format('truetype');
-            font-weight: normal;
-            font-style: normal;
-            font-display: swap;
-        }
-        @font-face {
-            font-family: '標楷體';
-            src: url(data:font/truetype;charset=utf-8;base64,${base64Font}) format('truetype'),
-                 local('AR PL UKai TW'), 
-                 local('DFKai-SB'), 
+            src: local('DFKai-SB'), 
                  local('BiauKai'), 
+                 local('AR PL UKai TW'), 
                  local('STKaiti'), 
                  local('ST Kaiti'), 
                  local('標楷體'),
                  local('Kaiti SC'), 
-                 local('Kaiti TC');
+                 local('Kaiti TC'),
+                 serif;
             font-weight: normal;
             font-style: normal;
-            font-display: swap;
+        }
+        @font-face {
+            font-family: 'BiauKai';
+            src: local('BiauKai'), 
+                 local('DFKai-SB'), 
+                 local('AR PL UKai TW'), 
+                 local('STKaiti'), 
+                 local('ST Kaiti'), 
+                 local('標楷體'),
+                 local('Kaiti SC'), 
+                 local('Kaiti TC'),
+                 serif;
+            font-weight: normal;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: '標楷體';
+            src: local('標楷體'),
+                 local('DFKai-SB'), 
+                 local('BiauKai'), 
+                 local('AR PL UKai TW'), 
+                 local('STKaiti'), 
+                 local('ST Kaiti'), 
+                 local('Kaiti SC'), 
+                 local('Kaiti TC'),
+                 serif;
+            font-weight: normal;
+            font-style: normal;
         }
     </style>
     `;
@@ -101,34 +120,22 @@ function injectFontStyle(html, base64Font) {
 }
 
 /**
- * 為電子郵件 HTML 嵌入標楷體字型
+ * 為電子郵件 HTML 添加標楷體字型樣式
+ * 注意：由於字型檔案太大（9MB），我們不嵌入字型檔案，而是使用系統內建字型
+ * 這樣可以避免郵件大小超過 AWS SES 的 10MB 限制
  * @param {string} html - 電子郵件 HTML 內容
- * @returns {string} 嵌入了字型的 HTML
+ * @returns {string} 添加了字型樣式的 HTML
  */
 function embedKaitiFontInEmail(html) {
-    // 檢查是否需要嵌入字型
+    // 檢查是否需要添加字型樣式
     if (!hasKaitiFont(html)) {
         return html;
     }
 
-    // 字型檔案路徑
-    const fontPath = path.join(__dirname, '../public/admin/assets/fonts/kaiti/Iansui-Regular.ttf');
-    
-    // 檢查字型檔案是否存在
-    if (!fs.existsSync(fontPath)) {
-        console.warn(`Font file not found: ${fontPath}. Email will use system fonts as fallback.`);
-        return html;
-    }
-
-    // 將字型轉換為 base64
-    const base64Font = fontToBase64(fontPath);
-    if (!base64Font) {
-        console.warn('Failed to convert font to base64. Email will use system fonts as fallback.');
-        return html;
-    }
-
-    // 注入字型樣式到 HTML
-    return injectFontStyle(html, base64Font);
+    // 不嵌入字型檔案，而是使用系統內建字型
+    // 這樣可以確保郵件大小不會超過 AWS SES 的 10MB 限制
+    // 如果收件人的系統有標楷體，會正確顯示；如果沒有，會使用 serif 作為後備
+    return injectFontStyle(html);
 }
 
 module.exports = {
