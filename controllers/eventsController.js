@@ -23,7 +23,6 @@ const multer = require('multer');
 const fs = require('fs');
 const { getSocket } = require('../socket'); // 引入 socket 以發送實時更新
 const { embedKaitiFontInEmail } = require('../utils/embedEmailFonts'); // 引入字型嵌入功能
-const { embedKaitiFontInEmail } = require('../utils/embedEmailFonts'); // 引入字型嵌入功能
 
 // 動態替換 email template 中的所有 user 字段
 function replaceTemplateVariables(content, user, event, additionalVars = {}) {
