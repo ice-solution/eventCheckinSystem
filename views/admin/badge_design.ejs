@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Badge 設計 - <%= event.name %></title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        .container-fluid {
+            max-width: 1400px;
+        }
+        .sidebar {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            height: calc(100vh - 100px);
+            overflow-y: auto;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .canvas-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        #badgeCanvas {
+            border: 2px dashed #ddd;
+            background: white;
+            display: block;
+            margin: 0 auto;
+            cursor: crosshair;
+        }
+        .field-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .field-item:hover {
+            background: #e9ecef;
+            border-color: #007bff;
+        }
+        .field-item.selected {
+            background: #007bff;
+            color: white;
+        }
+        .element-controls {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .btn-group-vertical {
+            width: 100%;
+        }
+        .preview-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .element-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            cursor: move;
+        }
+        .element-item:hover {
+            border-color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row mb-3">
+            <div class="col-12">
+                <h2>Badge 設計 - <%= event.name %></h2>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="saveConfig()">儲存配置</button>
+                    <button class="btn btn-success" onclick="generateTestImage()">生成測試圖片</button>
+                    <button class="btn btn-secondary" onclick="clearCanvas()">清除</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- 左側：表單字段列表 -->
+            <div class="col-md-3">
+                <div class="sidebar">
+                    <h4>表單字段</h4>
+                    <div id="fieldList">
+                        <!-- 動態變量 -->
+                        <div class="field-item" data-type="text" data-content="{{user.name}}">
+                            <strong>姓名</strong> - {{user.name}}
+                        </div>
+                        <div class="field-item" data-type="text" data-content="{{user.email}}">
+                            <strong>電子郵件</strong> - {{user.email}}
+                        </div>
+                        <div class="field-item" data-type="text" data-content="{{user.company}}">
+                            <strong>公司</strong> - {{user.company}}
+                        </div>
+                        <div class="field-item" data-type="text" data-content="{{user.phone}}">
+                            <strong>電話</strong> - {{user.phone}}
+                        </div>
+                        <div class="field-item" data-type="qrcode" data-content="{{qrcodeUrl}}">
+                            <strong>QR Code</strong> - {{qrcodeUrl}}
+                        </div>
+                        <!-- 動態字段 -->
+                        <% if (formConfig && formConfig.sections) { %>
+                            <% formConfig.sections.forEach(section => { %>
+                                <% if (section.visible && section.fields) { %>
+                                    <% section.fields.forEach(field => { %>
+                                        <% if (field.visible) { %>
+                                            <div class="field-item" data-type="text" data-content="{{user.<%= field.fieldName %>}}">
+                                                <strong><%= field.label.zh || field.label.en || field.fieldName %></strong> - {{user.<%= field.fieldName %>}}
+                                            </div>
+                                        <% } %>
+                                    <% }); %>
+                                <% } %>
+                            <% }); %>
+                        <% } %>
+                    </div>
+                    
+                    <div class="element-controls mt-4">
+                        <h5>已添加元素</h5>
+                        <div id="elementList"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 右側：Canvas 設計區域 -->
+            <div class="col-md-9">
+                <div class="canvas-container">
+                    <h4>標籤設計 (100mm x 62mm)</h4>
+                    <div class="text-center mb-3">
+                        <canvas id="badgeCanvas"></canvas>
+                    </div>
+                    
+                    <div class="preview-section">
+                        <h5>預覽</h5>
+                        <div id="testImagePreview"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const eventId = '<%= eventId %>';
+        const badgeConfig = <%- JSON.stringify(badgeConfig) %>;
+        
+        // Canvas 設置
+        // 100mm x 62mm @ 300 DPI = 1181px x 732px（橫向）
+        const MM_TO_PX = 300 / 25.4; // 300 DPI 轉換
+        const CANVAS_WIDTH = Math.round(100 * MM_TO_PX); // 1181px（寬）
+        const CANVAS_HEIGHT = Math.round(62 * MM_TO_PX); // 732px（高）
+        
+        const canvas = document.getElementById('badgeCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+        
+        // 設置 canvas 顯示大小（縮放顯示，保持橫向比例）
+        canvas.style.width = '645px';
+        canvas.style.height = '400px';
+        
+        let elements = badgeConfig.elements || [];
+        let selectedElement = null;
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
+        
+        // 初始化 canvas
+        function initCanvas() {
+            // 白色背景
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            
+            // 繪製所有元素
+            elements.forEach((element, index) => {
+                drawElement(element, index === selectedElement);
+            });
+            
+            updateElementList();
+        }
+        
+        // 繪製元素
+        function drawElement(element, isSelected = false) {
+            ctx.save();
+            
+            if (element.type === 'text') {
+                ctx.font = `${element.fontWeight || 'normal'} ${element.fontSize || 16}px ${element.fontFamily || 'Arial'}`;
+                ctx.fillStyle = element.color || '#000000';
+                ctx.textAlign = element.textAlign || 'left';
+                ctx.textBaseline = 'top';
+                
+                let x = element.x;
+                if (element.textAlign === 'center') {
+                    x = element.x + (element.width || 0) / 2;
+                } else if (element.textAlign === 'right') {
+                    x = element.x + (element.width || 0);
+                }
+                
+                ctx.fillText(element.content || '', x, element.y);
+            } else if (element.type === 'qrcode') {
+                // 繪製 QR Code 佔位符
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(element.x, element.y, element.width || 100, element.height || 100);
+                ctx.fillStyle = '#f0f0f0';
+                ctx.fillRect(element.x, element.y, element.width || 100, element.height || 100);
+                ctx.fillStyle = '#000000';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('QR Code', element.x + (element.width || 100) / 2, element.y + (element.height || 100) / 2);
+            }
+            
+            // 選中時繪製邊框
+            if (isSelected) {
+                ctx.strokeStyle = '#007bff';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.strokeRect(element.x - 2, element.y - 2, (element.width || 100) + 4, (element.height || 50) + 4);
+                ctx.setLineDash([]);
+            }
+            
+            ctx.restore();
+        }
+        
+        // 點擊字段添加到 canvas
+        $('.field-item').on('click', function() {
+            const type = $(this).data('type');
+            const content = $(this).data('content');
+            
+            const newElement = {
+                type: type,
+                content: content,
+                x: 50,
+                y: 50 + elements.length * 60,
+                width: type === 'qrcode' ? 150 : null,
+                height: type === 'qrcode' ? 150 : null,
+                fontSize: 16,
+                fontFamily: 'Arial',
+                fontWeight: 'normal',
+                textAlign: 'left',
+                color: '#000000',
+                qrData: type === 'qrcode' ? content : null,
+                zIndex: elements.length
+            };
+            
+            elements.push(newElement);
+            selectedElement = elements.length - 1;
+            initCanvas();
+        });
+        
+        // Canvas 點擊事件
+        canvas.addEventListener('click', function(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = CANVAS_WIDTH / rect.width;
+            const scaleY = CANVAS_HEIGHT / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            
+            // 檢查是否點擊了元素
+            let clickedElement = null;
+            for (let i = elements.length - 1; i >= 0; i--) {
+                const el = elements[i];
+                const width = el.width || 100;
+                const height = el.height || 50;
+                if (x >= el.x && x <= el.x + width && y >= el.y && y <= el.y + height) {
+                    clickedElement = i;
+                    break;
+                }
+            }
+            
+            selectedElement = clickedElement;
+            initCanvas();
+            
+            // 更新控制面板
+            if (selectedElement !== null) {
+                updateElementControls(elements[selectedElement]);
+            } else {
+                $('#elementControls').html('');
+            }
+        });
+        
+        // 拖動功能
+        canvas.addEventListener('mousedown', function(e) {
+            if (selectedElement !== null) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = CANVAS_WIDTH / rect.width;
+                const scaleY = CANVAS_HEIGHT / rect.height;
+                const x = (e.clientX - rect.left) * scaleX;
+                const y = (e.clientY - rect.top) * scaleY;
+                
+                const el = elements[selectedElement];
+                if (x >= el.x && x <= el.x + (el.width || 100) && y >= el.y && y <= el.y + (el.height || 50)) {
+                    isDragging = true;
+                    dragOffset.x = x - el.x;
+                    dragOffset.y = y - el.y;
+                }
+            }
+        });
+        
+        canvas.addEventListener('mousemove', function(e) {
+            if (isDragging && selectedElement !== null) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = CANVAS_WIDTH / rect.width;
+                const scaleY = CANVAS_HEIGHT / rect.height;
+                const x = (e.clientX - rect.left) * scaleX;
+                const y = (e.clientY - rect.top) * scaleY;
+                
+                elements[selectedElement].x = x - dragOffset.x;
+                elements[selectedElement].y = y - dragOffset.y;
+                initCanvas();
+            }
+        });
+        
+        canvas.addEventListener('mouseup', function() {
+            isDragging = false;
+        });
+        
+        // 更新元素列表
+        function updateElementList() {
+            const list = $('#elementList');
+            list.empty();
+            
+            elements.forEach((element, index) => {
+                const item = $('<div class="element-item"></div>');
+                item.text(`${element.type}: ${element.content || element.qrData || 'N/A'}`);
+                if (index === selectedElement) {
+                    item.addClass('selected');
+                }
+                item.on('click', function() {
+                    selectedElement = index;
+                    initCanvas();
+                    updateElementControls(element);
+                });
+                list.append(item);
+            });
+        }
+        
+        // 更新元素控制面板
+        function updateElementControls(element) {
+            // 這裡可以添加詳細的控制選項
+            console.log('Selected element:', element);
+        }
+        
+        // 保存配置
+        async function saveConfig() {
+            try {
+                const response = await fetch(`/events/${eventId}/badges/config`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: badgeConfig.name || 'Default Badge',
+                        width: 100,
+                        height: 62,
+                        dpi: 300,
+                        elements: elements
+                    })
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    alert('配置已保存！');
+                } else {
+                    alert('保存失敗：' + result.message);
+                }
+            } catch (error) {
+                console.error('Error saving config:', error);
+                alert('保存時發生錯誤');
+            }
+        }
+        
+        // 生成測試圖片
+        async function generateTestImage() {
+            try {
+                // 先保存配置
+                await saveConfig();
+                
+                const response = await fetch(`/events/${eventId}/badges/test-image`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    // 顯示測試圖片
+                    const preview = $('#testImagePreview');
+                    preview.html(`<img src="${result.imageUrl}" alt="Test Badge" style="max-width: 100%;" />`);
+                    alert('測試圖片已生成！');
+                } else {
+                    alert('生成失敗：' + result.message);
+                }
+            } catch (error) {
+                console.error('Error generating test image:', error);
+                alert('生成測試圖片時發生錯誤');
+            }
+        }
+        
+        // 清除 canvas
+        function clearCanvas() {
+            if (confirm('確定要清除所有元素嗎？')) {
+                elements = [];
+                selectedElement = null;
+                initCanvas();
+            }
+        }
+        
+        // 初始化
+        initCanvas();
+    </script>
+</body>
+</html>
+

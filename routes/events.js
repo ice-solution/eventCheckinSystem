@@ -5,6 +5,7 @@ const eventsController = require('../controllers/eventsController');
 const importController = require('../controllers/importController');
 const emailTemplateController = require("../controllers/emailTemplateController");
 const smsTemplateController = require("../controllers/smsTemplateController");
+const badgeController = require('../controllers/badgeController');
 
 const Event = require('../model/Event'); // 引入 Event 模型
 const multer = require('multer');
@@ -140,6 +141,13 @@ router.post('/:eventId/guest-list/send-sms', eventsController.sendSmsToGuestList
 const guestListStorage = multer.memoryStorage();
 const guestListUpload = multer({ storage: guestListStorage }).single('file');
 router.post('/:eventId/guest-list/import', guestListUpload, eventsController.importGuestListFromExcel); // 導入 Excel 到 Guest List
+
+// Badge 設計路由
+router.get('/:eventId/badges', badgeController.renderBadgeDesignPage); // 渲染 badge 設計頁面
+router.get('/:eventId/badges/config', badgeController.getBadgeConfig); // 獲取 badge 配置
+router.post('/:eventId/badges/config', badgeController.saveBadgeConfig); // 保存 badge 配置
+router.post('/:eventId/badges/test-image', badgeController.generateTestImage); // 生成測試圖片
+router.get('/:eventId/badges/:userId/image', badgeController.generateBadgeImage); // 生成實際 badge 圖片
 
 // 渲染參展商列表頁面（舊的 attendees 功能，保留用於向後兼容）
 router.get('/:eventId/attendees', eventsController.renderAttendeesListPage);
