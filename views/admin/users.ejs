@@ -724,6 +724,7 @@
                                             <th>Company</th>
                                             <th>Phone</th>
                                         <% } %>
+                                        <th>Created At</th>
                                         <th>Checked In</th>
                                         <th>Actions</th>
                                     </tr>
@@ -749,6 +750,27 @@
                                             <td data-field-name="company"><%= user.company %></td>
                                             <td data-field-name="phone"><%= user.phone %></td>
                                             <% } %>
+                                            <td data-order="<%= (user.create_at || user.created_at) ? new Date(user.create_at || user.created_at).getTime() : 0 %>">
+                                                <% 
+                                                const createdDate = user.create_at || user.created_at;
+                                                if (createdDate) {
+                                                    const date = new Date(createdDate);
+                                                    const formattedDate = date.toLocaleString('zh-TW', {
+                                                        timeZone: 'Asia/Hong_Kong',
+                                                        year: 'numeric',
+                                                        month: '2-digit',
+                                                        day: '2-digit',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit',
+                                                        second: '2-digit',
+                                                        hour12: false
+                                                    });
+                                                %>
+                                                    <%= formattedDate %>
+                                                <% } else { %>
+                                                    -
+                                                <% } %>
+                                            </td>
                                             <td>
                                                 <input type="checkbox" class="checkin-toggle" data-_id="<%= user._id %>" <%= user.isCheckIn ? 'checked' : '' %> />
                                             </td>
@@ -820,6 +842,10 @@
         const selectedUserIds = new Set();
 
         // Initialize DataTable with inline editing
+        // Calculate the Created At column index dynamically
+        const totalColumns = $('#usersTable thead th').length;
+        const createdAtColumnIndex = totalColumns - 3; // Created At is 3rd from the end (before Checked In and Actions)
+        
         const table = $('#usersTable').DataTable({
             pageLength: 50,
             dom: 'frtip', // Remove buttons
@@ -827,6 +853,12 @@
                 {
                     targets: 0, // Select checkbox column
                     orderable: false,
+                    searchable: false
+                },
+                {
+                    targets: createdAtColumnIndex, // Created At column - enable sorting
+                    type: 'num', // Use numeric sorting based on timestamp
+                    orderable: true,
                     searchable: false
                 },
                 {
@@ -840,6 +872,7 @@
                     searchable: false
                 }
             ],
+            order: [[createdAtColumnIndex, 'desc']], // Default sort by Created At descending (newest first)
             drawCallback: function() {
                 // Restore checkbox states after table redraw
                 $('.user-select').each(function() {
@@ -1933,6 +1966,22 @@
                         newRow.push(userData.phone || '-');
                     <% } %>
                     
+                    // 添加 Created At 列
+                    const now = new Date();
+                    const timestamp = now.getTime();
+                    const formattedDate = now.toLocaleString('zh-TW', {
+                        timeZone: 'Asia/Hong_Kong',
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                    });
+                    // 直接 push 文本內容，DataTable 會自動創建 td
+                    newRow.push(formattedDate);
+                    
                     // 添加Checked In和Actions列
                     newRow.push('<input type="checkbox" class="checkin-toggle" data-_id="' + response._id + '" />');
                     const userNameForQR = userData.name || userData.email || 'user';
@@ -1967,6 +2016,14 @@
                             $(this).attr('data-field-name', fieldNames[index - 1]);
                         }
                     });
+                    
+                    // 設置 Created At 列的 data-order 屬性（倒數第 3 列）
+                    const totalTds = $(rowNode).find('td').length;
+                    const createdAtTdIndex = totalTds - 3;
+                    const createdAtTd = $(rowNode).find('td').eq(createdAtTdIndex);
+                    if (createdAtTd.length) {
+                        createdAtTd.attr('data-order', timestamp);
+                    }
                     
                     // Hide form and show button
                     $('#addUserForm').hide();
