@@ -3658,6 +3658,7 @@ exports.outputReport = async (req, res) => {
                 role: user.role,
                 industry: user.industry,
                 checkInAt: user.checkInAt ? new Date(user.checkInAt).toLocaleString('zh-TW', {
+                    timeZone: 'Asia/Hong_Kong',
                     year: 'numeric',
                     month: '2-digit',
                     day: '2-digit',
