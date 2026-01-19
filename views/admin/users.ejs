@@ -187,6 +187,13 @@
             z-index: 1050 !important;
             background-color: rgba(0, 0, 0, 0.5) !important;
         }
+        #resendEmailModal {
+            z-index: 1055 !important;
+        }
+        #resendEmailModal .modal-backdrop {
+            z-index: 1050 !important;
+            background-color: rgba(0, 0, 0, 0.5) !important;
+        }
         .modal-backdrop {
             background-color: rgba(0, 0, 0, 0.5) !important;
             opacity: 0.5 !important;
@@ -203,6 +210,10 @@
             opacity: 1 !important;
         }
         #batchSendEmailModal.show {
+            display: block !important;
+            opacity: 1 !important;
+        }
+        #resendEmailModal.show {
             display: block !important;
             opacity: 1 !important;
         }
@@ -917,7 +928,29 @@
                     }
                     
                     // Show modal for template selection
-                    $('#resendEmailModal').modal('show');
+                    const $modal = $('#resendEmailModal');
+                    if ($modal.length === 0) {
+                        console.error('Resend email modal not found!');
+                        showAlert('danger', 'Modal 元素未找到，請刷新頁面。');
+                        return;
+                    }
+                    
+                    // Reset modal state before showing
+                    $modal.removeClass('show').attr('aria-hidden', 'false');
+                    
+                    // Show modal - Bootstrap 4 syntax
+                    $modal.modal('show');
+                    
+                    // Ensure modal is visible (fallback if Bootstrap doesn't work)
+                    setTimeout(function() {
+                        if (!$modal.hasClass('show') || $modal.css('display') === 'none') {
+                            $modal.addClass('show').css('display', 'block');
+                            $('body').addClass('modal-open');
+                            if ($('.modal-backdrop').length === 0) {
+                                $('<div class="modal-backdrop fade show"></div>').appendTo('body');
+                            }
+                        }
+                    }, 200);
                 },
                 error: function(xhr) {
                     console.error('Error fetching email templates:', xhr);
@@ -950,7 +983,17 @@
                 }),
                 success: function() {
                     showAlert('success', `${emailType} email resent successfully!`);
-                    $('#resendEmailModal').modal('hide');
+                    const $modal = $('#resendEmailModal');
+                    $modal.modal('hide');
+                    // Cleanup modal state
+                    setTimeout(function() {
+                        $modal.removeClass('show').attr('aria-hidden', 'true');
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css({
+                            'padding-right': '',
+                            'overflow': ''
+                        });
+                    }, 300);
                 },
                 error: function(xhr) {
                     console.error('Error resending email:', xhr.responseText);
@@ -965,6 +1008,26 @@
         // Confirm button in resend email modal
         $('#confirmResendEmail').on('click', function() {
             confirmResendEmail();
+        });
+        
+        // Handle resend email modal close events
+        $('#resendEmailModal').on('hidden.bs.modal', function() {
+            // Cleanup when modal is fully hidden
+            const $modal = $(this);
+            $modal.removeClass('show').attr('aria-hidden', 'true');
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css({
+                'padding-right': '',
+                'overflow': ''
+            });
+        });
+        
+        // Handle close button clicks for resend email modal
+        $(document).off('click', '#resendEmailModal .close, #resendEmailModal [data-dismiss="modal"]');
+        $(document).on('click', '#resendEmailModal .close, #resendEmailModal [data-dismiss="modal"]', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $('#resendEmailModal').modal('hide');
         });
 
         // Batch delete functionality

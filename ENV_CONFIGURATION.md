@@ -110,6 +110,17 @@ TWILIO_PHONE_NUMBER=+1234567890
 
 ---
 
+## 📝 編輯器配置（選填）
+
+### TINYMCE_API_KEY
+- **說明**：TinyMCE 富文本編輯器的 API Key
+- **範例**：`TINYMCE_API_KEY=0o0ixrpieipnq3fsu3kbsdu9e627qg468y6lpup3gmhx8lz7`
+- **用途**：用於電子郵件模板和 SMS 模板的富文本編輯器
+- **獲取方式**：[TinyMCE Cloud Dashboard](https://www.tiny.cloud/my-account/dashboard/)
+- **注意**：如果不設置，系統會使用默認的 API Key（可能有使用限制）
+
+---
+
 ## 📝 完整的 .env 範例
 
 ### 本地開發環境
@@ -128,6 +139,9 @@ STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxxxxxxx
 
 # Session Secret
 SESSION_SECRET=events
+
+# TinyMCE API Key (選填)
+TINYMCE_API_KEY=0o0ixrpieipnq3fsu3kbsdu9e627qg468y6lpup3gmhx8lz7
 ```
 
 ### 生產環境
@@ -159,6 +173,9 @@ TWILIO_PHONE_NUMBER=+1234567890
 
 # Session Secret
 SESSION_SECRET=your_production_secret_key_here
+
+# TinyMCE API Key (選填)
+TINYMCE_API_KEY=your_tinymce_api_key_here
 ```
 
 ---

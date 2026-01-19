@@ -6,7 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>事件電子郵件模板</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <script src="https://cdn.tiny.cloud/1/0o0ixrpieipnq3fsu3kbsdu9e627qg468y6lpup3gmhx8lz7/tinymce/7/tinymce.min.js"
+    <% const tinyMceApiKey = typeof TINYMCE_API_KEY !== 'undefined' ? TINYMCE_API_KEY : '0o0ixrpieipnq3fsu3kbsdu9e627qg468y6lpup3gmhx8lz7'; %>
+    <script src="https://cdn.tiny.cloud/1/<%= tinyMceApiKey %>/tinymce/7/tinymce.min.js"
         referrerpolicy="origin"></script>
     <script>
         tinymce.init({

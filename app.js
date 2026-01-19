@@ -50,6 +50,8 @@ app.use(express.static(path.join(__dirname, 'public'))); // 提供 public 文件
 app.use((req, res, next) => {
     res.locals.success_msg = req.flash('success_msg');
     res.locals.error_msg = req.flash('error_msg');
+    // 傳遞環境變量到 EJS 模板
+    res.locals.TINYMCE_API_KEY = process.env.TINYMCE_API_KEY || '';
     next();
 });
 
