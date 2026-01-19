@@ -443,7 +443,7 @@
                                                 <select class="form-control" id="batchEmailTemplate">
                                                     <option value="">使用默認模板 (Use Default Template)</option>
                                                 </select>
-                                                <small class="form-text text-muted">如果有多個同類型的模板，請選擇要使用的模板</small>
+                                                <small class="form-text text-muted">如果有多個同類型的模板，請選擇要使用的模板。如果沒有選擇模板，將使用默認模板。</small>
                                             </div>
                                             <div class="alert alert-info">
                                                 <i class="fas fa-info-circle"></i> 郵件將發送給所有選中的用戶
@@ -1183,6 +1183,8 @@
             $('#selectedUsersCount').text(selectedIds.length);
             // Reset email type to default
             $('#batchEmailType').val('invitation');
+            // Reset and load templates for default email type
+            loadBatchEmailTemplates('invitation');
             
             // Ensure modal exists and show it
             const $modal = $('#batchSendEmailModal');
@@ -1251,6 +1253,48 @@
             }
         });
 
+        // Load email templates for batch send based on email type
+        function loadBatchEmailTemplates(emailType) {
+            const $templateSelect = $('#batchEmailTemplate');
+            const $templateGroup = $('#batchEmailTemplateGroup');
+            const event_id = '<%= event._id %>';
+            
+            $templateSelect.html('<option value="">使用默認模板 (Use Default Template)</option>');
+            $templateGroup.hide();
+            
+            if (!emailType) {
+                return;
+            }
+            
+            $.ajax({
+                url: `/events/api/${event_id}/emailTemplates`,
+                type: 'GET',
+                data: { type: emailType },
+                success: function(templates) {
+                    if (templates && templates.length > 0) {
+                        templates.forEach(function(template) {
+                            const label = template.eventId ? 
+                                `${template.subject} (Event Template)` : 
+                                `${template.subject} (Global Template)`;
+                            $templateSelect.append(`<option value="${template._id}">${label}</option>`);
+                        });
+                        $templateGroup.show();
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Error fetching email templates:', xhr);
+                    // If error, just hide the template group
+                    $templateGroup.hide();
+                }
+            });
+        }
+        
+        // Listen for email type changes in batch send modal
+        $('#batchEmailType').on('change', function() {
+            const emailType = $(this).val();
+            loadBatchEmailTemplates(emailType);
+        });
+        
         // Confirm batch send email
         $('#confirmBatchSendEmail').on('click', function() {
             // Get all selected user IDs from the Set (includes all pages)

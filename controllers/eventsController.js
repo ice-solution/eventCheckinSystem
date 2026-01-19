@@ -3846,7 +3846,10 @@ exports.batchSendEmails = async (req, res) => {
                 const userData = typeof user.toObject === 'function' ? user.toObject() : user;
                 
                 // 根據 emailType 發送不同類型的郵件
-                if (emailType === 'welcome') {
+                // 如果指定了模板 ID，使用 sendEmailByType 並傳入模板 ID
+                if (emailTemplateId) {
+                    await exports.sendEmailByType(userData, event, emailType, emailTemplateId);
+                } else if (emailType === 'welcome') {
                     await exports.sendEmail(userData, event);
                 } else {
                     await exports.sendEmailByType(userData, event, emailType);
