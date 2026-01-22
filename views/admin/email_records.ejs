@@ -163,11 +163,14 @@
                                     <% emailRecords.forEach(record => { %>
                                         <tr>
                                             <td><%= new Date(record.created_at).toLocaleString('zh-HK', { 
+                                                timeZone: 'Asia/Hong_Kong',
                                                 year: 'numeric', 
                                                 month: '2-digit', 
                                                 day: '2-digit', 
                                                 hour: '2-digit', 
-                                                minute: '2-digit' 
+                                                minute: '2-digit',
+                                                second: '2-digit',
+                                                hour12: false
                                             }) %></td>
                                             <td><%= record.recipient %></td>
                                             <td><%= record.subject || '-' %></td>
@@ -197,11 +200,14 @@
                                                     </span>
                                                     <br>
                                                     <small><%= new Date(record.opened_at).toLocaleString('zh-HK', { 
+                                                        timeZone: 'Asia/Hong_Kong',
                                                         year: 'numeric', 
                                                         month: '2-digit', 
                                                         day: '2-digit', 
                                                         hour: '2-digit', 
-                                                        minute: '2-digit' 
+                                                        minute: '2-digit',
+                                                        second: '2-digit',
+                                                        hour12: false
                                                     }) %></small>
                                                 <% } else { %>
                                                     <span class="badge badge-secondary">未打開</span>
@@ -214,11 +220,14 @@
                                                     </span>
                                                     <br>
                                                     <small><%= new Date(record.clicked_at).toLocaleString('zh-HK', { 
+                                                        timeZone: 'Asia/Hong_Kong',
                                                         year: 'numeric', 
                                                         month: '2-digit', 
                                                         day: '2-digit', 
                                                         hour: '2-digit', 
-                                                        minute: '2-digit' 
+                                                        minute: '2-digit',
+                                                        second: '2-digit',
+                                                        hour12: false
                                                     }) %></small>
                                                 <% } else { %>
                                                     <span class="badge badge-secondary">未點擊</span>
@@ -465,10 +474,28 @@
                         
                         const statusClass = (record.status === 'sent' || record.status === 'delivered') ? 'success' : (record.status === 'failed' ? 'danger' : 'warning');
                         html += '<tr><th>狀態 (Status):</th><td><span class="badge badge-' + statusClass + '">' + (record.status || 'pending') + '</span></td></tr>';
-                        html += '<tr><th>發送時間 (Send Time):</th><td>' + (record.created_at ? new Date(record.created_at).toLocaleString('zh-HK') : '-') + '</td></tr>';
+                        html += '<tr><th>發送時間 (Send Time):</th><td>' + (record.created_at ? new Date(record.created_at).toLocaleString('zh-HK', {
+                            timeZone: 'Asia/Hong_Kong',
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: false
+                        }) : '-') + '</td></tr>';
                         
                         if (record.sent_at) {
-                            html += '<tr><th>已發送時間 (Sent At):</th><td>' + new Date(record.sent_at).toLocaleString('zh-HK') + '</td></tr>';
+                            html += '<tr><th>已發送時間 (Sent At):</th><td>' + new Date(record.sent_at).toLocaleString('zh-HK', {
+                                timeZone: 'Asia/Hong_Kong',
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                hour12: false
+                            }) + '</td></tr>';
                         }
                         
                         if (record.messageId) {
@@ -487,7 +514,16 @@
                         
                         html += '<tr><th>打開狀態 (Opened):</th><td>';
                         if (record.opened_at) {
-                            html += '<span class="badge badge-success">已打開</span><br><small>首次打開: ' + new Date(record.opened_at).toLocaleString('zh-HK') + '</small><br><small>打開次數: ' + (record.opened_count || 1) + ' 次</small>';
+                            html += '<span class="badge badge-success">已打開</span><br><small>首次打開: ' + new Date(record.opened_at).toLocaleString('zh-HK', {
+                                timeZone: 'Asia/Hong_Kong',
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                hour12: false
+                            }) + '</small><br><small>打開次數: ' + (record.opened_count || 1) + ' 次</small>';
                         } else {
                             html += '<span class="badge badge-secondary">未打開</span>';
                         }
@@ -495,12 +531,30 @@
                         
                         html += '<tr><th>點擊狀態 (Clicked):</th><td>';
                         if (record.clicked_at) {
-                            html += '<span class="badge badge-info">已點擊</span><br><small>首次點擊: ' + new Date(record.clicked_at).toLocaleString('zh-HK') + '</small><br><small>點擊次數: ' + (record.clicked_count || 1) + ' 次</small>';
+                            html += '<span class="badge badge-info">已點擊</span><br><small>首次點擊: ' + new Date(record.clicked_at).toLocaleString('zh-HK', {
+                                timeZone: 'Asia/Hong_Kong',
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                hour12: false
+                            }) + '</small><br><small>點擊次數: ' + (record.clicked_count || 1) + ' 次</small>';
                             
                             if (record.clicked_links && record.clicked_links.length > 0) {
                                 html += '<br><small>點擊的連結:</small><ul class="list-unstyled ml-3">';
                                 record.clicked_links.forEach(function(link) {
-                                    html += '<li><small>' + (link.url || '-') + ' (' + new Date(link.clicked_at).toLocaleString('zh-HK') + ')</small></li>';
+                                    html += '<li><small>' + (link.url || '-') + ' (' + new Date(link.clicked_at).toLocaleString('zh-HK', {
+                                        timeZone: 'Asia/Hong_Kong',
+                                        year: 'numeric',
+                                        month: '2-digit',
+                                        day: '2-digit',
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                        second: '2-digit',
+                                        hour12: false
+                                    }) + ')</small></li>';
                                 });
                                 html += '</ul>';
                             }

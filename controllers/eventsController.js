@@ -4111,6 +4111,7 @@ exports.exportEmailRecords = async (req, res) => {
             
             worksheet.addRow({
                 created_at: record.created_at ? new Date(record.created_at).toLocaleString('zh-HK', {
+                    timeZone: 'Asia/Hong_Kong',
                     year: 'numeric',
                     month: '2-digit',
                     day: '2-digit',
@@ -4126,6 +4127,7 @@ exports.exportEmailRecords = async (req, res) => {
                 opened: opened,
                 opened_count: record.opened_count || 0,
                 opened_at: record.opened_at ? new Date(record.opened_at).toLocaleString('zh-HK', {
+                    timeZone: 'Asia/Hong_Kong',
                     year: 'numeric',
                     month: '2-digit',
                     day: '2-digit',
@@ -4137,6 +4139,7 @@ exports.exportEmailRecords = async (req, res) => {
                 clicked: clicked,
                 clicked_count: record.clicked_count || 0,
                 clicked_at: record.clicked_at ? new Date(record.clicked_at).toLocaleString('zh-HK', {
+                    timeZone: 'Asia/Hong_Kong',
                     year: 'numeric',
                     month: '2-digit',
                     day: '2-digit',
@@ -4146,6 +4149,7 @@ exports.exportEmailRecords = async (req, res) => {
                     hour12: false
                 }) : '-',
                 delivered_at: record.delivered_at ? new Date(record.delivered_at).toLocaleString('zh-HK', {
+                    timeZone: 'Asia/Hong_Kong',
                     year: 'numeric',
                     month: '2-digit',
                     day: '2-digit',

@@ -184,7 +184,16 @@
                                     <% emailRecords.forEach(function(record) { %>
                                         <tr>
                                             <td>
-                                                <%= new Date(record.created_at).toLocaleString("en-GB") %>
+                                                <%= new Date(record.created_at).toLocaleString('zh-HK', { 
+                                                    timeZone: 'Asia/Hong_Kong',
+                                                    year: 'numeric', 
+                                                    month: '2-digit', 
+                                                    day: '2-digit', 
+                                                    hour: '2-digit', 
+                                                    minute: '2-digit',
+                                                    second: '2-digit',
+                                                    hour12: false
+                                                }) %>
                                             </td>
                                             <td>
                                                 <%= record.recipient %>
@@ -200,7 +209,16 @@
                                                         ✓ <%= record.opened_count || 1 %> 次
                                                     </span>
                                                     <br>
-                                                    <small><%= new Date(record.opened_at).toLocaleString("en-GB") %></small>
+                                                    <small><%= new Date(record.opened_at).toLocaleString('zh-HK', { 
+                                                        timeZone: 'Asia/Hong_Kong',
+                                                        year: 'numeric', 
+                                                        month: '2-digit', 
+                                                        day: '2-digit', 
+                                                        hour: '2-digit', 
+                                                        minute: '2-digit',
+                                                        second: '2-digit',
+                                                        hour12: false
+                                                    }) %></small>
                                                 <% } else { %>
                                                     <span class="badge badge-secondary">未打開</span>
                                                 <% } %>
@@ -211,7 +229,16 @@
                                                         ✓ <%= record.clicked_count || 1 %> 次
                                                     </span>
                                                     <br>
-                                                    <small><%= new Date(record.clicked_at).toLocaleString("en-GB") %></small>
+                                                    <small><%= new Date(record.clicked_at).toLocaleString('zh-HK', { 
+                                                        timeZone: 'Asia/Hong_Kong',
+                                                        year: 'numeric', 
+                                                        month: '2-digit', 
+                                                        day: '2-digit', 
+                                                        hour: '2-digit', 
+                                                        minute: '2-digit',
+                                                        second: '2-digit',
+                                                        hour12: false
+                                                    }) %></small>
                                                 <% } else { %>
                                                     <span class="badge badge-secondary">未點擊</span>
                                                 <% } %>
