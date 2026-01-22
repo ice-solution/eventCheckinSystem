@@ -99,9 +99,14 @@
                     <div class="card">
                         <div class="card-header">
                             <strong class="card-title">Email Records for <%= event.name %></strong>
-                            <a href="/events/<%= eventId %>" class="btn btn-outline-secondary btn-sm float-right">
-                                <i class="fas fa-arrow-left"></i> Back to User List
-                            </a>
+                            <div class="float-right">
+                                <a href="/events/<%= eventId %>/email-records/export" class="btn btn-success btn-sm mr-2">
+                                    <i class="fas fa-file-excel"></i> Export Excel
+                                </a>
+                                <a href="/events/<%= eventId %>" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-arrow-left"></i> Back to User List
+                                </a>
+                            </div>
                         </div>
                         <div class="card-body">
                             <!-- Summary Statistics -->

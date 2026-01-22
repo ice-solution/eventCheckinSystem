@@ -4038,6 +4038,141 @@ exports.renderEmailRecords = async (req, res) => {
     }
 };
 
+// 導出 Email Records 為 Excel
+exports.exportEmailRecords = async (req, res) => {
+    const { eventId } = req.params;
+    
+    try {
+        // Check authentication
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        // Find event
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        // Find all email records for this event
+        const mongoose = require('mongoose');
+        const eventObjectId = mongoose.Types.ObjectId.isValid(eventId) ? new mongoose.Types.ObjectId(eventId) : eventId;
+        
+        const emailRecords = await EmailRecord.find({ 
+            $or: [
+                { eventId: eventObjectId },
+                { eventId: eventId }
+            ]
+        })
+            .sort({ created_at: -1 })
+            .populate('emailTemplate', 'subject type')
+            .lean();
+
+        if (emailRecords.length === 0) {
+            return res.status(404).json({ message: 'No email records found' });
+        }
+
+        // Create Excel workbook
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Email Records');
+
+        // Set column headers
+        worksheet.columns = [
+            { header: '發送時間 (Send Time)', key: 'created_at', width: 20 },
+            { header: '收件人 (Recipient)', key: 'recipient', width: 30 },
+            { header: '主題 (Subject)', key: 'subject', width: 40 },
+            { header: '郵件類型 (Email Type)', key: 'emailType', width: 20 },
+            { header: '狀態 (Status)', key: 'status', width: 15 },
+            { header: '已打開 (Opened)', key: 'opened', width: 15 },
+            { header: '打開次數 (Open Count)', key: 'opened_count', width: 15 },
+            { header: '首次打開時間 (First Opened)', key: 'opened_at', width: 20 },
+            { header: '已點擊 (Clicked)', key: 'clicked', width: 15 },
+            { header: '點擊次數 (Click Count)', key: 'clicked_count', width: 15 },
+            { header: '首次點擊時間 (First Clicked)', key: 'clicked_at', width: 20 },
+            { header: '已送達時間 (Delivered At)', key: 'delivered_at', width: 20 },
+            { header: 'Message ID', key: 'messageId', width: 40 },
+            { header: 'Tracking ID', key: 'trackingId', width: 35 },
+            { header: '錯誤訊息 (Error)', key: 'errorLog', width: 50 }
+        ];
+
+        // Style header row
+        worksheet.getRow(1).font = { bold: true };
+        worksheet.getRow(1).fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFE0E0E0' }
+        };
+
+        // Add data rows
+        emailRecords.forEach(record => {
+            const emailType = record.emailTemplate && record.emailTemplate.type ? record.emailTemplate.type : '-';
+            const opened = record.opened_at ? '是 (Yes)' : '否 (No)';
+            const clicked = record.clicked_at ? '是 (Yes)' : '否 (No)';
+            
+            worksheet.addRow({
+                created_at: record.created_at ? new Date(record.created_at).toLocaleString('zh-HK', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                }) : '-',
+                recipient: record.recipient || '-',
+                subject: record.subject || '-',
+                emailType: emailType,
+                status: record.status || 'pending',
+                opened: opened,
+                opened_count: record.opened_count || 0,
+                opened_at: record.opened_at ? new Date(record.opened_at).toLocaleString('zh-HK', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                }) : '-',
+                clicked: clicked,
+                clicked_count: record.clicked_count || 0,
+                clicked_at: record.clicked_at ? new Date(record.clicked_at).toLocaleString('zh-HK', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                }) : '-',
+                delivered_at: record.delivered_at ? new Date(record.delivered_at).toLocaleString('zh-HK', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                }) : '-',
+                messageId: record.messageId || '-',
+                trackingId: record.trackingId || '-',
+                errorLog: record.errorLog || '-'
+            });
+        });
+
+        // Set response headers
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=email_records_${eventId}_${Date.now()}.xlsx`);
+
+        // Write and send file
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (error) {
+        console.error('Error exporting email records:', error);
+        res.status(500).json({ message: 'Error exporting email records' });
+    }
+};
+
 // Banner 管理功能
 // 配置 multer 用於文件上傳
 const storage = multer.diskStorage({

@@ -281,6 +281,7 @@ router.get('/:eventId/report', eventsController.outputReport);
 // Transaction Records
 router.get('/:eventId/transactions', eventsController.renderTransactionRecords);
 // Email Records
+router.get('/:eventId/email-records/export', eventsController.exportEmailRecords); // 導出 Email Records 為 Excel（必須在 email-records 路由之前）
 router.get('/:eventId/email-records', eventsController.renderEmailRecords);
 router.get('/:eventId/email-records/:trackingId', eventsController.getEmailRecordDetails);
 // Email Template
