@@ -21,9 +21,11 @@ const badgeElementSchema = new mongoose.Schema({
     textAlign: { 
         type: String, 
         enum: ['left', 'center', 'right'],
-        default: 'left'
+        default: 'center' // 預設改為置中，方便 badge 內容置中對齊
     },
     color: { type: String, default: '#000000' }, // 文字顏色
+    fullWidth: { type: Boolean, default: false }, // 是否全寬（全寬時置中，否則靠左）
+    size: { type: Number, default: 100 }, // 大小百分比（用於統一調整 font-size，預設 100%）
     
     // QR Code 相關
     qrData: { type: String, default: '{{qrcodeUrl}}' }, // QR Code 數據或變量

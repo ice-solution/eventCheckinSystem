@@ -111,16 +111,31 @@ exports.generateTestImage = async (req, res) => {
             return res.status(404).json({ message: 'Badge config not found' });
         }
         
-        // 測試數據
-        const testData = {
-            user: {
-                name: '測試用戶',
-                email: 'test@example.com',
-                company: '測試公司',
-                phone: '12345678'
-            },
-            qrcodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?data=test123&size=200x200'
-        };
+        // 嘗試從 event 中取得實際用戶資料
+        const event = await Event.findById(eventId);
+        let testData;
+        
+        if (event && event.users && event.users.length > 0) {
+            // 使用 event 中第一個用戶的實際資料
+            const user = event.users[0];
+            const userObject = user.toObject ? user.toObject({ minimize: false }) : user;
+            
+            testData = {
+                user: userObject,
+                qrcodeUrl: `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=200x200`
+            };
+        } else {
+            // 如果沒有用戶，使用預設測試數據
+            testData = {
+                user: {
+                    name: '測試用戶',
+                    email: 'test@example.com',
+                    company: '測試公司',
+                    phone: '12345678'
+                },
+                qrcodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?data=test123&size=200x200'
+            };
+        }
         
         // 生成圖片
         const imageUrl = await generateBadgeImage(badgeConfig, testData);
@@ -131,7 +146,8 @@ exports.generateTestImage = async (req, res) => {
         
         res.json({ 
             message: 'Test image generated successfully',
-            imageUrl 
+            imageUrl,
+            usedRealUser: event && event.users && event.users.length > 0
         });
     } catch (error) {
         console.error('Error generating test image:', error);
@@ -216,7 +232,7 @@ async function generateBadgeImage(badgeConfig, data) {
 async function drawElement(ctx, element, data, dimensions) {
     switch (element.type) {
         case 'text':
-            await drawText(ctx, element, data);
+            await drawText(ctx, element, data, dimensions);
             break;
         case 'qrcode':
             await drawQRCode(ctx, element, data);
@@ -227,29 +243,76 @@ async function drawElement(ctx, element, data, dimensions) {
     }
 }
 
+// 文字換行函數
+function wrapText(ctx, text, maxWidth) {
+    const words = text.split(' ');
+    const lines = [];
+    let currentLine = words[0] || '';
+
+    for (let i = 1; i < words.length; i++) {
+        const word = words[i];
+        const width = ctx.measureText(currentLine + ' ' + word).width;
+        if (width < maxWidth) {
+            currentLine += ' ' + word;
+        } else {
+            lines.push(currentLine);
+            currentLine = word;
+        }
+    }
+    lines.push(currentLine);
+    return lines;
+}
+
 // 繪製文本
-async function drawText(ctx, element, data) {
+async function drawText(ctx, element, data, dimensions) {
     let content = element.content || '';
     
     // 替換動態變量
     content = replaceVariables(content, data);
     
-    // 設置字體樣式
-    ctx.font = `${element.fontWeight} ${element.fontSize}px ${element.fontFamily}`;
-    ctx.fillStyle = element.color || '#000000';
-    ctx.textAlign = element.textAlign || 'left';
-    ctx.textBaseline = 'top';
+    // 計算實際 font-size（根據 size 百分比）
+    const baseFontSize = element.fontSize || 16;
+    const sizePercent = element.size || 100;
+    const actualFontSize = Math.round(baseFontSize * (sizePercent / 100));
     
-    // 計算位置
-    let x = element.x;
-    if (element.textAlign === 'center') {
-        x = element.x + (element.width || 0) / 2;
-    } else if (element.textAlign === 'right') {
-        x = element.x + (element.width || 0);
+    // 設置字體樣式
+    ctx.font = `${element.fontWeight || 'normal'} ${actualFontSize}px ${element.fontFamily || 'Arial'}`;
+    ctx.fillStyle = element.color || '#000000';
+    
+    // 處理 fullWidth：如果 fullWidth，則元素寬度為整個 canvas 寬度，x 為 0
+    let elementX = element.x;
+    let elementWidth = element.width || 300;
+    
+    if (element.fullWidth) {
+        elementX = 0;
+        elementWidth = dimensions.width;
     }
     
-    // 繪製文本
-    ctx.fillText(content, x, element.y);
+    // 設定文字對齊方式
+    // fullWidth 時強制置中，否則使用設定的 textAlign（預設 center）
+    const textAlign = element.fullWidth ? 'center' : (element.textAlign || 'center');
+    ctx.textAlign = textAlign;
+    ctx.textBaseline = 'top';
+    
+    // 計算文字繪製的 x 座標
+    let x = elementX;
+    if (textAlign === 'center') {
+        x = elementX + elementWidth / 2;
+    } else if (textAlign === 'right') {
+        x = elementX + elementWidth;
+    } else {
+        x = elementX;
+    }
+    
+    // 處理文字換行
+    const maxWidth = elementWidth - 10; // 留一點邊距
+    const lines = wrapText(ctx, content, maxWidth);
+    
+    // 繪製多行文字
+    const lineHeight = actualFontSize * 1.2; // 行高
+    lines.forEach((line, index) => {
+        ctx.fillText(line, x, element.y + index * lineHeight);
+    });
 }
 
 // 繪製 QR Code

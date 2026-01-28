@@ -37,11 +37,7 @@
         }
         .qrcode-popup {
             display: none;
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            margin-bottom: 10px;
+            position: fixed;
             z-index: 9999;
             background: white;
             border: 2px solid #ddd;
@@ -51,26 +47,45 @@
             min-width: 230px;
             text-align: center;
         }
-        .qrcode-popup::after {
+        .qrcode-popup.popup-right::after {
             content: '';
             position: absolute;
-            top: 100%;
-            left: 50%;
-            transform: translateX(-50%);
+            left: -16px;
+            top: 50%;
+            transform: translateY(-50%);
             border: 8px solid transparent;
-            border-top-color: white;
+            border-right-color: white;
             z-index: 10000;
         }
-        .qrcode-popup::before {
+        .qrcode-popup.popup-right::before {
             content: '';
             position: absolute;
-            top: 100%;
-            left: 50%;
-            transform: translateX(-50%);
+            left: -18px;
+            top: 50%;
+            transform: translateY(-50%);
             border: 9px solid transparent;
-            border-top-color: #ddd;
+            border-right-color: #ddd;
             z-index: 9998;
-            margin-top: -1px;
+        }
+        .qrcode-popup.popup-left::after {
+            content: '';
+            position: absolute;
+            right: -16px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 8px solid transparent;
+            border-left-color: white;
+            z-index: 10000;
+        }
+        .qrcode-popup.popup-left::before {
+            content: '';
+            position: absolute;
+            right: -18px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 9px solid transparent;
+            border-left-color: #ddd;
+            z-index: 9998;
         }
         .qrcode-image {
             width: 200px;
@@ -87,9 +102,6 @@
         /* 確保在 DataTable 中 popup 能正確顯示 */
         .dataTables_wrapper .qrcode-popup {
             position: fixed !important;
-        }
-        .qrcode-container:hover .qrcode-popup {
-            display: block !important;
         }
         /* 按鈕區域樣式優化 */
         .action-buttons-container {
@@ -2040,24 +2052,103 @@
         });
 
         // QR Code hover 顯示功能（使用 mouseenter/mouseleave 確保穩定性）
+        // 計算並更新 QR code popup 位置
+        function updateQRCodePopupPosition($container) {
+            const $popup = $container.find('.qrcode-popup');
+            if (!$popup.length) return;
+            
+            const containerOffset = $container.offset();
+            const containerWidth = $container.outerWidth();
+            const containerHeight = $container.outerHeight();
+            const popupWidth = 230;
+            const popupHeight = 250; // 大約的 popup 高度（200px QR + padding + button）
+            
+            const windowWidth = $(window).width();
+            const windowHeight = $(window).height();
+            const scrollTop = $(window).scrollTop();
+            const scrollLeft = $(window).scrollLeft();
+            
+            // 計算按鈕在視窗中的位置（考慮 scroll）
+            // offset() 返回的是相對於 document 的位置，需要減去 scroll 得到視窗中的位置
+            const buttonLeft = containerOffset.left - scrollLeft;
+            const buttonRight = buttonLeft + containerWidth;
+            const buttonTop = containerOffset.top - scrollTop;
+            const buttonCenterY = buttonTop + containerHeight / 2;
+            
+            // 計算右側和左側的可用空間
+            const spaceRight = windowWidth - buttonRight;
+            const spaceLeft = buttonLeft;
+            
+            let popupLeft, popupTop;
+            let positionClass = 'popup-right'; // 預設顯示在右側
+            
+            // 決定顯示位置：優先顯示在右側，如果右側空間不夠則顯示在左側
+            if (spaceRight >= popupWidth + 10) {
+                // 顯示在右側
+                popupLeft = buttonRight + 10; // fixed 定位，直接使用視窗座標
+                positionClass = 'popup-right';
+            } else if (spaceLeft >= popupWidth + 10) {
+                // 顯示在左側
+                popupLeft = buttonLeft - popupWidth - 10; // fixed 定位，直接使用視窗座標
+                positionClass = 'popup-left';
+            } else {
+                // 兩邊空間都不夠，選擇空間較大的一邊
+                if (spaceRight > spaceLeft) {
+                    popupLeft = buttonRight + 5; // 緊貼右側
+                    positionClass = 'popup-right';
+                } else {
+                    popupLeft = buttonLeft - popupWidth - 5; // 緊貼左側
+                    positionClass = 'popup-left';
+                }
+            }
+            
+            // 計算垂直位置（對齊按鈕中間，但確保不超出視窗）
+            popupTop = buttonCenterY - popupHeight / 2;
+            
+            // 確保不超出視窗上下邊界
+            if (popupTop < 10) {
+                popupTop = 10;
+            } else if (popupTop + popupHeight > windowHeight - 10) {
+                popupTop = windowHeight - popupHeight - 10;
+            }
+            
+            // 確保不超出視窗左右邊界
+            if (popupLeft < 10) {
+                popupLeft = 10;
+            } else if (popupLeft + popupWidth > windowWidth - 10) {
+                popupLeft = windowWidth - popupWidth - 10;
+            }
+            
+            // 移除舊的 position class 並添加新的
+            $popup.removeClass('popup-above popup-below popup-left popup-right').addClass(positionClass);
+            
+            // 設置 fixed 位置（fixed 定位是相對於視窗的，不需要加 scroll）
+            $popup.css({
+                'position': 'fixed',
+                'left': popupLeft + 'px',
+                'top': popupTop + 'px',
+                'display': 'block'
+            });
+        }
+        
         $(document).on('mouseenter', '.qrcode-container', function(e) {
             e.stopPropagation();
-            const $popup = $(this).find('.qrcode-popup');
-            if ($popup.length) {
-                // 計算 popup 位置
-                const $container = $(this);
-                const containerOffset = $container.offset();
-                const containerWidth = $container.outerWidth();
-                const popupWidth = 230;
-                
-                // 設置 fixed 位置以避免表格滾動問題
-                $popup.css({
-                    'position': 'fixed',
-                    'left': (containerOffset.left + containerWidth / 2 - popupWidth / 2) + 'px',
-                    'bottom': ($(window).height() - containerOffset.top + 10) + 'px',
-                    'display': 'block'
+            const $container = $(this);
+            updateQRCodePopupPosition($container);
+        });
+        
+        // 當頁面滾動時，更新所有顯示中的 QR code popup 位置
+        let scrollTimeout;
+        $(window).on('scroll', function() {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(function() {
+                $('.qrcode-popup:visible').each(function() {
+                    const $container = $(this).closest('.qrcode-container');
+                    if ($container.length) {
+                        updateQRCodePopupPosition($container);
+                    }
                 });
-            }
+            }, 10); // 稍微延遲以提升性能
         });
         
         $(document).on('mouseleave', '.qrcode-container', function(e) {

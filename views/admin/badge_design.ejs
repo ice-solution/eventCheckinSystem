@@ -77,6 +77,11 @@
         .element-item:hover {
             border-color: #007bff;
         }
+        .element-item .btn-sm {
+            padding: 2px 8px;
+            font-size: 18px;
+            line-height: 1;
+        }
     </style>
 </head>
 <body>
@@ -87,7 +92,9 @@
                 <div class="btn-group">
                     <button class="btn btn-primary" onclick="saveConfig()">儲存配置</button>
                     <button class="btn btn-success" onclick="generateTestImage()">生成測試圖片</button>
+                    <button class="btn btn-danger" onclick="deleteSelectedElement()" id="deleteElementBtn" disabled>刪除選中元素</button>
                     <button class="btn btn-secondary" onclick="clearCanvas()">清除</button>
+                    <button class="btn btn-outline-secondary" id="toggleGuidesBtn" onclick="toggleCenterGuides()">隱藏中線</button>
                 </div>
             </div>
         </div>
@@ -131,8 +138,21 @@
                     </div>
                     
                     <div class="element-controls mt-4">
+                        <h5>自定義文字</h5>
+                        <div class="form-group">
+                            <input type="text" id="customTextInput" class="form-control" placeholder="輸入自定義文字...">
+                            <button class="btn btn-primary btn-sm mt-2" onclick="addCustomText()" style="width: 100%;">添加到 Canvas</button>
+                        </div>
+                    </div>
+                    
+                    <div class="element-controls mt-4">
                         <h5>已添加元素</h5>
                         <div id="elementList"></div>
+                    </div>
+                    
+                    <div class="element-controls mt-4" id="elementControlsContainer" style="display: none;">
+                        <h5>元素設定</h5>
+                        <div id="elementControls"></div>
                     </div>
                 </div>
             </div>
@@ -175,16 +195,53 @@
         canvas.style.width = '645px';
         canvas.style.height = '400px';
         
-        let elements = badgeConfig.elements || [];
+        // 將已存的 elements 做一次標準化：文字預設 textAlign 為 center
+        let elements = (badgeConfig.elements || []).map(el => {
+            if (el.type === 'text' && !el.textAlign) {
+                return { ...el, textAlign: 'center' };
+            }
+            return el;
+        });
         let selectedElement = null;
         let isDragging = false;
+        let isResizing = false;
         let dragOffset = { x: 0, y: 0 };
-        
+        let resizeStart = { x: 0, y: 0, width: 0, height: 0 };
+        const RESIZE_HANDLE_SIZE = 14; // 右下角拉伸點尺寸
+        const SNAP_DISTANCE = 10; // 中線「磁吸」距離（px）
+        let showCenterGuides = true; // 是否顯示中線提示
+
+        // 繪製中線提示（水平、垂直中心線）
+        function drawCenterGuides() {
+            if (!showCenterGuides) return;
+            ctx.save();
+            const cx = CANVAS_WIDTH / 2;
+            const cy = CANVAS_HEIGHT / 2;
+            ctx.strokeStyle = 'rgba(0, 150, 255, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([6, 6]);
+            // 垂直中線
+            ctx.beginPath();
+            ctx.moveTo(cx, 0);
+            ctx.lineTo(cx, CANVAS_HEIGHT);
+            ctx.stroke();
+            // 水平中線
+            ctx.beginPath();
+            ctx.moveTo(0, cy);
+            ctx.lineTo(CANVAS_WIDTH, cy);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+        }
+
         // 初始化 canvas
         function initCanvas() {
             // 白色背景
             ctx.fillStyle = '#FFFFFF';
             ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // 中線提示（在元素底下繪製，較不搶眼）
+            drawCenterGuides();
             
             // 繪製所有元素
             elements.forEach((element, index) => {
@@ -194,24 +251,79 @@
             updateElementList();
         }
         
+        // 文字換行函數
+        function wrapText(ctx, text, maxWidth) {
+            const words = text.split(' ');
+            const lines = [];
+            let currentLine = words[0] || '';
+
+            for (let i = 1; i < words.length; i++) {
+                const word = words[i];
+                const width = ctx.measureText(currentLine + ' ' + word).width;
+                if (width < maxWidth) {
+                    currentLine += ' ' + word;
+                } else {
+                    lines.push(currentLine);
+                    currentLine = word;
+                }
+            }
+            lines.push(currentLine);
+            return lines;
+        }
+
         // 繪製元素
         function drawElement(element, isSelected = false) {
             ctx.save();
             
             if (element.type === 'text') {
-                ctx.font = `${element.fontWeight || 'normal'} ${element.fontSize || 16}px ${element.fontFamily || 'Arial'}`;
-                ctx.fillStyle = element.color || '#000000';
-                ctx.textAlign = element.textAlign || 'left';
-                ctx.textBaseline = 'top';
+                // 計算實際 font-size（根據 size 百分比）
+                const baseFontSize = element.fontSize || 16;
+                const sizePercent = element.size || 100;
+                const actualFontSize = Math.round(baseFontSize * (sizePercent / 100));
                 
-                let x = element.x;
-                if (element.textAlign === 'center') {
-                    x = element.x + (element.width || 0) / 2;
-                } else if (element.textAlign === 'right') {
-                    x = element.x + (element.width || 0);
+                ctx.font = `${element.fontWeight || 'normal'} ${actualFontSize}px ${element.fontFamily || 'Arial'}`;
+                ctx.fillStyle = element.color || '#000000';
+                
+                // 處理 fullWidth：如果 fullWidth，則元素寬度為整個 canvas 寬度，x 為 0
+                let elementX = element.x;
+                let elementWidth = element.width || 300;
+                
+                if (element.fullWidth) {
+                    elementX = 0;
+                    elementWidth = CANVAS_WIDTH;
                 }
                 
-                ctx.fillText(element.content || '', x, element.y);
+                // 設定文字對齊方式
+                // fullWidth 時強制置中，否則使用設定的 textAlign（預設 center）
+                const textAlign = element.fullWidth ? 'center' : (element.textAlign || 'center');
+                ctx.textAlign = textAlign;
+                ctx.textBaseline = 'top';
+                
+                // 計算文字繪製的 x 座標
+                let x = elementX;
+                if (textAlign === 'center') {
+                    x = elementX + elementWidth / 2;
+                } else if (textAlign === 'right') {
+                    x = elementX + elementWidth;
+                } else {
+                    x = elementX;
+                }
+                
+                // 處理文字換行
+                const content = element.content || '';
+                const maxWidth = elementWidth - 10; // 留一點邊距
+                const lines = wrapText(ctx, content, maxWidth);
+                
+                // 繪製多行文字
+                const lineHeight = actualFontSize * 1.2; // 行高
+                lines.forEach((line, index) => {
+                    ctx.fillText(line, x, element.y + index * lineHeight);
+                });
+                
+                // 更新元素高度（根據行數）
+                if (lines.length > 1) {
+                    element.height = lines.length * lineHeight;
+                }
             } else if (element.type === 'qrcode') {
                 // 繪製 QR Code 佔位符
                 ctx.strokeStyle = '#000000';
@@ -227,14 +339,63 @@
             
             // 選中時繪製邊框
             if (isSelected) {
+                // 計算實際寬度（fullWidth 時使用 canvas 寬度）
+                let boxWidth = element.width || (element.type === 'qrcode' ? 100 : 100);
+                if (element.fullWidth && element.type === 'text') {
+                    boxWidth = CANVAS_WIDTH;
+                }
+                const boxHeight = element.height || (element.type === 'qrcode' ? 100 : 50);
+
                 ctx.strokeStyle = '#007bff';
                 ctx.lineWidth = 2;
                 ctx.setLineDash([5, 5]);
-                ctx.strokeRect(element.x - 2, element.y - 2, (element.width || 100) + 4, (element.height || 50) + 4);
+                ctx.strokeRect(element.x - 2, element.y - 2, boxWidth + 4, boxHeight + 4);
                 ctx.setLineDash([]);
+
+                // 繪製右下角拉伸點
+                const handleX = element.x + boxWidth - RESIZE_HANDLE_SIZE / 2;
+                const handleY = element.y + boxHeight - RESIZE_HANDLE_SIZE / 2;
+                ctx.fillStyle = '#ffffff';
+                ctx.strokeStyle = '#007bff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.rect(handleX, handleY, RESIZE_HANDLE_SIZE, RESIZE_HANDLE_SIZE);
+                ctx.fill();
+                ctx.stroke();
             }
             
             ctx.restore();
+        }
+        
+        // 添加自定義文字到 canvas
+        function addCustomText() {
+            const customText = $('#customTextInput').val().trim();
+            if (!customText) {
+                alert('請輸入文字');
+                return;
+            }
+            
+            const newElement = {
+                type: 'text',
+                content: customText, // 直接使用輸入的文字（不是變量）
+                x: 50,
+                y: 50 + elements.length * 60,
+                width: 300,
+                height: 50,
+                fontSize: 16,
+                fontFamily: 'Arial',
+                fontWeight: 'normal',
+                textAlign: 'center',
+                color: '#000000',
+                fullWidth: false,
+                size: 100,
+                zIndex: elements.length
+            };
+            
+            elements.push(newElement);
+            selectedElement = elements.length - 1;
+            $('#customTextInput').val(''); // 清空輸入框
+            initCanvas();
         }
         
         // 點擊字段添加到 canvas
@@ -247,13 +408,15 @@
                 content: content,
                 x: 50,
                 y: 50 + elements.length * 60,
-                width: type === 'qrcode' ? 150 : null,
-                height: type === 'qrcode' ? 150 : null,
+                width: type === 'qrcode' ? 150 : 300,
+                height: type === 'qrcode' ? 150 : 50,
                 fontSize: 16,
                 fontFamily: 'Arial',
                 fontWeight: 'normal',
-                textAlign: 'left',
+                textAlign: 'center',
                 color: '#000000',
+                fullWidth: false, // 預設不全寬
+                size: 100, // 預設 100% 大小
                 qrData: type === 'qrcode' ? content : null,
                 zIndex: elements.length
             };
@@ -263,21 +426,42 @@
             initCanvas();
         });
         
-        // Canvas 點擊事件
-        canvas.addEventListener('click', function(e) {
+        // 自定義文字輸入框按 Enter 鍵也可以添加
+        $('#customTextInput').on('keypress', function(e) {
+            if (e.which === 13) { // Enter 鍵
+                addCustomText();
+            }
+        });
+        
+        // 工具函數：轉換滑鼠座標到 canvas 內容座標
+        function getCanvasPoint(e) {
             const rect = canvas.getBoundingClientRect();
             const scaleX = CANVAS_WIDTH / rect.width;
             const scaleY = CANVAS_HEIGHT / rect.height;
             const x = (e.clientX - rect.left) * scaleX;
             const y = (e.clientY - rect.top) * scaleY;
+            return { x, y };
+        }
+
+        // Canvas 點擊事件
+        canvas.addEventListener('click', function(e) {
+            const { x, y } = getCanvasPoint(e);
             
             // 檢查是否點擊了元素
             let clickedElement = null;
             for (let i = elements.length - 1; i >= 0; i--) {
                 const el = elements[i];
-                const width = el.width || 100;
-                const height = el.height || 50;
-                if (x >= el.x && x <= el.x + width && y >= el.y && y <= el.y + height) {
+                let elX = el.x;
+                let elWidth = el.width || (el.type === 'qrcode' ? 100 : 100);
+                
+                // 處理 fullWidth
+                if (el.fullWidth && el.type === 'text') {
+                    elX = 0;
+                    elWidth = CANVAS_WIDTH;
+                }
+                
+                const height = el.height || (el.type === 'qrcode' ? 100 : 50);
+                if (x >= elX && x <= elX + elWidth && y >= el.y && y <= el.y + height) {
                     clickedElement = i;
                     break;
                 }
@@ -286,48 +470,145 @@
             selectedElement = clickedElement;
             initCanvas();
             
-            // 更新控制面板
+            // 更新控制面板和刪除按鈕
             if (selectedElement !== null) {
                 updateElementControls(elements[selectedElement]);
             } else {
                 $('#elementControls').html('');
             }
+            updateDeleteButton();
         });
         
         // 拖動功能
         canvas.addEventListener('mousedown', function(e) {
-            if (selectedElement !== null) {
-                const rect = canvas.getBoundingClientRect();
-                const scaleX = CANVAS_WIDTH / rect.width;
-                const scaleY = CANVAS_HEIGHT / rect.height;
-                const x = (e.clientX - rect.left) * scaleX;
-                const y = (e.clientY - rect.top) * scaleY;
-                
-                const el = elements[selectedElement];
-                if (x >= el.x && x <= el.x + (el.width || 100) && y >= el.y && y <= el.y + (el.height || 50)) {
-                    isDragging = true;
-                    dragOffset.x = x - el.x;
-                    dragOffset.y = y - el.y;
+            if (selectedElement === null) return;
+
+            const { x, y } = getCanvasPoint(e);
+            const el = elements[selectedElement];
+            
+            let elX = el.x;
+            let boxWidth = el.width || (el.type === 'qrcode' ? 100 : 100);
+            
+            // 處理 fullWidth
+            if (el.fullWidth && el.type === 'text') {
+                elX = 0;
+                boxWidth = CANVAS_WIDTH;
+            }
+            
+            const boxHeight = el.height || (el.type === 'qrcode' ? 100 : 50);
+
+            // fullWidth 的元素不能調整大小，只能拖動垂直位置
+            if (!(el.fullWidth && el.type === 'text')) {
+                // 先檢查是否按到右下角拉伸點
+                const handleX = elX + boxWidth - RESIZE_HANDLE_SIZE / 2;
+                const handleY = el.y + boxHeight - RESIZE_HANDLE_SIZE / 2;
+                if (
+                    x >= handleX &&
+                    x <= handleX + RESIZE_HANDLE_SIZE &&
+                    y >= handleY &&
+                    y <= handleY + RESIZE_HANDLE_SIZE
+                ) {
+                    isResizing = true;
+                    resizeStart = { x, y, width: boxWidth, height: boxHeight };
+                    return;
                 }
+            }
+
+            // 否則就進入拖動模式
+            if (x >= elX && x <= elX + boxWidth && y >= el.y && y <= el.y + boxHeight) {
+                isDragging = true;
+                // dragOffset 記錄滑鼠相對於元素左上角的偏移
+                // fullWidth 的元素 x 是 0，所以 dragOffset.x 就是滑鼠的 x 座標
+                dragOffset.x = el.fullWidth ? x : (x - elX);
+                dragOffset.y = y - el.y;
             }
         });
         
         canvas.addEventListener('mousemove', function(e) {
-            if (isDragging && selectedElement !== null) {
-                const rect = canvas.getBoundingClientRect();
-                const scaleX = CANVAS_WIDTH / rect.width;
-                const scaleY = CANVAS_HEIGHT / rect.height;
-                const x = (e.clientX - rect.left) * scaleX;
-                const y = (e.clientY - rect.top) * scaleY;
+            if (selectedElement === null) return;
+
+            const { x, y } = getCanvasPoint(e);
+            const el = elements[selectedElement];
+
+            // 拉大縮小（fullWidth 的元素不能調整大小）
+            if (isResizing && !(el.fullWidth && el.type === 'text')) {
+                let newWidth = resizeStart.width + (x - resizeStart.x);
+                let newHeight = resizeStart.height + (y - resizeStart.y);
+
+                // 最小尺寸限制
+                newWidth = Math.max(40, newWidth);
+                newHeight = Math.max(20, newHeight);
+
+                el.width = newWidth;
+                el.height = newHeight;
+
+                // 文字：根據高度自動調整字體大小（大約對應）
+                if (el.type === 'text') {
+                    const baseHeight = 50;
+                    const baseFont = 16;
+                    const ratio = newHeight / baseHeight;
+                    el.fontSize = Math.max(8, Math.round(baseFont * ratio));
+                }
+
+                initCanvas();
+                return;
+            }
+
+            // 拖動位置（含「磁吸」到中線）
+            if (isDragging) {
+                // fullWidth 的元素只能垂直拖動（水平位置固定在 x=0）
+                if (el.fullWidth && el.type === 'text') {
+                    // 只允許垂直拖動
+                    let newY = y - dragOffset.y;
+                    const boxHeight = el.height || 50;
+                    const canvasCenterY = CANVAS_HEIGHT / 2;
+                    const elementCenterY = newY + boxHeight / 2;
+                    
+                    if (Math.abs(elementCenterY - canvasCenterY) <= SNAP_DISTANCE) {
+                        newY = canvasCenterY - boxHeight / 2;
+                    }
+                    
+                    el.y = newY;
+                    initCanvas();
+                    return;
+                }
                 
-                elements[selectedElement].x = x - dragOffset.x;
-                elements[selectedElement].y = y - dragOffset.y;
+                // 先計算正常拖動位置（基於滑鼠位置）
+                let newX = x - dragOffset.x;
+                let newY = y - dragOffset.y;
+
+                const boxWidth = el.width || (el.type === 'qrcode' ? 100 : 100);
+                const boxHeight = el.height || (el.type === 'qrcode' ? 100 : 50);
+                
+                // 計算元素中心點位置
+                const elementCenterX = newX + boxWidth / 2;
+                const elementCenterY = newY + boxHeight / 2;
+                
+                // 畫布中心點
+                const canvasCenterX = CANVAS_WIDTH / 2;
+                const canvasCenterY = CANVAS_HEIGHT / 2;
+
+                // 水平磁吸：當元素中心點靠近垂直中線時，讓元素中心對齊到中線
+                if (Math.abs(elementCenterX - canvasCenterX) <= SNAP_DISTANCE) {
+                    // 調整 newX，讓元素中心對齊到畫布中心
+                    newX = canvasCenterX - boxWidth / 2;
+                }
+
+                // 垂直磁吸：當元素中心點靠近水平中線時，讓元素中心對齊到中線
+                if (Math.abs(elementCenterY - canvasCenterY) <= SNAP_DISTANCE) {
+                    // 調整 newY，讓元素中心對齊到畫布中心
+                    newY = canvasCenterY - boxHeight / 2;
+                }
+
+                el.x = newX;
+                el.y = newY;
                 initCanvas();
             }
         });
         
         canvas.addEventListener('mouseup', function() {
             isDragging = false;
+            isResizing = false;
         });
         
         // 更新元素列表
@@ -336,24 +617,140 @@
             list.empty();
             
             elements.forEach((element, index) => {
-                const item = $('<div class="element-item"></div>');
-                item.text(`${element.type}: ${element.content || element.qrData || 'N/A'}`);
+                const item = $('<div class="element-item d-flex justify-content-between align-items-center"></div>');
+                const content = $('<span></span>').text(`${element.type}: ${element.content || element.qrData || 'N/A'}`);
+                const deleteBtn = $('<button class="btn btn-sm btn-danger ml-2">×</button>');
+                
                 if (index === selectedElement) {
                     item.addClass('selected');
                 }
-                item.on('click', function() {
+                
+                item.on('click', function(e) {
+                    // 如果點擊的是刪除按鈕，不觸發選中
+                    if ($(e.target).is('button')) return;
                     selectedElement = index;
                     initCanvas();
                     updateElementControls(element);
+                    updateDeleteButton();
                 });
+                
+                deleteBtn.on('click', function(e) {
+                    e.stopPropagation(); // 阻止觸發父元素的點擊事件
+                    if (confirm('確定要刪除這個元素嗎？')) {
+                        deleteElement(index);
+                    }
+                });
+                
+                item.append(content);
+                item.append(deleteBtn);
                 list.append(item);
             });
+            
+            updateDeleteButton();
+        }
+        
+        // 刪除選中的元素
+        function deleteSelectedElement() {
+            if (selectedElement === null || selectedElement === undefined) {
+                alert('請先選擇要刪除的元素');
+                return;
+            }
+            
+            if (confirm('確定要刪除選中的元素嗎？')) {
+                deleteElement(selectedElement);
+            }
+        }
+        
+        // 刪除指定索引的元素
+        function deleteElement(index) {
+            if (index >= 0 && index < elements.length) {
+                elements.splice(index, 1);
+                selectedElement = null;
+                initCanvas();
+            }
+        }
+        
+        // 更新刪除按鈕的啟用狀態
+        function updateDeleteButton() {
+            const deleteBtn = $('#deleteElementBtn');
+            if (selectedElement !== null && selectedElement !== undefined) {
+                deleteBtn.prop('disabled', false);
+            } else {
+                deleteBtn.prop('disabled', true);
+            }
         }
         
         // 更新元素控制面板
         function updateElementControls(element) {
-            // 這裡可以添加詳細的控制選項
-            console.log('Selected element:', element);
+            const controls = $('#elementControls');
+            const container = $('#elementControlsContainer');
+            controls.empty();
+            
+            if (!element) {
+                container.hide();
+                return;
+            }
+            
+            container.show();
+            
+            if (element.type === 'text') {
+                const html = `
+                    <div class="form-group">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="elementFullWidth" ${element.fullWidth ? 'checked' : ''} 
+                                   onchange="updateElementProperty('fullWidth', this.checked)">
+                            <label class="form-check-label" for="elementFullWidth">全寬 (Full Width)</label>
+                        </div>
+                        <small class="form-text text-muted">勾選後元素會佔滿整個寬度並置中</small>
+                    </div>
+                    <div class="form-group">
+                        <label>大小 (%)</label>
+                        <input type="number" id="elementSize" class="form-control" 
+                               value="${element.size || 100}" min="10" max="500" step="5"
+                               onchange="updateElementProperty('size', parseFloat(this.value))">
+                        <small class="form-text text-muted">調整字體大小百分比（100% = 原始大小）</small>
+                    </div>
+                    <div class="form-group">
+                        <label>文字對齊</label>
+                        <select id="elementTextAlign" class="form-control" 
+                                onchange="updateElementProperty('textAlign', this.value)" ${element.fullWidth ? 'disabled' : ''}>
+                            <option value="left" ${element.textAlign === 'left' ? 'selected' : ''}>靠左</option>
+                            <option value="center" ${element.textAlign === 'center' ? 'selected' : ''}>置中</option>
+                            <option value="right" ${element.textAlign === 'right' ? 'selected' : ''}>靠右</option>
+                        </select>
+                        <small class="form-text text-muted">全寬模式下會自動置中</small>
+                    </div>
+                    <div class="form-group">
+                        <label>字體大小（基礎）</label>
+                        <input type="number" id="elementFontSize" class="form-control" 
+                               value="${element.fontSize || 16}" min="8" max="200"
+                               onchange="updateElementProperty('fontSize', parseInt(this.value))">
+                        <small class="form-text text-muted">基礎字體大小，會根據「大小 (%)」調整</small>
+                    </div>
+                    <div class="form-group">
+                        <label>顏色</label>
+                        <input type="color" id="elementColor" class="form-control" 
+                               value="${element.color || '#000000'}"
+                               onchange="updateElementProperty('color', this.value)">
+                    </div>
+                `;
+                controls.html(html);
+            }
+        }
+        
+        // 更新元素屬性
+        function updateElementProperty(property, value) {
+            if (selectedElement === null || selectedElement === undefined) return;
+            
+            elements[selectedElement][property] = value;
+            
+            // 如果更新了 fullWidth，需要調整元素位置和寬度
+            if (property === 'fullWidth' && value === true) {
+                elements[selectedElement].x = 0;
+                elements[selectedElement].width = CANVAS_WIDTH;
+            }
+            
+            initCanvas();
         }
         
         // 保存配置
@@ -416,7 +813,28 @@
                 elements = [];
                 selectedElement = null;
                 initCanvas();
+                updateDeleteButton();
             }
+        }
+        
+        // 鍵盤快捷鍵：Delete 鍵刪除選中元素
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                // 確保不是在輸入框中
+                if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                    if (selectedElement !== null && selectedElement !== undefined) {
+                        deleteSelectedElement();
+                    }
+                }
+            }
+        });
+
+        // 切換中線提示顯示
+        function toggleCenterGuides() {
+            showCenterGuides = !showCenterGuides;
+            const btn = document.getElementById('toggleGuidesBtn');
+            if (btn) btn.textContent = showCenterGuides ? '隱藏中線' : '顯示中線';
+            initCanvas();
         }
         
         // 初始化
