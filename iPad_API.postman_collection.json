@@ -1,0 +1,103 @@
+{
+  "info": {
+    "name": "iPad API",
+    "description": "iPad 端 API：登入、活動、用戶、簽到、修改客戶個人資料等。\n\n使用前請先執行「1) 登入」取得 token，再呼叫其他需要 Authorization 的請求。",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3377" },
+    { "key": "token", "value": "" },
+    { "key": "eventId", "value": "" },
+    { "key": "userId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1) 登入取得 JWT",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"your_password\"\n}"
+        },
+        "url": "{{baseUrl}}/api/ipad/login",
+        "description": "登入後會回傳 token，請複製到 collection 變數 `token`，或使用 Tests 腳本自動儲存。"
+      }
+    },
+    {
+      "name": "2) 取得所有活動 (events)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/ipad/events",
+        "description": "回傳該帳號可存取的活動 name 與 _id。請將要用的 event _id 填入 collection 變數 eventId。"
+      }
+    },
+    {
+      "name": "3) 取得活動下的用戶列表",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/users",
+        "description": "依 eventId 取得該活動的 users 陣列。請將要用的 user _id 填入 collection 變數 userId。"
+      }
+    },
+    {
+      "name": "3c) 取得單一用戶詳細資料",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/users/{{userId}}",
+        "description": "取得指定活動下某位用戶的完整資料。"
+      }
+    },
+    {
+      "name": "4a) 更新用戶 - 簽到 (Check-in)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"isCheckIn\": true\n}"
+        },
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/users/{{userId}}",
+        "description": "將用戶設為已簽到。設為 false 可取消簽到。"
+      }
+    },
+    {
+      "name": "4b) 更新用戶 - 修改客戶個人資料",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"新姓名\",\n  \"email\": \"new@example.com\",\n  \"phone_code\": \"+852\",\n  \"phone\": \"98765432\",\n  \"company\": \"新公司名稱\"\n}"
+        },
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/users/{{userId}}",
+        "description": "修改客戶個人資料，只傳要更新的欄位即可。可與 isCheckIn 一併傳送。"
+      }
+    },
+    {
+      "name": "4c) 取消簽到",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"isCheckIn\": false\n}"
+        },
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/users/{{userId}}",
+        "description": "將用戶設為未簽到，並清除 checkInAt。"
+      }
+    }
+  ]
+}

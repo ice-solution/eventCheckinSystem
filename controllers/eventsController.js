@@ -3415,18 +3415,23 @@ exports.updateEmailSettings = async (req, res) => {
 // Stripe Checkout
 exports.stripeCheckout = async (req, res) => {
     const { event_id } = req.params;
-    const { ticketId, email, name, company, phone_code, phone, lang } = req.body;
+    const { ticketId, email, name, company, phone_code, phone, lang, ...restBody } = req.body || {};
     try {
         const event = await Event.findById(event_id);
         if (!event) return res.status(404).json({ message: 'Event not found' });
         const ticket = event.PaymentTickets.id(ticketId);
         if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
-        // Ensure DOMAIN has proper scheme
-        const domain = process.env.DOMAIN || `${req.protocol}://${req.get('host')}`;
-        const baseUrl = domain.startsWith('http://') || domain.startsWith('https://') 
-            ? domain 
+        // Ensure DOMAIN has proper scheme（Stripe 返回的 success_url/cancel_url 依此組出）
+        const domain = (process.env.DOMAIN || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
+        const baseUrl = domain.startsWith('http://') || domain.startsWith('https://')
+            ? domain
             : `https://${domain}`;
         
+        // 完整表單資料（含 FormConfig 欄位），供 webhook 寫入 event.users
+        const userFormData = { email, name, company, phone_code, phone, ...restBody };
+        delete userFormData.ticketId;
+        delete userFormData.lang;
+
         // Stripe session
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
@@ -3455,7 +3460,7 @@ exports.stripeCheckout = async (req, res) => {
                 phone
             }
         });
-        // 新增 Transaction
+        // 新增 Transaction（含完整表單資料，webhook 會用於寫入 event.users）
         await Transaction.create({
             eventId: event_id,
             userEmail: email,
@@ -3464,7 +3469,8 @@ exports.stripeCheckout = async (req, res) => {
             ticketTitle: ticket.title,
             ticketPrice: ticket.price,
             stripeSessionId: session.id,
-            status: 'pending'
+            status: 'pending',
+            userFormData
         });
         res.json({ url: session.url });
     } catch (error) {
@@ -3530,19 +3536,47 @@ exports.stripeWebhook = async (req, res) => {
                 existingUser.modified_at = new Date();
             } else {
                 console.log('Adding new user to event:', transaction.userEmail);
-                // Add user to event.users with all metadata
-                eventDoc.users.push({
-                    email: transaction.userEmail,
-                    name: transaction.userName || session.metadata.name,
-                    company: session.metadata.company || '',
-                    phone_code: session.metadata.phone_code || '',
-                    phone: session.metadata.phone || '',
-                    paymentStatus: 'paid',
-                    isCheckIn: false,
-                    role: 'guests',
-                    create_at: new Date(),
-                    modified_at: new Date()
-                });
+                const now = new Date();
+                const excludedFields = ['_id', '__v', 'create_at', 'modified_at'];
+                let newUser;
+                if (transaction.userFormData && typeof transaction.userFormData === 'object') {
+                    // 使用付款前儲存的完整表單資料（含 FormConfig 欄位）
+                    newUser = {
+                        create_at: now,
+                        modified_at: now,
+                        isCheckIn: false,
+                        paymentStatus: 'paid',
+                        role: 'guests'
+                    };
+                    Object.keys(transaction.userFormData).forEach(key => {
+                        if (excludedFields.includes(key)) return;
+                        const val = transaction.userFormData[key];
+                        if (Array.isArray(val)) {
+                            newUser[key] = val;
+                        } else if (val !== undefined) {
+                            newUser[key] = val;
+                        }
+                    });
+                    if (!newUser.name || newUser.name === '') {
+                        newUser.name = newUser.email || newUser.company || transaction.userName || '未提供姓名';
+                    }
+                    if (!newUser.email) newUser.email = transaction.userEmail;
+                } else {
+                    // 舊 Transaction 無 userFormData，僅寫入基本欄位
+                    newUser = {
+                        email: transaction.userEmail,
+                        name: transaction.userName || (session.metadata && session.metadata.name) || '',
+                        company: (session.metadata && session.metadata.company) || '',
+                        phone_code: (session.metadata && session.metadata.phone_code) || '',
+                        phone: (session.metadata && session.metadata.phone) || '',
+                        paymentStatus: 'paid',
+                        isCheckIn: false,
+                        role: 'guests',
+                        create_at: now,
+                        modified_at: now
+                    };
+                }
+                eventDoc.users.push(newUser);
             }
             
             await eventDoc.save();

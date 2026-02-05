@@ -10,7 +10,9 @@ const transactionSchema = new mongoose.Schema({
     stripeSessionId: { type: String, required: true },
     status: { type: String, enum: ['pending', 'paid', 'failed'], default: 'pending' },
     createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now }
+    updatedAt: { type: Date, default: Date.now },
+    // 付款前註冊表單的完整資料（FormConfig 欄位），webhook 完成付款後用來寫入 event.users
+    userFormData: { type: mongoose.Schema.Types.Mixed }
 });
 
 transactionSchema.pre('save', function(next) {

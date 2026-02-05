@@ -211,15 +211,9 @@ router.put('/events/:eventId/users/:userId', authenticateJwt, async (req, res) =
 
     await event.save();
 
-    // 返回更新後的用戶資料
-    return res.json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      isCheckIn: user.isCheckIn,
-      checkInAt: user.checkInAt,
-      modified_at: user.modified_at,
-    });
+    // 返回更新後的完整用戶資料（供簽到與修改個人資料共用）
+    const userObject = user.toObject ? user.toObject({ minimize: false }) : user;
+    return res.json(userObject);
   } catch (err) {
     console.error('iPad API update user checkin error:', err);
     return res.status(500).json({ message: 'Server error' });

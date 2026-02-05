@@ -1,6 +1,20 @@
 # iPad API（JWT）呼叫文件
 
-此文件說明 iPad 端要用的 API：登入取得 JWT、取得活動清單、用活動 `_id` 取得 users、更新用戶 checkin 狀態。
+此文件說明 iPad 端要用的 API：登入取得 JWT、取得活動清單、用活動 `_id` 取得 users、更新用戶簽到狀態與**修改客戶個人資料**。
+
+## Postman
+
+專案內含 **`iPad_API.postman_collection.json`**，可匯入 Postman 後直接測試所有 API，包含：
+
+- 1) 登入取得 JWT  
+- 2) 取得所有活動  
+- 3) 取得活動下的用戶列表  
+- 3c) 取得單一用戶詳細資料  
+- 4a) 更新用戶 - 簽到 (Check-in)  
+- **4b) 更新用戶 - 修改客戶個人資料**  
+- 4c) 取消簽到  
+
+匯入後請先執行「1) 登入」取得 token，在 Collection 變數中設定 `token`、`eventId`、`userId` 後即可依序測試。
 
 ## Base URL
 
@@ -143,7 +157,9 @@ curl "http://localhost:3377/api/ipad/events/$EVENT_ID/users/$USER_ID" \
 
 ---
 
-## 4) 更新用戶 Checkin 狀態
+## 4) 更新用戶（簽到 / 個人資料）
+
+同一個 `PUT` 端點支援：**簽到狀態** 與 **修改客戶個人資料**（可同時傳多個欄位）。
 
 ### URL
 
@@ -155,9 +171,19 @@ curl "http://localhost:3377/api/ipad/events/$EVENT_ID/users/$USER_ID" \
 
 ### Body（JSON）
 
-- `isCheckIn`: `true` 或 `false`（必填，用於設定簽到狀態）
+可傳以下任一或組合：
 
-**注意**：當 `isCheckIn` 設為 `true` 時，系統會自動設置 `checkInAt` 時間；設為 `false` 時會清除 `checkInAt`。
+| 用途 | 欄位 | 說明 |
+|------|------|------|
+| 簽到 | `isCheckIn` | `true` 簽到、`false` 取消簽到 |
+| 個人資料 | `name` | 姓名 |
+| 個人資料 | `email` | 電郵 |
+| 個人資料 | `phone_code` | 電話區號（如 `+852`） |
+| 個人資料 | `phone` | 電話號碼 |
+| 個人資料 | `company` | 公司名稱 |
+| 個人資料 | 其他 | FormConfig 中定義的欄位（如 `table`、`saluation`、`industry` 等） |
+
+**注意**：`isCheckIn: true` 時會自動寫入 `checkInAt`；`isCheckIn: false` 時會清除 `checkInAt`。不可透過此 API 修改 `_id`、`create_at`、`checkInAt`（僅能經由 `isCheckIn` 間接更新）。
 
 ### 權限規則
 
@@ -166,7 +192,7 @@ curl "http://localhost:3377/api/ipad/events/$EVENT_ID/users/$USER_ID" \
 
 ### curl 範例
 
-**簽到（Check-in）**：
+**僅簽到（Check-in）**：
 
 ```bash
 TOKEN="(貼上 login 回傳的 token)"
@@ -181,7 +207,7 @@ curl -X PUT "http://localhost:3377/api/ipad/events/$EVENT_ID/users/$USER_ID" \
   }'
 ```
 
-**取消簽到（取消 Check-in）**：
+**僅取消簽到**：
 
 ```bash
 curl -X PUT "http://localhost:3377/api/ipad/events/$EVENT_ID/users/$USER_ID" \
@@ -192,25 +218,58 @@ curl -X PUT "http://localhost:3377/api/ipad/events/$EVENT_ID/users/$USER_ID" \
   }'
 ```
 
+**修改客戶個人資料**（可只傳要改的欄位）：
+
+```bash
+curl -X PUT "http://localhost:3377/api/ipad/events/$EVENT_ID/users/$USER_ID" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "新姓名",
+    "email": "new@example.com",
+    "phone_code": "+852",
+    "phone": "98765432",
+    "company": "新公司名稱"
+  }'
+```
+
+**同時簽到並更新資料**：
+
+```bash
+curl -X PUT "http://localhost:3377/api/ipad/events/$EVENT_ID/users/$USER_ID" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "isCheckIn": true,
+    "name": "新姓名",
+    "company": "新公司"
+  }'
+```
+
 ### Response（成功）
+
+回傳**更新後的完整用戶物件**（含所有欄位，含 `_id`、`name`、`email`、`isCheckIn`、`checkInAt`、`modified_at` 及 FormConfig 定義的欄位）：
 
 ```json
 {
   "_id": "用戶ID",
   "name": "用戶名稱",
   "email": "用戶email",
+  "phone_code": "+852",
+  "phone": "12345678",
+  "company": "公司名稱",
   "isCheckIn": true,
   "checkInAt": "2026-01-28T10:30:00.000Z",
-  "modified_at": "2026-01-28T10:30:00.000Z"
+  "create_at": "2026-01-28T10:30:00.000Z",
+  "modified_at": "2026-01-28T12:00:00.000Z"
 }
 ```
 
 ### 功能說明
 
-此 API 與 `users.ejs` 中的 checkin 功能相同：
-- 當 `isCheckIn` 設為 `true` 時，會自動記錄 `checkInAt` 時間
-- 當 `isCheckIn` 設為 `false` 時，會清除 `checkInAt` 時間
-- 同時會更新 `modified_at` 時間戳
+- 簽到：與 `users.ejs` 行為一致；`isCheckIn: true` 會寫入 `checkInAt`，`false` 會清除。
+- 修改客戶個人資料：可更新 `name`、`email`、`phone_code`、`phone`、`company` 及 FormConfig 其他欄位，只傳要改的欄位即可。
+- 每次更新都會更新 `modified_at`。
 
 ---
 
