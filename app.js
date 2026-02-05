@@ -33,7 +33,7 @@ const PORT = process.env.PORT || 3377;
 const server = http.createServer(app);
 const io = initSocket(server); // 初始化 Socket.IO
 
-// CORS：由 .env 的 CORS_ENABLED 開關（true=啟用，false/未設=關閉）
+// CORS：由 .env 的 CORS_ENABLED 開關（true=允許跨域，false/未設=僅同源，外部 localhost/其他 domain 會被擋）
 const corsEnabled = process.env.CORS_ENABLED === 'true' || process.env.CORS_ENABLED === '1';
 if (corsEnabled) {
     const corsOrigin = process.env.CORS_ORIGIN;

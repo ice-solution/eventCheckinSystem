@@ -3,7 +3,15 @@ const socketIo = require('socket.io');
 let io; // 定義 io 變量
 
 const initSocket = (server) => {
-    io = socketIo(server); // 初始化 socket.io
+    // 與 app.js 一致：CORS_ENABLED=true 時才允許跨域（localhost/其他 domain 連線）
+    const corsEnabled = process.env.CORS_ENABLED === 'true' || process.env.CORS_ENABLED === '1';
+    const corsOrigin = process.env.CORS_ORIGIN;
+    const socketCors = corsEnabled
+        ? (corsOrigin
+            ? { origin: corsOrigin.split(',').map(s => s.trim()), credentials: true }
+            : { origin: true, credentials: true })
+        : false; // false = 只允許同源，不送 CORS headers
+    io = socketIo(server, { cors: socketCors });
     
     // 追蹤每個 room 中是否有 panel 連接
     const roomPanels = new Map(); // Map<room, Set<socketId>>
