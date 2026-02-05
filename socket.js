@@ -4,13 +4,21 @@ let io; // 定義 io 變量
 
 const initSocket = (server) => {
     // 與 app.js 一致：CORS_ENABLED=true 時才允許跨域（localhost/其他 domain 連線）
-    const corsEnabled = process.env.CORS_ENABLED === 'true' || process.env.CORS_ENABLED === '1';
-    const corsOrigin = process.env.CORS_ORIGIN;
-    const socketCors = corsEnabled
-        ? (corsOrigin
-            ? { origin: corsOrigin.split(',').map(s => s.trim()), credentials: true }
-            : { origin: true, credentials: true })
-        : false; // false = 只允許同源，不送 CORS headers
+    const corsEnabled = (process.env.CORS_ENABLED || '').toString().trim().toLowerCase() === 'true' || process.env.CORS_ENABLED === '1';
+    const corsOrigin = (process.env.CORS_ORIGIN || '').trim();
+    const allowedOrigins = corsOrigin ? corsOrigin.split(',').map(s => s.trim()).filter(Boolean) : [];
+    let socketCors;
+    if (!corsEnabled) {
+        socketCors = false; // 只允許同源
+    } else if (allowedOrigins.length > 0) {
+        socketCors = { origin: allowedOrigins, credentials: true };
+    } else {
+        // 允許所有 origin：用函數明確回傳 true，確保 localhost:5175 等都會過
+        socketCors = {
+            origin: (origin, callback) => callback(null, true),
+            credentials: true
+        };
+    }
     io = socketIo(server, { cors: socketCors });
     
     // 追蹤每個 room 中是否有 panel 連接

@@ -2191,32 +2191,28 @@ exports.addLuckydrawUser = async (req, res) => {
             return res.status(400).send('Prize is out of stock.');
         }
 
-        prize.unit -= 1;
         const prizeName = prize.name;
-        await prize.save();
-
-        // 計算下一個可用的 order 號碼（從1開始，不重用已刪除的號碼）
-        // 使用 maxLuckydrawOrder 追蹤最大 order，即使刪除中獎者也不會減少，確保 order 唯一性
+        // 先寫入中獎者再扣庫存，避免 event.save() 失敗時已扣庫存導致「畫面有件數但 API 回 out of stock」
         const nextOrder = (event.maxLuckydrawOrder || 0) + 1;
         console.log(`[單抽] 當前最大 order: ${event.maxLuckydrawOrder || 0}, 下一個 order: ${nextOrder}`);
 
-        // 創建 winner 對象，包含獎品信息和抽獎號碼
-        const winner = { 
-            _id, 
-            name, 
-            company, 
+        const winner = {
+            _id,
+            name,
+            company,
             table,
-            prizeId, 
+            prizeId,
             prizeName,
-            order: nextOrder, // 分配唯一的抽獎號碼
+            order: nextOrder,
             wonAt: new Date()
         };
 
-        // 將中獎者存儲在 event 的 winners 陣列中
         event.winners.push(winner);
-        // 更新最大 order 號碼
         event.maxLuckydrawOrder = Math.max(event.maxLuckydrawOrder || 0, nextOrder);
-        await event.save(); // 保存更改
+        await event.save();
+
+        prize.unit -= 1;
+        await prize.save();
 
         // 通過 socket 發送中獎者添加事件給顯示頁面
         try {
@@ -2286,33 +2282,23 @@ exports.batchDrawWinners = async (req, res) => {
             return res.status(400).send('Prize is out of stock.');
         }
 
-        // 計算實際可抽取的數量（考慮獎品庫存和可用人數）
         const actualCount = Math.min(count, prize.unit, availablePeople.length);
 
         if (actualCount <= 0) {
             return res.status(400).send('Cannot draw any winners. Not enough prize stock or available people.');
         }
 
-        // 使用 Fisher-Yates 洗牌算法隨機抽取指定數量的人
         const shuffled = [...availablePeople];
         for (let i = shuffled.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
-        
+
         const selectedWinners = shuffled.slice(0, actualCount);
-
-        // 更新獎品庫存
-        prize.unit -= actualCount;
         const prizeName = prize.name;
-        await prize.save();
-
-        // 計算下一個可用的 order 號碼（從1開始，不重用已刪除的號碼）
-        // 使用 maxLuckydrawOrder 追蹤最大 order，即使刪除中獎者也不會減少，確保 order 唯一性
         let nextOrder = (event.maxLuckydrawOrder || 0) + 1;
         console.log(`[批量抽] 當前最大 order: ${event.maxLuckydrawOrder || 0}, 下一個 order: ${nextOrder}`);
 
-        // 創建 winners 對象並添加到 event，為每個中獎者分配連續的 order 號碼
         const winners = selectedWinners.map((user, index) => ({
             _id: user._id,
             name: user.name || '',
@@ -2320,16 +2306,17 @@ exports.batchDrawWinners = async (req, res) => {
             table: user.table || '',
             prizeId: prizeId,
             prizeName: prizeName,
-            order: nextOrder + index, // 分配連續的抽獎號碼
+            order: nextOrder + index,
             wonAt: new Date()
         }));
 
-        // 將所有中獎者添加到 event 的 winners 陣列
         event.winners.push(...winners);
-        // 更新最大 order 號碼（批量抽獎的最後一個 order）
         const lastOrder = nextOrder + actualCount - 1;
         event.maxLuckydrawOrder = Math.max(event.maxLuckydrawOrder || 0, lastOrder);
         await event.save();
+
+        prize.unit -= actualCount;
+        await prize.save();
 
         // 通過 socket 發送中獎者添加事件給顯示頁面
         try {
