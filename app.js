@@ -3,6 +3,7 @@ require('dotenv').config(); // 加載環境變量
 const QRCode = require('qrcode');
 
 const express = require('express');
+const cors = require('cors');
 const mongoose = require('mongoose');
 const http = require('http');
 const session = require('express-session');
@@ -31,6 +32,16 @@ const app = express();
 const PORT = process.env.PORT || 3377;
 const server = http.createServer(app);
 const io = initSocket(server); // 初始化 Socket.IO
+
+// CORS：由 .env 的 CORS_ENABLED 開關（true=啟用，false/未設=關閉）
+const corsEnabled = process.env.CORS_ENABLED === 'true' || process.env.CORS_ENABLED === '1';
+if (corsEnabled) {
+    const corsOrigin = process.env.CORS_ORIGIN;
+    const corsOptions = corsOrigin
+        ? { origin: corsOrigin.split(',').map(s => s.trim()), credentials: true }
+        : { origin: true, credentials: true };
+    app.use(cors(corsOptions));
+}
 
 // 中間件
 app.post('/web/webhook/stripe', express.raw({type: 'application/json'}), eventsController.stripeWebhook);

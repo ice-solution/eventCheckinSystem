@@ -3528,67 +3528,60 @@ exports.stripeWebhook = async (req, res) => {
                 return res.json({ received: true, warning: 'Event not found' });
             }
             
-            // Check if user already exists in event.users
-            const existingUser = eventDoc.users.find(u => u.email === transaction.userEmail);
-            if (existingUser) {
-                console.log('User already exists, updating payment status:', transaction.userEmail);
-                existingUser.paymentStatus = 'paid';
-                existingUser.modified_at = new Date();
-            } else {
-                console.log('Adding new user to event:', transaction.userEmail);
-                const now = new Date();
-                const excludedFields = ['_id', '__v', 'create_at', 'modified_at'];
-                let newUser;
-                if (transaction.userFormData && typeof transaction.userFormData === 'object') {
-                    // 使用付款前儲存的完整表單資料（含 FormConfig 欄位）
-                    newUser = {
-                        create_at: now,
-                        modified_at: now,
-                        isCheckIn: false,
-                        paymentStatus: 'paid',
-                        role: 'guests'
-                    };
-                    Object.keys(transaction.userFormData).forEach(key => {
-                        if (excludedFields.includes(key)) return;
-                        const val = transaction.userFormData[key];
-                        if (Array.isArray(val)) {
-                            newUser[key] = val;
-                        } else if (val !== undefined) {
-                            newUser[key] = val;
-                        }
-                    });
-                    if (!newUser.name || newUser.name === '') {
-                        newUser.name = newUser.email || newUser.company || transaction.userName || '未提供姓名';
+            // 每次付款都新增一筆註冊記錄（不依 email 覆蓋既有用戶）
+            console.log('Adding new register record from payment:', transaction.userEmail);
+            const now = new Date();
+            const excludedFields = ['_id', '__v', 'create_at', 'modified_at'];
+            let newUser;
+            if (transaction.userFormData && typeof transaction.userFormData === 'object') {
+                // 使用付款前儲存的完整表單資料（含 FormConfig 欄位）
+                newUser = {
+                    create_at: now,
+                    modified_at: now,
+                    isCheckIn: false,
+                    paymentStatus: 'paid',
+                    role: 'guests'
+                };
+                Object.keys(transaction.userFormData).forEach(key => {
+                    if (excludedFields.includes(key)) return;
+                    const val = transaction.userFormData[key];
+                    if (Array.isArray(val)) {
+                        newUser[key] = val;
+                    } else if (val !== undefined) {
+                        newUser[key] = val;
                     }
-                    if (!newUser.email) newUser.email = transaction.userEmail;
-                } else {
-                    // 舊 Transaction 無 userFormData，僅寫入基本欄位
-                    newUser = {
-                        email: transaction.userEmail,
-                        name: transaction.userName || (session.metadata && session.metadata.name) || '',
-                        company: (session.metadata && session.metadata.company) || '',
-                        phone_code: (session.metadata && session.metadata.phone_code) || '',
-                        phone: (session.metadata && session.metadata.phone) || '',
-                        paymentStatus: 'paid',
-                        isCheckIn: false,
-                        role: 'guests',
-                        create_at: now,
-                        modified_at: now
-                    };
+                });
+                if (!newUser.name || newUser.name === '') {
+                    newUser.name = newUser.email || newUser.company || transaction.userName || '未提供姓名';
                 }
-                eventDoc.users.push(newUser);
+                if (!newUser.email) newUser.email = transaction.userEmail;
+            } else {
+                // 舊 Transaction 無 userFormData，僅寫入基本欄位
+                newUser = {
+                    email: transaction.userEmail,
+                    name: transaction.userName || (session.metadata && session.metadata.name) || '',
+                    company: (session.metadata && session.metadata.company) || '',
+                    phone_code: (session.metadata && session.metadata.phone_code) || '',
+                    phone: (session.metadata && session.metadata.phone) || '',
+                    paymentStatus: 'paid',
+                    isCheckIn: false,
+                    role: 'guests',
+                    create_at: now,
+                    modified_at: now
+                };
             }
-            
+            eventDoc.users.push(newUser);
+
             await eventDoc.save();
             console.log('Event updated successfully:', eventDoc._id);
-            
-            // Send payment confirmation email (根據設置決定是否發送)
+
+            // Send payment confirmation email (根據設置決定是否發送，發給剛新增的這筆記錄)
             try {
-                const user = eventDoc.users.find(u => u.email === transaction.userEmail);
-                if (user && eventDoc.emailSettings && eventDoc.emailSettings.sendConfirmationEmail) {
-                    await exports.sendPaymentConfirmationEmail(user, eventDoc, transaction);
+                const addedUser = eventDoc.users[eventDoc.users.length - 1];
+                if (addedUser && eventDoc.emailSettings && eventDoc.emailSettings.sendConfirmationEmail) {
+                    await exports.sendPaymentConfirmationEmail(addedUser, eventDoc, transaction);
                     console.log('Payment confirmation email sent to:', transaction.userEmail);
-                } else if (user && (!eventDoc.emailSettings || !eventDoc.emailSettings.sendConfirmationEmail)) {
+                } else if (addedUser && (!eventDoc.emailSettings || !eventDoc.emailSettings.sendConfirmationEmail)) {
                     console.log('Payment confirmation email skipped (setting disabled)');
                 }
             } catch (emailError) {
