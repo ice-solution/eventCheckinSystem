@@ -43,6 +43,9 @@ if (corsEnabled) {
     app.use(cors(corsOptions));
 }
 
+// Stripe webhook 需 raw body 驗證簽名，必須在 express.json() 之前註冊
+app.post('/web/webhook/stripe', express.raw({ type: 'application/json' }), eventsController.stripeWebhook);
+
 // 中間件
 app.use(express.json()); // 解析 JSON 請求主體
 app.use(express.urlencoded({ extended: true }));

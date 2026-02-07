@@ -36,7 +36,18 @@
 
 ---
 
-## 💳 Wonder Payment 配置（目前使用）
+## 💳 付款閘道選擇
+
+### PAYMENT_GATEWAY
+- **說明**：選擇付款方式，不影響前端（前端仍 POST 到同一 checkout 路徑）
+- **可選值**：`wonder` | `stripe`
+- **範例**：`PAYMENT_GATEWAY=wonder` 或 `PAYMENT_GATEWAY=stripe`
+- **預設**：未設或非 `stripe` 時為 `wonder`
+- **效果**：每筆付款記錄（Transaction）會寫入 `paymentGateway` 欄位（`stripe` 或 `wonder`），API 回傳的資料會照常包含該筆記錄
+
+---
+
+## 💳 Wonder Payment 配置（PAYMENT_GATEWAY=wonder 時使用）
 
 ### PAYMENT_DEV / payment_dev
 - **說明**：是否使用 Wonder 測試環境
@@ -63,6 +74,27 @@
 
 ### 回調 URL
 - Wonder 付款完成後會呼叫：`{DOMAIN}/web/webhook/wonder`（請在 Wonder 後台設定此 callback_url）
+
+---
+
+## 💳 Stripe 配置（PAYMENT_GATEWAY=stripe 時使用）
+
+### STRIPE_SECRET_KEY / STRIPE_SECRET
+- **說明**：Stripe 私鑰（後端建立 Checkout Session 用）
+- **範例**：`STRIPE_SECRET_KEY=sk_live_xxx` 或 `STRIPE_SECRET=sk_live_xxx`
+
+### STRIPE_PK（前端用）
+- **說明**：Stripe 公鑰（Publishable key），供前端載入 Stripe.js 用（若前端有使用）
+- **範例**：`STRIPE_PK=pk_live_xxx`
+
+### STRIPE_WEBHOOK_SECRET / STRIPE_WH_SECRET
+- **說明**：Stripe Webhook 簽名密鑰（在 Stripe Dashboard → Developers → Webhooks 建立 endpoint 後取得）
+- **範例**：`STRIPE_WEBHOOK_SECRET=whsec_xxx`
+- **Webhook URL**：`{DOMAIN}/web/webhook/stripe`（請在 Stripe 後台新增此 URL，事件選 `checkout.session.completed`）
+
+### STRIPE_CURRENCY（選填）
+- **說明**：Stripe 金額幣別（小寫），預設 `hkd`
+- **範例**：`STRIPE_CURRENCY=hkd`
 
 ---
 

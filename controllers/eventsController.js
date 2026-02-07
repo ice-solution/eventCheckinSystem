@@ -3401,10 +3401,17 @@ exports.updateEmailSettings = async (req, res) => {
     }
 };
 
-// Wonder Payment Checkout（取代 Stripe）
+/** 依 .env PAYMENT_GATEWAY 回傳 'stripe' 或 'wonder'（預設 wonder） */
+function getPaymentGateway() {
+    const v = (process.env.PAYMENT_GATEWAY || 'wonder').toString().trim().toLowerCase();
+    return v === 'stripe' ? 'stripe' : 'wonder';
+}
+
+// 統一 Checkout 入口：依 PAYMENT_GATEWAY 選擇 Stripe 或 Wonder，前端不需改動
 exports.stripeCheckout = async (req, res) => {
     const { event_id } = req.params;
     const { ticketId, email, name, company, phone_code, phone, lang, ...restBody } = req.body || {};
+    const gateway = getPaymentGateway();
     try {
         const event = await Event.findById(event_id);
         if (!event) return res.status(404).json({ message: 'Event not found' });
@@ -3421,7 +3428,6 @@ exports.stripeCheckout = async (req, res) => {
         delete userFormData.lang;
 
         const langQuery = lang && lang !== 'zh' ? `&lang=${lang}` : '';
-        const callbackUrl = `${baseUrl}/web/webhook/wonder`;
         const transaction = await Transaction.create({
             eventId: event_id,
             userEmail: email,
@@ -3430,28 +3436,59 @@ exports.stripeCheckout = async (req, res) => {
             ticketTitle: ticket.title,
             ticketPrice: ticket.price,
             stripeSessionId: 'pending',
+            paymentGateway: gateway,
             status: 'pending',
             userFormData
         });
 
-        const redirectUrl = `${baseUrl}/web/${event_id}/register/success?session_id=${transaction._id}${langQuery}`;
+        if (gateway === 'wonder') {
+            const callbackUrl = `${baseUrl}/web/webhook/wonder`;
+            const redirectUrl = `${baseUrl}/web/${event_id}/register/success?session_id=${transaction._id}${langQuery}`;
+            const { paymentUrl, orderId } = await wonderPayment.createOrder({
+                referenceNumber: transaction._id.toString(),
+                currency: 'HKD',
+                ticketTitle: ticket.title,
+                amount: ticket.price,
+                callbackUrl,
+                redirectUrl,
+                note: `Event: ${event_id}, Ticket: ${ticket.title}`
+            });
+            transaction.stripeSessionId = orderId || transaction._id.toString();
+            await transaction.save();
+            return res.json({ url: paymentUrl });
+        }
 
-        const { paymentUrl, orderId } = await wonderPayment.createOrder({
-            referenceNumber: transaction._id.toString(),
-            currency: 'HKD',
-            ticketTitle: ticket.title,
-            amount: ticket.price,
-            callbackUrl,
-            redirectUrl,
-            note: `Event: ${event_id}, Ticket: ${ticket.title}`
+        // gateway === 'stripe'
+        const Stripe = require('stripe');
+        const stripeSecret = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET;
+        if (!stripeSecret) {
+            await Transaction.findOneAndUpdate({ _id: transaction._id }, { status: 'failed' });
+            return res.status(500).json({ message: 'Stripe is not configured (STRIPE_SECRET_KEY)' });
+        }
+        const stripe = new Stripe(stripeSecret);
+        const successUrl = `${baseUrl}/web/${event_id}/register/success?session_id={CHECKOUT_SESSION_ID}${langQuery}`;
+        const cancelUrl = `${baseUrl}/web/${event_id}/register/fail?session_id={CHECKOUT_SESSION_ID}${langQuery}`;
+        const session = await stripe.checkout.sessions.create({
+            mode: 'payment',
+            payment_method_types: ['card'],
+            line_items: [{
+                price_data: {
+                    currency: (process.env.STRIPE_CURRENCY || 'hkd').toLowerCase(),
+                    product_data: { name: ticket.title || 'Ticket' },
+                    unit_amount: Math.round(Number(ticket.price) * 100) // 轉為分
+                },
+                quantity: 1
+            }],
+            success_url: successUrl,
+            cancel_url: cancelUrl,
+            client_reference_id: transaction._id.toString(),
+            metadata: { transaction_id: transaction._id.toString(), event_id }
         });
-
-        transaction.stripeSessionId = orderId || transaction._id.toString();
+        transaction.stripeSessionId = session.id;
         await transaction.save();
-
-        res.json({ url: paymentUrl });
+        res.json({ url: session.url });
     } catch (error) {
-        console.error('Wonder checkout error:', error);
+        console.error(`${gateway} checkout error:`, error);
         res.status(500).json({ message: error.message || 'Payment error' });
     }
 };
@@ -3484,63 +3521,7 @@ exports.wonderWebhook = async (req, res) => {
         }
 
         if (status === 'paid' || status === 'success' || status === 'completed') {
-            await Transaction.findOneAndUpdate(
-                { _id: transaction._id },
-                { status: 'paid', updatedAt: new Date() },
-                { new: true }
-            );
-
-            const eventDoc = await Event.findById(transaction.eventId);
-            if (!eventDoc) {
-                return res.status(200).json({ received: true, warning: 'Event not found' });
-            }
-
-            const now = new Date();
-            const excludedFields = ['_id', '__v', 'create_at', 'modified_at'];
-            let newUser;
-            if (transaction.userFormData && typeof transaction.userFormData === 'object') {
-                newUser = {
-                    create_at: now,
-                    modified_at: now,
-                    isCheckIn: false,
-                    paymentStatus: 'paid',
-                    role: 'guests'
-                };
-                Object.keys(transaction.userFormData).forEach(key => {
-                    if (excludedFields.includes(key)) return;
-                    const val = transaction.userFormData[key];
-                    if (Array.isArray(val)) newUser[key] = val;
-                    else if (val !== undefined) newUser[key] = val;
-                });
-                if (!newUser.name || newUser.name === '') {
-                    newUser.name = newUser.email || newUser.company || transaction.userName || '未提供姓名';
-                }
-                if (!newUser.email) newUser.email = transaction.userEmail;
-            } else {
-                newUser = {
-                    email: transaction.userEmail,
-                    name: transaction.userName || '',
-                    company: '',
-                    phone_code: '',
-                    phone: '',
-                    paymentStatus: 'paid',
-                    isCheckIn: false,
-                    role: 'guests',
-                    create_at: now,
-                    modified_at: now
-                };
-            }
-            eventDoc.users.push(newUser);
-            await eventDoc.save();
-
-            try {
-                const addedUser = eventDoc.users[eventDoc.users.length - 1];
-                if (addedUser && eventDoc.emailSettings && eventDoc.emailSettings.sendConfirmationEmail) {
-                    await exports.sendPaymentConfirmationEmail(addedUser, eventDoc, transaction);
-                }
-            } catch (emailError) {
-                console.error('Error sending payment confirmation email:', emailError);
-            }
+            await markTransactionPaidAndAddUser(transaction);
         } else if (status === 'failed' || status === 'cancelled' || status === 'expired') {
             await Transaction.findOneAndUpdate(
                 { _id: transaction._id },
@@ -3551,6 +3532,100 @@ exports.wonderWebhook = async (req, res) => {
         return res.status(200).json({ received: true });
     } catch (error) {
         console.error('Wonder webhook error:', error);
+        return res.status(200).json({ received: true, error: error.message });
+    }
+};
+
+/** 共用：將 transaction 標為已付款並將 user 加入 event（Stripe / Wonder webhook 皆用） */
+async function markTransactionPaidAndAddUser(transaction) {
+    await Transaction.findOneAndUpdate(
+        { _id: transaction._id },
+        { status: 'paid', updatedAt: new Date() },
+        { new: true }
+    );
+    const eventDoc = await Event.findById(transaction.eventId);
+    if (!eventDoc) return;
+    const now = new Date();
+    const excludedFields = ['_id', '__v', 'create_at', 'modified_at'];
+    let newUser;
+    if (transaction.userFormData && typeof transaction.userFormData === 'object') {
+        newUser = {
+            create_at: now,
+            modified_at: now,
+            isCheckIn: false,
+            paymentStatus: 'paid',
+            role: 'guests'
+        };
+        Object.keys(transaction.userFormData).forEach(key => {
+            if (excludedFields.includes(key)) return;
+            const val = transaction.userFormData[key];
+            if (Array.isArray(val)) newUser[key] = val;
+            else if (val !== undefined) newUser[key] = val;
+        });
+        if (!newUser.name || newUser.name === '') {
+            newUser.name = newUser.email || newUser.company || transaction.userName || '未提供姓名';
+        }
+        if (!newUser.email) newUser.email = transaction.userEmail;
+    } else {
+        newUser = {
+            email: transaction.userEmail,
+            name: transaction.userName || '',
+            company: '',
+            phone_code: '',
+            phone: '',
+            paymentStatus: 'paid',
+            isCheckIn: false,
+            role: 'guests',
+            create_at: now,
+            modified_at: now
+        };
+    }
+    eventDoc.users.push(newUser);
+    await eventDoc.save();
+    const addedUser = eventDoc.users[eventDoc.users.length - 1];
+    if (addedUser && eventDoc.emailSettings && eventDoc.emailSettings.sendConfirmationEmail) {
+        try {
+            await exports.sendPaymentConfirmationEmail(addedUser, eventDoc, transaction);
+        } catch (e) {
+            console.error('Error sending payment confirmation email:', e);
+        }
+    }
+}
+
+// Stripe Webhook（需用 raw body 驗證簽名，路由在 app.js 以 express.raw 註冊）
+exports.stripeWebhook = async (req, res) => {
+    const stripeSecret = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET;
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || process.env.STRIPE_WH_SECRET;
+    if (!webhookSecret) {
+        console.error('Stripe webhook: STRIPE_WEBHOOK_SECRET not set');
+        return res.status(500).send('Webhook secret not configured');
+    }
+    const sig = req.headers['stripe-signature'];
+    if (!sig) return res.status(400).send('Missing stripe-signature');
+    let event;
+    try {
+        const Stripe = require('stripe');
+        const stripe = new Stripe(stripeSecret || '');
+        event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    } catch (err) {
+        console.error('Stripe webhook signature verification failed:', err.message);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+    if (event.type !== 'checkout.session.completed') {
+        return res.status(200).json({ received: true });
+    }
+    const session = event.data.object;
+    const sessionId = session.id;
+    try {
+        const transaction = await Transaction.findOne({ stripeSessionId: sessionId });
+        if (!transaction) {
+            console.error('Stripe webhook: Transaction not found for session', sessionId);
+            return res.status(200).json({ received: true, warning: 'Transaction not found' });
+        }
+        await markTransactionPaidAndAddUser(transaction);
+        return res.status(200).json({ received: true });
+    } catch (error) {
+        console.error('Stripe webhook error:', error);
         return res.status(200).json({ received: true, error: error.message });
     }
 };
