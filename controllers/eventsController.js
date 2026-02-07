@@ -24,6 +24,12 @@ const fs = require('fs');
 const { getSocket } = require('../socket'); // 引入 socket 以發送實時更新
 const { embedKaitiFontInEmail } = require('../utils/embedEmailFonts'); // 引入字型嵌入功能
 
+/** 取得對外 base URL（依 DOMAIN/domain，缺協議時自動補 https://） */
+function getPublicBaseUrl() {
+    const raw = (process.env.DOMAIN || process.env.domain || 'http://localhost:3377').toString().trim().replace(/\/+$/, '');
+    return raw.startsWith('http://') || raw.startsWith('https://') ? raw : `https://${raw}`;
+}
+
 // 動態替換 email template 中的所有 user 字段
 function replaceTemplateVariables(content, user, event, additionalVars = {}) {
     let result = content;
@@ -261,7 +267,7 @@ exports.sendSMS = async (user, event, type = 'welcome') => {
 
         // 生成 QR 碼 URL
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
-        const loginUrl = `${process.env.DOMAIN || 'http://localhost:3377'}/events/${event._id}/login`;
+        const loginUrl = `${getPublicBaseUrl()}/events/${event._id}/login`;
         
         // 查找對應事件的 SMS 模板
         let smsTemplate = await SmsTemplate.findOne({ 
@@ -357,7 +363,7 @@ exports.sendBulkSMS = async (req, res) => {
         }
 
         // 生成消息內容
-        const loginUrl = `${process.env.DOMAIN || 'http://localhost:3377'}/events/${event._id}/login`;
+        const loginUrl = `${getPublicBaseUrl()}/events/${event._id}/login`;
 
         const results = [];
         let successCount = 0;
@@ -415,7 +421,7 @@ exports.sendEmail = async (user, event) => {
     try {
         // 生成 QR 碼
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
-        const loginUrl = `${process.env.DOMAIN || 'http://localhost:3377'}/events/${event._id}/login`;
+        const loginUrl = `${getPublicBaseUrl()}/events/${event._id}/login`;
         
         // 查找對應事件的歡迎郵件模板
         let emailTemplate = await EmailTemplate.findOne({ 
@@ -560,7 +566,7 @@ exports.sendEmailByType = async (user, event, type = 'welcome', emailTemplateId 
     try {
         // 生成 QR 碼
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
-        const loginUrl = `${process.env.DOMAIN || 'http://localhost:3377'}/events/${event._id}/login`;
+        const loginUrl = `${getPublicBaseUrl()}/events/${event._id}/login`;
         
         // 如果指定了模板 ID，使用指定的模板
         let emailTemplate = null;
@@ -1679,14 +1685,14 @@ exports.sendSmsToGuestList = async (req, res) => {
                 let loginUrl;
                 if (smsTemplate.type === 'invitation') {
                     // invitation 類型使用 /:eventId/:guestId/invitation
-                    loginUrl = `${process.env.DOMAIN || 'http://localhost:3377'}/events/${event._id}/${guest._id}/invitation`;
+                    loginUrl = `${getPublicBaseUrl()}/events/${event._id}/${guest._id}/invitation`;
                 } else {
                     // 其他類型使用默認的 login URL
-                    loginUrl = `${process.env.DOMAIN || 'http://localhost:3377'}/events/${event._id}/login`;
+                    loginUrl = `${getPublicBaseUrl()}/events/${event._id}/login`;
                 }
                 
                 // 生成確認頁面 URL
-                const confirmUrl = `${process.env.DOMAIN || 'http://localhost:3377'}/events/${event._id}/${guest._id}`;
+                const confirmUrl = `${getPublicBaseUrl()}/events/${event._id}/${guest._id}`;
                 
                 let messageBody = smsTemplate.content
                     .replace(/\{\{user\.name\}\}/g, guest.name || '')
@@ -2432,10 +2438,8 @@ exports.renderScanPointUsersPage = async (req, res) => {
         }
         
         // 獲取完整域名
-        const domain = process.env.DOMAIN || `${req.protocol}://${req.get('host')}`;
-        const baseUrl = domain.startsWith('http://') || domain.startsWith('https://') 
-            ? domain 
-            : `https://${domain}`;
+        const domain = (process.env.DOMAIN || process.env.domain || `${req.protocol}://${req.get('host')}`).toString().trim().replace(/\/+$/, '');
+        const baseUrl = domain.startsWith('http://') || domain.startsWith('https://') ? domain : `https://${domain}`;
         const loginUrl = `${baseUrl}/events/${eventId}/attendee`;
         
         res.render('admin/scan_point_users', { 
@@ -2724,10 +2728,8 @@ exports.renderTreasureHuntPage = async (req, res) => {
         }
         
         // 獲取完整域名
-        const domain = process.env.DOMAIN || `${req.protocol}://${req.get('host')}`;
-        const baseUrl = domain.startsWith('http://') || domain.startsWith('https://') 
-            ? domain 
-            : `https://${domain}`;
+        const domain = (process.env.DOMAIN || process.env.domain || `${req.protocol}://${req.get('host')}`).toString().trim().replace(/\/+$/, '');
+        const baseUrl = domain.startsWith('http://') || domain.startsWith('https://') ? domain : `https://${domain}`;
         
         res.render('admin/treasure_hunt', { 
             eventId, 
@@ -3421,10 +3423,8 @@ exports.stripeCheckout = async (req, res) => {
         const ticket = event.PaymentTickets.id(ticketId);
         if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
 
-        const domain = (process.env.DOMAIN || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
-        const baseUrl = domain.startsWith('http://') || domain.startsWith('https://')
-            ? domain
-            : `https://${domain}`;
+        // 付款回調／重導向一律用 .env 的 DOMAIN，不用 req，避免從 localhost 發起時導回 localhost
+        const baseUrl = getPublicBaseUrl();
 
         const userFormData = { email, name, company, phone_code, phone, ...restBody };
         delete userFormData.ticketId;
@@ -3970,7 +3970,7 @@ exports.getEmailRecordDetails = async (req, res) => {
             try {
                 const userData = typeof user.toObject === 'function' ? user.toObject() : user;
                 const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
-                const loginUrl = `${process.env.DOMAIN || 'http://localhost:3377'}/events/${event._id}/login`;
+                const loginUrl = `${getPublicBaseUrl()}/events/${event._id}/login`;
                 
                 // Use the same replaceTemplateVariables function to reconstruct the email
                 emailHtml = replaceTemplateVariables(emailRecord.emailTemplate.content, userData, event, {
@@ -3980,7 +3980,7 @@ exports.getEmailRecordDetails = async (req, res) => {
                 
                 // Add tracking pixel if trackingId exists (same as when sending)
                 if (trackingId) {
-                    const trackingPixelUrl = `${process.env.DOMAIN || 'http://localhost:3377'}/track/email/${trackingId}/open.gif`;
+                    const trackingPixelUrl = `${getPublicBaseUrl()}/track/email/${trackingId}/open.gif`;
                     emailHtml = emailTracking.addTrackingToEmail(emailHtml, trackingId);
                 }
             } catch (error) {

@@ -13,7 +13,8 @@ exports.addTrackingToEmail = (html, trackingId, domain = null) => {
         return html;
     }
 
-    const baseUrl = domain || process.env.DOMAIN || 'http://localhost:3377';
+    const raw = domain || (process.env.DOMAIN || process.env.domain || 'http://localhost:3377').toString().trim().replace(/\/+$/, '');
+    const baseUrl = raw.startsWith('http://') || raw.startsWith('https://') ? raw : `https://${raw}`;
     const trackingPixelUrl = `${baseUrl}/track/email/open/${trackingId}`;
 
     // 添加追蹤像素（在郵件末尾）

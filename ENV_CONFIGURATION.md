@@ -15,14 +15,16 @@
 
 ### DOMAIN ⚠️ **重要**
 - **說明**：應用程式的完整域名（包含協議）
-- **用途**：用於付款回調與重導向 URL（Wonder callback_url / redirect_url）
+- **用途**：用於付款回調與重導向 URL（Wonder callback_url / redirect_url）、郵件連結等
 - **範例**：
   - 本地開發：`DOMAIN=http://localhost:3377`
   - 生產環境：`DOMAIN=https://demo.brandactivation.hk`
 - **注意**：
-  - ✅ 必須包含協議（`http://` 或 `https://`）
+  - ✅ 變數名請用大寫 **DOMAIN**（小寫 `domain` 也會讀取，但建議統一用 DOMAIN）
+  - ✅ 必須包含協議（`http://` 或 `https://`）；若只填網域如 `demo.brandactivation.hk`，系統會自動補 `https://`
   - ✅ 不要在結尾加斜線 `/`
-  - ✅ 生產環境必須使用 HTTPS
+  - ✅ 修改 .env 後**必須重啟** Node（如 nodemon）才會生效
+- **若畫面上仍是 localhost:3377**：請確認 (1) .env 裡是 `DOMAIN=https://demo.brandactivation.hk` (2) 存檔後已重啟服務
 
 ---
 
