@@ -2160,6 +2160,30 @@ exports.removeAllLuckydrawUsers = async (req, res) => {
     }
 };
 
+/**
+ * 組裝中獎者資料供 socket/前台：合併 event.user 的完整資料（FormConfig 欄位）與 winner 抽獎欄位
+ * @param {Object} winner - 中獎記錄 { _id, name, company, table, prizeId, prizeName, order, wonAt }
+ * @param {Object} [fullUser] - event.users 中對應的完整 user（含 FormConfig 動態欄位），可為 null
+ * @param {string} prizePicture - 獎品圖片 URL
+ * @returns {Object} 完整中獎者物件（_id/prizeId 為字串，含所有 user 欄位）
+ */
+function buildWinnerWithFullUserData(winner, fullUser, prizePicture) {
+    const userObj = fullUser
+        ? (typeof fullUser.toObject === 'function' ? fullUser.toObject() : { ...fullUser })
+        : {};
+    const base = { ...userObj };
+    base._id = String(winner._id);
+    base.name = winner.name != null ? winner.name : (userObj.name || '');
+    base.company = winner.company != null ? winner.company : (userObj.company || '');
+    base.table = winner.table != null ? winner.table : (userObj.table || '');
+    base.prizeId = String(winner.prizeId);
+    base.prizeName = winner.prizeName != null ? winner.prizeName : '';
+    base.prizePicture = prizePicture || '';
+    base.order = winner.order;
+    base.wonAt = winner.wonAt;
+    return base;
+}
+
 // 新增中獎者
 exports.addLuckydrawUser = async (req, res) => {
     const { _id, name, company, table, prizeId } = req.body; // 獲取中獎者資料和獎品ID
@@ -2214,22 +2238,12 @@ exports.addLuckydrawUser = async (req, res) => {
         prize.unit -= 1;
         await prize.save();
 
-        // 通過 socket 發送中獎者添加事件給顯示頁面
+        // 通過 socket 發送中獎者添加事件給顯示頁面（含 FormConfig 完整資料）
         try {
             const io = getSocket();
             const room = `luckydraw:${req.params.eventId}`;
-            // 確保 winner 對象的 _id 是字符串格式，並包含所有必要字段
-            const winnerForSocket = {
-                _id: String(_id),
-                name: name || '',
-                company: company || '',
-                table: table || '',
-                prizeId: String(prizeId),
-                prizeName: prizeName || '',
-                prizePicture: prize.picture || '',
-                order: winner.order, // 包含抽獎號碼
-                wonAt: winner.wonAt
-            };
+            const fullUser = event.users.find(u => u._id && u._id.equals(_id));
+            const winnerForSocket = buildWinnerWithFullUserData(winner, fullUser, prize.picture || '');
             io.to(room).emit('luckydraw:winner_added', { winner: winnerForSocket });
         } catch (socketError) {
             console.error('Error sending socket event:', socketError);
@@ -2319,24 +2333,13 @@ exports.batchDrawWinners = async (req, res) => {
         prize.unit -= actualCount;
         await prize.save();
 
-        // 通過 socket 發送中獎者添加事件給顯示頁面
+        // 通過 socket 發送中獎者添加事件給顯示頁面（含 FormConfig 完整資料）
         try {
             const io = getSocket();
             const room = `luckydraw:${eventId}`;
-            
-            // 為每個中獎者發送 socket 事件
-            winners.forEach(winner => {
-                const winnerForSocket = {
-                    _id: String(winner._id),
-                    name: winner.name || '',
-                    company: winner.company || '',
-                    table: winner.table || '',
-                    prizeId: String(prizeId),
-                    prizeName: prizeName || '',
-                    prizePicture: prize.picture || '',
-                    order: winner.order, // 包含抽獎號碼
-                    wonAt: winner.wonAt
-                };
+            winners.forEach((winner, index) => {
+                const fullUser = selectedWinners[index]; // 對應的完整 user（含 FormConfig 欄位）
+                const winnerForSocket = buildWinnerWithFullUserData(winner, fullUser, prize.picture || '');
                 io.to(room).emit('luckydraw:winner_added', { winner: winnerForSocket });
             });
         } catch (socketError) {
