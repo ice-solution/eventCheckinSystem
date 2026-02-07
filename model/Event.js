@@ -43,7 +43,7 @@ const winnerSchema = new mongoose.Schema({
     table: { type: String }, // 桌號
     prizeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Prize' }, // 獎品ID
     prizeName: { type: String }, // 獎品名稱
-    order: { type: Number, required: true }, // 抽獎號碼（從1開始，不重用已刪除的號碼）
+    order: { type: Number, required: false, default: 0 }, // 抽獎號碼（從1開始）；舊資料可能無此欄位，故不設 required
     wonAt: { type: Date, default: Date.now } // 中獎時間
 });
 

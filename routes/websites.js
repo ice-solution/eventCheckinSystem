@@ -60,13 +60,18 @@ router.get('/:event_id/register', async (req, res) => {
     
     res.render('exvent/register', { event_id, paymentTickets, formConfig: formConfig });
 });
-// 路由到註冊成功頁面
+// 路由到註冊成功頁面（session_id 可為 Wonder order_id 或 Transaction _id）
 router.get('/:event_id/register/success', async (req, res) => {
     const { event_id } = req.params;
     const { session_id, lang } = req.query;
     let transaction = null;
     if (session_id) {
-        transaction = await Transaction.findOne({ stripeSessionId: session_id });
+        transaction = await Transaction.findOne({
+            $or: [
+                { stripeSessionId: session_id },
+                { _id: session_id }
+            ]
+        });
     }
     res.render('exvent/success', { event_id, transaction, lang: lang || null });
 });
@@ -77,15 +82,21 @@ router.get('/:event_id/register/fail', async (req, res) => {
     const { session_id, errorMsg, lang } = req.query;
     let transaction = null;
     if (session_id) {
-        transaction = await Transaction.findOne({ stripeSessionId: session_id });
+        transaction = await Transaction.findOne({
+            $or: [
+                { stripeSessionId: session_id },
+                { _id: session_id }
+            ]
+        });
     }
     res.render('exvent/fail', { event_id, transaction, errorMsg, lang: lang || null });
 });
 
-// Stripe Checkout
+// Wonder Payment Checkout（沿用舊路徑以相容前端）
 router.post('/:event_id/stripe-checkout', eventsController.stripeCheckout);
 
-// Stripe Webhook
-// router.post('/webhook/stripe', express.raw({type: 'application/json'}), eventsController.stripeWebhook);
+// Wonder Payment 回調（GET/POST 皆可，依 Wonder 文件設定 callback_url）
+router.get('/webhook/wonder', eventsController.wonderWebhook);
+router.post('/webhook/wonder', eventsController.wonderWebhook);
 
 module.exports = router;

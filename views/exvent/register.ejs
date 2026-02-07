@@ -673,9 +673,8 @@
             });
             newUser.ticketId = ticketId;
             if (ticketId) {
-                // Stripe checkout
+                // Wonder Payment checkout（沿用舊 API 路徑）
 
-                // 添加語言參數到請求數據
                 newUser.lang = currentLanguage;
                 
                 $.ajax({

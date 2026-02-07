@@ -44,7 +44,6 @@ if (corsEnabled) {
 }
 
 // 中間件
-app.post('/web/webhook/stripe', express.raw({type: 'application/json'}), eventsController.stripeWebhook);
 app.use(express.json()); // 解析 JSON 請求主體
 app.use(express.urlencoded({ extended: true }));
 app.use(session({

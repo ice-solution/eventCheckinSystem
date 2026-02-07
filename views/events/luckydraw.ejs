@@ -251,6 +251,7 @@
     <!-- 抽獎狀態和獎品顯示（中央上方） -->
     <div id="drawingStatus" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; background: rgba(255, 255, 255, 0.95); padding: 20px 40px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); text-align: center; font-size: 24px; font-weight: bold; color: #333; display: none;">
       <div id="statusText" style="margin-bottom: 10px;">現在抽獎</div>
+      <img id="prizeImage" src="" alt="" style="max-width: 120px; max-height: 90px; border-radius: 8px; margin-bottom: 8px; display: none;">
       <div id="prizeText" style="font-size: 20px; color: #e74c3c;"></div>
     </div>
     <div class="js-container container" style="display: flex; justify-content: center; align-items: center; width: 100%;">
@@ -281,8 +282,10 @@
     const drawingStatusDiv = document.getElementById('drawingStatus');
     const statusTextDiv = document.getElementById('statusText');
     const prizeTextDiv = document.getElementById('prizeText');
+    const prizeImageEl = document.getElementById('prizeImage');
     let controllerConnected = false;
     let currentPrizeName = null;
+    let currentPrizePicture = null;
 
     function updateStatusDisplay() {
       // 更新燈號（右上角）
@@ -295,13 +298,22 @@
         // 綠色燈（已連接）
         statusIndicator.style.backgroundColor = '#28a745';
         
-        // 更新抽獎狀態顯示（中央上方）
+        // 更新抽獎狀態顯示（中央上方），含獎品名稱與圖片
         if (currentPrizeName) {
           drawingStatusDiv.style.display = 'block';
           statusTextDiv.textContent = '現在抽獎';
           prizeTextDiv.textContent = currentPrizeName;
+          if (currentPrizePicture && currentPrizePicture.trim() !== '') {
+            prizeImageEl.src = currentPrizePicture;
+            prizeImageEl.alt = currentPrizeName;
+            prizeImageEl.style.display = 'block';
+          } else {
+            prizeImageEl.style.display = 'none';
+            prizeImageEl.removeAttribute('src');
+          }
         } else {
           drawingStatusDiv.style.display = 'none';
+          prizeImageEl.style.display = 'none';
         }
       }
     }
@@ -314,13 +326,15 @@
       controllerConnected = (status === 'online');
       if (!controllerConnected) {
         currentPrizeName = null;
+        currentPrizePicture = null;
       }
       updateStatusDisplay();
     });
 
-    // 監聽獎品選擇
-    socket.on('luckydraw:prize_selected', ({ prizeName }) => {
+    // 監聽獎品選擇（含獎品圖片）
+    socket.on('luckydraw:prize_selected', ({ prizeName, prizePicture }) => {
       currentPrizeName = prizeName;
+      currentPrizePicture = prizePicture || null;
       updateStatusDisplay();
     });
 
@@ -346,9 +360,11 @@
       const userName = winner.name || '未知';
       const orderNumber = winner.order || '';
       
-      // 使用與 #result 一致的格式，抽獎編號在左邊
+      // 使用與 #result 一致的格式，抽獎編號在左邊；若有獎品圖片則顯示
       let displayContent = '';
-      // 先顯示姓名，後顯示公司
+      if (winner.prizePicture && winner.prizePicture.trim() !== '') {
+        displayContent += `<div class="winner-prize-img" style="margin-bottom:8px;"><img src="${winner.prizePicture}" alt="${(winner.prizeName || '').replace(/"/g, '&quot;')}" style="max-width:80px;max-height:60px;border-radius:6px;"></div>`;
+      }
       displayContent += `<div class="name">${userName}</div>`;
       if (winner.company) {
         displayContent += `<div class="company">${winner.company}</div>`;
@@ -396,8 +412,9 @@
         rets.dataset.id = winnerId;
         
         let displayContent = '';
-        // 移除獎品顯示，因為中間已經顯示了
-        // 先顯示姓名，後顯示公司
+        if (winner.prizePicture && winner.prizePicture.trim() !== '') {
+          displayContent += `<div class="winner-prize-img" style="margin-bottom:6px;"><img src="${winner.prizePicture}" alt="${(winner.prizeName || '').replace(/"/g, '&quot;')}" style="max-width:60px;max-height:45px;border-radius:6px;"></div>`;
+        }
         const userName = winner.name || '未知';
         displayContent += `<div class="name">${userName}</div>`;
         if (winner.company) {
@@ -407,7 +424,6 @@
           displayContent += `<div class="table">桌號: ${winner.table}</div>`;
         }
         
-        // 使用中獎編號（order），必須存在
         const orderNumber = winner.order;
         if (!orderNumber) {
           console.warn('Winner missing order:', winner);

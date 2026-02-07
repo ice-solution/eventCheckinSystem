@@ -15,7 +15,7 @@
 
 ### DOMAIN ⚠️ **重要**
 - **說明**：應用程式的完整域名（包含協議）
-- **用途**：用於 Stripe Checkout 的重定向 URL
+- **用途**：用於付款回調與重導向 URL（Wonder callback_url / redirect_url）
 - **範例**：
   - 本地開發：`DOMAIN=http://localhost:3377`
   - 生產環境：`DOMAIN=https://demo.brandactivation.hk`
@@ -36,23 +36,33 @@
 
 ---
 
-## 💳 Stripe 配置
+## 💳 Wonder Payment 配置（目前使用）
 
-### STRIPE_SECRET_KEY
-- **說明**：Stripe 密鑰
-- **範例**：
-  - 測試環境：`STRIPE_SECRET_KEY=sk_test_xxxxxxxxxxxxxxxxxxxxx`
-  - 生產環境：`STRIPE_SECRET_KEY=sk_live_xxxxxxxxxxxxxxxxxxxxx`
-- **獲取方式**：[Stripe Dashboard](https://dashboard.stripe.com/apikeys)
+### PAYMENT_DEV / payment_dev
+- **說明**：是否使用 Wonder 測試環境
+- **範例**：`PAYMENT_DEV=true` 或 `payment_dev=true`
+- **效果**：
+  - `true` → 使用 `https://gateway-stg.wonder.today`
+  - `false` / 未設 → 使用 `https://gateway.wonder.today`
 
-### STRIPE_WEBHOOK_SECRET
-- **說明**：Stripe Webhook 簽名密鑰
-- **範例**：`STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxxxxxxx`
-- **獲取方式**：[Stripe Webhooks](https://dashboard.stripe.com/webhooks)
-- **設定步驟**：
-  1. 在 Stripe Dashboard 創建 Webhook 端點
-  2. 端點 URL：`https://yourdomain.com/web/webhook/stripe`
-  3. 複製 Signing secret
+### WONDER_APP_ID
+- **說明**：Wonder 的 app_id（建立訂單 API 必填，亦用於 Credential 簽名）
+- **範例**：`WONDER_APP_ID=00000000-0000-0000-0000-000000000000`
+
+### WONDER_PRIVATE_KEY
+- **說明**：Wonder 的 RSA 私鑰（PEM），用於 Wonder-RSA-SHA256 簽名，每次 create order 前會先做認證
+- **範例**：將整段 PEM（含 `-----BEGIN RSA PRIVATE KEY-----` 與 `-----END RSA PRIVATE KEY-----`）貼入 .env，換行處可用 `\n` 表示，例如：`WONDER_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\nMIIE...\n-----END RSA PRIVATE KEY-----"`
+
+### WONDER_CUSTOMER_UUID
+- **說明**：Wonder 的 customer_uuid（選填，依 Wonder 文件）
+- **範例**：`WONDER_CUSTOMER_UUID=00000000-0000-0000-0000-000000000000`
+
+### WONDER_API_KEY
+- **說明**：Wonder API 認證金鑰（選填，若 API 需要 Bearer 或 X-API-Key）
+- **範例**：`WONDER_API_KEY=your_api_key`
+
+### 回調 URL
+- Wonder 付款完成後會呼叫：`{DOMAIN}/web/webhook/wonder`（請在 Wonder 後台設定此 callback_url）
 
 ---
 
