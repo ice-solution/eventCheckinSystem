@@ -3511,9 +3511,11 @@ exports.wonderWebhook = async (req, res) => {
     console.log('[Wonder Webhook] Body:', typeof body === 'object' ? JSON.stringify(body, null, 2) : body);
     console.log('[Wonder Webhook] =======================================\n');
 
+    // Wonder 回調格式：body 為 Invoice，reference_number 為我方訂單編號，state / correspondence_state 表示狀態
     const referenceNumber = body.reference_number || query.reference_number;
-    const orderId = body.order_id || body.orderId || query.order_id;
-    const status = (body.status || query.status || '').toString().toLowerCase();
+    const state = (body.state || '').toString().toLowerCase();
+    const correspondenceState = (body.correspondence_state || '').toString().toLowerCase();
+    const isPaid = state === 'completed' || correspondenceState === 'paid';
 
     try {
         let transaction = null;
@@ -3525,25 +3527,29 @@ exports.wonderWebhook = async (req, res) => {
                 ]
             });
         }
-        if (!transaction && orderId) {
-            transaction = await Transaction.findOne({ stripeSessionId: orderId });
-        }
         if (!transaction) {
-            console.log('[Wonder Webhook] Result: Transaction not found. reference_number=', referenceNumber, 'order_id=', orderId);
+            console.log('[Wonder Webhook] Result: Transaction not found. reference_number=', referenceNumber);
             return res.status(200).json({ received: true, warning: 'Transaction not found' });
         }
 
-        if (status === 'paid' || status === 'success' || status === 'completed') {
+        // 一律寫回 webhook 完整 body 到 transactionData，並依 state 更新 status
+        await Transaction.findOneAndUpdate(
+            { _id: transaction._id },
+            {
+                transactionData: body,
+                status: isPaid ? 'paid' : (state === 'cancelled' || state === 'voided' || state === 'failed' ? 'failed' : transaction.status),
+                updatedAt: new Date()
+            },
+            { new: true }
+        );
+
+        if (isPaid) {
             await markTransactionPaidAndAddUser(transaction);
             console.log('[Wonder Webhook] Result: transaction marked paid, user added to event. Transaction _id:', transaction._id);
-        } else if (status === 'failed' || status === 'cancelled' || status === 'expired') {
-            await Transaction.findOneAndUpdate(
-                { _id: transaction._id },
-                { status: 'failed', updatedAt: new Date() }
-            );
-            console.log('[Wonder Webhook] Result: transaction marked failed. Transaction _id:', transaction._id);
+        } else if (state === 'cancelled' || state === 'voided' || state === 'failed') {
+            console.log('[Wonder Webhook] Result: transaction marked failed. state=', state, 'Transaction _id:', transaction._id);
         } else {
-            console.log('[Wonder Webhook] Result: status not handled, no DB update. status=', status);
+            console.log('[Wonder Webhook] Result: transactionData saved. state=', state, 'correspondence_state=', correspondenceState);
         }
 
         return res.status(200).json({ received: true });
