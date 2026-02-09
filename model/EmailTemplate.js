@@ -6,9 +6,9 @@ const emailTemplateSchema = new mongoose.Schema({
     content: { type: String,  default: "", },    // 電子郵件內容
     type: { 
         type: String, 
-        enum: ['invitation', 'welcome', 'knowledge', 'reminder'], 
+        enum: ['invitation', 'welcome', 'knowledge', 'reminder', 'invoice', 'payment_receipt'], 
         default: "welcome" 
-    }, // 電子郵件類型
+    }, // 電子郵件類型（invoice=發票 / payment_receipt=付款憑證）
     created_at: { type: Date, default: Date.now }, // 創建時間
     modified_at: { type: Date, default: Date.now }  // 修改時間
 });

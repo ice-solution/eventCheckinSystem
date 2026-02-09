@@ -30,6 +30,15 @@ function getPublicBaseUrl() {
     return raw.startsWith('http://') || raw.startsWith('https://') ? raw : `https://${raw}`;
 }
 
+/** 將獎品圖片路徑轉為絕對 URL（相對路徑補上 getPublicBaseUrl()） */
+function getPrizePictureUrl(picture) {
+    if (!picture || typeof picture !== 'string' || !picture.trim()) return '';
+    const p = picture.trim();
+    if (p.startsWith('http://') || p.startsWith('https://')) return p;
+    const base = getPublicBaseUrl();
+    return p.startsWith('/') ? base + p : base + '/' + p;
+}
+
 // 動態替換 email template 中的所有 user 字段
 function replaceTemplateVariables(content, user, event, additionalVars = {}) {
     let result = content;
@@ -70,6 +79,115 @@ function replaceTemplateVariables(content, user, event, additionalVars = {}) {
     });
     
     return result;
+}
+
+/** 將物件壓平為 {{prefix.key}} 用的變數表（一層，巢狀用 prefix.key） */
+function flattenForTemplate(obj, prefix) {
+    if (!obj || typeof obj !== 'object') return {};
+    const out = {};
+    const toStr = (v) => (v === undefined || v === null ? '' : String(v));
+    Object.keys(obj).forEach(key => {
+        if (key.startsWith('_') && key !== '_id') return;
+        const val = obj[key];
+        if (val !== null && typeof val === 'object' && !(val instanceof Date) && !Array.isArray(val)) return; // 略過巢狀物件
+        out[`${prefix}.${key}`] = Array.isArray(val) ? JSON.stringify(val) : toStr(val);
+    });
+    return out;
+}
+
+/** 發票 email 預設內容（建立訂單後發送） */
+function getDefaultInvoiceEmailContent(transaction, event) {
+    const t = transaction;
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family: sans-serif;">
+<h2>訂單／發票</h2>
+<p>您好 {{user.name}}，</p>
+<p>感謝您報名活動「{{event.name}}」。</p>
+<p>以下為您的訂單資料，請完成付款。</p>
+<table border="1" cellpadding="8" style="border-collapse:collapse;">
+<tr><td>訂單編號</td><td>{{transaction._id}}</td></tr>
+<tr><td>票券／項目</td><td>{{transaction.ticketTitle}}</td></tr>
+<tr><td>金額</td><td>{{transaction.ticketPrice}} {{invoice.currency}}</td></tr>
+<tr><td>狀態</td><td>{{transaction.status}}</td></tr>
+</table>
+<p>此為系統自動發送，請勿直接回覆。</p>
+</body></html>`;
+}
+
+/** 付款憑證 email 預設內容（webhook 付款完成後發送） */
+function getDefaultPaymentReceiptEmailContent(transaction, event) {
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family: sans-serif;">
+<h2>付款憑證</h2>
+<p>您好 {{user.name}}，</p>
+<p>您的款項已收訖，感謝您報名「{{event.name}}」。</p>
+<table border="1" cellpadding="8" style="border-collapse:collapse;">
+<tr><td>訂單編號</td><td>{{transaction._id}}</td></tr>
+<tr><td>票券／項目</td><td>{{transaction.ticketTitle}}</td></tr>
+<tr><td>已付金額</td><td>{{invoice.paid_total}} {{invoice.currency}}</td></tr>
+<tr><td>發票／單號</td><td>{{invoice.number}}</td></tr>
+<tr><td>狀態</td><td>{{invoice.state}}</td></tr>
+</table>
+<p>此為系統自動發送，請勿直接回覆。</p>
+</body></html>`;
+}
+
+/** 發送發票 email（建立訂單後，寄給登記者） */
+async function sendInvoiceEmail(transaction, event) {
+    const email = transaction.userEmail;
+    if (!email || !email.trim()) return;
+    try {
+        const eventDoc = typeof event.populate === 'function' ? event : await Event.findById(transaction.eventId);
+        if (!eventDoc) return;
+        let emailTemplate = await EmailTemplate.findOne({ eventId: eventDoc._id, type: 'invoice' });
+        if (!emailTemplate) emailTemplate = await EmailTemplate.findOne({ eventId: null, type: 'invoice' });
+        const userLike = { name: transaction.userName || '', email: transaction.userEmail || '' };
+        const invoiceData = transaction.transactionData && Object.keys(transaction.transactionData).length > 0
+            ? transaction.transactionData
+            : { currency: 'HKD', number: String(transaction._id), state: transaction.status || 'pending' };
+        const additionalVars = {
+            ...flattenForTemplate(transaction.toObject ? transaction.toObject() : transaction, 'transaction'),
+            ...flattenForTemplate(invoiceData, 'invoice')
+        };
+        const subject = emailTemplate ? emailTemplate.subject : '您的訂單／發票 - ' + (eventDoc.name || '');
+        let messageBody = emailTemplate
+            ? replaceTemplateVariables(emailTemplate.content, userLike, eventDoc, additionalVars)
+            : getDefaultInvoiceEmailContent(transaction, eventDoc);
+        messageBody = replaceTemplateVariables(messageBody, userLike, eventDoc, additionalVars);
+        messageBody = embedKaitiFontInEmail(messageBody);
+        await ses.sendEmail(email, subject, messageBody);
+        console.log('[Invoice Email] Sent to:', email);
+    } catch (err) {
+        console.error('[Invoice Email] Error:', err);
+    }
+}
+
+/** 發送付款憑證 email（webhook 付款完成後，寄給登記者） */
+async function sendPaymentReceiptEmail(transaction, event, user) {
+    const email = (user && user.email) || transaction.userEmail;
+    if (!email || !email.trim()) return;
+    try {
+        const eventDoc = typeof event.populate === 'function' ? event : await Event.findById(transaction.eventId);
+        if (!eventDoc) return;
+        let emailTemplate = await EmailTemplate.findOne({ eventId: eventDoc._id, type: 'payment_receipt' });
+        if (!emailTemplate) emailTemplate = await EmailTemplate.findOne({ eventId: null, type: 'payment_receipt' });
+        const userLike = user ? (user.toObject ? user.toObject() : user) : { name: transaction.userName || '', email: transaction.userEmail || '' };
+        const invoiceData = transaction.transactionData && Object.keys(transaction.transactionData).length > 0
+            ? transaction.transactionData
+            : { paid_total: transaction.ticketPrice, currency: 'HKD', number: transaction.stripeSessionId || transaction._id, state: transaction.status || 'paid' };
+        const additionalVars = {
+            ...flattenForTemplate(transaction.toObject ? transaction.toObject() : transaction, 'transaction'),
+            ...flattenForTemplate(invoiceData, 'invoice')
+        };
+        const subject = emailTemplate ? emailTemplate.subject : '付款憑證 - ' + (eventDoc.name || '');
+        let messageBody = emailTemplate
+            ? replaceTemplateVariables(emailTemplate.content, userLike, eventDoc, additionalVars)
+            : getDefaultPaymentReceiptEmailContent(transaction, eventDoc);
+        messageBody = replaceTemplateVariables(messageBody, userLike, eventDoc, additionalVars);
+        messageBody = embedKaitiFontInEmail(messageBody);
+        await ses.sendEmail(email, subject, messageBody);
+        console.log('[Payment Receipt Email] Sent to:', email);
+    } catch (err) {
+        console.error('[Payment Receipt Email] Error:', err);
+    }
 }
 
 // 創建事件
@@ -2170,10 +2288,10 @@ exports.removeAllLuckydrawUsers = async (req, res) => {
  * 組裝中獎者資料供 socket/前台：合併 event.user 的完整資料（FormConfig 欄位）與 winner 抽獎欄位
  * @param {Object} winner - 中獎記錄 { _id, name, company, table, prizeId, prizeName, order, wonAt }
  * @param {Object} [fullUser] - event.users 中對應的完整 user（含 FormConfig 動態欄位），可為 null
- * @param {string} prizePicture - 獎品圖片 URL
+ * @param {string} prizeImage - 獎品圖片 URL
  * @returns {Object} 完整中獎者物件（_id/prizeId 為字串，含所有 user 欄位）
  */
-function buildWinnerWithFullUserData(winner, fullUser, prizePicture) {
+function buildWinnerWithFullUserData(winner, fullUser, prizeImage) {
     const userObj = fullUser
         ? (typeof fullUser.toObject === 'function' ? fullUser.toObject() : { ...fullUser })
         : {};
@@ -2184,7 +2302,7 @@ function buildWinnerWithFullUserData(winner, fullUser, prizePicture) {
     base.table = winner.table != null ? winner.table : (userObj.table || '');
     base.prizeId = String(winner.prizeId);
     base.prizeName = winner.prizeName != null ? winner.prizeName : '';
-    base.prizePicture = prizePicture || '';
+    base.prizeImage = prizeImage || '';
     base.order = winner.order;
     base.wonAt = winner.wonAt;
     return base;
@@ -2249,7 +2367,7 @@ exports.addLuckydrawUser = async (req, res) => {
             const io = getSocket();
             const room = `luckydraw:${req.params.eventId}`;
             const fullUser = event.users.find(u => u._id && u._id.equals(_id));
-            const winnerForSocket = buildWinnerWithFullUserData(winner, fullUser, prize.picture || '');
+            const winnerForSocket = buildWinnerWithFullUserData(winner, fullUser, getPrizePictureUrl(prize.picture)); // prizeImage URL
             io.to(room).emit('luckydraw:winner_added', { winner: winnerForSocket });
         } catch (socketError) {
             console.error('Error sending socket event:', socketError);
@@ -2345,7 +2463,7 @@ exports.batchDrawWinners = async (req, res) => {
             const room = `luckydraw:${eventId}`;
             winners.forEach((winner, index) => {
                 const fullUser = selectedWinners[index]; // 對應的完整 user（含 FormConfig 欄位）
-                const winnerForSocket = buildWinnerWithFullUserData(winner, fullUser, prize.picture || '');
+                const winnerForSocket = buildWinnerWithFullUserData(winner, fullUser, getPrizePictureUrl(prize.picture)); // prizeImage URL
                 io.to(room).emit('luckydraw:winner_added', { winner: winnerForSocket });
             });
         } catch (socketError) {
@@ -2405,16 +2523,20 @@ exports.renderLuckydrawPanelPage = async (req, res) => {
         // 獲取獎品列表
         const Prize = require('../model/Prize');
         const prizes = await Prize.find({ eventId });
-
-        // 日誌輸出 winners 陣列
-        console.log('Winners:', event.winners);
+        const baseUrl = getPublicBaseUrl();
+        // 為每個獎品加上絕對 URL 的 picture，供前台 data-image 與 socket 使用
+        const prizesWithPictureUrl = prizes.map(p => {
+            const doc = p.toObject ? p.toObject() : { ...p };
+            doc.pictureUrl = getPrizePictureUrl(p.picture);
+            return doc;
+        });
 
         // 獲取所有已經簽到且未中獎的用戶
         const availablePeople = event.users.filter(user => 
             user.isCheckIn === true && !event.winners.some(winner => winner._id && winner._id.equals(user._id)) // 確保 winner._id 存在
         );
 
-        res.render('admin/luckydraw_panel', { eventId, availablePeople, prizes }); // 傳遞可用的參與者和獎品列表
+        res.render('admin/luckydraw_panel', { eventId, availablePeople, prizes: prizesWithPictureUrl, baseUrl }); // 傳遞獎品（含 pictureUrl）與 baseUrl
     } catch (error) {
         console.error('Error rendering luckydraw panel page:', error);
         res.status(500).send('Error rendering luckydraw panel page.');
@@ -3458,6 +3580,7 @@ exports.stripeCheckout = async (req, res) => {
             });
             transaction.stripeSessionId = orderId || transaction._id.toString();
             await transaction.save();
+            try { await sendInvoiceEmail(transaction, event); } catch (e) { console.error('Invoice email error:', e); }
             return res.json({ url: paymentUrl });
         }
 
@@ -3489,6 +3612,7 @@ exports.stripeCheckout = async (req, res) => {
         });
         transaction.stripeSessionId = session.id;
         await transaction.save();
+        try { await sendInvoiceEmail(transaction, event); } catch (e) { console.error('Invoice email error:', e); }
         res.json({ url: session.url });
     } catch (error) {
         console.error(`${gateway} checkout error:`, error);
@@ -3533,7 +3657,7 @@ exports.wonderWebhook = async (req, res) => {
         }
 
         // 一律寫回 webhook 完整 body 到 transactionData，並依 state 更新 status
-        await Transaction.findOneAndUpdate(
+        const updatedTransaction = await Transaction.findOneAndUpdate(
             { _id: transaction._id },
             {
                 transactionData: body,
@@ -3545,6 +3669,12 @@ exports.wonderWebhook = async (req, res) => {
 
         if (isPaid) {
             await markTransactionPaidAndAddUser(transaction);
+            const eventDoc = await Event.findById(transaction.eventId);
+            if (eventDoc) {
+                try {
+                    await sendPaymentReceiptEmail(updatedTransaction, eventDoc, { email: updatedTransaction.userEmail, name: updatedTransaction.userName });
+                } catch (e) { console.error('[Wonder Webhook] Payment receipt email error:', e); }
+            }
             console.log('[Wonder Webhook] Result: transaction marked paid, user added to event. Transaction _id:', transaction._id);
         } else if (state === 'cancelled' || state === 'voided' || state === 'failed') {
             console.log('[Wonder Webhook] Result: transaction marked failed. state=', state, 'Transaction _id:', transaction._id);
@@ -3646,6 +3776,10 @@ exports.stripeWebhook = async (req, res) => {
             return res.status(200).json({ received: true, warning: 'Transaction not found' });
         }
         await markTransactionPaidAndAddUser(transaction);
+        const eventDoc = await Event.findById(transaction.eventId);
+        if (eventDoc) {
+            try { await sendPaymentReceiptEmail(transaction, eventDoc, { email: transaction.userEmail, name: transaction.userName }); } catch (e) { console.error('Stripe webhook receipt email error:', e); }
+        }
         return res.status(200).json({ received: true });
     } catch (error) {
         console.error('Stripe webhook error:', error);

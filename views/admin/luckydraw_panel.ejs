@@ -106,7 +106,7 @@
                                 <option value="">請選擇獎品</option>
                                 <% prizes.forEach(prize => { %>
                                     <% if (prize.unit > 0) { %>
-                                        <option value="<%= prize._id %>" data-name="<%= prize.name %>" data-image="<%= prize.picture || '' %>">
+                                        <option value="<%= prize._id %>" data-name="<%= prize.name %>" data-image="<%= prize.pictureUrl || prize.picture || '' %>">
                                             <%= prize.name %> (剩餘: <%= prize.unit %>)
                                         </option>
                                     <% } %>
@@ -218,18 +218,18 @@
         const selectedOption = prizeSelect.options[prizeSelect.selectedIndex];
         if (selectedOption && selectedOption.value) {
             const prizeName = selectedOption.dataset.name || selectedOption.text.split('(')[0].trim();
-            const prizePicture = selectedOption.dataset.image || '';
+            const prizeImage = selectedOption.dataset.image || '';
             socket.emit('luckydraw_panel_prize_selected', { 
                 eventId, 
                 prizeName: prizeName,
-                prizePicture: prizePicture
+                prizeImage: prizeImage
             });
         } else {
             // 清除獎品選擇
             socket.emit('luckydraw_panel_prize_selected', { 
                 eventId, 
                 prizeName: null,
-                prizePicture: null
+                prizeImage: null
             });
         }
     }
@@ -281,7 +281,7 @@
                     const newOption = document.createElement('option');
                     newOption.value = winner.prizeId;
                     newOption.dataset.name = winner.prizeName || prize?.name || '未知獎品';
-                    newOption.dataset.image = prize?.picture || '';
+                    newOption.dataset.image = prize?.pictureUrl || prize?.picture || '';
                     newOption.text = `${winner.prizeName || prize?.name || '未知獎品'} (剩餘: 1)`;
                     if (prizeSelect.options.length > 1) {
                         prizeSelect.insertBefore(newOption, prizeSelect.options[1]);
@@ -562,7 +562,7 @@
                     const newOption = document.createElement('option');
                     newOption.value = lastWinner.prizeId;
                     newOption.dataset.name = lastWinner.prizeName || prize?.name || '未知獎品';
-                    newOption.dataset.image = prize?.picture || '';
+                    newOption.dataset.image = prize?.pictureUrl || prize?.picture || '';
                     newOption.text = `${lastWinner.prizeName || prize?.name || '未知獎品'} (剩餘: 1)`;
                     if (prizeSelect.options.length > 1) {
                         prizeSelect.insertBefore(newOption, prizeSelect.options[1]);

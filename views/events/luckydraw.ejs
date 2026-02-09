@@ -331,10 +331,10 @@
       updateStatusDisplay();
     });
 
-    // 監聽獎品選擇（含獎品圖片）
-    socket.on('luckydraw:prize_selected', ({ prizeName, prizePicture }) => {
+    // 監聽獎品選擇（含獎品圖片 URL，只接 prizeImage）
+    socket.on('luckydraw:prize_selected', ({ prizeName, prizeImage }) => {
       currentPrizeName = prizeName;
-      currentPrizePicture = prizePicture || null;
+      currentPrizePicture = prizeImage || null;
       updateStatusDisplay();
     });
 
@@ -362,8 +362,9 @@
       
       // 使用與 #result 一致的格式，抽獎編號在左邊；若有獎品圖片則顯示
       let displayContent = '';
-      if (winner.prizePicture && winner.prizePicture.trim() !== '') {
-        displayContent += `<div class="winner-prize-img" style="margin-bottom:8px;"><img src="${winner.prizePicture}" alt="${(winner.prizeName || '').replace(/"/g, '&quot;')}" style="max-width:80px;max-height:60px;border-radius:6px;"></div>`;
+      const winnerImg = (winner.prizeImage || '').trim();
+      if (winnerImg) {
+        displayContent += `<div class="winner-prize-img" style="margin-bottom:8px;"><img src="${winnerImg}" alt="${(winner.prizeName || '').replace(/"/g, '&quot;')}" style="max-width:80px;max-height:60px;border-radius:6px;"></div>`;
       }
       displayContent += `<div class="name">${userName}</div>`;
       if (winner.company) {
@@ -412,8 +413,9 @@
         rets.dataset.id = winnerId;
         
         let displayContent = '';
-        if (winner.prizePicture && winner.prizePicture.trim() !== '') {
-          displayContent += `<div class="winner-prize-img" style="margin-bottom:6px;"><img src="${winner.prizePicture}" alt="${(winner.prizeName || '').replace(/"/g, '&quot;')}" style="max-width:60px;max-height:45px;border-radius:6px;"></div>`;
+        const winnerImg = (winner.prizeImage || '').trim();
+        if (winnerImg) {
+          displayContent += `<div class="winner-prize-img" style="margin-bottom:6px;"><img src="${winnerImg}" alt="${(winner.prizeName || '').replace(/"/g, '&quot;')}" style="max-width:60px;max-height:45px;border-radius:6px;"></div>`;
         }
         const userName = winner.name || '未知';
         displayContent += `<div class="name">${userName}</div>`;

@@ -74,11 +74,11 @@ const initSocket = (server) => {
             io.to(room).emit('luckydraw:user_started', { eventId });
         });
 
-        // LuckyDraw: 從控制面板發出「獎品選擇」通知（含獎品圖片）
-        socket.on('luckydraw_panel_prize_selected', ({ eventId, prizeName, prizePicture }) => {
+        // LuckyDraw: 從控制面板發出「獎品選擇」通知（含獎品圖片 URL，只送 prizeImage）
+        socket.on('luckydraw_panel_prize_selected', ({ eventId, prizeName, prizeImage }) => {
             if (!eventId) return;
             const room = `luckydraw:${eventId}`;
-            io.to(room).emit('luckydraw:prize_selected', { prizeName, prizePicture: prizePicture || null });
+            io.to(room).emit('luckydraw:prize_selected', { prizeName, prizeImage: prizeImage || null });
         });
 
         // 處理投票提交事件
