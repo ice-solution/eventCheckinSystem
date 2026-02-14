@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>中獎者列表</title>
+    <title>Winners List</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -42,27 +42,27 @@
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <strong class="card-title">中獎者列表 - event : <%= eventId %></strong>
+                            <strong class="card-title">Winners List - Event: <%= eventId %></strong>
                         </div>
                         <div class="card-body">
                             <div class="mb-3">
                                 <a href="/events/<%= eventId %>/luckydraw/list/export" class="btn btn-success">
-                                    匯出 Excel
+                                    Export Excel
                                 </a>
                                 <button id="delete-all-winners" class="btn btn-danger" style="margin-left: 10px;">
-                                    <i class="fa fa-trash"></i> 全部刪除抽獎記錄
+                                    <i class="fa fa-trash"></i> Delete All Draw Records
                                 </button>
                             </div>
                             <table id="winners-table" class="table table-bordered">
                                 <thead>
                                     <tr>
-                                        <th>中獎號碼</th>
-                                        <th>姓名</th>
-                                        <th>公司</th>
-                                        <th>桌號</th>
-                                        <th>獎品</th>
-                                        <th>中獎時間</th>
-                                        <th>操作</th>
+                                        <th>Winner No.</th>
+                                        <th>Name</th>
+                                        <th>Company</th>
+                                        <th>Table</th>
+                                        <th>Prize</th>
+                                        <th>Won At</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -72,13 +72,13 @@
                                             <td><%= winner.name %></td>
                                             <td><%= winner.company || '-' %></td>
                                             <td><%= winner.table || '-' %></td>
-                                            <td><%= winner.prizeName || '隨機獎品' %></td>
-                                            <td><%= winner.wonAt ? new Date(winner.wonAt).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }) : '未記錄' %></td>
+                                            <td><%= winner.prizeName || 'Random prize' %></td>
+                                            <td><%= winner.wonAt ? new Date(winner.wonAt).toLocaleString('en-US', { timeZone: 'Asia/Taipei' }) : 'N/A' %></td>
                                             <td>
                                                 <button class="btn btn-danger btn-sm delete-winner" 
                                                         data-winner-id="<%= winner._id %>"
                                                         data-winner-name="<%= winner.name %>">
-                                                    <i class="fa fa-trash"></i> 刪除
+                                                    <i class="fa fa-trash"></i> Delete
                                                 </button>
                                             </td>
                                         </tr>
@@ -86,7 +86,7 @@
                                 </tbody>
                             </table>
                             <div class="button-container" style="margin-top: 20px; text-align: center;">
-                                <a href="/events/<%= eventId %>" class="btn btn-primary">返回事件列表</a>
+                                <a href="/events/<%= eventId %>" class="btn btn-primary">Back to Event List</a>
                             </div>
                         </div>
                     </div>
@@ -113,26 +113,24 @@
             const winnerId = $(this).data('winner-id');
             const winnerName = $(this).data('winner-name');
             
-            if (confirm(`確定要刪除 ${winnerName} 的中獎記錄嗎？`)) {
-                // 發送刪除請求
+            if (confirm(`Are you sure you want to delete the winner record for ${winnerName}?`)) {
+                // Send delete request
                 $.ajax({
                     url: `/events/<%= eventId %>/luckydraw`,
                     type: 'DELETE',
                     contentType: 'application/json',
                     data: JSON.stringify({ _id: winnerId }),
                     success: function(response) {
-                        // 刪除成功，移除表格行
+                        // On success, remove table row
                         $(`tr[data-winner-id="${winnerId}"]`).fadeOut(300, function() {
                             $(this).remove();
-                            // 注意：不需要重新計算次序，因為使用的是抽獎號碼（order），刪除後不會重用
                         });
                         
-                        // 顯示成功消息
-                        alert('中獎記錄已成功刪除！');
+                        alert('Winner record deleted successfully!');
                     },
                     error: function(xhr, status, error) {
-                        console.error('刪除失敗:', error);
-                        alert('刪除失敗，請稍後再試。');
+                        console.error('Delete failed:', error);
+                        alert('Delete failed. Please try again.');
                     }
                 });
             }
@@ -140,13 +138,13 @@
         
         // 處理全部刪除抽獎記錄（雙重確認）
         $('#delete-all-winners').on('click', function() {
-            // 第一次確認
-            if (!confirm('⚠️ 警告：您確定要刪除所有抽獎記錄嗎？\n\n此操作無法復原！')) {
+            // First confirmation
+            if (!confirm('⚠️ Warning: Are you sure you want to delete all draw records?\n\nThis action cannot be undone!')) {
                 return;
             }
             
-            // 第二次確認
-            if (!confirm('⚠️ 最後確認：您真的要刪除所有抽獎記錄嗎？\n\n所有中獎記錄將被永久刪除，且無法復原！')) {
+            // Second confirmation
+            if (!confirm('⚠️ Final confirmation: Do you really want to delete all draw records?\n\nAll winner records will be permanently deleted!')) {
                 return;
             }
             
@@ -155,14 +153,14 @@
                 url: `/events/<%= eventId %>/luckydraw/all`,
                 type: 'DELETE',
                 success: function(response) {
-                    // 刪除成功，重新載入頁面
-                    alert('所有抽獎記錄已成功刪除！');
+                    // On success, reload page
+                    alert('All draw records deleted successfully!');
                     location.reload();
                 },
                 error: function(xhr, status, error) {
-                    console.error('刪除失敗:', error);
-                    const errorMsg = xhr.responseJSON?.message || xhr.responseText || '刪除失敗，請稍後再試。';
-                    alert('刪除失敗：' + errorMsg);
+                    console.error('Delete failed:', error);
+                    const errorMsg = xhr.responseJSON?.message || xhr.responseText || 'Delete failed. Please try again.';
+                    alert('Delete failed: ' + errorMsg);
                 }
             });
         });

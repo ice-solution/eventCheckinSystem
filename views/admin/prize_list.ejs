@@ -11,17 +11,17 @@
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <strong class="card-title">獎品管理 - <%= event.name %></strong>
+                            <strong class="card-title">Prize Management - <%= event.name %></strong>
                         </div>
                         <div class="card-body">
                             <table id="bootstrap-data-table" class="table table-bordered">
                                 <thead>
                                     <tr>
-                                        <th>獎品名稱</th>
-                                        <th>圖片</th>
-                                        <th>數量</th>
-                                        <th>創建時間</th>
-                                        <th>操作</th>
+                                        <th>Prize Name</th>
+                                        <th>Image</th>
+                                        <th>Quantity</th>
+                                        <th>Created At</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -32,33 +32,33 @@
                                                 <% if (prize.picture) { %>
                                                     <img src="<%= prize.picture %>" alt="<%= prize.name %>" style="max-width: 50px; max-height: 50px; object-fit: cover; border-radius: 4px;">
                                                 <% } else { %>
-                                                    <span class="text-muted">無圖片</span>
+                                                    <span class="text-muted">No image</span>
                                                 <% } %>
                                             </td>
                                             <td><%= prize.unit %></td>
                                             <td class="prize-date"><%= prize.created_at %></td>
                                             <td>
-                                                <a href="/prizes/<%= eventId %>/prizes/<%= prize._id %>/edit" class="btn btn-sm btn-primary">編輯</a>
-                                                <button class="btn btn-sm btn-danger" onclick="deletePrize('<%= prize._id %>')">刪除</button>
+                                                <a href="/prizes/<%= eventId %>/prizes/<%= prize._id %>/edit" class="btn btn-sm btn-primary">Edit</a>
+                                                <button class="btn btn-sm btn-danger" onclick="deletePrize('<%= prize._id %>')">Delete</button>
                                             </td>
                                         </tr>
                                     <% }); %>
                                 </tbody>
                             </table>
                             <div class="mb-3">
-                                <a href="/prizes/<%= eventId %>/prizes/create" class="btn btn-primary">新增獎品</a>
-                                <button type="button" class="btn btn-success" data-toggle="modal" data-target="#batchUploadModal">批量上傳</button>
-                                <a href="/prizes/<%= eventId %>/prizes/download-sample" class="btn btn-info">下載範本</a>
-                                <button type="button" class="btn btn-danger" onclick="deleteAllPrizes()">一鍵刪除全部獎品</button>
-                                <a href="/events/<%= eventId %>" class="btn btn-secondary">返回事件</a>
+                                <a href="/prizes/<%= eventId %>/prizes/create" class="btn btn-primary">Add Prize</a>
+                                <button type="button" class="btn btn-success" data-toggle="modal" data-target="#batchUploadModal">Batch Upload</button>
+                                <a href="/prizes/<%= eventId %>/prizes/download-sample" class="btn btn-info">Download Template</a>
+                                <button type="button" class="btn btn-danger" onclick="deleteAllPrizes()">Delete All Prizes</button>
+                                <a href="/events/<%= eventId %>" class="btn btn-secondary">Back to Event</a>
                             </div>
                             
-                            <!-- 批量上傳 Modal -->
+                            <!-- Batch Upload Modal -->
                             <div class="modal fade" id="batchUploadModal" tabindex="-1" role="dialog" aria-labelledby="batchUploadModalLabel" aria-hidden="true">
                                 <div class="modal-dialog" role="document">
                                     <div class="modal-content">
                                         <div class="modal-header">
-                                            <h5 class="modal-title" id="batchUploadModalLabel">xlsx上傳獎品</h5>
+                                            <h5 class="modal-title" id="batchUploadModalLabel">Upload Prizes (xlsx)</h5>
                                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                                 <span aria-hidden="true">&times;</span>
                                             </button>
@@ -66,13 +66,13 @@
                                         <div class="modal-body">
                                             <form id="batchUploadForm" enctype="multipart/form-data">
                                                 <div class="form-group">
-                                                    <label for="excelFile">選擇 Excel 檔案 (.xlsx)</label>
+                                                    <label for="excelFile">Select Excel file (.xlsx)</label>
                                                     <input type="file" class="form-control-file" id="excelFile" name="file" accept=".xlsx,.xls" required>
                                                     <small class="form-text text-muted">
-                                                        請上傳包含以下欄位的 Excel 檔案：<br>
-                                                        - name (獎品名稱，必填)<br>
-                                                        - unit (數量，必填，數字)<br>
-                                                        - picture (圖片 URL，選填)
+                                                        Please upload an Excel file with the following columns:<br>
+                                                        - name (Prize name, required)<br>
+                                                        - unit (Quantity, required, number)<br>
+                                                        - picture (Image URL, optional)
                                                     </small>
                                                 </div>
                                                 <div id="uploadProgress" class="progress" style="display: none;">
@@ -82,8 +82,8 @@
                                             </form>
                                         </div>
                                         <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
-                                            <button type="button" class="btn btn-primary" onclick="submitBatchUpload()">上傳</button>
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                                            <button type="button" class="btn btn-primary" onclick="submitBatchUpload()">Upload</button>
                                         </div>
                                     </div>
                                 </div>
@@ -111,13 +111,13 @@
     $(document).ready(function () {
         $('#bootstrap-data-table').DataTable();
         
-        // 格式化日期為 GMT+8 (Asia/Taipei)
+        // Format date (e.g. en-US or Asia/Taipei)
         $('.prize-date').each(function() {
             const dateStr = $(this).text().trim();
             if (dateStr) {
                 try {
                     const date = new Date(dateStr);
-                    const formattedDate = date.toLocaleString('zh-TW', { 
+                    const formattedDate = date.toLocaleString('en-US', { 
                         timeZone: 'Asia/Taipei', 
                         year: 'numeric',
                         month: '2-digit',
@@ -136,7 +136,7 @@
     });
 
     function deletePrize(prizeId) {
-        if (confirm('確定要刪除這個獎品嗎？')) {
+        if (confirm('Are you sure you want to delete this prize?')) {
             fetch(`/prizes/<%= eventId %>/prizes/${prizeId}`, {
                 method: 'DELETE',
                 headers: {
@@ -152,7 +152,7 @@
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('刪除失敗');
+                alert('Delete failed');
             });
         }
     }
@@ -162,7 +162,7 @@
         const file = fileInput.files[0];
         
         if (!file) {
-            alert('請選擇檔案');
+            alert('Please select a file');
             return;
         }
 
@@ -186,13 +186,13 @@
             
             if (data.success) {
                 messageDiv.className = 'alert alert-success';
-                messageDiv.textContent = `成功上傳 ${data.importedCount} 個獎品！`;
+                messageDiv.textContent = `Successfully uploaded ${data.importedCount} prize(s)!`;
                 setTimeout(() => {
                     location.reload();
                 }, 1500);
             } else {
                 messageDiv.className = 'alert alert-danger';
-                messageDiv.textContent = data.message || '上傳失敗';
+                messageDiv.textContent = data.message || 'Upload failed';
             }
         })
         .catch(error => {
@@ -200,7 +200,7 @@
             progressDiv.style.display = 'none';
             messageDiv.style.display = 'block';
             messageDiv.className = 'alert alert-danger';
-            messageDiv.textContent = '上傳失敗：' + error.message;
+            messageDiv.textContent = 'Upload failed: ' + error.message;
         });
     }
 
@@ -208,29 +208,29 @@
         const totalPrizes = <%= prizes.length %>;
         
         if (totalPrizes === 0) {
-            alert('目前沒有任何獎品可以刪除');
+            alert('There are no prizes to delete');
             return;
         }
 
         // 第一次確認
-        if (!confirm(`警告：您即將刪除所有 ${totalPrizes} 個獎品！\n\n這是一個不可逆的操作，請確認您真的要執行此操作。`)) {
+        if (!confirm(`Warning: You are about to delete all ${totalPrizes} prize(s)!\n\nThis action cannot be undone. Please confirm you want to proceed.`)) {
             return;
         }
 
         // 第二次確認
-        if (!confirm(`再次確認：您確定要刪除所有 ${totalPrizes} 個獎品嗎？\n\n此操作無法復原！`)) {
+        if (!confirm(`Confirm again: Are you sure you want to delete all ${totalPrizes} prize(s)?\n\nThis action cannot be undone!`)) {
             return;
         }
 
         // 第三次確認
-        if (!confirm(`最後確認：您真的要刪除所有 ${totalPrizes} 個獎品嗎？\n\n請輸入 "確認刪除" 來完成此操作。\n\n（請在提示框中輸入：確認刪除）`)) {
+        if (!confirm(`Final confirmation: Do you really want to delete all ${totalPrizes} prize(s)?\n\nType "confirm delete" in the next prompt to complete this action.`)) {
             return;
         }
 
-        // 第四次確認 - 要求輸入特定文字
-        const userInput = prompt(`請輸入 "確認刪除" 來確認刪除所有 ${totalPrizes} 個獎品：`);
-        if (userInput !== '確認刪除') {
-            alert('操作已取消');
+        // Fourth confirmation - require typing "confirm delete"
+        const userInput = prompt(`Please type "confirm delete" to confirm deleting all ${totalPrizes} prize(s):`);
+        if (userInput !== 'confirm delete') {
+            alert('Operation cancelled');
             return;
         }
 
@@ -244,15 +244,15 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert(`成功刪除 ${data.deletedCount} 個獎品！`);
+                alert(`Successfully deleted ${data.deletedCount} prize(s)!`);
                 location.reload();
             } else {
-                alert('刪除失敗：' + (data.message || '未知錯誤'));
+                alert('Delete failed: ' + (data.message || 'Unknown error'));
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('刪除失敗：' + error.message);
+            alert('Delete failed: ' + error.message);
         });
     }
 </script> 

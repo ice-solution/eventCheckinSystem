@@ -1,4 +1,6 @@
 const SmsTemplate = require("../model/SmsTemplate");
+const FormConfig = require("../model/FormConfig");
+const formConfigController = require("./formConfigController");
 
 // 獲取 SMS 模板列表
 exports.renderSmsTemplateList = async (req, res) => {
@@ -21,7 +23,11 @@ exports.renderSmsTemplateDetail = async (req, res) => {
         if (!template) {
             return res.status(404).send("SMS 模板未找到！");
         }
-        res.render("admin/sms_template_detail", { template, eventId });
+        let formConfig = eventId ? await FormConfig.findOne({ eventId }) : null;
+        if (!formConfig) {
+            formConfig = { sections: formConfigController.getDefaultFormConfig().sections || [] };
+        }
+        res.render("admin/sms_template_detail", { template, eventId, formConfig: formConfig || { sections: [] } });
     } catch (error) {
         console.error("Error fetching SMS template:", error);
         res.status(500).send("獲取 SMS 模板時出現錯誤！");
@@ -32,7 +38,11 @@ exports.renderSmsTemplateDetail = async (req, res) => {
 exports.renderCreateSmsTemplatePage = async (req, res) => {
     try {
         const { eventId } = req.params;
-        res.render("admin/create_sms_template", { eventId });
+        let formConfig = eventId ? await FormConfig.findOne({ eventId }) : null;
+        if (!formConfig) {
+            formConfig = { sections: formConfigController.getDefaultFormConfig().sections || [] };
+        }
+        res.render("admin/create_sms_template", { eventId, formConfig: formConfig || { sections: [] } });
     } catch (error) {
         console.error("Error rendering create SMS template page:", error);
         res.status(500).json({ message: "Error rendering create SMS template page" });

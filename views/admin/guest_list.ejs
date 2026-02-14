@@ -288,7 +288,7 @@
                        window.location.pathname.match(/\/events\/([^\/]+)/)?.[1];
         
         if (!eventId) {
-            alert('無法獲取活動 ID，請刷新頁面重試');
+            alert('Unable to get event ID. Please refresh and try again.');
             return;
         }
         
@@ -314,7 +314,7 @@
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">發送 SMS 給 Guest List (Send SMS to Guest List)</h5>
+                            <h5 class="modal-title">Send SMS to Guest List</h5>
                             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
@@ -351,7 +351,7 @@
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label>預覽 (Preview):</label>
+                                    <label>Preview:</label>
                                     <div id="smsPreview" class="alert alert-info" style="display: none;"></div>
                                 </div>
                                 <div id="smsStatus" class="alert" style="display: none;"></div>
@@ -375,7 +375,7 @@
             if (templateId) {
                 const template = templates.find(t => t._id === templateId);
                 if (template) {
-                    $('#smsPreview').html(`<strong>模板內容:</strong><br>${template.content || ''}`).show();
+                    $('#smsPreview').html(`<strong>Template content:</strong><br>${template.content || ''}`).show();
                 }
             } else {
                 $('#smsPreview').hide();
@@ -387,12 +387,12 @@
             const templateId = $('#smsTemplateSelect').val();
 
             if (!templateId) {
-                alert('請選擇 SMS 模板 (Please select SMS template)');
+                alert('Please select an SMS template');
                 return;
             }
 
             const button = $(this);
-            button.prop('disabled', true).text('發送中... (Sending...)');
+            button.prop('disabled', true).text('Sending...');
 
             $.ajax({
                 url: `/events/${eventId}/guest-list/send-sms`,
@@ -404,7 +404,7 @@
                 }),
                 success: function(response) {
                     $('#smsStatus').removeClass('alert-danger').addClass('alert-success')
-                        .html(`<i class="fa fa-check-circle"></i> ${response.message || 'SMS 發送成功！'}`).show();
+                        .html(`<i class="fa fa-check-circle"></i> ${response.message || 'SMS sent successfully!'}`).show();
                     setTimeout(() => {
                         $('#sendSmsModal').modal('hide');
                         location.reload();
@@ -433,7 +433,7 @@
         
         const row = $(`.edit-guest[data-guest-id="${guestId}"]`).closest('tr');
         if (row.length === 0) {
-            alert('無法找到來賓資料，請刷新頁面重試');
+            alert('Unable to find guest data. Please refresh and try again.');
             return;
         }
         
@@ -470,13 +470,13 @@
         const guestId = $('#editGuestId').val();
         
         if (!eventId || !guestId) {
-            alert('無法獲取活動 ID 或來賓 ID，請刷新頁面重試');
+            alert('Unable to get event ID or guest ID. Please refresh and try again.');
             return;
         }
         
         const name = $('#editGuestName').val().trim();
         if (!name) {
-            alert('Name is required (姓名是必填的)');
+            alert('Name is required');
             $('#editGuestName').focus();
             return;
         }
@@ -536,13 +536,13 @@
                        window.location.pathname.match(/\/events\/([^\/]+)/)?.[1];
         
         if (!eventId) {
-            alert('無法獲取活動 ID，請刷新頁面重試');
+            alert('Unable to get event ID. Please refresh and try again.');
             return;
         }
         
         const name = $('#guestName').val().trim();
         if (!name) {
-            alert('Name is required (姓名是必填的)');
+            alert('Name is required');
             $('#guestName').focus();
             return;
         }
@@ -600,7 +600,7 @@
         
         const row = $(`.edit-guest[data-guest-id="${guestId}"]`).closest('tr');
         if (row.length === 0) {
-            alert('無法找到來賓資料，請刷新頁面重試');
+            alert('Unable to find guest data. Please refresh and try again.');
             return;
         }
         
@@ -637,13 +637,13 @@
         const guestId = $('#editGuestId').val();
         
         if (!eventId || !guestId) {
-            alert('無法獲取活動 ID 或來賓 ID，請刷新頁面重試');
+            alert('Unable to get event ID or guest ID. Please refresh and try again.');
             return;
         }
         
         const name = $('#editGuestName').val().trim();
         if (!name) {
-            alert('Name is required (姓名是必填的)');
+            alert('Name is required');
             $('#editGuestName').focus();
             return;
         }
@@ -734,9 +734,9 @@
                             "order": [[5, "desc"]], // 按創建時間降序排列（Role 是第 5 列，Created At 是第 6 列）
                             "pageLength": 25,
                             "language": {
-                                "search": "搜尋:",
-                                "lengthMenu": "顯示 _MENU_ 筆記錄",
-                                "info": "顯示第 _START_ 至 _END_ 筆，共 _TOTAL_ 筆",
+                                "search": "Search:",
+                                "lengthMenu": "Show _MENU_ entries",
+                                "info": "Showing _START_ to _END_ of _TOTAL_ entries",
                                 "infoEmpty": "沒有記錄",
                                 "infoFiltered": "(從 _MAX_ 筆記錄中過濾)",
                                 "paginate": {
@@ -761,7 +761,7 @@
                     var $ = window.jQuery || window.$;
                     const name = $('#guestName').val().trim();
                     if (!name) {
-                        alert('Name is required (姓名是必填的)');
+                        alert('Name is required');
                         return;
                     }
 
@@ -1153,7 +1153,7 @@
                             <div class="modal-dialog" role="document">
                                 <div class="modal-content">
                                     <div class="modal-header">
-                                        <h5 class="modal-title">發送 SMS 給 Guest List (Send SMS to Guest List)</h5>
+                                        <h5 class="modal-title">Send SMS to Guest List</h5>
                                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                             <span aria-hidden="true">&times;</span>
                                         </button>
@@ -1190,7 +1190,7 @@
                                                 </select>
                                             </div>
                                             <div class="form-group">
-                                                <label>預覽 (Preview):</label>
+                                                <label>Preview:</label>
                                                 <div id="smsPreview" class="alert alert-info" style="display: none;"></div>
                                             </div>
                                             <div id="smsStatus" class="alert" style="display: none;"></div>
@@ -1216,7 +1216,7 @@
                         if (templateId) {
                             const template = templates.find(t => t._id === templateId);
                             if (template) {
-                                $('#smsPreview').html(`<strong>模板內容:</strong><br>${template.content || ''}`).show();
+                                $('#smsPreview').html(`<strong>Template content:</strong><br>${template.content || ''}`).show();
                             }
                         } else {
                             $('#smsPreview').hide();
@@ -1229,12 +1229,12 @@
                         const templateId = $('#smsTemplateSelect').val();
 
                         if (!templateId) {
-                            alert('請選擇 SMS 模板 (Please select SMS template)');
+                            alert('Please select an SMS template');
                             return;
                         }
 
                         const button = $(this);
-                        button.prop('disabled', true).text('發送中... (Sending...)');
+                        button.prop('disabled', true).text('Sending...');
 
                         $.ajax({
                             url: `/events/${eventId}/guest-list/send-sms`,
@@ -1246,7 +1246,7 @@
                             }),
                             success: function(response) {
                                 $('#smsStatus').removeClass('alert-danger').addClass('alert-success')
-                                    .html(`<i class="fa fa-check-circle"></i> ${response.message || 'SMS 發送成功！'}`).show();
+                                    .html(`<i class="fa fa-check-circle"></i> ${response.message || 'SMS sent successfully!'}`).show();
                                 setTimeout(() => {
                                     $('#sendSmsModal').modal('hide');
                                     location.reload();

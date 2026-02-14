@@ -79,7 +79,7 @@
                     contentType: 'application/json',
                     data: JSON.stringify({ username, password }),
                     success: function(response) {
-                        window.location.href = '/'; // 登入成功後重定向到首頁
+                        window.location.href = '/'; // Redirect to home after login
                     },
                     error: function(xhr) {
                         const alertHtml = `

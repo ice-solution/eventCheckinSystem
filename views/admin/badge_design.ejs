@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badge 設計 - <%= event.name %></title>
+    <title>Badge Design - <%= event.name %></title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         body {
@@ -88,35 +88,35 @@
     <div class="container-fluid">
         <div class="row mb-3">
             <div class="col-12">
-                <h2>Badge 設計 - <%= event.name %></h2>
+                <h2>Badge Design - <%= event.name %></h2>
                 <div class="btn-group">
-                    <button class="btn btn-primary" onclick="saveConfig()">儲存配置</button>
-                    <button class="btn btn-success" onclick="generateTestImage()">生成測試圖片</button>
-                    <button class="btn btn-danger" onclick="deleteSelectedElement()" id="deleteElementBtn" disabled>刪除選中元素</button>
-                    <button class="btn btn-secondary" onclick="clearCanvas()">清除</button>
-                    <button class="btn btn-outline-secondary" id="toggleGuidesBtn" onclick="toggleCenterGuides()">隱藏中線</button>
+                    <button class="btn btn-primary" onclick="saveConfig()">Save Config</button>
+                    <button class="btn btn-success" onclick="generateTestImage()">Generate Test Image</button>
+                    <button class="btn btn-danger" onclick="deleteSelectedElement()" id="deleteElementBtn" disabled>Delete Selected Element</button>
+                    <button class="btn btn-secondary" onclick="clearCanvas()">Clear</button>
+                    <button class="btn btn-outline-secondary" id="toggleGuidesBtn" onclick="toggleCenterGuides()">Hide Center Lines</button>
                 </div>
             </div>
         </div>
         
         <div class="row">
-            <!-- 左側：表單字段列表 -->
+            <!-- Left: Form fields list -->
             <div class="col-md-3">
                 <div class="sidebar">
-                    <h4>表單字段</h4>
+                    <h4>Form Fields</h4>
                     <div id="fieldList">
-                        <!-- 動態變量 -->
+                        <!-- Dynamic variables -->
                         <div class="field-item" data-type="text" data-content="{{user.name}}">
-                            <strong>姓名</strong> - {{user.name}}
+                            <strong>Name</strong> - {{user.name}}
                         </div>
                         <div class="field-item" data-type="text" data-content="{{user.email}}">
-                            <strong>電子郵件</strong> - {{user.email}}
+                            <strong>Email</strong> - {{user.email}}
                         </div>
                         <div class="field-item" data-type="text" data-content="{{user.company}}">
-                            <strong>公司</strong> - {{user.company}}
+                            <strong>Company</strong> - {{user.company}}
                         </div>
                         <div class="field-item" data-type="text" data-content="{{user.phone}}">
-                            <strong>電話</strong> - {{user.phone}}
+                            <strong>Phone</strong> - {{user.phone}}
                         </div>
                         <div class="field-item" data-type="qrcode" data-content="{{qrcodeUrl}}">
                             <strong>QR Code</strong> - {{qrcodeUrl}}
@@ -138,35 +138,35 @@
                     </div>
                     
                     <div class="element-controls mt-4">
-                        <h5>自定義文字</h5>
+                        <h5>Custom Text</h5>
                         <div class="form-group">
-                            <input type="text" id="customTextInput" class="form-control" placeholder="輸入自定義文字...">
-                            <button class="btn btn-primary btn-sm mt-2" onclick="addCustomText()" style="width: 100%;">添加到 Canvas</button>
+                            <input type="text" id="customTextInput" class="form-control" placeholder="Enter custom text...">
+                            <button class="btn btn-primary btn-sm mt-2" onclick="addCustomText()" style="width: 100%;">Add to Canvas</button>
                         </div>
                     </div>
                     
                     <div class="element-controls mt-4">
-                        <h5>已添加元素</h5>
+                        <h5>Added Elements</h5>
                         <div id="elementList"></div>
                     </div>
                     
                     <div class="element-controls mt-4" id="elementControlsContainer" style="display: none;">
-                        <h5>元素設定</h5>
+                        <h5>Element Settings</h5>
                         <div id="elementControls"></div>
                     </div>
                 </div>
             </div>
             
-            <!-- 右側：Canvas 設計區域 -->
+            <!-- Right: Canvas design area -->
             <div class="col-md-9">
                 <div class="canvas-container">
-                    <h4>標籤設計 (100mm x 62mm)</h4>
+                    <h4>Badge Design (100mm x 62mm)</h4>
                     <div class="text-center mb-3">
                         <canvas id="badgeCanvas"></canvas>
                     </div>
                     
                     <div class="preview-section">
-                        <h5>預覽</h5>
+                        <h5>Preview</h5>
                         <div id="testImagePreview"></div>
                     </div>
                 </div>
@@ -371,7 +371,7 @@
         function addCustomText() {
             const customText = $('#customTextInput').val().trim();
             if (!customText) {
-                alert('請輸入文字');
+                alert('Please enter text');
                 return;
             }
             

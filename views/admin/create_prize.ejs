@@ -10,30 +10,30 @@
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <strong class="card-title">新增獎品 - <%= event.name %></strong>
+                            <strong class="card-title">Add Prize - <%= event.name %></strong>
                         </div>
                         <div class="card-body">
                             <form id="createPrizeForm">
                                 <div class="form-group">
-                                    <label for="name">獎品名稱</label>
+                                    <label for="name">Prize Name</label>
                                     <input type="text" class="form-control" id="name" name="name" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="prizeImage">獎品圖片</label>
+                                    <label for="prizeImage">Prize Image</label>
                                     <input type="file" class="form-control-file" id="prizeImage" name="prizeImage" accept="image/*">
-                                    <small class="form-text text-muted">支持 JPG, PNG, GIF 格式，最大 5MB</small>
+                                    <small class="form-text text-muted">JPG, PNG, GIF supported, max 5MB</small>
                                 </div>
                                 <div class="form-group">
-                                    <label for="picture">獎品圖片URL（可選）</label>
-                                    <input type="url" class="form-control" id="picture" name="picture" placeholder="https://example.com/image.jpg">
-                                    <small class="form-text text-muted">如果上傳了圖片文件，此URL將被忽略</small>
+                                    <label for="picture">Prize Image URL (optional)</label>
+                                    <input type="text" class="form-control" id="picture" name="picture" placeholder="https://example.com/image.jpg or leave empty to use uploaded image">
+                                    <small class="form-text text-muted">If you upload an image file, this URL will be ignored</small>
                                 </div>
                                 <div class="form-group">
-                                    <label for="unit">數量</label>
+                                    <label for="unit">Quantity</label>
                                     <input type="number" class="form-control" id="unit" name="unit" value="1" min="1" required>
                                 </div>
-                                <button type="submit" class="btn btn-primary">新增獎品</button>
-                                <a href="/prizes/<%= eventId %>/prizes/list" class="btn btn-secondary">返回列表</a>
+                                <button type="submit" class="btn btn-primary">Add Prize</button>
+                                <a href="/prizes/<%= eventId %>/prizes/list" class="btn btn-secondary">Back to List</a>
                             </form>
                         </div>
                     </div>
@@ -54,7 +54,7 @@
             formData.append('name', $('#name').val());
             formData.append('unit', $('#unit').val());
             
-            // 如果有上傳圖片文件，使用文件；否則使用URL
+            // If image file uploaded use file; otherwise use URL
             const imageFile = $('#prizeImage')[0].files[0];
             if (imageFile) {
                 formData.append('prizeImage', imageFile);
@@ -69,15 +69,15 @@
             .then(response => response.json())
             .then(data => {
                 if (data._id) {
-                    alert('獎品新增成功！');
+                    alert('Prize added successfully!');
                     window.location.href = `/prizes/<%= eventId %>/prizes/list`;
                 } else {
-                    alert('新增失敗：' + (data.message || '未知錯誤'));
+                    alert('Failed to add: ' + (data.message || 'Unknown error'));
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('新增失敗');
+                alert('Failed to add');
             });
         });
     });

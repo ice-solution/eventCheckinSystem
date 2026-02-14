@@ -28,9 +28,14 @@
                                     <label for="content">SMS 內容 (SMS Content)</label>
                                     <textarea class="form-control" id="content" rows="10" required><%= template.content || '' %></textarea>
                                     <small class="form-text text-muted">
-                                        可用變數 (Available variables): 
-                                        {{user.name}}, {{user.email}}, {{user.company}}, {{user.phone}}, {{user.phone_code}}, 
-                                        {{event.name}}, {{qrCodeUrl}}, {{loginUrl}}
+                                        <strong>可用變數 (Available variables):</strong><br>
+                                        基本：{{user.name}}, {{user.email}}, {{user.company}}, {{user.phone}}, {{user.phone_code}}, {{user.table}}, {{user.role}}<br>
+                                        <% if (formConfig && formConfig.sections) { 
+                                            const formFields = [];
+                                            formConfig.sections.forEach(s => { if (s.visible && s.fields) s.fields.forEach(f => { if (f.visible) formFields.push('{{user.' + f.fieldName + '}}'); }); });
+                                            if (formFields.length) { %><br>表單欄位（FormConfig）：<%= formFields.join(', ') %><% } %>
+                                        <% } %>
+                                        <br>活動/連結：{{event.name}}, {{loginUrl}}, {{confirmUrl}}, {{qrCodeUrl}}
                                     </small>
                                 </div>
                                 <div class="form-group">

@@ -44,21 +44,21 @@
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <strong class="card-title">表單配置管理 - <%= event.name %></strong>
+                            <strong class="card-title">Form Config - <%= event.name %></strong>
                             <div class="btn-toolbar mb-2 mb-md-0" style="float: right;">
                                 <div class="btn-group me-2">
                                     <button type="button" class="btn btn-sm btn-outline-info" onclick="exportConfig()">
-                                        <i class="fas fa-download"></i> 導出 JSON
+                                        <i class="fas fa-download"></i> Export JSON
                                     </button>
                                     <button type="button" class="btn btn-sm btn-outline-info" onclick="document.getElementById('importFileInput').click()">
-                                        <i class="fas fa-upload"></i> 導入 JSON
+                                        <i class="fas fa-upload"></i> Import JSON
                                     </button>
                                     <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="importConfig(event)">
                                     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetToDefault()">
-                                        <i class="fas fa-undo"></i> 重置為預設
+                                        <i class="fas fa-undo"></i> Reset to Default
                                     </button>
                                     <button type="button" class="btn btn-sm btn-primary" onclick="saveConfig()">
-                                        <i class="fas fa-save"></i> 儲存配置
+                                        <i class="fas fa-save"></i> Save Config
                                     </button>
                                 </div>
                             </div>
@@ -67,7 +67,7 @@
                             <!-- 事件信息 -->
                             <div class="alert alert-info">
                                 <h5><%= event.name %></h5>
-                                <p class="mb-0">配置此事件的註冊表單字段顯示設定</p>
+                                <p class="mb-0">Configure registration form field display for this event</p>
                             </div>
 
                             <!-- 語言設置 -->
@@ -99,7 +99,7 @@
                             <div id="formConfigContainer">
                                 <% if (formConfig && formConfig.sections) { %>
                                     <% 
-                                    // 根據 order 排序 sections
+                                    // 根據 order Order sections
                                     const sortedSections = formConfig.sections.slice().sort((a, b) => {
                                         const orderA = a.order || 0;
                                         const orderB = b.order || 0;
@@ -123,7 +123,7 @@
                                                     </label>
                                                 </div>
                                                 <div class="col-md-2">
-                                                    <label class="form-label">排序</label>
+                                                    <label class="form-label">Order</label>
                                                     <input type="number" class="form-control form-control-sm" 
                                                            value="<%= section.order || 0 %>" 
                                                            onchange="updateSectionProperty(<%= actualSectionIndex %>, 'order', parseInt(this.value) || 0); updatePreview();">
@@ -135,7 +135,7 @@
                                             
                                             <% if (section.fields) { %>
                                                 <% 
-                                                // 根據 order 排序 fields
+                                                // 根據 order Order fields
                                                 const sortedFields = section.fields.slice().sort((a, b) => {
                                                     const orderA = a.order || 0;
                                                     const orderB = b.order || 0;
@@ -168,13 +168,13 @@
                                                         
                                                         <div class="row">
                                                             <div class="col-md-2">
-                                                                <label class="form-label">字段名稱</label>
+                                                                <label class="form-label">Field Name</label>
                                                                 <input type="text" class="form-control form-control-sm" 
                                                                        value="<%= field.fieldName %>" 
                                                                        onchange="updateFieldProperty(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'fieldName', this.value)">
                                                             </div>
                                                             <div class="col-md-2">
-                                                                <label class="form-label">中文標籤</label>
+                                                                <label class="form-label">Label (ZH)</label>
                                                                 <input type="text" class="form-control form-control-sm" 
                                                                        value="<%= field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '') %>" 
                                                                        onchange="updateFieldLabel(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'zh', this.value)">
@@ -186,20 +186,20 @@
                                                                        onchange="updateFieldLabel(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'en', this.value)">
                                                             </div>
                                                             <div class="col-md-2">
-                                                                <label class="form-label">字段類型</label>
+                                                                <label class="form-label">Field Type</label>
                                                                 <select class="form-select form-select-sm" 
                                                                         onchange="updateFieldProperty(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'type', this.value)">
-                                                                    <option value="text" <%= field.type === 'text' ? 'selected' : '' %>>文字</option>
-                                                                    <option value="email" <%= field.type === 'email' ? 'selected' : '' %>>電子郵件</option>
-                                                                    <option value="tel" <%= field.type === 'tel' ? 'selected' : '' %>>電話</option>
-                                                                    <option value="select" <%= field.type === 'select' ? 'selected' : '' %>>下拉選單</option>
-                                                                    <option value="textarea" <%= field.type === 'textarea' ? 'selected' : '' %>>多行文字</option>
-                                                                    <option value="checkbox" <%= field.type === 'checkbox' ? 'selected' : '' %>>複選框</option>
-                                                                    <option value="radio" <%= field.type === 'radio' ? 'selected' : '' %>>單選框</option>
+                                                                    <option value="text" <%= field.type === 'text' ? 'selected' : '' %>>Text</option>
+                                                                    <option value="email" <%= field.type === 'email' ? 'selected' : '' %>>Email</option>
+                                                                    <option value="tel" <%= field.type === 'tel' ? 'selected' : '' %>>Phone</option>
+                                                                    <option value="select" <%= field.type === 'select' ? 'selected' : '' %>>Select</option>
+                                                                    <option value="textarea" <%= field.type === 'textarea' ? 'selected' : '' %>>Textarea</option>
+                                                                    <option value="checkbox" <%= field.type === 'checkbox' ? 'selected' : '' %>>Checkbox</option>
+                                                                    <option value="radio" <%= field.type === 'radio' ? 'selected' : '' %>>Radio</option>
                                                                 </select>
                                                             </div>
                                                             <div class="col-md-2">
-                                                                <label class="form-label">必填</label>
+                                                                <label class="form-label">Required</label>
                                                                 <div class="form-check">
                                                                     <input class="form-check-input" type="checkbox" 
                                                                            <%= field.required ? 'checked' : '' %>
@@ -207,7 +207,7 @@
                                                                 </div>
                                                             </div>
                                                             <div class="col-md-2">
-                                                                <label class="form-label">排序</label>
+                                                                <label class="form-label">Order</label>
                                                                 <input type="number" class="form-control form-control-sm" 
                                                                        value="<%= field.order || 0 %>" 
                                                                        onchange="updateFieldProperty(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'order', parseInt(this.value) || 0); updatePreview();">

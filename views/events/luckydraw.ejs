@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>互動抽獎</title>
+  <title>Lucky Draw</title>
   <script src="/socket.io/socket.io.js"></script>
   <style>
     body {
@@ -240,7 +240,7 @@
   <div class="bg">
     <!-- Start Button -->
     <div id="startButton">
-      <img src="/admin/img/11.png" alt="開始抽獎" id="startButtonImage">
+      <img src="/admin/img/11.png" alt="Start Draw" id="startButtonImage">
     </div>
 
     <!-- 燈號狀態（右上角） -->
@@ -250,7 +250,7 @@
 
     <!-- 抽獎狀態和獎品顯示（中央上方） -->
     <div id="drawingStatus" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; background: rgba(255, 255, 255, 0.95); padding: 20px 40px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); text-align: center; font-size: 24px; font-weight: bold; color: #333; display: none;">
-      <div id="statusText" style="margin-bottom: 10px;">現在抽獎</div>
+      <div id="statusText" style="margin-bottom: 10px;">Draw Now</div>
       <img id="prizeImage" src="" alt="" style="max-width: 120px; max-height: 90px; border-radius: 8px; margin-bottom: 8px; display: none;">
       <div id="prizeText" style="font-size: 20px; color: #e74c3c;"></div>
     </div>
@@ -301,7 +301,7 @@
         // 更新抽獎狀態顯示（中央上方），含獎品名稱與圖片
         if (currentPrizeName) {
           drawingStatusDiv.style.display = 'block';
-          statusTextDiv.textContent = '現在抽獎';
+          statusTextDiv.textContent = 'Draw Now';
           prizeTextDiv.textContent = currentPrizeName;
           if (currentPrizePicture && currentPrizePicture.trim() !== '') {
             prizeImageEl.src = currentPrizePicture;
@@ -357,7 +357,7 @@
     
     // 單獨的函數用於渲染單抽結果到中間（格式與 #result 一致）
     function renderSingleWinnerToCenter(winner) {
-      const userName = winner.name || '未知';
+      const userName = winner.name || 'Unknown';
       const orderNumber = winner.order || '';
       
       // 使用與 #result 一致的格式，抽獎編號在左邊；若有獎品圖片則顯示
@@ -371,7 +371,7 @@
         displayContent += `<div class="company">${winner.company}</div>`;
       }
       if (winner.table) {
-        displayContent += `<div class="table">桌號: ${winner.table}</div>`;
+        displayContent += `<div class="table">Table: ${winner.table}</div>`;
       }
       
       currentDiv.innerHTML = `<div class="rets"><div class="number">${orderNumber}</div><div class="card">${displayContent}</div></div>`;
@@ -417,13 +417,13 @@
         if (winnerImg) {
           displayContent += `<div class="winner-prize-img" style="margin-bottom:6px;"><img src="${winnerImg}" alt="${(winner.prizeName || '').replace(/"/g, '&quot;')}" style="max-width:60px;max-height:45px;border-radius:6px;"></div>`;
         }
-        const userName = winner.name || '未知';
+        const userName = winner.name || 'Unknown';
         displayContent += `<div class="name">${userName}</div>`;
         if (winner.company) {
           displayContent += `<div class="company">${winner.company}</div>`;
         }
         if (winner.table) {
-          displayContent += `<div class="table">桌號: ${winner.table}</div>`;
+          displayContent += `<div class="table">Table: ${winner.table}</div>`;
         }
         
         const orderNumber = winner.order;

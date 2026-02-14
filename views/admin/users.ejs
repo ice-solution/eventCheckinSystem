@@ -171,7 +171,7 @@
             margin-left: 0 !important;
             padding: 0 !important;
             padding-left: 0 !important;
-            cursor: pointer;
+            cursor: default;
             flex: 1;
             line-height: 1.5;
             min-width: 0;
@@ -191,20 +191,25 @@
             color: #6c757d;
             line-height: 1.4;
         }
-        /* Modal 樣式修復 - 確保背景和內容不透明 */
-        #batchSendEmailModal {
-            z-index: 1055 !important;
+        /* Modal 樣式修復 - 確保 modal 顯示在最上層（高於 admin 模板 z-index: 9999） */
+        #batchSendEmailModal,
+        #batchSendSmsModal {
+            z-index: 10600 !important;
+            position: fixed !important;
         }
-        #batchSendEmailModal .modal-backdrop {
-            z-index: 1050 !important;
+        #batchSendEmailModal .modal-dialog,
+        #batchSendSmsModal .modal-dialog {
+            z-index: 10601 !important;
+        }
+        body.modal-open .modal-backdrop {
+            z-index: 10550 !important;
             background-color: rgba(0, 0, 0, 0.5) !important;
         }
-        #resendEmailModal {
-            z-index: 1055 !important;
-        }
-        #resendEmailModal .modal-backdrop {
-            z-index: 1050 !important;
-            background-color: rgba(0, 0, 0, 0.5) !important;
+        #resendEmailModal,
+        #batchSendSmsResultsModal,
+        #batchSendEmailResultsModal {
+            z-index: 10600 !important;
+            position: fixed !important;
         }
         .modal-backdrop {
             background-color: rgba(0, 0, 0, 0.5) !important;
@@ -221,7 +226,8 @@
         .modal.fade.show {
             opacity: 1 !important;
         }
-        #batchSendEmailModal.show {
+        #batchSendEmailModal.show,
+        #batchSendSmsModal.show {
             display: block !important;
             opacity: 1 !important;
         }
@@ -403,6 +409,9 @@
                                     <button id="batchSendEmailBtn" class="btn btn-warning" style="display: none;">
                                         <i class="fas fa-envelope"></i> Batch Send Email
                                     </button>
+                                    <button id="batchSendSmsBtn" class="btn btn-info" style="display: none;">
+                                        <i class="fas fa-sms"></i> Batch Send SMS
+                                    </button>
                                     <button id="addUserBtn" class="btn btn-primary">
                                         <i class="fas fa-user-plus"></i> Add User
                                     </button>
@@ -416,11 +425,11 @@
                                 </div>
                             </div>
                             
-                            <!-- Payment Event Settings (Separated) -->
+                            <!-- Payment Event Settings (Separated)：只有點擊 switch 才會切換，文字區不觸發 -->
                             <div class="payment-event-container">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="paymentEvent">
-                                    <label class="form-check-label" for="paymentEvent">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="paymentEvent" aria-label="Payment Event">
+                                    <label class="form-check-label" id="paymentEventLabel">
                                         <strong>Payment Event</strong>
                                         <small class="text-muted d-block">Enable paid event functionality</small>
                                     </label>
@@ -471,6 +480,39 @@
                                 </div>
                             </div>
 
+                            <!-- Batch Send SMS Modal -->
+                            <div class="modal fade" id="batchSendSmsModal" tabindex="-1" role="dialog" aria-labelledby="batchSendSmsModalLabel" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="batchSendSmsModalLabel">Batch Send SMS</h5>
+                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Selected <strong id="selectedUsersCountSms">0</strong> user(s)</p>
+                                            <div class="form-group">
+                                                <label for="batchSmsTemplate">Select SMS Template:</label>
+                                                <select class="form-control" id="batchSmsTemplate" required>
+                                                    <option value="">--- Please Select Template ---</option>
+                                                </select>
+                                                <small class="form-text text-muted">SMS will be sent to all selected users (with phone numbers)</small>
+                                            </div>
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle"></i> SMS will be sent to all selected users who have a phone number
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                                            <button type="button" class="btn btn-primary" id="confirmBatchSendSms">
+                                                <i class="fas fa-paper-plane"></i> Confirm Send
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Resend Email Template Selection Modal -->
                             <div class="modal fade" id="resendEmailModal" tabindex="-1" role="dialog" aria-labelledby="resendEmailModalLabel" aria-hidden="true">
                                 <div class="modal-dialog" role="document">
@@ -498,6 +540,26 @@
                                             <button type="button" class="btn btn-primary" id="confirmResendEmail">
                                                 <i class="fas fa-paper-plane"></i> 確認發送 (Confirm Send)
                                             </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Batch Send SMS Results Modal -->
+                            <div class="modal fade" id="batchSendSmsResultsModal" tabindex="-1" role="dialog" aria-labelledby="batchSendSmsResultsModalLabel" aria-hidden="true">
+                                <div class="modal-dialog modal-lg" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="batchSendSmsResultsModalLabel">Batch Send SMS Results</h5>
+                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div id="batchSendSmsResultsContent"></div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                                         </div>
                                     </div>
                                 </div>
@@ -837,6 +899,9 @@
 <script src="/admin/assets/js/lib/data-table/buttons.colVis.min.js"></script>
 <script>
     $(document).ready(function() {
+        // 將 modal 移到 body 最外層，避免被父元素 overflow 或 stacking context 遮擋
+        $('#batchSendEmailModal, #batchSendSmsModal, #resendEmailModal, #batchSendSmsResultsModal, #batchSendEmailResultsModal').appendTo('body');
+        
         // Check if DataTables is loaded
         if (typeof $.fn.DataTable === 'undefined') {
             console.error('DataTables is not loaded!');
@@ -896,6 +961,7 @@
                 updateSelectAllCheckbox();
                 updateBatchDeleteButton();
                 updateBatchSendEmailButton();
+                updateBatchSendSmsButton();
             }
         });
 
@@ -910,6 +976,7 @@
             $('#selectAll').prop('checked', true).prop('indeterminate', false);
             updateBatchDeleteButton();
             updateBatchSendEmailButton();
+            updateBatchSendSmsButton();
             showAlert('success', `已選擇所有 ${allUserIds.length} 位用戶`);
         });
 
@@ -922,6 +989,7 @@
             $('#selectAll').prop('checked', false).prop('indeterminate', false);
             updateBatchDeleteButton();
             updateBatchSendEmailButton();
+            updateBatchSendSmsButton();
             showAlert('info', '已取消所有選擇');
         });
 
@@ -1089,6 +1157,7 @@
             });
             updateBatchDeleteButton();
             updateBatchSendEmailButton();
+                updateBatchSendSmsButton();
             updateSelectAllCheckbox();
         });
 
@@ -1102,6 +1171,7 @@
             }
             updateBatchDeleteButton();
             updateBatchSendEmailButton();
+                updateBatchSendSmsButton();
             updateSelectAllCheckbox();
         });
 
@@ -1122,6 +1192,16 @@
                 $('#batchSendEmailBtn').show().text(`Batch Send Email (${selectedCount})`);
             } else {
                 $('#batchSendEmailBtn').hide();
+            }
+        }
+
+        // Update batch send SMS button visibility
+        function updateBatchSendSmsButton() {
+            const selectedCount = selectedUserIds.size;
+            if (selectedCount > 0) {
+                $('#batchSendSmsBtn').show().text(`Batch Send SMS (${selectedCount})`);
+            } else {
+                $('#batchSendSmsBtn').hide();
             }
         }
 
@@ -1171,6 +1251,7 @@
                         showAlert('success', `成功刪除 ${response.deletedCount} 位用戶！`);
                         updateBatchDeleteButton();
                         updateBatchSendEmailButton();
+                        updateBatchSendSmsButton();
                         updateSelectAllCheckbox();
                     },
                     error: function(xhr, status, error) {
@@ -1182,6 +1263,15 @@
         });
 
         // Function to properly close modal
+        function closeBatchSendSmsModal() {
+            const $modal = $('#batchSendSmsModal');
+            if (typeof $modal.modal === 'function') {
+                try { $modal.modal('hide'); } catch(e) { console.log('Bootstrap modal hide failed'); }
+            }
+            $modal.removeClass('show').css('display', 'none').attr('aria-hidden', 'true');
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css({ 'padding-right': '', 'overflow': '' });
+        }
         function closeBatchSendEmailModal() {
             const $modal = $('#batchSendEmailModal');
             
@@ -1251,7 +1341,7 @@
                     $modal.addClass('show').css('display', 'block');
                     $('body').addClass('modal-open');
                     if ($('.modal-backdrop').length === 0) {
-                        $('<div class="modal-backdrop fade show"></div>').appendTo('body');
+                        $('<div class="modal-backdrop fade show"></div>').appendTo('body').css('z-index', '10550');
                     }
                 }
             }, 200);
@@ -1281,21 +1371,132 @@
         $(document).off('keydown.modal-close');
         $(document).on('keydown.modal-close', function(e) {
             if (e.key === 'Escape' || e.keyCode === 27) {
-                if ($('#batchSendEmailModal').hasClass('show')) {
-                    e.preventDefault();
-                    closeBatchSendEmailModal();
-                }
+                e.preventDefault();
+                if ($('#batchSendSmsModal').hasClass('show')) closeBatchSendSmsModal();
+                else if ($('#batchSendEmailModal').hasClass('show')) closeBatchSendEmailModal();
             }
         });
 
-        // Handle backdrop click to close modal
+        // Handle backdrop click to close modal (click on gray area)
         $('#batchSendEmailModal').off('click.backdrop');
         $('#batchSendEmailModal').on('click.backdrop', function(e) {
-            // Only close if clicking directly on the modal backdrop, not on modal-content
             if ($(e.target).is('#batchSendEmailModal') && !$(e.target).closest('.modal-content').length) {
                 e.preventDefault();
                 closeBatchSendEmailModal();
             }
+        });
+
+        // Handle Batch Send SMS modal - Cancel, close button, backdrop click
+        $(document).on('click', '#batchSendSmsModal .close, #batchSendSmsModal [data-dismiss="modal"]', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeBatchSendSmsModal();
+        });
+        $('#batchSendSmsModal').on('click', function(e) {
+            if ($(e.target).is('#batchSendSmsModal')) { closeBatchSendSmsModal(); }
+        });
+        $(document).on('click', '.modal-backdrop', function() {
+            if ($('#batchSendSmsModal').hasClass('show')) closeBatchSendSmsModal();
+            else if ($('#batchSendEmailModal').hasClass('show')) closeBatchSendEmailModal();
+            else if ($('#resendEmailModal').hasClass('show')) $('#resendEmailModal').modal('hide');
+            else if ($('#batchSendSmsResultsModal').hasClass('show')) $('#batchSendSmsResultsModal').modal('hide');
+            else if ($('#batchSendEmailResultsModal').hasClass('show')) $('#batchSendEmailResultsModal').modal('hide');
+        });
+
+        // Batch send SMS button click
+        $('#batchSendSmsBtn').on('click', function() {
+            const selectedIds = Array.from(selectedUserIds);
+            if (selectedIds.length === 0) {
+                showAlert('warning', 'Please select users to send SMS.');
+                return;
+            }
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('padding-right', '');
+            $('#selectedUsersCountSms').text(selectedIds.length);
+            $('#batchSmsTemplate').html('<option value="">--- Please Select Template ---</option>');
+            $.ajax({
+                url: `/events/api/<%= event._id %>/smsTemplates`,
+                type: 'GET',
+                success: function(templates) {
+                    if (templates && templates.length > 0) {
+                        const typeNames = { welcome: 'Welcome', confirmation: 'Confirmation', reminder: 'Reminder', thankYou: 'Thank You', invitation: 'Invitation' };
+                        templates.forEach(function(t) {
+                            const typeName = typeNames[t.type] || t.type || 'welcome';
+                            const scope = t.eventId ? '(Event)' : '(Global)';
+                            const preview = (t.content || '').substring(0, 40) + '...';
+                            $('#batchSmsTemplate').append(`<option value="${t._id}">${typeName} ${scope} - ${preview}</option>`);
+                        });
+                    }
+                }
+            });
+            const $smsModal = $('#batchSendSmsModal');
+            $smsModal.modal('show');
+            // 確保 modal 可見（若 Bootstrap 未正確顯示則手動顯示）
+            setTimeout(function() {
+                if (!$smsModal.hasClass('show') || $smsModal.css('display') === 'none') {
+                    $smsModal.addClass('show').css('display', 'block');
+                    $('body').addClass('modal-open');
+                    if ($('.modal-backdrop').length === 0) {
+                        $('<div class="modal-backdrop fade show"></div>').appendTo('body').css('z-index', '10550');
+                    }
+                }
+            }, 200);
+        });
+
+        // Confirm batch send SMS
+        $('#confirmBatchSendSms').on('click', function() {
+            const selectedIds = Array.from(selectedUserIds);
+            if (selectedIds.length === 0) {
+                showAlert('warning', 'Please select users to send SMS.');
+                return;
+            }
+            const templateId = $('#batchSmsTemplate').val();
+            if (!templateId) {
+                showAlert('warning', 'Please select an SMS template.');
+                return;
+            }
+            const button = $(this);
+            button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...');
+            $.ajax({
+                url: `/events/<%= event._id %>/users/batch-send-sms`,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    userIds: selectedIds,
+                    templateId: templateId,
+                    sendToSelectedOnly: true
+                }),
+                success: function(response) {
+                    $('#batchSendSmsModal').modal('hide');
+                    button.prop('disabled', false).html('<i class="fas fa-paper-plane"></i> Confirm Send');
+                    let resultsHtml = `
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle"></i> Summary</h6>
+                            <p><strong>Success:</strong> <span class="badge badge-success">${response.successCount || 0}</span></p>
+                            <p><strong>Failed:</strong> <span class="badge badge-danger">${response.failCount || 0}</span></p>
+                            <p><strong>Total:</strong> ${response.total || 0}</p>
+                        </div>
+                    `;
+                    if (response.results && response.results.length > 0) {
+                        resultsHtml += '<h6>Details</h6><div style="max-height: 400px; overflow-y: auto;"><table class="table table-sm table-bordered"><thead><tr><th>Name</th><th>Phone</th><th>Status</th></tr></thead><tbody>';
+                        response.results.forEach(function(r) {
+                            const status = r.success ? '<span class="badge badge-success">Success</span>' : '<span class="badge badge-danger">' + (r.error || 'Failed') + '</span>';
+                            resultsHtml += `<tr><td>${r.name || '-'}</td><td>${r.phone || '-'}</td><td>${status}</td></tr>`;
+                        });
+                        resultsHtml += '</tbody></table></div>';
+                    }
+                    $('#batchSendSmsResultsContent').html(resultsHtml);
+                    $('#batchSendSmsResultsModal').modal('show');
+                    showAlert('success', response.message || 'SMS sent.');
+                    updateBatchSendEmailButton();
+                    updateBatchSendSmsButton();
+                },
+                error: function(xhr) {
+                    button.prop('disabled', false).html('<i class="fas fa-paper-plane"></i> Confirm Send');
+                    const msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Failed to send SMS.';
+                    showAlert('danger', msg);
+                }
+            });
         });
 
         // Load email templates for batch send based on email type
@@ -1447,6 +1648,7 @@
                     $('#selectAll').prop('checked', false).prop('indeterminate', false);
                     updateBatchDeleteButton();
                     updateBatchSendEmailButton();
+                    updateBatchSendSmsButton();
                 },
                 error: function(xhr, status, error) {
                     console.error('Error batch sending emails:', error);

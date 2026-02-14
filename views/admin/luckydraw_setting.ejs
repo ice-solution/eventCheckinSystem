@@ -12,31 +12,31 @@
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <strong class="card-title">抽獎設定</strong>
+                            <strong class="card-title">Lucky Draw Settings</strong>
                         </div>
                         <div class="card-body">
                             <form id="uploadForm" enctype="multipart/form-data" action="/events/<%= eventId %>/luckydraw_setting/upload-background" method="POST">
                                 <div class="form-group">
-                                    <label for="backgroundImage">上傳背景圖片 (僅限 .jpg 格式):</label>
+                                    <label for="backgroundImage">Upload background image (.jpg only):</label>
                                     <input type="file" id="backgroundImage" name="backgroundImage" accept=".jpg, .jpeg" required>
                                 </div>
-                                <button type="submit" class="btn btn-primary">上傳</button>
+                                <button type="submit" class="btn btn-primary">Upload</button>
                             </form>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 預覽區域 -->
+            <!-- Preview area -->
             <div class="row">
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <strong class="card-title">背景圖片預覽</strong>
+                            <strong class="card-title">Background Image Preview</strong>
                         </div>
                         <div class="card-body text-center">
-                            <img id="backgroundPreview" src="/luckydraw/img/<%= eventId %>.jpg" alt="背景圖片預覽" style="max-width: 100%; height: auto;">
-                            <div id="noImageMessage" style="display: none;">還沒有背景圖片</div>
+                            <img id="backgroundPreview" src="/luckydraw/img/<%= eventId %>.jpg" alt="Background preview" style="max-width: 100%; height: auto;">
+                            <div id="noImageMessage" style="display: none;">No background image yet</div>
                         </div>
                     </div>
                 </div>
@@ -59,19 +59,17 @@
 
 <script>
     window.onload = function() {
-        // 檢查圖片是否存在
+        // Check if image exists
         const img = document.getElementById('backgroundPreview');
         const noImageMessage = document.getElementById('noImageMessage');
 
         img.onload = function() {
-            // 圖片加載成功，隱藏提示信息
             noImageMessage.style.display = 'none';
         };
 
         img.onerror = function() {
-            // 圖片加載失敗，顯示提示信息
-            img.style.display = 'none'; // 隱藏圖片
-            noImageMessage.style.display = 'block'; // 顯示提示信息
+            img.style.display = 'none';
+            noImageMessage.style.display = 'block';
         };
     };
 </script>

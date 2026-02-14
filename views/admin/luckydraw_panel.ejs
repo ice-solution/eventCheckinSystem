@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>LuckyDraw 控制面板</title>
+    <title>LuckyDraw Control Panel</title>
     <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
     <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
     <link rel="stylesheet" href="/admin/assets/css/style.css">
@@ -96,18 +96,18 @@
             <div class="row control-panel-container">
                 <div class="col-lg-7 col-md-12 mb-3">
                     <div class="card control-card">
-                        <div class="section-title">抽獎控制（適合 iPad 操作）</div>
+                        <div class="section-title">Draw Control (iPad-friendly)</div>
                         <div class="form-group">
-                            <label for="prizeSelect">選擇獎品：</label>
+                            <label for="prizeSelect">Select prize:</label>
                             <div class="mb-2" id="prizeImageContainer" style="display:none; text-align:center;">
-                                <img id="prizeImage" src="" alt="選擇獎品" style="max-width: 200px; max-height: 150px; border-radius: 8px; border: 2px solid #eee;">
+                                <img id="prizeImage" src="" alt="Select prize" style="max-width: 200px; max-height: 150px; border-radius: 8px; border: 2px solid #eee;">
                             </div>
                             <select id="prizeSelect" class="form-control" required>
-                                <option value="">請選擇獎品</option>
+                                <option value="">Please select a prize</option>
                                 <% prizes.forEach(prize => { %>
                                     <% if (prize.unit > 0) { %>
                                         <option value="<%= prize._id %>" data-name="<%= prize.name %>" data-image="<%= prize.pictureUrl || prize.picture || '' %>">
-                                            <%= prize.name %> (剩餘: <%= prize.unit %>)
+                                            <%= prize.name %> (remaining: <%= prize.unit %>)
                                         </option>
                                     <% } %>
                                 <% }); %>
@@ -116,43 +116,43 @@
 
                         <div class="form-row">
                             <div class="form-group col-md-4">
-                                <label for="drawCount">抽獎次數：</label>
+                                <label for="drawCount">Draw count:</label>
                                 <input type="number" id="drawCount" class="form-control" min="1" value="1">
                             </div>
                         </div>
 
                         <div class="form-group mt-3">
-                            <button id="btn-draw-once" class="btn btn-primary btn-block mb-2">抽 1 人</button>
-                            <button id="btn-draw-multi" class="btn btn-success btn-block mb-2">按上方次數連抽</button>
-                            <button id="btn-cancel-last" class="btn btn-warning btn-block mb-2">取消上一位中獎者</button>
+                            <button id="btn-draw-once" class="btn btn-primary btn-block mb-2">Draw 1</button>
+                            <button id="btn-draw-multi" class="btn btn-success btn-block mb-2">Draw (by count above)</button>
+                            <button id="btn-cancel-last" class="btn btn-warning btn-block mb-2">Cancel Last Winner</button>
                         </div>
 
                         <hr>
 
-                        <div class="section-title">自訂中獎人物</div>
+                        <div class="section-title">Manual Winner</div>
                         <div class="form-group">
-                            <label for="manualWinnerSelect">選擇參與者：</label>
+                            <label for="manualWinnerSelect">Select participant:</label>
                             <select id="manualWinnerSelect" class="form-control">
-                                <option value="">請選擇參與者</option>
+                                <option value="">Please select a participant</option>
                                 <% availablePeople.forEach(person => { %>
                                     <option value="<%= person._id %>">
                                         <%= person.company || '' %>
-                                        <% if (person.table) { %> | 桌號: <%= person.table %> <% } %>
+                                        <% if (person.table) { %> | Table: <%= person.table %> <% } %>
                                         | <%= person.name %>
                                     </option>
                                 <% }); %>
                             </select>
                         </div>
-                        <button id="btn-set-manual-winner" class="btn btn-info btn-block">設為中獎者</button>
+                        <button id="btn-set-manual-winner" class="btn btn-info btn-block">Set as Winner</button>
                     </div>
                 </div>
 
                 <div class="col-lg-5 col-md-12 mb-3">
                     <div class="card control-card">
-                        <div class="section-title">本次操作中獎紀錄</div>
+                        <div class="section-title">Session Winners</div>
                         <ul id="winnerList" class="winner-list"></ul>
                         <small class="text-muted d-block mt-2">
-                            說明：此列表只顯示本次面板操作的中獎者。完整紀錄請查看「Luckydraw List」頁面。
+                            This list shows winners from this panel session only. See "Luckydraw List" for full records.
                         </small>
                     </div>
                 </div>
@@ -246,7 +246,7 @@
     });
 
     async function cancelWinner(winner) {
-        if (!confirm(`確定要取消 ${winner.name} 的中獎結果？`)) {
+        if (!confirm(`Are you sure you want to cancel the win for ${winner.name}?`)) {
             return;
         }
         try {
@@ -257,7 +257,7 @@
             });
             if (!res.ok) {
                 const msg = await res.text();
-                alert('取消中獎者失敗：' + msg);
+                alert('Failed to cancel winner: ' + msg);
                 return;
             }
             // 從 sessionWinners 中移除
@@ -272,7 +272,7 @@
                 const option = Array.from(prizeSelect.options).find(o => o.value === winner.prizeId);
                 if (option) {
                     const text = option.text;
-                    const match = text.match(/\(剩餘: (\d+)\)/);
+                    const match = text.match(/\(remaining: (\d+)\)/);
                     const currentRemaining = match ? parseInt(match[1]) : 0;
                     updatePrizeOptionText(option, currentRemaining + 1);
                 } else {
@@ -280,9 +280,9 @@
                     const prize = allPrizes.find(p => String(p._id) === String(winner.prizeId));
                     const newOption = document.createElement('option');
                     newOption.value = winner.prizeId;
-                    newOption.dataset.name = winner.prizeName || prize?.name || '未知獎品';
+                    newOption.dataset.name = winner.prizeName || prize?.name || 'Unknown prize';
                     newOption.dataset.image = prize?.pictureUrl || prize?.picture || '';
-                    newOption.text = `${winner.prizeName || prize?.name || '未知獎品'} (剩餘: 1)`;
+                    newOption.text = `${winner.prizeName || prize?.name || 'Unknown prize'} (remaining: 1)`;
                     if (prizeSelect.options.length > 1) {
                         prizeSelect.insertBefore(newOption, prizeSelect.options[1]);
                     } else {
@@ -302,11 +302,11 @@
             // 更新手動選擇下拉列表
             const manualOption = document.createElement('option');
             manualOption.value = winner._id;
-            manualOption.text = `${winner.company || ''} ${winner.table ? ' | 桌號: ' + winner.table : ''} | ${winner.name}`;
+            manualOption.text = `${winner.company || ''} ${winner.table ? ' | Table: ' + winner.table : ''} | ${winner.name}`;
             manualWinnerSelect.appendChild(manualOption);
         } catch (err) {
             console.error(err);
-            alert('取消中獎者時發生錯誤');
+            alert('Error cancelling winner');
         }
     }
 
@@ -318,14 +318,14 @@
             li.dataset.id = w._id;
             li.style.cursor = 'pointer';
             li.style.userSelect = 'none';
-            li.title = '點擊取消此中獎者';
+            li.title = 'Click to cancel this winner';
             // 使用中獎編號（order）取代序號
             const orderNumber = w.order || '';
             li.innerHTML = `
                 <div class="winner-main">
                     <span class="winner-name">${orderNumber ? orderNumber + '. ' : ''}${w.name}</span>
                     <span class="winner-meta">
-                        ${w.company || ''} ${w.table ? ' | 桌號: ' + w.table : ''} ${w.prizeName ? ' | 🎁 ' + w.prizeName : ''}
+                        ${w.company || ''} ${w.table ? ' | Table: ' + w.table : ''} ${w.prizeName ? ' | 🎁 ' + w.prizeName : ''}
                     </span>
                 </div>
             `;
@@ -346,25 +346,25 @@
 
     // 連線狀態提示（控制器本身）
     socket.on('connect', () => {
-        showControllerToast('控制器已連接伺服器', 'success');
+        showControllerToast('Controller connected to server', 'success');
     });
 
     socket.on('disconnect', () => {
-        showControllerToast('控制器連線中斷，請檢查網絡', 'warning');
+        showControllerToast('Controller disconnected. Please check network.', 'warning');
     });
 
     // 來自伺服器的控制器狀態廣播（同一 event 的所有頁面都會收到）
     socket.on('luckydraw:controller_status', ({ status }) => {
         if (status === 'online') {
-            showControllerToast('控制器已就緒，可以開始抽獎', 'success');
+            showControllerToast('Controller ready. You can start drawing.', 'success');
         } else if (status === 'offline') {
-            showControllerToast('控制器目前未連接', 'warning');
+            showControllerToast('Controller not connected', 'warning');
         }
     });
 
     function pickRandomPerson() {
         if (availablePeople.length === 0) {
-            alert('所有人都已抽出！');
+            alert('Everyone has been drawn!');
             return null;
         }
         const idx = Math.floor(Math.random() * availablePeople.length);
@@ -373,19 +373,19 @@
 
     function getSelectedPrize() {
         if (!prizeSelect.value) {
-            alert('請先選擇獎品！');
+            alert('Please select a prize first!');
             return null;
         }
         const option = prizeSelect.options[prizeSelect.selectedIndex];
         const text = option.text;
-        const match = text.match(/\(剩餘: (\d+)\)/);
+        const match = text.match(/\(remaining: (\d+)\)/);
         if (!match) {
-            alert('無法獲取獎品庫存信息！');
+            alert('Unable to get prize stock info!');
             return null;
         }
         const remaining = parseInt(match[1]);
         if (remaining <= 0) {
-            alert('所選獎品已無庫存！');
+            alert('Selected prize is out of stock!');
             return null;
         }
         return {
@@ -403,7 +403,7 @@
                 prizeSelect.selectedIndex = 0;
             }
         } else {
-            option.text = option.text.replace(/\(剩餘: \d+\)/, `(剩餘: ${newRemaining})`);
+            option.text = option.text.replace(/\(remaining: \d+\)/, `(remaining: ${newRemaining})`);
         }
     }
 
@@ -427,7 +427,7 @@
             });
             if (!res.ok) {
                 const msg = await res.text();
-                alert('新增中獎者失敗：' + msg);
+                alert('Failed to add winner: ' + msg);
                 return;
             }
             const data = await res.json();
@@ -442,7 +442,7 @@
             updatePrizeOptionText(prizeInfo.option, newRemaining);
         } catch (err) {
             console.error(err);
-            alert('新增中獎者時發生錯誤');
+            alert('Error adding winner');
         }
     }
 
@@ -461,17 +461,17 @@
         const count = Math.max(1, parseInt(drawCountInput.value || '1', 10));
         
         if (prizeInfo.remaining <= 0) {
-            alert('獎品已無庫存，無法抽獎。');
+            alert('Prize is out of stock. Cannot draw.');
             return;
         }
 
         if (count > prizeInfo.remaining) {
-            alert(`獎品庫存不足，最多只能抽取 ${prizeInfo.remaining} 個。`);
+            alert(`Insufficient prize stock. You can only draw ${prizeInfo.remaining} at most.`);
             return;
         }
 
         if (availablePeople.length < count) {
-            alert(`可用人數不足，目前只有 ${availablePeople.length} 人可抽。`);
+            alert(`Not enough participants. Only ${availablePeople.length} available.`);
             return;
         }
 
@@ -491,7 +491,7 @@
 
             if (!res.ok) {
                 const msg = await res.text();
-                alert('批量抽獎失敗：' + msg);
+                alert('Batch draw failed: ' + msg);
                 return;
             }
 
@@ -521,17 +521,17 @@
             // 後端會自動發送 luckydraw:winner_added 事件給所有連接的客戶端
         } catch (err) {
             console.error(err);
-            alert('批量抽獎時發生錯誤：' + err.message);
+            alert('Error during batch draw: ' + err.message);
         }
     });
 
     document.getElementById('btn-cancel-last').addEventListener('click', async () => {
         if (sessionWinners.length === 0) {
-            alert('目前沒有可取消的中獎者。');
+            alert('There is no winner to cancel.');
             return;
         }
         const lastWinner = sessionWinners[sessionWinners.length - 1];
-        if (!confirm(`確定要取消 ${lastWinner.name} 的中獎結果？`)) {
+        if (!confirm(`Are you sure you want to cancel the win for ${lastWinner.name}?`)) {
             return;
         }
         try {
@@ -542,7 +542,7 @@
             });
             if (!res.ok) {
                 const msg = await res.text();
-                alert('取消中獎者失敗：' + msg);
+                alert('Failed to cancel winner: ' + msg);
                 return;
             }
             sessionWinners.pop();
@@ -553,7 +553,7 @@
                 const option = Array.from(prizeSelect.options).find(o => o.value === lastWinner.prizeId);
                 if (option) {
                     const text = option.text;
-                    const match = text.match(/\(剩餘: (\d+)\)/);
+                    const match = text.match(/\(remaining: (\d+)\)/);
                     const currentRemaining = match ? parseInt(match[1]) : 0;
                     updatePrizeOptionText(option, currentRemaining + 1);
                 } else {
@@ -561,9 +561,9 @@
                     const prize = allPrizes.find(p => String(p._id) === String(lastWinner.prizeId));
                     const newOption = document.createElement('option');
                     newOption.value = lastWinner.prizeId;
-                    newOption.dataset.name = lastWinner.prizeName || prize?.name || '未知獎品';
+                    newOption.dataset.name = lastWinner.prizeName || prize?.name || 'Unknown prize';
                     newOption.dataset.image = prize?.pictureUrl || prize?.picture || '';
-                    newOption.text = `${lastWinner.prizeName || prize?.name || '未知獎品'} (剩餘: 1)`;
+                    newOption.text = `${lastWinner.prizeName || prize?.name || 'Unknown prize'} (remaining: 1)`;
                     if (prizeSelect.options.length > 1) {
                         prizeSelect.insertBefore(newOption, prizeSelect.options[1]);
                     } else {
@@ -580,19 +580,19 @@
             });
         } catch (err) {
             console.error(err);
-            alert('取消中獎者時發生錯誤');
+            alert('Error cancelling winner');
         }
     });
 
     document.getElementById('btn-set-manual-winner').addEventListener('click', async () => {
         const selectedId = manualWinnerSelect.value;
         if (!selectedId) {
-            alert('請先選擇一位參與者');
+            alert('Please select a participant first');
             return;
         }
         const index = availablePeople.findIndex(p => String(p._id) === String(selectedId));
         if (index === -1) {
-            alert('找不到選擇的參與者，可能已中獎或不在名單中。');
+            alert('Selected participant not found. They may have already won or are not on the list.');
             return;
         }
         // 通知展示頁開始動畫

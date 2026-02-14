@@ -1796,7 +1796,7 @@ exports.sendSmsToGuestList = async (req, res) => {
         let successCount = 0;
         let failCount = 0;
 
-        // 發送 SMS
+        // 發送 SMS（使用 replaceTemplateVariables 支援 formConfig 欄位，與 email template 一致）
         for (const guest of targetGuests) {
             try {
                 // 根據 SMS 模板類型決定 loginUrl
@@ -1809,23 +1809,17 @@ exports.sendSmsToGuestList = async (req, res) => {
                     loginUrl = `${getPublicBaseUrl()}/events/${event._id}/login`;
                 }
                 
-                // 生成確認頁面 URL
+                // 生成確認頁面 URL 和 QR Code URL
                 const confirmUrl = `${getPublicBaseUrl()}/events/${event._id}/${guest._id}`;
+                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${guest._id}&size=250x250`;
                 
-                let messageBody = smsTemplate.content
-                    .replace(/\{\{user\.name\}\}/g, guest.name || '')
-                    .replace(/\{\{guest\.name\}\}/g, guest.name || '')
-                    .replace(/\{\{user\.email\}\}/g, guest.email || '')
-                    .replace(/\{\{guest\.email\}\}/g, guest.email || '')
-                    .replace(/\{\{user\.company\}\}/g, guest.company || '')
-                    .replace(/\{\{guest\.company\}\}/g, guest.company || '')
-                    .replace(/\{\{user\.phone\}\}/g, guest.phone || '')
-                    .replace(/\{\{guest\.phone\}\}/g, guest.phone || '')
-                    .replace(/\{\{user\.phone_code\}\}/g, guest.phone_code || '')
-                    .replace(/\{\{guest\.phone_code\}\}/g, guest.phone_code || '')
-                    .replace(/\{\{event\.name\}\}/g, event.name)
-                    .replace(/\{\{loginUrl\}\}/g, loginUrl)
-                    .replace(/\{\{confirmUrl\}\}/g, confirmUrl);
+                // 使用 replaceTemplateVariables 支援所有 user/guest 欄位（含 formConfig 自訂欄位）
+                const guestObj = guest.toObject ? guest.toObject() : guest;
+                let messageBody = replaceTemplateVariables(smsTemplate.content, guestObj, event, {
+                    loginUrl,
+                    confirmUrl,
+                    qrCodeUrl
+                });
 
                 // 組合電話號碼
                 let phoneNumber = '';
@@ -3823,48 +3817,87 @@ exports.outputReport = async (req, res) => {
         const event = await Event.findById(eventId);
         if (!event) return res.status(404).send('Event not found');
         const users = event.users || [];
+
+        const FormConfig = require('../model/FormConfig');
+        let formConfig = await FormConfig.findOne({ eventId });
+
+        // Build columns: formConfig fields (in order), then CheckInAt, then 已簽到 at the end
+        const columnDefs = [];
+        const fieldKeys = []; // key for each column, for building row data
+
+        if (formConfig && formConfig.sections && formConfig.sections.length > 0) {
+            const lang = formConfig.defaultLanguage || 'zh';
+            const sections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0));
+            sections.forEach(section => {
+                if (!section.visible || !section.fields) return;
+                const fields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0));
+                fields.forEach(field => {
+                    if (!field.visible) return;
+                    const header = (field.label && (field.label[lang] || field.label.zh || field.label.en)) || field.fieldName || '';
+                    columnDefs.push({ header, key: field.fieldName, width: Math.min(25, Math.max(10, (header && header.length) || 10)) });
+                    fieldKeys.push(field.fieldName);
+                });
+            });
+        } else {
+            // Fallback when no formConfig: default columns
+            const defaults = [
+                { header: 'Email', key: 'email', width: 25 },
+                { header: 'Name', key: 'name', width: 20 },
+                { header: 'Table', key: 'table', width: 10 },
+                { header: 'Company', key: 'company', width: 20 },
+                { header: 'Phone', key: 'phone', width: 15 },
+                { header: 'Role', key: 'role', width: 10 },
+                { header: 'Industry', key: 'industry', width: 15 }
+            ];
+            defaults.forEach(col => {
+                columnDefs.push(col);
+                fieldKeys.push(col.key);
+            });
+        }
+
+        // Append CheckInAt and 已簽到 at the end
+        columnDefs.push({ header: 'CheckInAt', key: 'checkInAt', width: 15 });
+        columnDefs.push({ header: '已簽到', key: 'isCheckIn', width: 10 });
+        fieldKeys.push('checkInAt', 'isCheckIn');
+
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Users');
-        worksheet.columns = [
-            { header: 'Email', key: 'email', width: 25 },
-            { header: 'Name', key: 'name', width: 20 },
-            { header: 'Table', key: 'table', width: 10 },
-            { header: 'Company', key: 'company', width: 20 },
-            { header: 'Phone', key: 'phone', width: 15 },
-            { header: 'Role', key: 'role', width: 10 },
-            { header: 'Industry', key: 'industry', width: 15 },
-            { header: 'CheckInAt', key: 'checkInAt', width: 15 },
-            { header: '已簽到', key: 'isCheckIn', width: 10 }
-        ];
+        worksheet.columns = columnDefs;
+
+        const checkInAtFormat = (date) => date ? new Date(date).toLocaleString('en-US', {
+            timeZone: 'Asia/Hong_Kong',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        }) : '';
+
         users.forEach(user => {
-            worksheet.addRow({
-                email: user.email,
-                name: user.name,
-                table: user.table,
-                company: user.company,
-                phone: user.phone,
-                role: user.role,
-                industry: user.industry,
-                checkInAt: user.checkInAt ? new Date(user.checkInAt).toLocaleString('zh-TW', {
-                    timeZone: 'Asia/Hong_Kong',
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: false
-                }) : '',
-                isCheckIn: user.isCheckIn ? '✓' : ''
+            const userObj = user.toObject ? user.toObject() : user;
+            const row = {};
+            fieldKeys.forEach(key => {
+                if (key === 'checkInAt') {
+                    row[key] = checkInAtFormat(userObj.checkInAt);
+                } else if (key === 'isCheckIn') {
+                    row[key] = userObj.isCheckIn ? '✓' : '';
+                } else {
+                    const val = userObj[key];
+                    row[key] = val !== undefined && val !== null ? (Array.isArray(val) ? val.join(', ') : String(val)) : '';
+                }
             });
+            worksheet.addRow(row);
         });
+
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', 'attachment; filename=event_users.xlsx');
         await workbook.xlsx.write(res);
         res.end();
     } catch (err) {
         console.error('Export report error:', err);
-        res.status(500).send('報表匯出失敗');
+        res.status(500).send('Report export failed');
     }
 };
 

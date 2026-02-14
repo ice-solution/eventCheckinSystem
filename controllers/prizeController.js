@@ -25,7 +25,7 @@ const uploadPrizeImageMulter = multer({
     fileFilter: (req, file, cb) => {
         // 只接受圖片
         if (!file.mimetype.startsWith('image/')) {
-            return cb(new Error('只允許上傳圖片！'), false);
+            return cb(new Error('Only image uploads are allowed!'), false);
         }
         cb(null, true);
     }
@@ -205,7 +205,7 @@ exports.renderEditPrize = async (req, res) => {
 // 上傳獎品圖片
 exports.uploadPrizeImage = async (req, res) => {
     if (!req.file) {
-        return res.status(400).json({ message: '沒有上傳文件或文件格式不正確' });
+        return res.status(400).json({ message: 'No file uploaded or invalid file format' });
     }
     
     try {
@@ -224,7 +224,7 @@ exports.uploadPrizeImage = async (req, res) => {
         await prize.save();
         
         res.json({ 
-            message: '圖片上傳成功！',
+            message: 'Image uploaded successfully!',
             picture: filePath
         });
     } catch (error) {
@@ -240,7 +240,7 @@ exports.batchUploadPrizes = async (req, res) => {
     try {
         // 確保 req.file 存在
         if (!req.file) {
-            return res.status(400).json({ success: false, message: '沒有上傳文件' });
+            return res.status(400).json({ success: false, message: 'No file uploaded' });
         }
 
         // 查詢事件以確保存在
@@ -256,7 +256,7 @@ exports.batchUploadPrizes = async (req, res) => {
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
 
         if (!rows || rows.length === 0) {
-            return res.status(400).json({ success: false, message: '上傳的檔案是空的' });
+            return res.status(400).json({ success: false, message: 'Uploaded file is empty' });
         }
 
         // 第一行是標題行
@@ -274,7 +274,7 @@ exports.batchUploadPrizes = async (req, res) => {
         if (missingColumns.length > 0) {
             return res.status(400).json({ 
                 success: false, 
-                message: `缺少必填欄位：${missingColumns.join(', ')}` 
+                message: `Missing required columns: ${missingColumns.join(', ')}` 
             });
         }
 
@@ -284,7 +284,7 @@ exports.batchUploadPrizes = async (req, res) => {
         });
 
         if (dataRows.length === 0) {
-            return res.status(400).json({ success: false, message: '檔案中沒有數據行' });
+            return res.status(400).json({ success: false, message: 'No data rows in file' });
         }
 
         // 批量創建獎品
@@ -308,13 +308,13 @@ exports.batchUploadPrizes = async (req, res) => {
 
                 // 驗證必填欄位
                 if (!name) {
-                    errors.push(`第 ${rowNumber} 行：獎品名稱不能為空`);
+                    errors.push(`Row ${rowNumber}: Prize name cannot be empty`);
                     continue;
                 }
 
                 const unit = parseInt(unitStr, 10);
                 if (isNaN(unit) || unit < 1) {
-                    errors.push(`第 ${rowNumber} 行：數量必須是正整數`);
+                    errors.push(`Row ${rowNumber}: Quantity must be a positive integer`);
                     continue;
                 }
 
@@ -332,15 +332,15 @@ exports.batchUploadPrizes = async (req, res) => {
                 importedCount += 1;
             } catch (error) {
                 console.error(`Error processing row ${rowNumber}:`, error);
-                errors.push(`第 ${rowNumber} 行：處理失敗 - ${error.message}`);
+                errors.push(`Row ${rowNumber}: Processing failed - ${error.message}`);
             }
         }
 
         if (importedCount === 0 && errors.length > 0) {
             return res.status(400).json({ 
                 success: false, 
-                message: '沒有成功導入任何獎品',
-                errors: errors.slice(0, 10) // 只返回前 10 個錯誤
+                message: 'No prizes were imported successfully',
+                errors: errors.slice(0, 10) // Return first 10 errors only
             });
         }
 
@@ -352,7 +352,7 @@ exports.batchUploadPrizes = async (req, res) => {
         });
     } catch (error) {
         console.error('Error during batch upload:', error);
-        res.status(500).json({ success: false, message: '批量上傳過程中發生錯誤：' + error.message });
+        res.status(500).json({ success: false, message: 'Error during batch upload: ' + error.message });
     }
 };
 
@@ -369,14 +369,14 @@ exports.downloadSampleFile = async (req, res) => {
         // 創建範本 Excel 檔案
         const headers = ['name', 'unit', 'picture'];
         const sampleData = [
-            ['範例獎品1', 10, '/prizes/img/sample1.jpg'],
-            ['範例獎品2', 5, ''],
-            ['範例獎品3', 20, '/prizes/img/sample3.jpg']
+            ['Sample Prize 1', 10, '/prizes/img/sample1.jpg'],
+            ['Sample Prize 2', 5, ''],
+            ['Sample Prize 3', 20, '/prizes/img/sample3.jpg']
         ];
 
         const worksheet = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, '獎品列表');
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Prize List');
 
         const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
 
