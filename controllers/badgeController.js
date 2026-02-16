@@ -269,6 +269,8 @@ async function drawText(ctx, element, data, dimensions) {
     
     // 替換動態變量
     content = replaceVariables(content, data);
+    // 值為 '-' 或空則不顯示此元素
+    if (content.trim() === '') return;
     
     // 計算實際 font-size（根據 size 百分比）
     const baseFontSize = element.fontSize || 16;
@@ -320,6 +322,7 @@ async function drawQRCode(ctx, element, data) {
     try {
         let qrData = element.qrData || '{{qrcodeUrl}}';
         qrData = replaceVariables(qrData, data);
+        if (qrData.trim() === '') return;
         
         // 如果 qrData 是 URL，直接使用；否則生成 QR Code
         let image;
@@ -352,6 +355,7 @@ async function drawImage(ctx, element, data) {
     try {
         let imageUrl = element.imageUrl || '';
         imageUrl = replaceVariables(imageUrl, data);
+        if (!imageUrl || imageUrl.trim() === '') return;
         
         if (imageUrl) {
             const image = await loadImage(imageUrl);
@@ -368,23 +372,31 @@ async function drawImage(ctx, element, data) {
     }
 }
 
+// 若值為 '-' 則視為不顯示，回傳空字串
+function emptyIfDash(value) {
+    if (value == null || value === '') return '';
+    const s = String(value).trim();
+    return s === '-' ? '' : s;
+}
+
 // 替換變量
 function replaceVariables(text, data) {
     if (!text) return '';
     
-    // 替換 {{user.fieldName}}
+    // 替換 {{user.fieldName}}（含 formConfig 的 fields）
     text = text.replace(/\{\{user\.(\w+)\}\}/g, (match, field) => {
-        return data.user && data.user[field] ? String(data.user[field]) : '';
+        const value = data.user && data.user[field] != null ? data.user[field] : '';
+        return emptyIfDash(value);
     });
     
     // 替換 {{qrcodeUrl}}
-    text = text.replace(/\{\{qrcodeUrl\}\}/g, data.qrcodeUrl || '');
+    text = text.replace(/\{\{qrcodeUrl\}\}/g, () => emptyIfDash(data.qrcodeUrl));
     
     // 替換其他變量
     Object.keys(data).forEach(key => {
         if (key !== 'user') {
             const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
-            text = text.replace(regex, data[key] || '');
+            text = text.replace(regex, emptyIfDash(data[key]));
         }
     });
     
