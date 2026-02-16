@@ -541,6 +541,7 @@ function wrapBadgeText(ctx, text, maxWidth) {
 async function drawBadgeText(ctx, element, data, dimensions) {
   let content = element.content || '';
   content = replaceBadgeVariables(content, data);
+  if (content.trim() === '') return;
 
   // 計算實際 font-size（根據 size 百分比）
   const baseFontSize = element.fontSize || 16;
@@ -600,6 +601,7 @@ async function drawBadgeQRCode(ctx, element, data) {
 
     let qrData = element.qrData || '{{qrcodeUrl}}';
     qrData = replaceBadgeVariables(qrData, data);
+    if (qrData.trim() === '') return;
 
     let image;
     if (qrData.startsWith('http')) {
@@ -637,6 +639,7 @@ async function drawBadgeImage(ctx, element, data) {
 
     let imageUrl = element.imageUrl || '';
     imageUrl = replaceBadgeVariables(imageUrl, data);
+    if (!imageUrl || imageUrl.trim() === '') return;
 
     if (imageUrl) {
       const image = await loadImage(imageUrl);
@@ -653,23 +656,31 @@ async function drawBadgeImage(ctx, element, data) {
   }
 }
 
+// 若值為 '-' 則視為不顯示，回傳空字串（與 badgeController 一致，含 formConfig fields）
+function emptyIfDash(value) {
+  if (value == null || value === '') return '';
+  const s = String(value).trim();
+  return s === '-' ? '' : s;
+}
+
 // 替換變量
 function replaceBadgeVariables(text, data) {
   if (!text) return '';
 
-  // 替換 {{user.fieldName}}
+  // 替換 {{user.fieldName}}（含 formConfig 的 fields）
   text = text.replace(/\{\{user\.(\w+)\}\}/g, (match, field) => {
-    return data.user && data.user[field] ? String(data.user[field]) : '';
+    const value = data.user && data.user[field] != null ? data.user[field] : '';
+    return emptyIfDash(value);
   });
 
   // 替換 {{qrcodeUrl}}
-  text = text.replace(/\{\{qrcodeUrl\}\}/g, data.qrcodeUrl || '');
+  text = text.replace(/\{\{qrcodeUrl\}\}/g, () => emptyIfDash(data.qrcodeUrl));
 
   // 替換其他變量
   Object.keys(data).forEach(key => {
     if (key !== 'user') {
       const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
-      text = text.replace(regex, data[key] || '');
+      text = text.replace(regex, emptyIfDash(data[key]));
     }
   });
 
