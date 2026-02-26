@@ -81,6 +81,14 @@ const initSocket = (server) => {
             io.to(room).emit('luckydraw:prize_selected', { prizeName, prizeImage: prizeImage || null });
         });
 
+        // Panel 送出 Draw count（input blur 時），轉發給同 event 的 display 前端
+        socket.on('luckydraw_panel_draw_count', ({ eventId, drawCount }) => {
+            if (!eventId) return;
+            const room = `luckydraw:${eventId}`;
+            const count = Math.max(1, parseInt(drawCount, 10) || 1);
+            io.to(room).emit('luckydraw:draw_count', { drawCount: count });
+        });
+
         // 處理投票提交事件
         socket.on('vote_submitted', (data) => {
             console.log('Vote submitted:', data);

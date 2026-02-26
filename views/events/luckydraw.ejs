@@ -338,6 +338,13 @@
       updateStatusDisplay();
     });
 
+    // 監聽 Panel 送出的 Draw count（input blur 時）
+    let currentDrawCount = 1;
+    socket.on('luckydraw:draw_count', ({ drawCount }) => {
+      currentDrawCount = Math.max(1, parseInt(drawCount, 10) || 1);
+      window.luckydrawDrawCount = currentDrawCount; // 供頁面或嵌入遊戲讀取
+    });
+
     let winners = [];
     let currentDrawWinners = []; // 追蹤當前抽獎輪次的中獎者
     let currentDrawTimer = null; // 用於延遲顯示，判斷是單抽還是批量抽

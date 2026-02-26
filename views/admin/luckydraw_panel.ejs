@@ -238,6 +238,13 @@
         updatePrizePreview();
         sendPrizeSelection();
     });
+
+    // Draw count 失焦時，透過 socket 發送給前端
+    drawCountInput.addEventListener('blur', () => {
+        const count = Math.max(1, parseInt(drawCountInput.value || '1', 10));
+        drawCountInput.value = count;
+        socket.emit('luckydraw_panel_draw_count', { eventId, drawCount: count });
+    });
     
     document.addEventListener('DOMContentLoaded', () => {
         updatePrizePreview();

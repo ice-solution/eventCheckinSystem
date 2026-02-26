@@ -1,0 +1,48 @@
+{
+  "api": {
+    "serverUrl": "https://demo.brandactivation.hk",
+    "eventId": "6984a59d0e1c34ac697638b8"
+  },
+  "timing": {
+    "accelerate": 1500,
+    "fullSpeed": 2500,
+    "stopFirst": 5000,
+    "stopSecond": 1500,
+    "stopThird": 1500,
+    "reveal": 1500,
+    "celebrate": 3000
+  },
+  "speed": {
+    "max": 2000,
+    "min": 100
+  },
+  "visual": {
+    "fontSize": 48,
+    "highlightScale": 1.15
+  },
+  "animations": {
+    "fadeIn": 500,
+    "fadeOut": 300,
+    "scaleUp": 400,
+    "scaleDown": 300
+  },
+  "draw": {
+    "drawCount": 10
+  },
+  "ui": {
+    "subtitle": "ANNUAL PARTY 2026",
+    "waitingText": "等待控制器開始抽獎...",
+    "welcomeHint": "等待主持開始",
+    "congratsTitle": "恭喜得獎！",
+    "drawingText": "抽獎中...",
+    "winnerNumberLabel": "第1號",
+    "winnerCardSlots": [
+      { "type": "label", "text": "第1號", "yPosition": 0.18, "fontSize": 28, "color": "#ffd700", "bold": true, "fontType": "subtitle" },
+      { "type": "prize", "yPosition": 0.28, "fontSize": 36, "color": "#ffd700", "bold": true, "fontType": "subtitle" },
+      { "type": "divider", "yPosition": 0.40 },
+      { "type": "field", "key": "name", "yPosition": 0.52, "fontSize": 64, "color": "#ffffff", "bold": true, "fontType": "title" },
+      { "type": "field", "key": "staff_num", "yPosition": 0.68, "fontSize": 24, "color": "#ffffff", "fontType": "body" },
+      { "type": "field", "key": "department", "fallback": "company", "yPosition": 0.80, "fontSize": 28, "color": "#333333", "bold": true, "fontType": "body", "hasBackground": true }
+    ]
+  }
+}
