@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= eventName %> - 中獎名單</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --accent: #0f766e;
+      --accent-light: #14b8a6;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --gold: #c59b2d;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+      --radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: 0.02em;
+      margin-bottom: 0.25rem;
+    }
+
+    .subtitle {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+    }
+
+    .section-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+      padding: 1.5rem 1.75rem;
+    }
+
+    .list {
+      list-style: none;
+    }
+
+    .list-item {
+      display: grid;
+      grid-template-columns: 3rem 1fr 1fr 1fr auto;
+      gap: 1rem;
+      align-items: center;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9375rem;
+      transition: background 0.15s ease;
+    }
+
+    .list-item:last-child {
+      border-bottom: none;
+    }
+
+    .list-item:hover {
+      background: #f8fafc;
+    }
+
+    .list-item.list-header {
+      background: #f1f5f9;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 0.8125rem;
+      padding: 0.75rem 1.25rem;
+    }
+
+    .list-item.list-header:hover {
+      background: #f1f5f9;
+    }
+
+    .list-item .order {
+      font-weight: 700;
+      color: var(--accent);
+      font-size: 1rem;
+      min-width: 2rem;
+      text-align: center;
+    }
+
+    .list-item .name {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .list-item .company,
+    .list-item .table {
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+
+    .list-item .prize {
+      font-weight: 600;
+      color: var(--gold);
+      font-size: 0.875rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 140px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1.5rem;
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    .empty-state p {
+      margin-bottom: 0.5rem;
+    }
+
+    @media (max-width: 640px) {
+      .page {
+        padding: 1.5rem 1rem;
+      }
+
+      .card {
+        padding: 1.25rem 1.25rem;
+      }
+
+      .title {
+        font-size: 1.375rem;
+      }
+
+      .list-item {
+        grid-template-columns: 2.5rem 1fr;
+        gap: 0.5rem;
+        padding: 0.875rem 1rem;
+      }
+
+      .list-item .company,
+      .list-item .table {
+        grid-column: 2;
+        font-size: 0.8125rem;
+      }
+
+      .list-item .prize {
+        grid-column: 1 / -1;
+        max-width: none;
+      }
+
+      .list-item.list-header {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <h1 class="title"><%= typeof eventName !== 'undefined' ? eventName : 'Lucky Draw' %></h1>
+      <p class="subtitle">中獎名單</p>
+    </header>
+
+    <section class="card">
+      <h2 class="section-label">中獎列表</h2>
+      <% if (winners && winners.length > 0) { %>
+        <ul class="list">
+          <li class="list-item list-header">
+            <span class="order">序號</span>
+            <span class="name">姓名</span>
+            <span class="company">公司</span>
+            <span class="table">桌號</span>
+            <span class="prize">獎品</span>
+          </li>
+          <% winners.forEach(function(winner) { %>
+            <li class="list-item">
+              <span class="order"><%= winner.order || '–' %></span>
+              <span class="name"><%= winner.name || '–' %></span>
+              <span class="company"><%= winner.company || '–' %></span>
+              <span class="table"><%= winner.table ? '桌 ' + winner.table : '–' %></span>
+              <span class="prize" title="<%= winner.prizeName || '' %>"><%= winner.prizeName || '–' %></span>
+            </li>
+          <% }); %>
+        </ul>
+      <% } else { %>
+        <div class="empty-state">
+          <p>暫無中獎記錄</p>
+          <p>抽獎開始後，名單將顯示於此。</p>
+        </div>
+      <% } %>
+    </section>
+  </div>
+</body>
+</html>

@@ -3347,6 +3347,30 @@ exports.renderAdminLuckydrawPage = async (req, res) => {
     }
 };
 
+// 外部顯示用：抽獎中獎名單頁（無後台 layout）
+exports.renderLuckydrawAwardPage = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+        const winners = (event.winners || []).map((winner) => ({
+            order: winner.order || 0,
+            _id: winner._id,
+            name: winner.name,
+            company: winner.company,
+            table: winner.table,
+            prizeName: winner.prizeName,
+            wonAt: winner.wonAt
+        })).sort((a, b) => (a.order || 0) - (b.order || 0));
+        res.render('events/luckydraw_award', { eventId, eventName: event.name || 'Lucky Draw', winners });
+    } catch (error) {
+        console.error('Error rendering luckydraw award page:', error);
+        res.status(500).send('Error loading award list.');
+    }
+};
+
 // 匯出中獎者列表為 Excel
 exports.exportLuckydrawList = async (req, res) => {
     const { eventId } = req.params;

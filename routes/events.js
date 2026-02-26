@@ -82,6 +82,7 @@ router.get('/:eventId/users/data', eventsController.fetchUsersByEvent);
 router.get('/:eventId', eventsController.getEventUsersByEventID);
 router.get('/:eventId/luckydraw', eventsController.renderLuckydrawPage); // 使用控制器函數
 router.get('/:eventId/luckydraw/panel', eventsController.renderLuckydrawPanelPage); // iPad 抽獎控制面板
+router.get('/:eventId/luckydraw/award', eventsController.renderLuckydrawAwardPage); // 外部顯示中獎名單
 router.get('/:eventId/import', importController.getImportUserPage);
 router.post('/:eventId/import', upload, importController.importUsers);
 router.get('/:eventId/import/sample', importController.downloadSampleFile);
