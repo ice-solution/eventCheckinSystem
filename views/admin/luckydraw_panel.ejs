@@ -239,11 +239,23 @@
         sendPrizeSelection();
     });
 
-    // Draw count 失焦時，透過 socket 發送給前端
-    drawCountInput.addEventListener('blur', () => {
+    // Draw count 改動時透過 socket 通知前端（blur + change + input 防抖）
+    function emitDrawCount() {
         const count = Math.max(1, parseInt(drawCountInput.value || '1', 10));
         drawCountInput.value = count;
         socket.emit('luckydraw_panel_draw_count', { eventId, drawCount: count });
+    }
+
+    drawCountInput.addEventListener('blur', emitDrawCount);
+    drawCountInput.addEventListener('change', emitDrawCount);
+
+    let drawCountDebounceTimer = null;
+    drawCountInput.addEventListener('input', () => {
+        if (drawCountDebounceTimer) clearTimeout(drawCountDebounceTimer);
+        drawCountDebounceTimer = setTimeout(() => {
+            drawCountDebounceTimer = null;
+            emitDrawCount();
+        }, 400);
     });
     
     document.addEventListener('DOMContentLoaded', () => {
