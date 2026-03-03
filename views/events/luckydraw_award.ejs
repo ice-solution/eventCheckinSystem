@@ -88,7 +88,7 @@
 
     .list-item {
       display: grid;
-      grid-template-columns: 3rem 1fr 1fr 1fr auto;
+      grid-template-columns: 3rem 1fr 1fr 1fr minmax(140px, 2fr);
       gap: 1rem;
       align-items: center;
       padding: 1rem 1.25rem;
@@ -140,10 +140,9 @@
       font-weight: 600;
       color: var(--gold);
       font-size: 0.875rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 140px;
+      white-space: normal;
+      word-break: break-word;
+      min-width: 0;
     }
 
     .empty-state {
@@ -184,7 +183,6 @@
 
       .list-item .prize {
         grid-column: 1 / -1;
-        max-width: none;
       }
 
       .list-item.list-header {

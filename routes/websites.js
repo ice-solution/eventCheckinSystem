@@ -60,18 +60,17 @@ router.get('/:event_id/register', async (req, res) => {
     
     res.render('exvent/register', { event_id, paymentTickets, formConfig: formConfig });
 });
-// 路由到註冊成功頁面（session_id 可為 Wonder order_id 或 Transaction _id）
+// 路由到註冊成功頁面（session_id 可為 Stripe session_id、Wonder order_id 或 Transaction _id）
 router.get('/:event_id/register/success', async (req, res) => {
     const { event_id } = req.params;
     const { session_id, lang } = req.query;
     let transaction = null;
     if (session_id) {
-        transaction = await Transaction.findOne({
-            $or: [
-                { stripeSessionId: session_id },
-                { _id: session_id }
-            ]
-        });
+        const isObjectId = /^[0-9a-fA-F]{24}$/.test(session_id);
+        const query = isObjectId
+            ? { $or: [{ stripeSessionId: session_id }, { _id: session_id }] }
+            : { stripeSessionId: session_id };
+        transaction = await Transaction.findOne(query);
     }
     res.render('exvent/success', { event_id, transaction, lang: lang || null });
 });
@@ -82,12 +81,11 @@ router.get('/:event_id/register/fail', async (req, res) => {
     const { session_id, errorMsg, lang } = req.query;
     let transaction = null;
     if (session_id) {
-        transaction = await Transaction.findOne({
-            $or: [
-                { stripeSessionId: session_id },
-                { _id: session_id }
-            ]
-        });
+        const isObjectId = /^[0-9a-fA-F]{24}$/.test(session_id);
+        const query = isObjectId
+            ? { $or: [{ stripeSessionId: session_id }, { _id: session_id }] }
+            : { stripeSessionId: session_id };
+        transaction = await Transaction.findOne(query);
     }
     res.render('exvent/fail', { event_id, transaction, errorMsg, lang: lang || null });
 });
