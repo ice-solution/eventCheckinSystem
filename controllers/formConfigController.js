@@ -93,6 +93,8 @@ const migrateFormConfig = (formConfig) => {
 // 預設表單配置
 exports.getDefaultFormConfig = () => ({
     defaultLanguage: 'zh',
+    registerPageEnabled: true,
+    registerClosedMessage: '',
     sections: [
         {
             sectionName: 'contact_info',
@@ -337,7 +339,7 @@ exports.getFormConfig = async (req, res) => {
 exports.updateFormConfig = async (req, res) => {
     try {
         const { eventId } = req.params;
-        const { sections, defaultLanguage } = req.body;
+        const { sections, defaultLanguage, registerPageEnabled, registerClosedMessage } = req.body;
         
         // 驗證事件是否存在
         const event = await Event.findById(eventId);
@@ -357,6 +359,12 @@ exports.updateFormConfig = async (req, res) => {
             if (defaultLanguage) {
                 formConfig.defaultLanguage = defaultLanguage;
             }
+            if (typeof registerPageEnabled === 'boolean') {
+                formConfig.registerPageEnabled = registerPageEnabled;
+            }
+            if (typeof registerClosedMessage === 'string') {
+                formConfig.registerClosedMessage = registerClosedMessage;
+            }
             await formConfig.save();
         } else {
             // 創建新配置
@@ -364,7 +372,9 @@ exports.updateFormConfig = async (req, res) => {
             formConfig = new FormConfig({
                 eventId: eventId,
                 sections: sections || defaultConfig.sections,
-                defaultLanguage: defaultLanguage || defaultConfig.defaultLanguage
+                defaultLanguage: defaultLanguage || defaultConfig.defaultLanguage,
+                registerPageEnabled: typeof registerPageEnabled === 'boolean' ? registerPageEnabled : defaultConfig.registerPageEnabled,
+                registerClosedMessage: typeof registerClosedMessage === 'string' ? registerClosedMessage : (defaultConfig.registerClosedMessage || '')
             });
             await formConfig.save();
         }

@@ -73,6 +73,28 @@
                             <!-- 語言設置 -->
                             <div class="card mb-3">
                                 <div class="card-header">
+                                    <h6>Register 版面開關 (Registration Page)</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="registerPageEnabled" 
+                                               <%= (formConfig.registerPageEnabled !== false) ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="registerPageEnabled">
+                                            開啟註冊頁面 (ON = 顯示註冊表單，OFF = 顯示關閉頁)
+                                        </label>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label">關閉時顯示的訊息 (Message when closed)</label>
+                                        <textarea class="form-control" id="registerClosedMessage" rows="4" 
+                                                  placeholder="例如：報名已截止，感謝您的關注。"><%= (formConfig.registerClosedMessage || '') %></textarea>
+                                        <small class="text-muted">當 Register 版面為 OFF 時，訪客會看到此頁面與上述文字。</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 語言設置 -->
+                            <div class="card mb-3">
+                                <div class="card-header">
                                     <h6>語言設置 (Language Settings)</h6>
                                 </div>
                                 <div class="card-body">
@@ -734,6 +756,8 @@
     // 儲存配置
     async function saveConfig() {
         try {
+            const registerPageEnabled = document.getElementById('registerPageEnabled').checked;
+            const registerClosedMessage = document.getElementById('registerClosedMessage').value || '';
             const response = await fetch('/formConfig/' + eventId + '/config', {
                 method: 'PUT',
                 headers: {
@@ -741,7 +765,9 @@
                 },
                 body: JSON.stringify({ 
                     sections: formConfig.sections,
-                    defaultLanguage: formConfig.defaultLanguage
+                    defaultLanguage: formConfig.defaultLanguage,
+                    registerPageEnabled: registerPageEnabled,
+                    registerClosedMessage: registerClosedMessage
                 })
             });
             

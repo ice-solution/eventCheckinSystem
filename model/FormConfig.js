@@ -75,6 +75,16 @@ const formConfigSchema = new mongoose.Schema({
         enum: ['zh', 'en'],
         default: 'zh' // 默認語言為中文
     },
+    // Register 版面開關：true=顯示註冊表單，false=顯示關閉頁（registerClosedMessage）
+    registerPageEnabled: {
+        type: Boolean,
+        default: true
+    },
+    // 關閉註冊時顯示的訊息（支援多行）
+    registerClosedMessage: {
+        type: String,
+        default: ''
+    },
     sections: [formSectionSchema],
     createdAt: { 
         type: Date, 

@@ -58,6 +58,15 @@ router.get('/:event_id/register', async (req, res) => {
         }
     }
     
+    // Register 版面關閉時顯示關閉頁，否則顯示註冊表單
+    if (formConfig.registerPageEnabled === false) {
+        return res.render('exvent/register_closed', {
+            event_id,
+            event,
+            message: formConfig.registerClosedMessage || 'Registration is currently closed.'
+        });
+    }
+    
     res.render('exvent/register', { event_id, paymentTickets, formConfig: formConfig });
 });
 // 路由到註冊成功頁面（session_id 可為 Stripe session_id、Wonder order_id 或 Transaction _id）
