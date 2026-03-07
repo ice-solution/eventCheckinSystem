@@ -16,7 +16,7 @@ const EVENT_FUNCTIONS = [
     { key: 'luckydrawPanel', label: 'LuckyDraw Panel', pathMatch: /^\/events\/[^/]+\/luckydraw\/panel/ },
     { key: 'luckydrawAward', label: 'LuckyDraw Award', pathMatch: /^\/events\/[^/]+\/luckydraw\/award/ },
     { key: 'luckydrawOpen', label: 'LuckyDraw Open', pathMatch: /^\/events\/[^/]+\/luckydraw$/ },
-    { key: 'luckydrawSetting', label: 'LuckyDraw Setting', pathMatch: /^\/events\/[^/]+\/luckydraw_setting/ },
+    { key: 'luckydrawSetting', label: 'LuckyDraw Setting', pathMatch: /^\/events\/[^/]+\/(luckydraw_setting|luckydraw-config)/ },
     { key: 'prizes', label: 'Prize Management', pathMatch: /^\/prizes\/[^/]+\/prizes/ },
     { key: 'votes', label: 'Vote Management', pathMatch: /^\/votes\/[^/]+\/admin/ },
     { key: 'website', label: 'Website / Register / FormConfig', pathMatch: /^\/web\/[^/]+/ },

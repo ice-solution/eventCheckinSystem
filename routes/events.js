@@ -6,6 +6,7 @@ const importController = require('../controllers/importController');
 const emailTemplateController = require("../controllers/emailTemplateController");
 const smsTemplateController = require("../controllers/smsTemplateController");
 const badgeController = require('../controllers/badgeController');
+const luckydrawGameConfigController = require('../controllers/luckydrawGameConfigController');
 
 const Event = require('../model/Event'); // 引入 Event 模型
 const multer = require('multer');
@@ -268,6 +269,10 @@ router.post('/:eventId/luckydraw_setting/upload-background', uploadBackgroundMul
 
 // 渲染 luckydraw_setting.ejs 的 GET 路由
 router.get('/:eventId/luckydraw_setting', eventsController.renderLuckydrawSetting);
+
+// Lucky Draw Game Config（後台編輯 + API 由 app.js 註冊）
+router.get('/:eventId/luckydraw-config/edit', luckydrawGameConfigController.renderConfigPage);
+router.put('/:eventId/luckydraw-config', luckydrawGameConfigController.saveConfig);
 
 // 新增的路由
 router.get('/:eventId/email/:userId', eventsController.renderEmailHtml);

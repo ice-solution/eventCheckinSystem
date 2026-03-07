@@ -1,0 +1,97 @@
+<%- include("components/header") %>
+<%- include("components/menu", { eventId: eventId }) %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+
+<div id="right-panel" class="right-panel">
+    <%- include("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title">Lucky Draw Game Config - <%= event.name %></strong>
+                            <a href="/events/<%= eventId %>/luckydraw_setting" class="btn btn-sm btn-outline-secondary float-right">LuckyDraw Setting (背景圖)</a>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">此設定供抽獎顯示頁 (Lucky Draw 前端) 使用。儲存後前端可透過 API 取得：<code>GET /events/<%= eventId %>/luckydraw-config</code></p>
+                            <div class="form-group">
+                                <label>Config (JSON)</label>
+                                <button type="button" class="btn btn-sm btn-outline-secondary ml-2" id="btnDefault">載入預設</button>
+                                <button type="button" class="btn btn-sm btn-outline-info ml-1" id="btnFormat">格式化</button>
+                                <textarea id="configJson" class="form-control font-monospace mt-2" rows="24" style="font-size: 13px;"></textarea>
+                                <script type="application/json" id="configData"><%- JSON.stringify(config) %></script>
+                                <small class="text-muted">可編輯 JSON，注意 <code>api.serverUrl</code> 與 <code>api.eventId</code> 會由 API 自動帶入，此處可留空或填預設。</small>
+                            </div>
+                            <button type="button" id="btnSave" class="btn btn-primary">儲存</button>
+                            <span id="saveStatus" class="ml-2"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include("components/footer") %>
+<script>
+(function() {
+    const configDataEl = document.getElementById('configData');
+    const defaultConfig = configDataEl ? JSON.parse(configDataEl.textContent || '{}') : {};
+    document.getElementById('configJson').value = JSON.stringify(defaultConfig, null, 2);
+
+    const eventId = '<%= eventId %>';
+
+    document.getElementById('btnDefault').addEventListener('click', function() {
+        document.getElementById('configJson').value = JSON.stringify(defaultConfig, null, 2);
+    });
+
+    document.getElementById('btnFormat').addEventListener('click', function() {
+        const ta = document.getElementById('configJson');
+        try {
+            const obj = JSON.parse(ta.value);
+            ta.value = JSON.stringify(obj, null, 2);
+            document.getElementById('saveStatus').textContent = '已格式化';
+            document.getElementById('saveStatus').className = 'ml-2 text-success';
+        } catch (e) {
+            document.getElementById('saveStatus').textContent = 'JSON 格式錯誤';
+            document.getElementById('saveStatus').className = 'ml-2 text-danger';
+        }
+    });
+
+    document.getElementById('btnSave').addEventListener('click', function() {
+        const ta = document.getElementById('configJson');
+        const status = document.getElementById('saveStatus');
+        let config;
+        try {
+            config = JSON.parse(ta.value);
+        } catch (e) {
+            status.textContent = 'JSON 格式錯誤，無法儲存';
+            status.className = 'ml-2 text-danger';
+            return;
+        }
+        status.textContent = '儲存中...';
+        status.className = 'ml-2 text-muted';
+        fetch('/events/' + eventId + '/luckydraw-config', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ config: config })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                status.textContent = '已儲存';
+                status.className = 'ml-2 text-success';
+            } else {
+                status.textContent = data.message || '儲存失敗';
+                status.className = 'ml-2 text-danger';
+            }
+        })
+        .catch(function(err) {
+            status.textContent = '儲存失敗';
+            status.className = 'ml-2 text-danger';
+        });
+    });
+})();
+</script>

@@ -23,6 +23,7 @@ const formConfigRouter = require('./routes/formConfig'); // 引入表單配置�
 const ipadApiRouter = require('./routes/ipadApi'); // iPad API (JWT)
 
 const eventsController = require('./controllers/eventsController');
+const luckydrawGameConfigController = require('./controllers/luckydrawGameConfigController');
 
 const Auth = require('./model/Auth'); // 引入 Auth 模型
 const path = require('path'); // 引入 path 模組
@@ -158,6 +159,9 @@ const emailTrackingController = require('./controllers/emailTrackingController')
 app.get('/track/email/open/:trackingId', emailTrackingController.trackEmailOpen); // 追蹤郵件打開
 app.get('/track/email/click/:trackingId', emailTrackingController.trackEmailClick); // 追蹤郵件點擊
 app.get('/track/email/stats', emailTrackingController.getEmailTrackingStats); // 獲取追蹤統計
+
+// 公開 API：Lucky Draw 前端取得 game config（不需登入）
+app.get('/events/:eventId/luckydraw-config', luckydrawGameConfigController.getConfigApi);
 
 // 設置路由
 app.use('/web', websiteRouter);
