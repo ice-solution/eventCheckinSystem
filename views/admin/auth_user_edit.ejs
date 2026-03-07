@@ -1,0 +1,110 @@
+<%- include ("components/header") %>
+<%- include ("components/menu", { eventId: '' }) %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+<div id="right-panel" class="right-panel">
+    <%- include ("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title">設定權限 - <%= user.username %></strong>
+                        </div>
+                        <div class="card-body">
+                            <form id="permissionsForm" action="/auth/users/<%= user._id %>/permissions" method="POST">
+                                <input type="hidden" name="eventPermissions" id="eventPermissionsInput" value="">
+                                <div class="form-group">
+                                    <label>可存取的活動 (Allowed Events)</label>
+                                    <p class="text-muted small">勾選該用戶可進入的活動；未勾選的活動將無法存取。</p>
+                                    <% if (!events || events.length === 0) { %>
+                                        <p class="text-warning">尚無活動，請先建立活動再設定權限。</p>
+                                    <% } else { %>
+                                    <div class="row">
+                                        <% events.forEach(ev => { %>
+                                            <div class="col-md-6 col-lg-4 mb-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input event-checkbox" type="checkbox" name="allowedEvents" value="<%= ev._id %>" id="ev_<%= ev._id %>"
+                                                        <%= (user.allowedEvents || []).some(e => e && e.toString() === ev._id.toString()) ? 'checked' : '' %>>
+                                                    <label class="form-check-label" for="ev_<%= ev._id %>"><%= ev.name %></label>
+                                                </div>
+                                            </div>
+                                        <% }); %>
+                                    </div>
+                                    <% } %>
+                                </div>
+                                <hr>
+                                <div class="form-group">
+                                    <label>各活動下可使用的功能 (Functions per Event)</label>
+                                    <p class="text-muted small">為每個已勾選的活動，再勾選該用戶可使用哪些功能。</p>
+                                    <% events.forEach(ev => { %>
+                                        <% const allowedForEvent = (user.allowedEvents || []).some(e => e && e.toString() === ev._id.toString()); %>
+                                        <% const perms = (user.eventPermissions || []).find(p => p.eventId && p.eventId.toString() === ev._id.toString()); %>
+                                        <% const funcs = perms ? (perms.functions || []) : []; %>
+                                        <div class="card mb-2 event-func-card" data-event-id="<%= ev._id %>" style="<%= allowedForEvent ? '' : 'display:none' %>">
+                                            <div class="card-header py-2">
+                                                <strong><%= ev.name %></strong>
+                                            </div>
+                                            <div class="card-body py-2">
+                                                <div class="row">
+                                                    <% eventFunctions.forEach(fn => { %>
+                                                        <div class="col-md-6 col-lg-4 col-xl-3 mb-1">
+                                                            <div class="form-check">
+                                                                <input class="form-check-input func-checkbox" type="checkbox" data-event-id="<%= ev._id %>" data-func="<%= fn.key %>" id="f_<%= ev._id %>_<%= fn.key %>"
+                                                                    <%= funcs.indexOf(fn.key) !== -1 ? 'checked' : '' %>>
+                                                                <label class="form-check-label" for="f_<%= ev._id %>_<%= fn.key %>"><%= fn.label %></label>
+                                                            </div>
+                                                        </div>
+                                                    <% }); %>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <% }); %>
+                                </div>
+                                <button type="submit" class="btn btn-primary">儲存權限</button>
+                                <a href="/auth/users" class="btn btn-secondary">返回用戶列表</a>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<%- include ("components/footer") %>
+<script>
+(function() {
+    const form = document.getElementById('permissionsForm');
+    const eventCheckboxes = document.querySelectorAll('.event-checkbox');
+    const eventCards = document.querySelectorAll('.event-func-card');
+
+    eventCheckboxes.forEach(function(cb) {
+        cb.addEventListener('change', function() {
+            const eventId = this.value;
+            const card = document.querySelector('.event-func-card[data-event-id="' + eventId + '"]');
+            if (card) card.style.display = this.checked ? '' : 'none';
+        });
+    });
+
+    form.addEventListener('submit', function(e) {
+        const allowedEvents = [];
+        document.querySelectorAll('.event-checkbox:checked').forEach(function(cb) {
+            allowedEvents.push(cb.value);
+        });
+        const eventPermissions = [];
+        document.querySelectorAll('.func-checkbox:checked').forEach(function(cb) {
+            const eventId = cb.getAttribute('data-event-id');
+            const func = cb.getAttribute('data-func');
+            if (!eventId || !func) return;
+            let ep = eventPermissions.find(function(p) { return p.eventId === eventId; });
+            if (!ep) {
+                ep = { eventId: eventId, functions: [] };
+                eventPermissions.push(ep);
+            }
+            ep.functions.push(func);
+        });
+        document.getElementById('eventPermissionsInput').value = JSON.stringify(eventPermissions);
+    });
+})();
+</script>

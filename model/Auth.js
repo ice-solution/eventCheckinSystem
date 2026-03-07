@@ -1,6 +1,11 @@
 // model/Auth.js
 const mongoose = require('mongoose');
 
+const eventPermissionSchema = new mongoose.Schema({
+    eventId: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', required: true },
+    functions: [{ type: String }] // 該 event 下可使用的功能鍵，如 rsvp, guestList, emailTemplate...
+}, { _id: false });
+
 const authSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true },
@@ -8,9 +13,13 @@ const authSchema = new mongoose.Schema({
     modified_at: { type: Date, default: Date.now },
     role: {
         type: String,
-        enum: ['admin', 'staff', 'reception', 'user'], // 限制角色的值
-        default: 'user' // 設置默認角色為 user
-    }
+        enum: ['admin', 'staff', 'reception', 'user'],
+        default: 'user'
+    },
+    // 非 admin 用戶：可存取哪些 event（ObjectId 列表）
+    allowedEvents: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Event' }],
+    // 非 admin 用戶：每個 event 下可使用哪些功能
+    eventPermissions: [eventPermissionSchema]
 });
 
 // 在保存之前加密密碼

@@ -595,8 +595,10 @@
                                 <h5>Add New User</h5>
                                 <form id="newUserForm">
                                     <% if (formConfig && formConfig.sections) { %>
-                                        <% formConfig.sections.forEach((section, sectionIndex) => { %>
+                                        <% const addFormSortedSections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                                        <% addFormSortedSections.forEach((section, sectionIndex) => { %>
                                             <% if (section.visible && section.fields) { %>
+                                                <% const addFormSortedFields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
                                                 <div class="form-section mb-4">
                                                     <h6>
                                                         <% 
@@ -614,7 +616,7 @@
                                                         <%= sectionTitle %>
                                                     </h6>
                                                     <div class="row">
-                                                        <% section.fields.forEach((field, fieldIndex) => { %>
+                                                        <% addFormSortedFields.forEach((field, fieldIndex) => { %>
                                                             <% if (field.visible) { %>
                                                                 <div class="col-md-6">
                                                                     <div class="form-group">
@@ -763,14 +765,96 @@
                                 </form>
                             </div>
 
+                            <!-- 進階搜尋 Advanced Search（可同時符合多個條件 AND）-->
+                            <div class="card mb-3 advanced-search-panel">
+                                <div class="card-body py-2">
+                                    <p class="mb-2 small text-muted">同時符合以下條件 (Show rows that match ALL conditions):</p>
+                                    <div id="advancedSearchConditionsContainer">
+                                    <div class="form-row align-items-center flex-wrap mb-2 advanced-search-condition-row" data-index="1">
+                                        <div class="col-auto">
+                                            <label class="col-form-label col-form-label-sm mb-0">條件 1</label>
+                                        </div>
+                                        <div class="col-auto">
+                                            <select class="form-control form-control-sm advancedSearchField" style="min-width: 140px;">
+                                                <option value="">-- 請選擇欄位 --</option>
+                                                <% if (formConfig && formConfig.sections) { %>
+                                                    <% const cond1Sections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                                                    <% cond1Sections.forEach(section => { %>
+                                                        <% if (section.visible && section.fields) { %>
+                                                            <% const cond1Fields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                                                            <% cond1Fields.forEach(field => { %>
+                                                                <% if (field.visible) { %>
+                                                                    <% let l1 = (typeof field.label === 'string') ? field.label : (field.label && (field.label[formConfig.defaultLanguage] || field.label.zh || field.label.en)) ? (field.label[formConfig.defaultLanguage] || field.label.zh || field.label.en) : field.fieldName; %>
+                                                                    <option value="<%= field.fieldName %>"><%= l1 %> (<%= field.fieldName %>)</option>
+                                                                <% } %>
+                                                            <% }); %>
+                                                        <% } %>
+                                                    <% }); %>
+                                                <% } else { %>
+                                                    <option value="email">Email</option>
+                                                    <option value="name">Name</option>
+                                                    <option value="company">Company</option>
+                                                    <option value="phone">Phone</option>
+                                                <% } %>
+                                            </select>
+                                        </div>
+                                        <div class="col-auto">
+                                            <input type="text" class="form-control form-control-sm advancedSearchInput" placeholder="關鍵字..." style="min-width: 160px;">
+                                        </div>
+                                        <div class="col-auto advanced-search-remove-wrap" style="display: none;"><button type="button" class="btn btn-sm btn-outline-danger advanced-search-remove">×</button></div>
+                                    </div>
+                                    <div class="form-row align-items-center flex-wrap mb-2 advanced-search-condition-row" data-index="2">
+                                        <div class="col-auto">
+                                            <label class="col-form-label col-form-label-sm mb-0">條件 2</label>
+                                        </div>
+                                        <div class="col-auto">
+                                            <select class="form-control form-control-sm advancedSearchField" style="min-width: 140px;">
+                                                <option value="">-- 請選擇欄位 --</option>
+                                                <% if (formConfig && formConfig.sections) { %>
+                                                    <% const cond2Sections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                                                    <% cond2Sections.forEach(section => { %>
+                                                        <% if (section.visible && section.fields) { %>
+                                                            <% const cond2Fields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                                                            <% cond2Fields.forEach(field => { %>
+                                                                <% if (field.visible) { %>
+                                                                    <% let l2 = (typeof field.label === 'string') ? field.label : (field.label && (field.label[formConfig.defaultLanguage] || field.label.zh || field.label.en)) ? (field.label[formConfig.defaultLanguage] || field.label.zh || field.label.en) : field.fieldName; %>
+                                                                    <option value="<%= field.fieldName %>"><%= l2 %> (<%= field.fieldName %>)</option>
+                                                                <% } %>
+                                                            <% }); %>
+                                                        <% } %>
+                                                    <% }); %>
+                                                <% } else { %>
+                                                    <option value="email">Email</option>
+                                                    <option value="name">Name</option>
+                                                    <option value="company">Company</option>
+                                                    <option value="phone">Phone</option>
+                                                <% } %>
+                                            </select>
+                                        </div>
+                                        <div class="col-auto">
+                                            <input type="text" class="form-control form-control-sm advancedSearchInput" placeholder="關鍵字..." style="min-width: 160px;">
+                                        </div>
+                                        <div class="col-auto advanced-search-remove-wrap" style="display: none;"><button type="button" class="btn btn-sm btn-outline-danger advanced-search-remove">×</button></div>
+                                    </div>
+                                    </div>
+                                    <div class="form-row align-items-center flex-wrap">
+                                        <div class="col-auto">
+                                            <button type="button" id="advancedSearchAddCondition" class="btn btn-sm btn-outline-primary mr-2"><i class="fas fa-plus"></i> 添加條件</button>
+                                            <button type="button" id="advancedSearchClear" class="btn btn-sm btn-outline-secondary">清除</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             <table id="usersTable" class="display">
                                 <thead>
                                     <tr>
                                         <th><input type="checkbox" id="selectAll" /></th>
                                         <% if (formConfig && formConfig.sections) { %>
-                                            <% formConfig.sections.forEach(section => { %>
+                                            <% const sortedSections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                                            <% sortedSections.forEach(section => { %>
                                                 <% if (section.visible && section.fields) { %>
-                                                    <% section.fields.forEach(field => { %>
+                                                    <% const sortedFields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                                                    <% sortedFields.forEach(field => { %>
                                                         <% if (field.visible) { %>
                                                             <th>
                                                                 <% 
@@ -808,9 +892,11 @@
                                         <tr class="<%= user.isCheckIn ? 'checkin-true' : 'checkin-false' %>" data-id="<%= user._id %>">
                                             <td><input type="checkbox" class="user-select" data-_id="<%= user._id %>" /></td>
                                             <% if (formConfig && formConfig.sections) { %>
-                                                <% formConfig.sections.forEach(section => { %>
+                                                <% const sortedSections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                                                <% sortedSections.forEach(section => { %>
                                                     <% if (section.visible && section.fields) { %>
-                                                        <% section.fields.forEach(field => { %>
+                                                        <% const sortedFields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                                                        <% sortedFields.forEach(field => { %>
                                                             <% if (field.visible) { %>
                                                         <td data-field-name="<%= field.fieldName %>"><%= user[field.fieldName] || '-' %></td>
                                                             <% } %>
@@ -925,7 +1011,7 @@
         
         const table = $('#usersTable').DataTable({
             pageLength: 50,
-            dom: 'frtip', // Remove buttons
+            dom: 'rtip', // no default filter - use advanced search panel
             columnDefs: [
                 {
                     targets: 0, // Select checkbox column
@@ -963,6 +1049,101 @@
                 updateBatchSendEmailButton();
                 updateBatchSendSmsButton();
             }
+        });
+
+        // --- 進階搜尋：多條件 AND（例如 姓名=John doe 且 公司=government）---
+        const searchableFieldNames = [];
+        <% if (formConfig && formConfig.sections) { %>
+            <% const jsSortedSections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+            <% jsSortedSections.forEach(section => { %>
+                <% if (section.visible && section.fields) { %>
+                    <% const jsSortedFields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                    <% jsSortedFields.forEach(field => { %>
+                        <% if (field.visible) { %>
+                            searchableFieldNames.push('<%= field.fieldName %>');
+                        <% } %>
+                    <% }); %>
+                <% } %>
+            <% }); %>
+        <% } else { %>
+            searchableFieldNames.push('email', 'name', 'company', 'phone');
+        <% } %>
+
+        // 條件陣列：{ field: 'name', term: 'john doe' }，須全部符合 (AND)
+        let advancedSearchConditions = [];
+
+        $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+            if (advancedSearchConditions.length === 0) return true;
+            const row = table.row(dataIndex).node();
+            const $row = $(row);
+            for (let i = 0; i < advancedSearchConditions.length; i++) {
+                const c = advancedSearchConditions[i];
+                if (!c.field || !c.term || c.term.trim() === '') continue;
+                const cellText = ($row.find('td[data-field-name="' + c.field + '"]').text() || '').trim().toLowerCase();
+                const term = c.term.trim().toLowerCase();
+                if (cellText.indexOf(term) === -1) return false; // 任一條件不符合則不顯示
+            }
+            return true;
+        });
+
+        function applyAdvancedSearch() {
+            advancedSearchConditions = [];
+            $('#advancedSearchConditionsContainer .advanced-search-condition-row').each(function() {
+                const field = $(this).find('.advancedSearchField').val();
+                const term = ($(this).find('.advancedSearchInput').val() || '').trim();
+                if (field && term) advancedSearchConditions.push({ field: field, term: term });
+            });
+            table.draw();
+        }
+
+        function updateRemoveButtons() {
+            const rows = $('#advancedSearchConditionsContainer .advanced-search-condition-row');
+            rows.each(function(i) {
+                const $wrap = $(this).find('.advanced-search-remove-wrap');
+                if (rows.length > 2) $wrap.show(); else $wrap.hide();
+            });
+        }
+
+        function renumberConditionLabels() {
+            $('#advancedSearchConditionsContainer .advanced-search-condition-row').each(function(i) {
+                $(this).find('label.col-form-label').text('條件 ' + (i + 1));
+                $(this).attr('data-index', i + 1);
+            });
+        }
+
+        $('#advancedSearchAddCondition').on('click', function() {
+            const $firstRow = $('#advancedSearchConditionsContainer .advanced-search-condition-row').first();
+            const $newRow = $firstRow.clone().removeAttr('data-index').addClass('advanced-search-condition-row').attr('data-index', $('#advancedSearchConditionsContainer .advanced-search-condition-row').length + 1);
+            $newRow.find('.advancedSearchField').val('');
+            $newRow.find('.advancedSearchInput').val('');
+            $newRow.find('label.col-form-label').text('條件 ' + ($('#advancedSearchConditionsContainer .advanced-search-condition-row').length + 1));
+            $('#advancedSearchConditionsContainer').append($newRow);
+            $newRow.find('.advancedSearchInput').on('keyup', function() { applyAdvancedSearch(); });
+            $newRow.find('.advancedSearchField').on('change', function() { applyAdvancedSearch(); });
+            updateRemoveButtons();
+            renumberConditionLabels();
+        });
+
+        $(document).on('click', '.advanced-search-remove', function() {
+            const $row = $(this).closest('.advanced-search-condition-row');
+            if ($('#advancedSearchConditionsContainer .advanced-search-condition-row').length <= 2) return;
+            $row.remove();
+            renumberConditionLabels();
+            updateRemoveButtons();
+            applyAdvancedSearch();
+        });
+
+        $('#advancedSearchConditionsContainer').on('keyup', '.advancedSearchInput', function() { applyAdvancedSearch(); });
+        $('#advancedSearchConditionsContainer').on('change', '.advancedSearchField', function() { applyAdvancedSearch(); });
+        $('#advancedSearchClear').on('click', function() {
+            $('#advancedSearchConditionsContainer .advanced-search-condition-row').each(function(i) {
+                $(this).find('.advancedSearchField').val('');
+                $(this).find('.advancedSearchInput').val('');
+            });
+            $('#advancedSearchConditionsContainer .advanced-search-condition-row').slice(2).remove();
+            renumberConditionLabels();
+            updateRemoveButtons();
+            applyAdvancedSearch();
         });
 
         // Select All Users button - selects all users across all pages
@@ -2155,12 +2336,14 @@
                         '<input type="checkbox" class="user-select" data-_id="' + response._id + '" />'
                     ];
                     
-                    // 根據formConfig添加字段數據
-                    const fieldNames = []; // 用於記錄欄位名稱順序
+                    // 根據formConfig添加字段數據（順序需與 table 欄位一致）
+                    const fieldNames = [];
                     <% if (formConfig && formConfig.sections) { %>
-                        <% formConfig.sections.forEach(section => { %>
+                        <% const ajaxSortedSections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                        <% ajaxSortedSections.forEach(section => { %>
                             <% if (section.visible && section.fields) { %>
-                                <% section.fields.forEach(field => { %>
+                                <% const ajaxSortedFields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                                <% ajaxSortedFields.forEach(field => { %>
                                     <% if (field.visible) { %>
                                         fieldNames.push('<%= field.fieldName %>');
                                         newRow.push(userData['<%= field.fieldName %>'] || '-');

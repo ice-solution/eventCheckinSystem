@@ -1,15 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Badge Design - <%= event.name %></title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <style>
-        body {
-            background-color: #f5f5f5;
-            padding: 20px;
-        }
+<%- include("components/header") %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+<style>
         .container-fluid {
             max-width: 1400px;
         }
@@ -83,8 +75,11 @@
             line-height: 1;
         }
     </style>
-</head>
-<body>
+<%- include("components/menu", { eventId: eventId }) %>
+<div id="right-panel" class="right-panel">
+    <%- include("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
     <div class="container-fluid">
         <div class="row mb-3">
             <div class="col-12">
@@ -173,6 +168,10 @@
             </div>
         </div>
     </div>
+        </div>
+    </div>
+</div>
+<%- include("components/footer") %>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>

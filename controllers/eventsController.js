@@ -221,12 +221,17 @@ exports.createEvent = async (req, res) => {
 // 獲取用戶的事件
 exports.getUserEvents = async (req, res) => {
     try {
-        // 檢查是否有用戶數據
         if (!req.session || !req.session.user || !req.session.user._id) {
             return res.status(401).json({ message: '未授權：請先登入' });
         }
-        
-        const events = await Event.find({ owner: req.session.user._id }); // 根據擁有者查詢事件
+        const user = req.session.user;
+        let events;
+        if (user.role === 'admin') {
+            events = await Event.find({ owner: user._id });
+        } else {
+            const allowed = (user.allowedEvents || []).filter(Boolean);
+            events = allowed.length ? await Event.find({ _id: { $in: allowed } }) : [];
+        }
         res.status(200).json(events);
     } catch (error) {
         console.error('Error fetching events:', error);
@@ -921,13 +926,18 @@ exports.renderCreateEventPage = async (req, res) => {
 // 獲取當前用戶的事件並渲染事件列表視圖
 exports.renderEventsList = async (req, res) => {
     try {
-        // 檢查是否有用戶數據
         if (!req.session || !req.session.user || !req.session.user._id) {
             return res.redirect('/login');
         }
-        
-        const events = await Event.find({ owner: req.session.user._id }); // 根據擁有者查詢事件
-        res.render('admin/events_list', { events }); // 渲染事件列表視圖
+        const user = req.session.user;
+        let events;
+        if (user.role === 'admin') {
+            events = await Event.find({ owner: user._id });
+        } else {
+            const allowed = (user.allowedEvents || []).filter(Boolean);
+            events = allowed.length ? await Event.find({ _id: { $in: allowed } }) : [];
+        }
+        res.render('admin/events_list', { events });
     } catch (error) {
         console.error('Error fetching events:', error);
         res.status(500).json({ message: 'Error fetching events' });
@@ -4271,11 +4281,19 @@ exports.renderEmailRecords = async (req, res) => {
             stats.clickRate = '0.00';
         }
 
-        res.render('admin/email_records', { 
-            event, 
+        // 取得所有出現過的 email 類型（供 filter 使用）
+        const emailTypes = [...new Set(
+            emailRecords
+                .map(r => r.emailTemplate && r.emailTemplate.type ? r.emailTemplate.type : null)
+                .filter(t => t != null)
+        )].sort();
+
+        res.render('admin/email_records', {
+            event,
             emailRecords,
             stats,
-            eventId: eventId 
+            eventId: eventId,
+            emailTypes
         });
     } catch (error) {
         console.error('Error fetching email records:', error);

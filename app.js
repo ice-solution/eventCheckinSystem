@@ -13,6 +13,8 @@ const websiteRouter = require('./routes/websites');
 const eventsRouter = require('./routes/events');
 const awardsRouter = require('./routes/awards'); // 引入新的路由
 const authRoutes = require('./routes/auth'); // 引入 auth 路由
+const permission = require('./middleware/permission'); // 權限中間件
+
 const emailTemplateRoutes = require('./routes/emailTemplate'); // 引入 emailTemplate 路由
 const prizesRouter = require('./routes/prizes'); // 引入獎品路由
 const votesRouter = require('./routes/votes'); // 引入投票路由
@@ -64,8 +66,12 @@ app.use(express.static(path.join(__dirname, 'public'))); // 提供 public 文件
 app.use((req, res, next) => {
     res.locals.success_msg = req.flash('success_msg');
     res.locals.error_msg = req.flash('error_msg');
-    // 傳遞環境變量到 EJS 模板
     res.locals.TINYMCE_API_KEY = process.env.TINYMCE_API_KEY || '';
+    if (req.session && req.session.user) {
+        res.locals.userForMenu = req.session.user; // 左側選單依權限顯示用
+    } else {
+        res.locals.userForMenu = null;
+    }
     next();
 });
 
@@ -114,7 +120,17 @@ app.post('/login', async (req, res) => {
         }
         const isMatch = await bcrypt.compare(password, user.password);
         if (isMatch) {
-            req.session.user = user; // 設置 session
+            const u = user.toObject ? user.toObject() : user;
+            req.session.user = {
+                _id: u._id,
+                username: u.username,
+                role: u.role || 'user',
+                allowedEvents: (u.allowedEvents || []).map(id => id && id.toString()),
+                eventPermissions: (u.eventPermissions || []).map(p => ({
+                    eventId: p.eventId && p.eventId.toString(),
+                    functions: p.functions || []
+                }))
+            };
             return res.status(200).send(); // 登入成功
         } else {
             return res.status(401).send(); // 密碼不正確
@@ -145,16 +161,20 @@ app.get('/track/email/stats', emailTrackingController.getEmailTrackingStats); //
 
 // 設置路由
 app.use('/web', websiteRouter);
-app.use('/events', eventsRouter);
+app.use('/events', isAuthenticated, permission.refreshUserPermissions, (req, res, next) => {
+    const m = req.path.match(/^\/([a-f0-9]{24})(\/|$)/);
+    if (m) req._eventIdFromPath = m[1];
+    next();
+}, permission.requireEventPermission, eventsRouter);
 app.use('/users',isAuthenticated, usersRouter);
 app.use('/awards', awardsRouter);
-app.use('/auth', authRoutes); // 使用 auth 路由
+app.use('/auth', isAuthenticated, permission.refreshUserPermissions, authRoutes); // 需要登入
 app.use('/emailTemplate', emailTemplateRoutes); // 使用 emailTemplate 路由
-app.use('/prizes', prizesRouter); // 使用獎品路由
+app.use('/prizes', isAuthenticated, permission.refreshUserPermissions, permission.requirePrizesPermission, prizesRouter); // 使用獎品路由
 app.use('/votes', votesRouter); // 使用投票路由
 app.use('/api/game', gamesRouter); // 使用遊戲API路由
 app.use('/api/ipad', ipadApiRouter); // iPad API
-app.use('/formConfig', isAuthenticated, formConfigRouter); // 使用表單配置路由（需要認證）
+app.use('/formConfig', isAuthenticated, permission.refreshUserPermissions, permission.requireFormConfigPermission, formConfigRouter); // 使用表單配置路由（需要認證）
 
 app.get('/demo_website',async function (req, res){
     try {

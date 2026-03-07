@@ -1,0 +1,36 @@
+<%- include ("components/header") %>
+<%- include ("components/menu", { eventId: '' }) %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+<div id="right-panel" class="right-panel">
+    <%- include ("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title">添加用戶 (Add User)</strong>
+                        </div>
+                        <div class="card-body">
+                            <form action="/auth/users/add" method="POST" class="form-horizontal">
+                                <div class="form-group">
+                                    <label for="username">帳號 (Username)</label>
+                                    <input type="text" class="form-control" id="username" name="username" required placeholder="不可使用 admin">
+                                </div>
+                                <div class="form-group">
+                                    <label for="password">密碼 (Password)</label>
+                                    <input type="password" class="form-control" id="password" name="password" required>
+                                </div>
+                                <p class="text-muted">新增後請至「設定權限」為該用戶勾選可存取的活動與功能。</p>
+                                <button type="submit" class="btn btn-primary">建立用戶</button>
+                                <a href="/auth/users" class="btn btn-secondary">取消</a>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<%- include ("components/footer") %>

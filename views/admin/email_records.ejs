@@ -145,6 +145,22 @@
                                 </div>
                             </div>
 
+                            <!-- Filter by Email Type -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label class="mr-2">篩選郵件類型 (Filter by type):</label>
+                                    <select id="filterEmailType" class="form-control form-control-sm d-inline-block" style="width: auto;">
+                                        <option value="">全部 (All)</option>
+                                        <% if (typeof emailTypes !== 'undefined' && emailTypes.length) { %>
+                                            <% emailTypes.forEach(function(type) { %>
+                                                <option value="<%= type %>"><%= type %></option>
+                                            <% }); %>
+                                        <% } %>
+                                        <option value="__none__">未分類 (No type)</option>
+                                    </select>
+                                </div>
+                            </div>
+
                             <!-- Email Records Table -->
                             <table id="emailRecordsTable" class="table table-striped table-bordered">
                                 <thead>
@@ -284,16 +300,29 @@
 <script>
     $(document).ready(function() {
         console.log('Email Records page script loaded');
-        
+
         const table = $('#emailRecordsTable').DataTable({
             pageLength: 50,
             order: [[0, 'desc']], // Sort by send time descending
             drawCallback: function() {
-                // Ensure buttons are clickable after table redraw
                 console.log('Table redrawn, button count:', $('.view-email-details').length);
             }
         });
-        
+
+        var filterEmailType = '';
+        $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+            if (!filterEmailType) return true;
+            var row = table.row(dataIndex).node();
+            var cellText = $(row).find('td:eq(3)').text().trim();  // Email Type 為第 4 欄 (index 3)
+            if (filterEmailType === '__none__') return !cellText || cellText === '-';
+            return cellText === filterEmailType;
+        });
+
+        $('#filterEmailType').on('change', function() {
+            filterEmailType = $(this).val();
+            table.draw();
+        });
+
         console.log('DataTable initialized, total buttons:', $('.view-email-details').length);
         
         // Test button click - verify buttons exist

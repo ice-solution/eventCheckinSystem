@@ -1,0 +1,52 @@
+<%- include ("components/header") %>
+<%- include ("components/menu", { eventId: '' }) %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+<div id="right-panel" class="right-panel">
+    <%- include ("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title">用戶登入管理 (User Login Management)</strong>
+                            <a href="/auth/users/add" class="btn btn-sm btn-primary float-right"><i class="fa fa-plus"></i> 添加用戶</a>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">Admin 為系統唯一最高權限帳號，僅能透過 server 建立。以下為一般用戶，可設定可存取的活動與功能。</p>
+                            <table class="table table-bordered table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>帳號 (Username)</th>
+                                        <th>角色</th>
+                                        <th>可存取活動數</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (users && users.length) { %>
+                                        <% users.forEach(u => { %>
+                                            <tr>
+                                                <td><%= u.username %></td>
+                                                <td><%= u.role || 'user' %></td>
+                                                <td><%= (u.allowedEvents && u.allowedEvents.length) || 0 %></td>
+                                                <td>
+                                                    <a href="/auth/users/<%= u._id %>/edit" class="btn btn-sm btn-info">設定權限</a>
+                                                </td>
+                                            </tr>
+                                        <% }); %>
+                                    <% } else { %>
+                                        <tr><td colspan="4" class="text-center">尚無其他用戶</td></tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                            <a href="/events/list" class="btn btn-secondary">返回活動列表</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<%- include ("components/footer") %>
