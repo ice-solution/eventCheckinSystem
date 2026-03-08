@@ -227,7 +227,7 @@ exports.getUserEvents = async (req, res) => {
         const user = req.session.user;
         let events;
         if (user.role === 'admin') {
-            events = await Event.find({ owner: user._id });
+            events = await Event.find({}).sort({ created_at: -1 });
         } else {
             const allowed = (user.allowedEvents || []).filter(Boolean);
             events = allowed.length ? await Event.find({ _id: { $in: allowed } }) : [];
@@ -932,7 +932,7 @@ exports.renderEventsList = async (req, res) => {
         const user = req.session.user;
         let events;
         if (user.role === 'admin') {
-            events = await Event.find({ owner: user._id });
+            events = await Event.find({}).sort({ created_at: -1 });
         } else {
             const allowed = (user.allowedEvents || []).filter(Boolean);
             events = allowed.length ? await Event.find({ _id: { $in: allowed } }) : [];
