@@ -267,6 +267,7 @@ router.post('/:eventId/luckydraw/batch', eventsController.batchDrawWinners);
 router.get('/:eventId/luckydraw/list', eventsController.renderAdminLuckydrawPage); // 使用控制器函數
 // 匯出中獎者列表為 Excel
 router.get('/:eventId/luckydraw/list/export', eventsController.exportLuckydrawList);
+router.patch('/:eventId/luckydraw/list-columns', eventsController.updateLuckydrawListColumns);
 
 // 添加路由以顯示 QR 碼登錄頁面
 router.get('/:eventId/qrcodeLogin', eventsController.renderQRCodeLoginPage); // 使用控制器函數

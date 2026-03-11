@@ -85,6 +85,8 @@ const eventSchema = new mongoose.Schema({
     points: [pointSchema],
     winners: [winnerSchema], // 新增 winners 字段
     maxLuckydrawOrder: { type: Number, default: 0 }, // 追蹤最大的中獎編號（即使刪除也不會減少，確保唯一性）
+    /** Luckydraw List / Award / Export 要顯示的來賓欄位（FormConfig fieldName）；空則用預設 name, company, table */
+    luckydrawListFieldNames: [{ type: String }],
     isPaymentEvent: { type: Boolean, default: false }, // 是否為付費活動
     PaymentTickets: [ticketSchema], // 票券陣列
     gameIds: [{ type: String }], // 新增 gameIds 陣列，存儲該事件開放的遊戲ID

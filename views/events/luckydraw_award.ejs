@@ -86,6 +86,36 @@
       list-style: none;
     }
 
+    .award-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9375rem;
+    }
+    .award-table th,
+    .award-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+    .award-table th {
+      background: #f1f5f9;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 0.8125rem;
+    }
+    .award-table tbody tr:hover {
+      background: #f8fafc;
+    }
+    .award-table .order {
+      font-weight: 700;
+      color: var(--accent);
+      width: 3rem;
+      text-align: center;
+    }
+    .award-table .prize {
+      font-weight: 600;
+      color: var(--gold);
+    }
     .list-item {
       display: grid;
       grid-template-columns: 3rem 1fr 1fr 1fr minmax(140px, 2fr);
@@ -201,24 +231,35 @@
     <section class="card">
       <h2 class="section-label">中獎列表</h2>
       <% if (winners && winners.length > 0) { %>
-        <ul class="list">
-          <li class="list-item list-header">
-            <span class="order">序號</span>
-            <span class="name">姓名</span>
-            <span class="company">公司</span>
-            <span class="table">桌號</span>
-            <span class="prize">獎品</span>
-          </li>
-          <% winners.forEach(function(winner) { %>
-            <li class="list-item">
-              <span class="order"><%= winner.order || '–' %></span>
-              <span class="name"><%= winner.name || '–' %></span>
-              <span class="company"><%= winner.company || '–' %></span>
-              <span class="table"><%= winner.table ? '桌 ' + winner.table : '–' %></span>
-              <span class="prize" title="<%= winner.prizeName || '' %>"><%= winner.prizeName || '–' %></span>
-            </li>
-          <% }); %>
-        </ul>
+        <% var colDefsAward = typeof columnDefs !== 'undefined' && columnDefs.length ? columnDefs : [{fieldName:'name',label:'姓名'},{fieldName:'company',label:'公司'},{fieldName:'table',label:'桌號'}]; %>
+        <table class="award-table">
+          <thead>
+            <tr>
+              <th class="order">序號</th>
+              <% colDefsAward.forEach(function(c) { %>
+                <th><%= c.label %></th>
+              <% }); %>
+              <th class="prize">獎品</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% winners.forEach(function(winner) { %>
+              <tr>
+                <td class="order"><%= winner.order || '–' %></td>
+                <% if (winner.cells && winner.cells.length) { %>
+                  <% winner.cells.forEach(function(cell) { %>
+                    <td><%= cell.value %></td>
+                  <% }); %>
+                <% } else { %>
+                  <td><%= winner.name || '–' %></td>
+                  <td><%= winner.company || '–' %></td>
+                  <td><%= winner.table ? '桌 ' + winner.table : '–' %></td>
+                <% } %>
+                <td class="prize" title="<%= winner.prizeName || '' %>"><%= winner.prizeName || '–' %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
       <% } else { %>
         <div class="empty-state">
           <p>暫無中獎記錄</p>

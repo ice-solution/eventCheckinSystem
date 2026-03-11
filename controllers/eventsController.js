@@ -3412,6 +3412,66 @@ exports.scanTreasureHuntQRCode = async (req, res) => {
     }
 };
 
+/** 從 FormConfig 收集可選欄位（fieldName + 顯示標籤） */
+function collectFormConfigFields(formConfig) {
+    const out = [];
+    if (!formConfig || !Array.isArray(formConfig.sections)) return out;
+    const seen = new Set();
+    for (const sec of formConfig.sections) {
+        if (!sec || !sec.fields || sec.visible === false) continue;
+        for (const f of sec.fields) {
+            if (!f || f.visible === false || !f.fieldName) continue;
+            if (seen.has(f.fieldName)) continue;
+            seen.add(f.fieldName);
+            const label = (f.label && f.label.zh) || (f.label && f.label.en) || f.fieldName;
+            out.push({ fieldName: f.fieldName, label });
+        }
+    }
+    return out;
+}
+
+/** 依 winner._id 在 event.users 找完整 user（含 FormConfig 動態欄位） */
+function findEventUserByWinnerId(event, winnerId) {
+    const id = winnerId && winnerId.toString();
+    if (!id || !event.users || !event.users.length) return null;
+    return event.users.find(u => u && u._id && u._id.toString() === id) || null;
+}
+
+/** 取值：優先 user，再 winner；陣列轉字串 */
+function getWinnerFieldValue(winner, user, fieldName) {
+    const u = user && typeof user.toObject === 'function' ? user.toObject() : user;
+    const w = winner && typeof winner.toObject === 'function' ? winner.toObject() : winner;
+    let v = u && u[fieldName];
+    if (v == null || v === '') v = w && w[fieldName];
+    if (v == null || v === '') return '–';
+    if (Array.isArray(v)) return v.join(', ');
+    if (typeof v === 'object') return JSON.stringify(v);
+    return String(v);
+}
+
+const DEFAULT_LUCKYDRAW_LIST_FIELDS = ['name', 'company', 'table'];
+
+/** 組裝 List/Award/Export 用：欄位定義 + 每列儲存格 */
+function buildLuckydrawListRows(event, fieldNames) {
+    const names = Array.isArray(fieldNames) && fieldNames.length > 0 ? fieldNames : DEFAULT_LUCKYDRAW_LIST_FIELDS;
+    const columnDefs = names.map(fieldName => ({ fieldName, label: fieldName }));
+    const rows = (event.winners || []).map(winner => {
+        const user = findEventUserByWinnerId(event, winner._id);
+        const cells = names.map(fieldName => ({
+            fieldName,
+            value: getWinnerFieldValue(winner, user, fieldName)
+        }));
+        return {
+            order: winner.order || 0,
+            _id: winner._id,
+            prizeName: winner.prizeName || '–',
+            wonAt: winner.wonAt,
+            cells
+        };
+    });
+    return { columnDefs, rows };
+}
+
 // 渲染管理中獎者頁面
 exports.renderAdminLuckydrawPage = async (req, res) => {
     const { eventId } = req.params; // 獲取 eventId
@@ -3421,29 +3481,63 @@ exports.renderAdminLuckydrawPage = async (req, res) => {
             return res.status(404).send('Event not found.');
         }
 
-        // 獲取中獎者列表，使用實際的中獎編號（order）
-        const winners = event.winners.map((winner) => ({
-            order: winner.order || 0, // 使用數據庫中存儲的中獎編號
-            _id: winner._id,
-            name: winner.name,
-            company: winner.company,
-            table: winner.table,
-            prizeName: winner.prizeName,
-            wonAt: winner.wonAt
+        const FormConfig = require('../model/FormConfig');
+        let formConfig = await FormConfig.findOne({ eventId });
+        const formFieldOptions = collectFormConfigFields(formConfig);
+
+        const savedFieldNames = Array.isArray(event.luckydrawListFieldNames) ? event.luckydrawListFieldNames : [];
+        const fieldNames = savedFieldNames.length > 0 ? savedFieldNames : DEFAULT_LUCKYDRAW_LIST_FIELDS;
+        // 若已存的是舊預設且 formConfig 有其他欄位，仍用已存順序；column label 從 formFieldOptions 補上
+        const labelByName = {};
+        formFieldOptions.forEach(o => { labelByName[o.fieldName] = o.label; });
+        DEFAULT_LUCKYDRAW_LIST_FIELDS.forEach(f => {
+            if (!labelByName[f]) {
+                if (f === 'name') labelByName[f] = '姓名';
+                else if (f === 'company') labelByName[f] = '公司';
+                else if (f === 'table') labelByName[f] = '桌號';
+                else labelByName[f] = f;
+            }
+        });
+        const { rows } = buildLuckydrawListRows(event, fieldNames);
+        const columnDefs = fieldNames.map(fieldName => ({
+            fieldName,
+            label: labelByName[fieldName] || fieldName
         }));
 
-        // 添加調試日誌
-        console.log('Winners data:', winners);
-
-        // 渲染 admin/luckydraw.ejs 頁面，並傳遞中獎者與目前 Winner No 計數（供重置按鈕顯示）
         res.render('admin/luckydraw', {
-            winners,
+            winners: rows,
             eventId,
-            maxLuckydrawOrder: event.maxLuckydrawOrder || 0
+            maxLuckydrawOrder: event.maxLuckydrawOrder || 0,
+            formFieldOptions,
+            luckydrawListFieldNames: fieldNames,
+            columnDefs
         });
     } catch (error) {
         console.error('Error rendering admin luckydraw page:', error);
         res.status(500).send('Error rendering admin luckydraw page.');
+    }
+};
+
+/** PATCH 儲存 Luckydraw List/Award 要顯示的 FormConfig 欄位 */
+exports.updateLuckydrawListColumns = async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        const { fieldNames } = req.body || {};
+        if (!Array.isArray(fieldNames)) {
+            return res.status(400).json({ message: 'fieldNames must be an array' });
+        }
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).json({ message: 'Event not found.' });
+        const cleaned = fieldNames.map(f => String(f).trim()).filter(Boolean);
+        if (cleaned.length === 0) {
+            return res.status(400).json({ message: 'At least one field is required' });
+        }
+        event.luckydrawListFieldNames = cleaned;
+        await event.save();
+        res.status(200).json({ message: 'Updated', luckydrawListFieldNames: cleaned });
+    } catch (error) {
+        console.error('updateLuckydrawListColumns error:', error);
+        res.status(500).json({ message: 'Error saving columns' });
     }
 };
 
@@ -3455,16 +3549,33 @@ exports.renderLuckydrawAwardPage = async (req, res) => {
         if (!event) {
             return res.status(404).send('Event not found.');
         }
-        const winners = (event.winners || []).map((winner) => ({
-            order: winner.order || 0,
-            _id: winner._id,
-            name: winner.name,
-            company: winner.company,
-            table: winner.table,
-            prizeName: winner.prizeName,
-            wonAt: winner.wonAt
-        })).sort((a, b) => (a.order || 0) - (b.order || 0));
-        res.render('events/luckydraw_award', { eventId, eventName: event.name || 'Lucky Draw', winners });
+        const savedFieldNames = Array.isArray(event.luckydrawListFieldNames) ? event.luckydrawListFieldNames : [];
+        const fieldNames = savedFieldNames.length > 0 ? savedFieldNames : DEFAULT_LUCKYDRAW_LIST_FIELDS;
+        const FormConfig = require('../model/FormConfig');
+        const formConfig = await FormConfig.findOne({ eventId });
+        const formFieldOptions = collectFormConfigFields(formConfig);
+        const labelByName = {};
+        formFieldOptions.forEach(o => { labelByName[o.fieldName] = o.label; });
+        DEFAULT_LUCKYDRAW_LIST_FIELDS.forEach(f => {
+            if (!labelByName[f]) {
+                if (f === 'name') labelByName[f] = '姓名';
+                else if (f === 'company') labelByName[f] = '公司';
+                else if (f === 'table') labelByName[f] = '桌號';
+                else labelByName[f] = f;
+            }
+        });
+        const { rows } = buildLuckydrawListRows(event, fieldNames);
+        const columnDefs = fieldNames.map(fieldName => ({
+            fieldName,
+            label: labelByName[fieldName] || fieldName
+        }));
+        const winners = rows.sort((a, b) => (a.order || 0) - (b.order || 0));
+        res.render('events/luckydraw_award', {
+            eventId,
+            eventName: event.name || 'Lucky Draw',
+            winners,
+            columnDefs
+        });
     } catch (error) {
         console.error('Error rendering luckydraw award page:', error);
         res.status(500).send('Error loading award list.');
@@ -3480,27 +3591,40 @@ exports.exportLuckydrawList = async (req, res) => {
             return res.status(404).send('Event not found.');
         }
 
-        const winners = event.winners || [];
+        const savedFieldNames = Array.isArray(event.luckydrawListFieldNames) ? event.luckydrawListFieldNames : [];
+        const fieldNames = savedFieldNames.length > 0 ? savedFieldNames : DEFAULT_LUCKYDRAW_LIST_FIELDS;
+        const FormConfig = require('../model/FormConfig');
+        const formConfig = await FormConfig.findOne({ eventId });
+        const formFieldOptions = collectFormConfigFields(formConfig);
+        const labelByName = {};
+        formFieldOptions.forEach(o => { labelByName[o.fieldName] = o.label; });
+        DEFAULT_LUCKYDRAW_LIST_FIELDS.forEach(f => {
+            if (!labelByName[f]) {
+                if (f === 'name') labelByName[f] = '姓名';
+                else if (f === 'company') labelByName[f] = '公司';
+                else if (f === 'table') labelByName[f] = '桌號';
+                else labelByName[f] = f;
+            }
+        });
+        const { rows } = buildLuckydrawListRows(event, fieldNames);
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('中獎者列表');
-        
-        worksheet.columns = [
-            { header: '次序', key: 'order', width: 10 },
-            { header: '姓名', key: 'name', width: 20 },
-            { header: '公司', key: 'company', width: 25 },
-            { header: '桌號', key: 'table', width: 10 },
+
+        const headers = [{ header: '次序', key: 'order', width: 10 }];
+        fieldNames.forEach(fn => {
+            headers.push({ header: labelByName[fn] || fn, key: 'f_' + fn, width: 18 });
+        });
+        headers.push(
             { header: '獎品', key: 'prizeName', width: 25 },
             { header: '中獎時間', key: 'wonAt', width: 20 }
-        ];
+        );
+        worksheet.columns = headers;
 
-        winners.forEach((winner, index) => {
-            worksheet.addRow({
-                order: index + 1,
-                name: winner.name || '',
-                company: winner.company || '',
-                table: winner.table || '',
-                prizeName: winner.prizeName || '',
-                wonAt: winner.wonAt ? new Date(winner.wonAt).toLocaleString('zh-TW', {
+        rows.forEach((row) => {
+            const obj = {
+                order: row.order,
+                prizeName: row.prizeName || '',
+                wonAt: row.wonAt ? new Date(row.wonAt).toLocaleString('zh-TW', {
                     year: 'numeric',
                     month: '2-digit',
                     day: '2-digit',
@@ -3509,7 +3633,12 @@ exports.exportLuckydrawList = async (req, res) => {
                     second: '2-digit',
                     hour12: false
                 }) : ''
+            };
+            (row.cells || []).forEach(c => {
+                const v = c.value === '–' ? '' : c.value;
+                obj['f_' + c.fieldName] = v;
             });
+            worksheet.addRow(obj);
         });
 
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');

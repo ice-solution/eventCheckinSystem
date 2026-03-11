@@ -14,6 +14,7 @@ const EVENT_FUNCTIONS = [
     { key: 'scanPointUsers', label: 'Scan Point Management', pathMatch: /^\/events\/[^/]+\/scan-point-users/ },
     { key: 'treasureHunt', label: 'Treasure Hunt', pathMatch: /^\/events\/[^/]+\/treasure-hunt/ },
     { key: 'luckydrawList', label: 'Luckydraw List', pathMatch: /^\/events\/[^/]+\/luckydraw\/list/ },
+    { key: 'luckydrawList', label: 'Luckydraw List Columns', pathMatch: /^\/events\/[^/]+\/luckydraw\/list-columns/ },
     { key: 'luckydrawPanel', label: 'LuckyDraw Panel', pathMatch: /^\/events\/[^/]+\/luckydraw\/panel/ },
     { key: 'luckydrawAward', label: 'LuckyDraw Award', pathMatch: /^\/events\/[^/]+\/luckydraw\/award/ },
     { key: 'luckydrawOpen', label: 'LuckyDraw Open', pathMatch: /^\/events\/[^/]+\/luckydraw$/ },

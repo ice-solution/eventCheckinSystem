@@ -61,31 +61,68 @@
                                     · Reset 後會改為「名單中最大 Winner No + 1」
                                 </div>
                             </div>
+                            <% 
+                              const colDefs = typeof columnDefs !== 'undefined' && columnDefs.length ? columnDefs : [];
+                              const fieldOpts = typeof formFieldOptions !== 'undefined' ? formFieldOptions : [];
+                              const selectedFields = typeof luckydrawListFieldNames !== 'undefined' ? luckydrawListFieldNames : ['name','company','table'];
+                              function winnerDisplayName(w) {
+                                if (!w || !w.cells) return (w && w.name) || 'Winner';
+                                const nameCell = w.cells.find(function(c){ return c.fieldName === 'name'; });
+                                return (nameCell && nameCell.value && nameCell.value !== '–') ? nameCell.value : ('#' + (w.order || ''));
+                              }
+                            %>
+                            <div class="card mb-3 border-info">
+                                <div class="card-header py-2"><strong>顯示欄位（FormConfig）</strong> — 勾選要在 List / Award / Export 顯示的來賓欄位，儲存後重新整理 Award 頁即可同步。</div>
+                                <div class="card-body py-2">
+                                    <% if (fieldOpts.length === 0) { %>
+                                        <p class="text-muted mb-0 small">尚未載入 FormConfig 欄位，請先到 Registration Page Config 設定表單。目前使用預設：姓名、公司、桌號。</p>
+                                    <% } else { %>
+                                        <div class="d-flex flex-wrap align-items-center">
+                                            <% fieldOpts.forEach(function(opt) { %>
+                                                <label class="mr-3 mb-1" style="cursor:pointer;">
+                                                    <input type="checkbox" class="luckydraw-field-cb" value="<%= opt.fieldName %>" <%= selectedFields.indexOf(opt.fieldName) >= 0 ? 'checked' : '' %>>
+                                                    <%= opt.label %> <small class="text-muted">(<%= opt.fieldName %>)</small>
+                                                </label>
+                                            <% }); %>
+                                        </div>
+                                        <button type="button" id="btn-save-luckydraw-columns" class="btn btn-sm btn-primary mt-2">儲存欄位設定</button>
+                                        <span id="luckydraw-columns-msg" class="ml-2 small text-success" style="display:none;">已儲存，請重新整理本頁以更新表格。</span>
+                                    <% } %>
+                                </div>
+                            </div>
                             <table id="winners-table" class="table table-bordered">
                                 <thead>
                                     <tr>
                                         <th>Winner No.</th>
-                                        <th>Name</th>
-                                        <th>Company</th>
-                                        <th>Table</th>
+                                        <% colDefs.forEach(function(c) { %>
+                                            <th><%= c.label %></th>
+                                        <% }); %>
                                         <th>Prize</th>
                                         <th>Won At</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <% winners.forEach(winner => { %>
+                                    <% winners.forEach(function(winner) { 
+                                         const displayName = winnerDisplayName(winner);
+                                    %>
                                         <tr data-winner-id="<%= winner._id %>">
                                             <td><%= winner.order %></td>
-                                            <td><%= winner.name %></td>
-                                            <td><%= winner.company || '-' %></td>
-                                            <td><%= winner.table || '-' %></td>
+                                            <% if (winner.cells && winner.cells.length) { %>
+                                                <% winner.cells.forEach(function(cell) { %>
+                                                    <td><%= cell.value %></td>
+                                                <% }); %>
+                                            <% } else { %>
+                                                <td><%= winner.name || '–' %></td>
+                                                <td><%= winner.company || '–' %></td>
+                                                <td><%= winner.table || '–' %></td>
+                                            <% } %>
                                             <td><%= winner.prizeName || 'Random prize' %></td>
                                             <td><%= winner.wonAt ? new Date(winner.wonAt).toLocaleString('en-US', { timeZone: 'Asia/Taipei' }) : 'N/A' %></td>
                                             <td>
                                                 <button class="btn btn-danger btn-sm delete-winner" 
                                                         data-winner-id="<%= winner._id %>"
-                                                        data-winner-name="<%= winner.name %>">
+                                                        data-winner-name="<%= String(displayName).replace(/"/g, '&quot;') %>">
                                                     <i class="fa fa-trash"></i> Delete
                                                 </button>
                                             </td>
@@ -116,6 +153,34 @@
         // 移除 DataTable 排序功能，只顯示表格
         // $('#winners-table').DataTable(); // 已禁用排序功能
         
+        // 儲存 Luckydraw 顯示欄位
+        $('#btn-save-luckydraw-columns').on('click', function() {
+            const fieldNames = [];
+            $('.luckydraw-field-cb:checked').each(function() { fieldNames.push($(this).val()); });
+            if (fieldNames.length === 0) {
+                alert('請至少勾選一個欄位');
+                return;
+            }
+            const btn = $(this);
+            btn.prop('disabled', true);
+            $.ajax({
+                url: '/events/' + eventId + '/luckydraw/list-columns',
+                type: 'PATCH',
+                contentType: 'application/json',
+                data: JSON.stringify({ fieldNames: fieldNames }),
+                success: function() {
+                    $('#luckydraw-columns-msg').show();
+                    setTimeout(function() { location.reload(); }, 800);
+                },
+                error: function(xhr) {
+                    let msg = '儲存失敗';
+                    try { var j = JSON.parse(xhr.responseText); if (j.message) msg = j.message; } catch(e) {}
+                    alert(msg);
+                },
+                complete: function() { btn.prop('disabled', false); }
+            });
+        });
+
         // 處理刪除中獎者
         $(document).on('click', '.delete-winner', function() {
             const winnerId = $(this).data('winner-id');
