@@ -81,6 +81,10 @@ router.get('/list', eventsController.renderEventsList);
 
 router.get('/:eventId/users/data', eventsController.fetchUsersByEvent);
 router.get('/:eventId', eventsController.getEventUsersByEventID);
+// 編輯活動名稱（需放在 /:eventId 明細路由之前，避免被當成 user 路由）
+router.get('/:eventId/edit-name', eventsController.renderEditEventNamePage);
+router.patch('/:eventId/name', eventsController.updateEventName);
+
 router.get('/:eventId/luckydraw', eventsController.renderLuckydrawPage); // 使用控制器函數
 router.get('/:eventId/luckydraw/panel', eventsController.renderLuckydrawPanelPage); // iPad 抽獎控制面板
 router.get('/:eventId/luckydraw/award', eventsController.renderLuckydrawAwardPage); // 外部顯示中獎名單
@@ -249,6 +253,9 @@ router.delete('/:eventId/luckydraw', eventsController.removeLuckydrawUser); // �
 
 // 刪除所有中獎記錄
 router.delete('/:eventId/luckydraw/all', eventsController.removeAllLuckydrawUsers); // 使用控制器函數
+
+// 重置 Winner No：依目前剩餘 winners 的最大 order 重設，下一筆可接續或填補缺號
+router.post('/:eventId/luckydraw/reset-winner-order', eventsController.resetLuckydrawWinnerOrder);
 
 // 新增中獎者
 router.post('/:eventId/luckydraw', eventsController.addLuckydrawUser); // 使用控制器函數

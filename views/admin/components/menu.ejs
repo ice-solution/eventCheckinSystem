@@ -22,6 +22,9 @@
 
                 <% if (eventId && canAccessThisEvent) { %>
                 <li class="menu-title">Event Items</li>
+                <li>
+                    <a href="/events/<%=eventId%>/edit-name"> <i class="menu-icon fa fa-edit"></i>Edit Event Name</a>
+                </li>
                 <% if (can('rsvp')) { %>
                 <li>
                     <a href="/events/<%=eventId%>"> <i class="menu-icon fa fa-clipboard-list"></i>RSVP </a>

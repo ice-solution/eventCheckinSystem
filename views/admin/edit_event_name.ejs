@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Event Name</title>
+    <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+    <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
+    <link rel="stylesheet" href="/admin/assets/css/style.css">
+</head>
+<body>
+<%- include("components/header") %>
+<%- include("components/menu", { eventId: eventId }) %>
+
+<div id="right-panel" class="right-panel">
+    <%- include("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title">編輯活動名稱</strong>
+                        </div>
+                        <div class="card-body">
+                            <form id="editEventNameForm">
+                                <div class="form-group">
+                                    <label for="name">Event Name</label>
+                                    <input type="text" class="form-control" id="name" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">儲存</button>
+                                <a href="/events/list" class="btn btn-secondary">返回活動列表</a>
+                            </form>
+                            <div id="alertContainer" class="mt-3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include("components/footer") %>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    const eventId = '<%= eventId %>';
+    const initialName = <%- JSON.stringify(typeof eventName !== 'undefined' ? eventName : '') %>;
+    $(function() {
+        $('#name').val(initialName);
+        $('#editEventNameForm').on('submit', function(e) {
+            e.preventDefault();
+            const name = $('#name').val().trim();
+            if (!name) {
+                alert('請輸入活動名稱');
+                return;
+            }
+            const btn = $(this).find('button[type="submit"]');
+            btn.prop('disabled', true).text('儲存中...');
+            $.ajax({
+                url: '/events/' + eventId + '/name',
+                type: 'PATCH',
+                contentType: 'application/json',
+                data: JSON.stringify({ name: name }),
+                success: function() {
+                    $('#alertContainer').html(
+                        '<div class="alert alert-success">已更新活動名稱。</div>'
+                    );
+                    document.title = name + ' - Edit';
+                },
+                error: function(xhr) {
+                    let msg = '更新失敗';
+                    try {
+                        const j = JSON.parse(xhr.responseText);
+                        if (j.message) msg = j.message;
+                    } catch (_) {}
+                    $('#alertContainer').html(
+                        '<div class="alert alert-danger">' + msg + '</div>'
+                    );
+                },
+                complete: function() {
+                    btn.prop('disabled', false).text('儲存');
+                }
+            });
+        });
+    });
+</script>
+</body>
+</html>

@@ -125,6 +125,8 @@
                             <button id="btn-draw-once" class="btn btn-primary btn-block mb-2">Draw 1</button>
                             <button id="btn-draw-multi" class="btn btn-success btn-block mb-2">Draw (by count above)</button>
                             <button id="btn-cancel-last" class="btn btn-warning btn-block mb-2">Cancel Last Winner</button>
+                            <button id="btn-reset-winner-order" type="button" class="btn btn-outline-secondary btn-block mb-2">Reset Winner No</button>
+                            <small class="text-muted d-block">重置後下一個號碼 = 目前名單中最大號碼 + 1（例如刪除了第 4 號後重置，下一抽會是 4）</small>
                         </div>
 
                         <hr>
@@ -600,6 +602,28 @@
         } catch (err) {
             console.error(err);
             alert('Error cancelling winner');
+        }
+    });
+
+    document.getElementById('btn-reset-winner-order').addEventListener('click', async () => {
+        if (!confirm('將 Winner No 計數重置為「目前名單中的最大號碼」。下一筆抽獎會從該號碼 + 1 開始（可填補已刪除的號碼）。確定？')) {
+            return;
+        }
+        try {
+            const res = await fetch(`/events/${eventId}/luckydraw/reset-winner-order`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert('Reset failed: ' + (data.message || res.statusText));
+                return;
+            }
+            showControllerToast(`已重置：下一個 Winner No = ${data.nextWinnerOrder}`, 'success');
+            alert(`已重置。\n目前最大號碼：${data.maxLuckydrawOrder}\n下一筆將使用號碼：${data.nextWinnerOrder}`);
+        } catch (err) {
+            console.error(err);
+            alert('Error resetting winner order');
         }
     });
 

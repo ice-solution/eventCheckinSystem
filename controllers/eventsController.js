@@ -923,6 +923,60 @@ exports.renderCreateEventPage = async (req, res) => {
         res.status(500).json({ message: 'Error fetching events' });
     }
 };
+
+/** 後台：編輯活動名稱頁 */
+exports.renderEditEventNamePage = async (req, res) => {
+    try {
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.redirect('/login');
+        }
+        const event = await Event.findById(req.params.eventId);
+        if (!event) {
+            return res.status(404).send('Event not found');
+        }
+        const user = req.session.user;
+        const isAdmin = user.role === 'admin';
+        const allowed = (user.allowedEvents || []).map(id => id && id.toString());
+        if (!isAdmin && !allowed.includes(req.params.eventId)) {
+            return res.status(403).send('No access to this event');
+        }
+        res.render('admin/edit_event_name', { eventId: req.params.eventId, eventName: event.name });
+    } catch (error) {
+        console.error('Error rendering edit event name page:', error);
+        res.status(500).send('Error loading page');
+    }
+};
+
+/** PATCH 僅更新活動名稱 */
+exports.updateEventName = async (req, res) => {
+    try {
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+        const { name } = req.body || {};
+        const trimmed = (name && String(name).trim()) || '';
+        if (!trimmed) {
+            return res.status(400).json({ message: 'Event name is required' });
+        }
+        const event = await Event.findById(req.params.eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+        const user = req.session.user;
+        const isAdmin = user.role === 'admin';
+        const allowed = (user.allowedEvents || []).map(id => id && id.toString());
+        if (!isAdmin && !allowed.includes(req.params.eventId)) {
+            return res.status(403).json({ message: 'No access to this event' });
+        }
+        event.name = trimmed;
+        event.modified_at = new Date();
+        await event.save();
+        res.status(200).json({ message: 'Event name updated', name: event.name });
+    } catch (error) {
+        console.error('Error updating event name:', error);
+        res.status(500).json({ message: 'Error updating event name' });
+    }
+};
 // 獲取當前用戶的事件並渲染事件列表視圖
 exports.renderEventsList = async (req, res) => {
     try {
@@ -2285,6 +2339,38 @@ exports.removeAllLuckydrawUsers = async (req, res) => {
     } catch (error) {
         console.error('Error deleting all winners:', error);
         res.status(500).send('Error deleting all winners.');
+    }
+};
+
+/**
+ * 重置 Winner No 計數：將 maxLuckydrawOrder 設為「目前仍存在的 winners 中最大的 order」
+ * 下一筆抽獎會是 maxLuckydrawOrder + 1，因此刪除最後一筆（例如刪除 4）後重置，下一筆會再次得到 4。
+ */
+exports.resetLuckydrawWinnerOrder = async (req, res) => {
+    try {
+        const event = await Event.findById(req.params.eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found.' });
+        }
+        const orders = (event.winners || [])
+            .map(w => (w.order != null ? Number(w.order) : 0))
+            .filter(n => !isNaN(n) && n > 0);
+        const newMax = orders.length ? Math.max(...orders) : 0;
+        const previousMax = event.maxLuckydrawOrder || 0;
+        event.maxLuckydrawOrder = newMax;
+        event.modified_at = new Date();
+        await event.save();
+        const nextOrder = newMax + 1;
+        console.log(`[重置 Winner No] event=${req.params.eventId} previousMax=${previousMax} newMax=${newMax} nextOrder=${nextOrder}`);
+        res.status(200).json({
+            message: 'Winner order counter reset.',
+            maxLuckydrawOrder: newMax,
+            nextWinnerOrder: nextOrder,
+            previousMaxLuckydrawOrder: previousMax
+        });
+    } catch (error) {
+        console.error('Error resetting luckydraw winner order:', error);
+        res.status(500).json({ message: 'Error resetting winner order.' });
     }
 };
 

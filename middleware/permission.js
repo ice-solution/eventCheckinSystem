@@ -5,6 +5,7 @@
 // Event 功能鍵（與路由對應）
 const EVENT_FUNCTIONS = [
     { key: 'rsvp', label: 'RSVP / User List', pathMatch: /^\/events\/[^/]+\/?$/ },
+    { key: 'rsvp', label: 'Edit Event Name', pathMatch: /^\/events\/[^/]+\/edit-name/ },
     { key: 'guestList', label: 'Guest List', pathMatch: /^\/events\/[^/]+\/guest-list/ },
     { key: 'emailTemplate', label: 'Email Template', pathMatch: /^\/events\/[^/]+\/emailTemplate/ },
     { key: 'smsTemplate', label: 'SMS Template', pathMatch: /^\/events\/[^/]+\/smsTemplate/ },
