@@ -49,9 +49,17 @@
                                 <a href="/events/<%= eventId %>/luckydraw/list/export" class="btn btn-success">
                                     Export Excel
                                 </a>
+                                <button type="button" id="reset-winner-order" class="btn btn-warning" style="margin-left: 10px;" title="刪除名單後按此，下一個號碼會接在現有最大號之後">
+                                    <i class="fa fa-undo"></i> Reset Winner No
+                                </button>
                                 <button id="delete-all-winners" class="btn btn-danger" style="margin-left: 10px;">
                                     <i class="fa fa-trash"></i> Delete All Draw Records
                                 </button>
+                                <div class="mt-2 text-muted small">
+                                    目前計數 maxLuckydrawOrder = <strong id="max-order-display"><%= typeof maxLuckydrawOrder !== 'undefined' ? maxLuckydrawOrder : 0 %></strong>
+                                    （下一筆抽獎若未重置會是 <%= (typeof maxLuckydrawOrder !== 'undefined' ? maxLuckydrawOrder : 0) + 1 %>）
+                                    · Reset 後會改為「名單中最大 Winner No + 1」
+                                </div>
                             </div>
                             <table id="winners-table" class="table table-bordered">
                                 <thead>
@@ -136,6 +144,35 @@
             }
         });
         
+        // 重置 Winner No：將 maxLuckydrawOrder 設為目前名單中最大 order，下一筆可填補缺號
+        $('#reset-winner-order').on('click', function() {
+            if (!confirm('將 Winner No 計數重置為「目前名單中的最大號碼」。\n下一筆抽獎會從該號碼 + 1 開始（例如在 List 刪掉第 4 號後按此，下一抽會是 4）。\n\n確定？')) {
+                return;
+            }
+            const btn = $(this);
+            btn.prop('disabled', true);
+            $.ajax({
+                url: `/events/${eventId}/luckydraw/reset-winner-order`,
+                type: 'POST',
+                contentType: 'application/json',
+                success: function(data) {
+                    $('#max-order-display').text(data.maxLuckydrawOrder);
+                    alert('已重置。\n目前最大號碼：' + data.maxLuckydrawOrder + '\n下一筆將使用號碼：' + data.nextWinnerOrder);
+                },
+                error: function(xhr) {
+                    let msg = '重置失敗';
+                    try {
+                        const j = JSON.parse(xhr.responseText);
+                        if (j.message) msg = j.message;
+                    } catch (e) {}
+                    alert(msg);
+                },
+                complete: function() {
+                    btn.prop('disabled', false);
+                }
+            });
+        });
+
         // 處理全部刪除抽獎記錄（雙重確認）
         $('#delete-all-winners').on('click', function() {
             // First confirmation

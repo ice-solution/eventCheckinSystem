@@ -3435,8 +3435,12 @@ exports.renderAdminLuckydrawPage = async (req, res) => {
         // 添加調試日誌
         console.log('Winners data:', winners);
 
-        // 渲染 admin/luckydraw.ejs 頁面，並傳遞中獎者
-        res.render('admin/luckydraw', { winners, eventId });
+        // 渲染 admin/luckydraw.ejs 頁面，並傳遞中獎者與目前 Winner No 計數（供重置按鈕顯示）
+        res.render('admin/luckydraw', {
+            winners,
+            eventId,
+            maxLuckydrawOrder: event.maxLuckydrawOrder || 0
+        });
     } catch (error) {
         console.error('Error rendering admin luckydraw page:', error);
         res.status(500).send('Error rendering admin luckydraw page.');
