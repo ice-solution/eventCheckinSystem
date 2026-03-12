@@ -55,8 +55,10 @@
      - 將值正規化為 ≥1 的整數；
      - `socket.emit('luckydraw_panel_draw_count', { eventId, drawCount: count })`。
 2. **後端（socket.js）**
-   - 收到 `luckydraw_panel_draw_count` 後，以 `eventId` 找到 room，再：
-     - `io.to(room).emit('luckydraw:draw_count', { drawCount })`。
+   - 收到 `luckydraw_panel_draw_count` 後：
+     - **會先把 `drawCount` 寫入 `LuckydrawGameConfig.config.draw.drawCount`**（與 Game Config API 一致），Phaser 顯示頁若依 config 建槽位，才不會卡在預設 10。
+     - 再以 `eventId` 找到 room，`io.to(room).emit('luckydraw:draw_count', { drawCount })`。
+   - **Display 加入 room 時** 會依 DB 內目前 `draw.drawCount` 再 `socket.emit('luckydraw:draw_count')` 一次，晚開的畫面也能對齊。
 3. **Display（events/luckydraw.ejs 或 Phaser 頁）**
    - 監聽 `luckydraw:draw_count`，更新 `currentDrawCount` 與 `window.luckydrawDrawCount`，供畫面或遊戲使用。
 

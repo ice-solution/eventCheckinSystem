@@ -23,7 +23,8 @@ function getDefaultConfig(eventId, baseUrl) {
             scaleUp: 400,
             scaleDown: 300
         },
-        draw: { drawCount: 10 },
+        // 批量抽獎／畫面槽位上限；Panel 可透過 socket 覆寫並寫回 DB（見 socket.js）
+        draw: { drawCount: 50 },
         ui: {
             subtitle: 'ANNUAL PARTY 2026',
             waitingText: '等待控制器開始抽獎...',

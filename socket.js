@@ -1,6 +1,36 @@
 const socketIo = require('socket.io');
+const LuckydrawGameConfig = require('./model/LuckydrawGameConfig');
 
 let io; // 定義 io 變量
+
+const LUCKYDRAW_DRAW_COUNT_MAX = 100;
+
+/** 將 Panel 設定的 drawCount 寫入 LuckydrawGameConfig，Phaser 從 GET config 讀取 draw.drawCount，需與 socket 一致 */
+async function persistLuckydrawDrawCount(eventId, drawCount) {
+    if (!eventId) return;
+    const count = Math.max(1, Math.min(LUCKYDRAW_DRAW_COUNT_MAX, parseInt(drawCount, 10) || 1));
+    try {
+        const doc = await LuckydrawGameConfig.findOne({ eventId });
+        if (doc && doc.config && typeof doc.config === 'object') {
+            const config = JSON.parse(JSON.stringify(doc.config));
+            if (!config.draw || typeof config.draw !== 'object') config.draw = {};
+            config.draw.drawCount = count;
+            doc.config = config;
+            doc.updatedAt = new Date();
+            await doc.save();
+        } else {
+            // 尚無整份 config 時，只更新嵌套欄位，避免 upsert 覆蓋成只有 draw
+            await LuckydrawGameConfig.updateOne(
+                { eventId },
+                { $set: { 'config.draw.drawCount': count, updatedAt: new Date() } },
+                { upsert: false }
+            );
+        }
+    } catch (e) {
+        console.error('persistLuckydrawDrawCount error:', e);
+    }
+    return count;
+}
 
 const initSocket = (server) => {
     // 與 app.js 一致：CORS_ENABLED=true 時才允許跨域（localhost/其他 domain 連線）
@@ -56,6 +86,12 @@ const initSocket = (server) => {
                     eventId,
                     status: hasPanel ? 'online' : 'offline'
                 });
+                // 補送目前 drawCount（與 Game Config 同步），避免遊戲只讀到預設 10
+                LuckydrawGameConfig.findOne({ eventId }).then(doc => {
+                    const n = doc && doc.config && doc.config.draw && doc.config.draw.drawCount;
+                    const count = Math.max(1, Math.min(LUCKYDRAW_DRAW_COUNT_MAX, parseInt(n, 10) || 1));
+                    socket.emit('luckydraw:draw_count', { drawCount: count });
+                }).catch(() => {});
             }
         });
 
@@ -81,11 +117,11 @@ const initSocket = (server) => {
             io.to(room).emit('luckydraw:prize_selected', { prizeName, prizeImage: prizeImage || null });
         });
 
-        // Panel 送出 Draw count（input blur 時），轉發給同 event 的 display 前端
-        socket.on('luckydraw_panel_draw_count', ({ eventId, drawCount }) => {
+        // Panel 送出 Draw count（input blur 時）：寫入 DB + 轉發給同 event 的 display（Phaser 依 config.draw.drawCount 建槽位，必須持久化）
+        socket.on('luckydraw_panel_draw_count', async ({ eventId, drawCount }) => {
             if (!eventId) return;
             const room = `luckydraw:${eventId}`;
-            const count = Math.max(1, parseInt(drawCount, 10) || 1);
+            const count = await persistLuckydrawDrawCount(eventId, drawCount);
             io.to(room).emit('luckydraw:draw_count', { drawCount: count });
         });
 
