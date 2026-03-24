@@ -116,20 +116,24 @@
                         <div class="field-item" data-type="qrcode" data-content="{{qrcodeUrl}}">
                             <strong>QR Code</strong> - {{qrcodeUrl}}
                         </div>
-                        <!-- 動態字段 -->
-                        <% if (formConfig && formConfig.sections) { %>
-                            <% formConfig.sections.forEach(section => { %>
-                                <% if (section.visible && section.fields) { %>
-                                    <% section.fields.forEach(field => { %>
-                                        <% if (field.visible) { %>
+                        <!-- 動態字段（FormConfig）：只顯示英文標籤，且跳過已在上方固定列出的 name / email / company / phone 避免重複 -->
+                        <% 
+                          const fixedFieldNames = ['name', 'email', 'company', 'phone'];
+                          if (formConfig && formConfig.sections) {
+                            formConfig.sections.forEach(section => { %>
+                                <% if (section.visible && section.fields) {
+                                    section.fields.forEach(field => { %>
+                                        <% if (field.visible && fixedFieldNames.indexOf(field.fieldName) === -1) {
+                                          const labelEn = (field.label && field.label.en && field.label.en.trim()) ? field.label.en.trim() : field.fieldName;
+                                        %>
                                             <div class="field-item" data-type="text" data-content="{{user.<%= field.fieldName %>}}">
-                                                <strong><%= field.label.zh || field.label.en || field.fieldName %></strong> - {{user.<%= field.fieldName %>}}
+                                                <strong><%= labelEn %></strong> - {{user.<%= field.fieldName %>}}
                                             </div>
                                         <% } %>
-                                    <% }); %>
-                                <% } %>
-                            <% }); %>
-                        <% } %>
+                                    <% });
+                                } %>
+                            <% });
+                          } %>
                     </div>
                     
                     <div class="element-controls mt-4">
@@ -149,6 +153,7 @@
                         <h5>Element Settings</h5>
                         <div id="elementControls"></div>
                     </div>
+                    <div class="mt-2 small text-muted">Ctrl+C 複製選中元素格式 · Ctrl+V 貼上並選擇欄位</div>
                 </div>
             </div>
             
@@ -171,6 +176,28 @@
         </div>
     </div>
 </div>
+
+<!-- Modal: 貼上時選擇要綁定的欄位 -->
+<div class="modal fade" id="pasteFieldModal" tabindex="-1" role="dialog" aria-labelledby="pasteFieldModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="pasteFieldModalLabel">選擇欄位 (Choose field for pasted element)</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">已複製的元素格式將貼上，請選擇要使用的資料欄位：</p>
+                <div id="pasteFieldOptions" class="list-group"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <%- include("components/footer") %>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -202,6 +229,7 @@
             return el;
         });
         let selectedElement = null;
+        let copiedElement = null; // Ctrl+C 複製的 element（格式），貼上時可選不同欄位
         let isDragging = false;
         let isResizing = false;
         let dragOffset = { x: 0, y: 0 };
@@ -816,14 +844,99 @@
             }
         }
         
-        // 鍵盤快捷鍵：Delete 鍵刪除選中元素
+        // 取得左側 Form Fields 清單（用於貼上時選擇欄位）
+        function getFieldOptions() {
+            const opts = [];
+            $('#fieldList .field-item').each(function() {
+                const type = $(this).data('type');
+                const content = $(this).data('content');
+                const label = $(this).text().trim();
+                if (type && content) opts.push({ type, content, label });
+            });
+            return opts;
+        }
+
+        // Ctrl+C：複製選中 element 的格式（不含綁定欄位，貼上時再選）
+        function copySelectedElement() {
+            if (selectedElement === null || selectedElement === undefined) return;
+            const el = elements[selectedElement];
+            copiedElement = JSON.parse(JSON.stringify(el));
+            // 可選：短提示
+            if (typeof showControllerToast === 'function') showControllerToast('已複製元素格式', 'success');
+            else console.log('Element format copied. Use Ctrl+V to paste and choose field.');
+        }
+
+        // Ctrl+V：貼上並彈出選擇欄位
+        function pasteWithFieldChoice() {
+            if (!copiedElement) {
+                alert('請先選擇一個元素後按 Ctrl+C 複製');
+                return;
+            }
+            const fieldOptions = getFieldOptions();
+            if (fieldOptions.length === 0) {
+                alert('沒有可選的欄位');
+                return;
+            }
+            const container = $('#pasteFieldOptions');
+            container.empty();
+            fieldOptions.forEach(function(opt) {
+                const btn = $('<button type="button" class="list-group-item list-group-item-action"></button>')
+                    .text(opt.label)
+                    .data('opt', opt)
+                    .on('click', function() {
+                        applyPasteWithField($(this).data('opt'));
+                        $('#pasteFieldModal').modal('hide');
+                    });
+                container.append(btn);
+            });
+            $('#pasteFieldModal').modal('show');
+        }
+
+        // 使用選定的欄位建立並加入新 element（複製格式、偏移位置）
+        function applyPasteWithField(opt) {
+            if (!copiedElement || !opt) return;
+            const offset = 20;
+            const newEl = JSON.parse(JSON.stringify(copiedElement));
+            newEl.x = (newEl.x || 0) + offset;
+            newEl.y = (newEl.y || 0) + offset;
+            newEl.content = opt.content;
+            newEl.type = opt.type;
+            newEl.zIndex = elements.length;
+            if (opt.type === 'qrcode') {
+                newEl.qrData = opt.content;
+                newEl.width = newEl.width || 150;
+                newEl.height = newEl.height || 150;
+            }
+            elements.push(newEl);
+            selectedElement = elements.length - 1;
+            initCanvas();
+            updateElementControls(newEl);
+            updateDeleteButton();
+        }
+
+        // 鍵盤快捷鍵：Delete 刪除選中；Ctrl+C 複製格式；Ctrl+V 貼上並選欄位
         document.addEventListener('keydown', function(e) {
+            const inInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
             if (e.key === 'Delete' || e.key === 'Backspace') {
-                // 確保不是在輸入框中
-                if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-                    if (selectedElement !== null && selectedElement !== undefined) {
-                        deleteSelectedElement();
+                if (!inInput && selectedElement !== null && selectedElement !== undefined) {
+                    deleteSelectedElement();
+                }
+                return;
+            }
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 'c') {
+                    if (!inInput && selectedElement !== null) {
+                        e.preventDefault();
+                        copySelectedElement();
                     }
+                    return;
+                }
+                if (e.key === 'v') {
+                    if (!inInput && copiedElement) {
+                        e.preventDefault();
+                        pasteWithFieldChoice();
+                    }
+                    return;
                 }
             }
         });

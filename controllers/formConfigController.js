@@ -70,6 +70,9 @@ const migrateFormConfig = (formConfig) => {
                                 en: option.value || ''
                             };
                         }
+                        if (migratedOption.isOther === undefined) {
+                            migratedOption.isOther = false;
+                        }
                         
                         return migratedOption;
                     });

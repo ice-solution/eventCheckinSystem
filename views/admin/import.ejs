@@ -24,6 +24,9 @@
                             </div>
                             <div class="card-body">
                                 <p>You can only import columns that exist in the current registration form. Use the column names below as the first row (headers) in your Excel file.</p>
+                                <p class="text-muted mb-3">
+                                    Import rule: if a row has <code>_id</code> and matches an existing user, that user will be updated; if <code>_id</code> is empty, a new user will be created.
+                                </p>
                                 
                                 <% if (importFields && importFields.length > 0) { %>
                                     <div class="mb-3">
@@ -48,8 +51,10 @@
                                     <button type="submit" class="btn btn-primary" <%= (importFields && importFields.length > 0) ? '' : 'disabled' %>>Import</button>
                                     <a href="/events/<%= event._id%>" class="btn btn-secondary">Return to User List</a>
                                     <% if (importFields && importFields.length > 0) { %>
+                                        <a href="/events/<%= event._id %>/import/export-current" class="btn btn-success">Download Current User List (xlsx)</a>
                                         <a href="/events/<%= event._id %>/import/sample" class="btn btn-info">Download Sample File</a>
                                     <% } else { %>
+                                        <span class="btn btn-success disabled" aria-disabled="true">Download Current User List (xlsx)</span>
                                         <span class="btn btn-info disabled" aria-disabled="true">Download Sample File</span>
                                     <% } %>
                                 </form>

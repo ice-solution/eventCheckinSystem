@@ -3541,7 +3541,7 @@ exports.updateLuckydrawListColumns = async (req, res) => {
     }
 };
 
-// 外部顯示用：抽獎中獎名單頁（無後台 layout）
+// 外部顯示用：抽獎中獎名單頁（無後台 layout）；若已設定 luckydrawAwardPassword 則需先輸入密碼
 exports.renderLuckydrawAwardPage = async (req, res) => {
     const { eventId } = req.params;
     try {
@@ -3549,6 +3549,18 @@ exports.renderLuckydrawAwardPage = async (req, res) => {
         if (!event) {
             return res.status(404).send('Event not found.');
         }
+        const awardPassword = (event.luckydrawAwardPassword || '').trim();
+        const requirePassword = awardPassword.length > 0;
+        const unlocked = (req.session.luckydrawAwardUnlocked || {})[eventId] === true;
+
+        if (requirePassword && !unlocked) {
+            return res.render('events/luckydraw_award_gate', {
+                eventId,
+                eventName: event.name || 'Lucky Draw',
+                error: (req.query.error === '1' ? '密碼錯誤，請重試。' : null)
+            });
+        }
+
         const savedFieldNames = Array.isArray(event.luckydrawListFieldNames) ? event.luckydrawListFieldNames : [];
         const fieldNames = savedFieldNames.length > 0 ? savedFieldNames : DEFAULT_LUCKYDRAW_LIST_FIELDS;
         const FormConfig = require('../model/FormConfig');
@@ -3579,6 +3591,34 @@ exports.renderLuckydrawAwardPage = async (req, res) => {
     } catch (error) {
         console.error('Error rendering luckydraw award page:', error);
         res.status(500).send('Error loading award list.');
+    }
+};
+
+// POST：驗證中獎名單頁密碼並解鎖（寫入 session 後重導向回 award 頁）
+exports.unlockLuckydrawAwardPage = async (req, res) => {
+    const { eventId } = req.params;
+    const { password } = req.body || {};
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found.' });
+        }
+        const expected = (event.luckydrawAwardPassword || '').trim();
+        if (expected.length === 0) {
+            if (!req.session.luckydrawAwardUnlocked) req.session.luckydrawAwardUnlocked = {};
+            req.session.luckydrawAwardUnlocked[eventId] = true;
+            return res.redirect(`/events/${eventId}/luckydraw/award`);
+        }
+        const submitted = (password || '').trim();
+        if (submitted !== expected) {
+            return res.redirect(`/events/${eventId}/luckydraw/award?error=1`);
+        }
+        if (!req.session.luckydrawAwardUnlocked) req.session.luckydrawAwardUnlocked = {};
+        req.session.luckydrawAwardUnlocked[eventId] = true;
+        return res.redirect(`/events/${eventId}/luckydraw/award`);
+    } catch (err) {
+        console.error('unlockLuckydrawAwardPage error:', err);
+        return res.status(500).redirect(`/events/${eventId}/luckydraw/award?error=1`);
     }
 };
 
@@ -3668,9 +3708,33 @@ exports.renderQRCodeLoginPage = async (req, res) => {
         res.status(500).send('Error rendering QR code login page.');
     }
 };
-exports.renderLuckydrawSetting = (req, res) => {
+exports.renderLuckydrawSetting = async (req, res) => {
     const eventId = req.params.eventId;
-    res.render('admin/luckydraw_setting', { eventId }); // 渲染 luckydraw_setting.ejs
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).send('Event not found');
+        const awardPasswordSet = !!(event.luckydrawAwardPassword && event.luckydrawAwardPassword.trim());
+        res.render('admin/luckydraw_setting', { eventId, awardPasswordSet });
+    } catch (err) {
+        console.error('renderLuckydrawSetting error:', err);
+        res.status(500).send('Error loading setting');
+    }
+};
+
+/** PATCH 儲存中獎名單頁密碼（LuckyDraw Setting 設定）；空字串表示取消密碼 */
+exports.updateLuckydrawAwardPassword = async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        const { password } = req.body || {};
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).json({ message: 'Event not found.' });
+        event.luckydrawAwardPassword = typeof password === 'string' ? password.trim() : '';
+        await event.save();
+        res.status(200).json({ message: 'Saved', awardPasswordSet: !!event.luckydrawAwardPassword });
+    } catch (err) {
+        console.error('updateLuckydrawAwardPassword error:', err);
+        res.status(500).json({ message: 'Error saving' });
+    }
 };
 // 上傳背景圖片的控制器函數
 exports.uploadBackground = (req, res) => {

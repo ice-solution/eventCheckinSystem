@@ -49,8 +49,15 @@ const initSocket = (server) => {
             credentials: true
         };
     }
-    io = socketIo(server, { cors: socketCors });
-    
+    // 縮短 ping 間隔與逾時，減少靜默斷線／僵屍連線（可選 .env：SOCKET_PING_INTERVAL、SOCKET_PING_TIMEOUT，單位 ms）
+    const pingInterval = Math.max(5000, parseInt(process.env.SOCKET_PING_INTERVAL, 10) || 10000);
+    const pingTimeout = Math.max(4000, parseInt(process.env.SOCKET_PING_TIMEOUT, 10) || 8000);
+    io = socketIo(server, {
+        cors: socketCors,
+        pingInterval,
+        pingTimeout
+    });
+
     // 追蹤每個 room 中是否有 panel 連接
     const roomPanels = new Map(); // Map<room, Set<socketId>>
 
@@ -115,6 +122,11 @@ const initSocket = (server) => {
             if (!eventId) return;
             const room = `luckydraw:${eventId}`;
             io.to(room).emit('luckydraw:prize_selected', { prizeName, prizeImage: prizeImage || null });
+        });
+
+        // LuckyDraw 應用層 heartbeat：客戶端定期發送，服務端回 ack，客戶端可據此偵測靜默斷線並重連
+        socket.on('luckydraw:heartbeat', () => {
+            socket.emit('luckydraw:heartbeat_ack', { ts: Date.now() });
         });
 
         // Panel 送出 Draw count（input blur 時）：寫入 DB + 轉發給同 event 的 display（Phaser 依 config.draw.drawCount 建槽位，必須持久化）

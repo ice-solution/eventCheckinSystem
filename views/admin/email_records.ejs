@@ -176,18 +176,25 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <% emailRecords.forEach(record => { %>
+                                    <% 
+                                    function formatEmailRecordSendTimeHK(d) {
+                                        if (!d || isNaN(d.getTime())) return '-';
+                                        const parts = new Intl.DateTimeFormat('en-CA', {
+                                            timeZone: 'Asia/Hong_Kong',
+                                            year: 'numeric', month: '2-digit', day: '2-digit',
+                                            hour: '2-digit', minute: '2-digit', second: '2-digit',
+                                            hour12: false
+                                        }).formatToParts(d);
+                                        const g = function(t) { var p = parts.find(function(x) { return x.type === t; }); return p ? p.value : ''; };
+                                        return g('year') + '-' + g('month') + '-' + g('day') + ' ' + g('hour') + ':' + g('minute') + ':' + g('second');
+                                    }
+                                    emailRecords.forEach(record => { %>
+                                        <% 
+                                          var _sentAt = record.created_at ? new Date(record.created_at) : null;
+                                          var _sentTs = _sentAt && !isNaN(_sentAt.getTime()) ? _sentAt.getTime() : 0;
+                                        %>
                                         <tr>
-                                            <td><%= new Date(record.created_at).toLocaleString('zh-HK', { 
-                                                timeZone: 'Asia/Hong_Kong',
-                                                year: 'numeric', 
-                                                month: '2-digit', 
-                                                day: '2-digit', 
-                                                hour: '2-digit', 
-                                                minute: '2-digit',
-                                                second: '2-digit',
-                                                hour12: false
-                                            }) %></td>
+                                            <td data-order="<%= _sentTs %>"><%= formatEmailRecordSendTimeHK(_sentAt) %></td>
                                             <td><%= record.recipient %></td>
                                             <td><%= record.subject || '-' %></td>
                                             <td>
@@ -303,7 +310,20 @@
 
         const table = $('#emailRecordsTable').DataTable({
             pageLength: 50,
-            order: [[0, 'desc']], // Sort by send time descending
+            order: [[0, 'desc']], // Sort by send time descending（依欄位 data-order 時間戳，非顯示字串）
+            columnDefs: [{
+                targets: 0,
+                type: 'num',
+                render: function (data, type, row, meta) {
+                    if (type === 'sort' || type === 'type') {
+                        var tr = meta.settings.aoData[meta.row].nTr;
+                        var td = tr && tr.cells ? tr.cells[meta.col] : null;
+                        var v = td ? td.getAttribute('data-order') : null;
+                        return v != null && v !== '' ? parseInt(v, 10) : 0;
+                    }
+                    return data;
+                }
+            }],
             drawCallback: function() {
                 console.log('Table redrawn, button count:', $('.view-email-details').length);
             }

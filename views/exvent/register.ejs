@@ -213,8 +213,10 @@
                                 %>
                                 <% sortedFields.forEach((field, fieldIndex) => { %>
                                     <% if (field.visible) { %>
+                                        <% var _selectHasOther = (field.type === 'select' && field.options && field.options.some(function (o) { return o && o.isOther; })); %>
+                                        <% var _fieldControlId = (field.type === 'select' && _selectHasOther) ? (field.fieldName + '_sel') : field.fieldName; %>
                                         <div class="form-row">
-                                            <label class="form-label field-label" for="<%= field.fieldName %>" 
+                                            <label class="form-label field-label" for="<%= _fieldControlId %>" 
                                                    data-zh="<%= field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '') %>" 
                                                    data-en="<%= field.label && field.label.en ? field.label.en : '' %>">
                                                 <%= field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '') %>
@@ -225,16 +227,38 @@
                                             <div class="form-input">
                                                 <!-- Debug: field.type = <%= field.type %>, has options = <%= field.options ? 'yes' : 'no' %> -->
                                                 <% if (field.type === 'select' && field.options) { %>
-                                                    <select class="form-control" id="<%= field.fieldName %>" name="<%= field.fieldName %>" <%= field.required ? 'required' : '' %>>
-                                                        <option value="" class="select-placeholder" data-zh="--- 請選擇 ---" data-en="--- Please select ---">--- 請選擇 ---</option>
-                                                        <% field.options.forEach((option) => { %>
-                                                            <option value="<%= option.value %>" 
-                                                                    data-zh="<%= option.label && option.label.zh ? option.label.zh : option.label %>" 
-                                                                    data-en="<%= option.label && option.label.en ? option.label.en : '' %>">
-                                                                <%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>
-                                                            </option>
-                                                        <% }); %>
-                                                    </select>
+                                                    <% if (_selectHasOther) { %>
+                                                        <select class="form-control js-select-maybe-other" id="<%= field.fieldName %>_sel"
+                                                                data-select-other-base="<%= field.fieldName %>"
+                                                                <%= field.required ? 'required' : '' %>>
+                                                            <option value="" class="select-placeholder" data-zh="--- 請選擇 ---" data-en="--- Please select ---">--- 請選擇 ---</option>
+                                                            <% field.options.forEach((option) => { %>
+                                                                <option value="<%= option.value %>"
+                                                                        data-is-other="<%= option.isOther ? '1' : '' %>"
+                                                                        data-zh="<%= option.label && option.label.zh ? option.label.zh : option.label %>" 
+                                                                        data-en="<%= option.label && option.label.en ? option.label.en : '' %>">
+                                                                    <%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>
+                                                                </option>
+                                                            <% }); %>
+                                                        </select>
+                                                        <input type="text" class="form-control mt-2 d-none js-select-other-text"
+                                                               id="<%= field.fieldName %>_other"
+                                                               data-placeholder-zh="請填寫"
+                                                               data-placeholder-en="Please specify"
+                                                               autocomplete="off">
+                                                        <input type="hidden" name="<%= field.fieldName %>" id="<%= field.fieldName %>_hidden" value="">
+                                                    <% } else { %>
+                                                        <select class="form-control" id="<%= field.fieldName %>" name="<%= field.fieldName %>" <%= field.required ? 'required' : '' %>>
+                                                            <option value="" class="select-placeholder" data-zh="--- 請選擇 ---" data-en="--- Please select ---">--- 請選擇 ---</option>
+                                                            <% field.options.forEach((option) => { %>
+                                                                <option value="<%= option.value %>" 
+                                                                        data-zh="<%= option.label && option.label.zh ? option.label.zh : option.label %>" 
+                                                                        data-en="<%= option.label && option.label.en ? option.label.en : '' %>">
+                                                                    <%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>
+                                                                </option>
+                                                            <% }); %>
+                                                        </select>
+                                                    <% } %>
                                                 <% } else if (field.type === 'checkbox' && field.options) { %>
                                                     <div class="checkbox-group" id="<%= field.fieldName %>-group">
                                                         <% field.options.forEach((option, optionIndex) => { %>
@@ -525,6 +549,16 @@
                     $(this).attr('placeholder', enPlaceholder);
                 }
             });
+            // select「其他」自填欄位佔位符
+            $('.js-select-other-text').each(function() {
+                const zhPlaceholder = $(this).data('placeholder-zh');
+                const enPlaceholder = $(this).data('placeholder-en');
+                if (currentLanguage === 'zh' && zhPlaceholder) {
+                    $(this).attr('placeholder', zhPlaceholder);
+                } else if (currentLanguage === 'en' && enPlaceholder) {
+                    $(this).attr('placeholder', enPlaceholder);
+                }
+            });
 
             // 更新選擇框選項
             $('select option').each(function() {
@@ -659,8 +693,61 @@
             stripe = Stripe(STRIPE_PK);
         }
 
+        // FormConfig：select 勾選「其他可自填」時，以隱藏欄位送出用戶輸入文字
+        function syncSelectWithOther(selectEl) {
+            if (!selectEl || !selectEl.getAttribute('data-select-other-base')) return;
+            var base = selectEl.getAttribute('data-select-other-base');
+            var hidden = document.getElementById(base + '_hidden');
+            var other = document.getElementById(base + '_other');
+            if (!hidden || !other) return;
+            var opt = selectEl.options[selectEl.selectedIndex];
+            var isOther = opt && opt.getAttribute('data-is-other') === '1';
+            if (isOther) {
+                $(other).removeClass('d-none');
+                if (selectEl.hasAttribute('required')) {
+                    other.setAttribute('required', 'required');
+                } else {
+                    other.removeAttribute('required');
+                }
+                hidden.value = (other.value || '').trim();
+            } else {
+                $(other).addClass('d-none');
+                other.removeAttribute('required');
+                other.value = '';
+                other.setCustomValidity('');
+                hidden.value = selectEl.value || '';
+            }
+        }
+        $(document).on('change', '.js-select-maybe-other', function() {
+            syncSelectWithOther(this);
+        });
+        $(document).on('input', '.js-select-other-text', function() {
+            var id = this.id;
+            if (id && id.indexOf('_other') !== -1) {
+                var base = id.replace(/_other$/, '');
+                var sel = document.getElementById(base + '_sel');
+                if (sel) syncSelectWithOther(sel);
+            }
+        });
+        $(function() {
+            $('.js-select-maybe-other').each(function() { syncSelectWithOther(this); });
+        });
+
         $('#userForm').on('submit', function(e) {
             e.preventDefault(); // 防止表單默認提交
+            $('.js-select-maybe-other').each(function() { syncSelectWithOther(this); });
+            var formEl = document.getElementById('userForm');
+            $('.js-select-other-text').each(function() {
+                if (!$(this).hasClass('d-none') && this.hasAttribute('required') && !((this.value || '').trim())) {
+                    this.setCustomValidity(currentLanguage === 'zh' ? '請填寫這個欄位。' : 'Please fill in this field.');
+                } else {
+                    this.setCustomValidity('');
+                }
+            });
+            if (formEl && !formEl.checkValidity()) {
+                formEl.reportValidity();
+                return;
+            }
             const ticketId = $('#ticketId').val();
             
             // 動態收集所有表單字段

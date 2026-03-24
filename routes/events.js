@@ -87,10 +87,11 @@ router.patch('/:eventId/name', eventsController.updateEventName);
 
 router.get('/:eventId/luckydraw', eventsController.renderLuckydrawPage); // 使用控制器函數
 router.get('/:eventId/luckydraw/panel', eventsController.renderLuckydrawPanelPage); // iPad 抽獎控制面板
-router.get('/:eventId/luckydraw/award', eventsController.renderLuckydrawAwardPage); // 外部顯示中獎名單
+// award 改在 app.js 註冊為公開路由（密碼保護）
 router.get('/:eventId/import', importController.getImportUserPage);
 router.post('/:eventId/import', upload, importController.importUsers);
 router.get('/:eventId/import/sample', importController.downloadSampleFile);
+router.get('/:eventId/import/export-current', importController.downloadCurrentUsersFile);
 
 router.post('/:eventId/users', eventsController.addUserToEvent);
 // router.put('/:eventId/users/:userEmail', eventsController.updateUserInEvent);
@@ -277,6 +278,7 @@ router.post('/:eventId/luckydraw_setting/upload-background', uploadBackgroundMul
 
 // 渲染 luckydraw_setting.ejs 的 GET 路由
 router.get('/:eventId/luckydraw_setting', eventsController.renderLuckydrawSetting);
+router.patch('/:eventId/luckydraw_setting/award-password', eventsController.updateLuckydrawAwardPassword);
 
 // Lucky Draw Game Config（後台編輯 + API 由 app.js 註冊）
 router.get('/:eventId/luckydraw-config/edit', luckydrawGameConfigController.renderConfigPage);

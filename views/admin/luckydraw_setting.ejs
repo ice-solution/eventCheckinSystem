@@ -24,6 +24,24 @@
                             </form>
                         </div>
                     </div>
+
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <strong class="card-title">中獎名單頁密碼 (Award Page Password)</strong>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small">設定後，訪客開啟「中獎名單」頁面 (<code>/events/<%= eventId %>/luckydraw/award</code>) 時需輸入此密碼才能查看。留空則不需密碼。</p>
+                            <% if (typeof awardPasswordSet !== 'undefined' && awardPasswordSet) { %>
+                                <p class="text-success small mb-2">目前已設定密碼（修改下方欄位並儲存即可變更）</p>
+                            <% } %>
+                            <div class="form-group">
+                                <label for="awardPassword">密碼</label>
+                                <input type="password" id="awardPassword" class="form-control" placeholder="留空則不需密碼" autocomplete="new-password">
+                            </div>
+                            <button type="button" id="saveAwardPasswordBtn" class="btn btn-primary">儲存</button>
+                            <span id="awardPasswordMsg" class="ml-2 small"></span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -72,4 +90,29 @@
             noImageMessage.style.display = 'block';
         };
     };
+
+    document.getElementById('saveAwardPasswordBtn').addEventListener('click', function() {
+        const eventId = '<%= eventId %>';
+        const password = document.getElementById('awardPassword').value.trim();
+        const btn = this;
+        const msg = document.getElementById('awardPasswordMsg');
+        btn.disabled = true;
+        msg.textContent = '';
+        fetch('/events/' + eventId + '/luckydraw_setting/award-password', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: password })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            msg.textContent = '已儲存';
+            msg.className = 'ml-2 small text-success';
+            if (!password) msg.textContent = '已儲存（已取消密碼，名單頁公開）';
+        })
+        .catch(function() {
+            msg.textContent = '儲存失敗';
+            msg.className = 'ml-2 small text-danger';
+        })
+        .finally(function() { btn.disabled = false; });
+    });
 </script>

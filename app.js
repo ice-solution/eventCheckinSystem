@@ -163,6 +163,10 @@ app.get('/track/email/stats', emailTrackingController.getEmailTrackingStats); //
 // 公開 API：Lucky Draw 前端取得 game config（不需登入）
 app.get('/events/:eventId/luckydraw-config', luckydrawGameConfigController.getConfigApi);
 
+// 中獎名單頁及解鎖：不需後台登入，以 LuckyDraw Setting 設定的密碼保護
+app.get('/events/:eventId/luckydraw/award', eventsController.renderLuckydrawAwardPage);
+app.post('/events/:eventId/luckydraw/award/unlock', eventsController.unlockLuckydrawAwardPage);
+
 // 設置路由
 app.use('/web', websiteRouter);
 app.use('/events', isAuthenticated, permission.refreshUserPermissions, (req, res, next) => {

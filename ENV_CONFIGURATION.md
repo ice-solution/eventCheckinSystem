@@ -145,6 +145,18 @@ TWILIO_PHONE_NUMBER=+1234567890
 
 ---
 
+## 🔌 Socket.IO（選填，LuckyDraw 防靜默斷線）
+
+### SOCKET_PING_INTERVAL
+- **說明**：Socket.IO 服務端 ping 間隔（ms），逾時未收到 pong 會判定斷線。預設 10000。
+- **範例**：`SOCKET_PING_INTERVAL=10000`
+
+### SOCKET_PING_TIMEOUT
+- **說明**：Socket.IO 服務端等待 pong 的逾時（ms）。預設 8000，應小於 SOCKET_PING_INTERVAL。
+- **範例**：`SOCKET_PING_TIMEOUT=8000`
+
+---
+
 ## 🔐 Session 配置
 
 ### SESSION_SECRET

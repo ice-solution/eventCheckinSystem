@@ -281,6 +281,61 @@
                 min-width: 120px;
             }
         }
+
+        /* User table: 保持欄位整齊，寬度不足時允許橫向捲動 */
+        #usersTable {
+            width: 100% !important;
+        }
+        #usersTable th,
+        #usersTable td {
+            white-space: nowrap;
+            word-break: keep-all;
+            vertical-align: middle;
+        }
+        #usersTable th:first-child,
+        #usersTable td:first-child {
+            min-width: 42px;
+            width: 42px;
+            text-align: center;
+        }
+        #usersTable td[data-field-name] {
+            min-width: 140px;
+        }
+        #usersTable th:nth-last-child(3),
+        #usersTable td:nth-last-child(3) {
+            min-width: 170px; /* Created At */
+        }
+        #usersTable th:nth-last-child(2),
+        #usersTable td:nth-last-child(2) {
+            min-width: 88px; /* Checked In */
+            text-align: center;
+        }
+        #usersTable th:last-child,
+        #usersTable td:last-child {
+            min-width: 270px; /* Actions */
+        }
+        .dataTables_wrapper .dataTables_scrollBody {
+            overflow-x: auto !important;
+        }
+        .column-toggle-panel {
+            margin: 12px 0 16px;
+            padding: 10px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            background: #f8f9fa;
+        }
+        .column-toggle-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 14px;
+        }
+        .column-toggle-item {
+            display: inline-flex;
+            align-items: center;
+            font-size: 13px;
+            gap: 6px;
+            white-space: nowrap;
+        }
     </style>
 </head>
 <body>
@@ -618,9 +673,10 @@
                                                     <div class="row">
                                                         <% addFormSortedFields.forEach((field, fieldIndex) => { %>
                                                             <% if (field.visible) { %>
+                                                                <% const _addUserSelectOther = (field.type === 'select' && field.options && field.options.some(o => o && o.isOther)); %>
                                                                 <div class="col-md-6">
                                                                     <div class="form-group">
-                                                                        <label for="newUser<%= field.fieldName %>">
+                                                                        <label for="<%= _addUserSelectOther ? ('newUser_' + field.fieldName + '_sel') : ('newUser' + field.fieldName) %>">
                                                                             <% 
                                                                             let fieldLabel = '';
                                                                             if (typeof field.label === 'string') {
@@ -639,6 +695,35 @@
                                                                             <% } %>
                                                                         </label>
                                                                         <% if (field.type === 'select' && field.options) { %>
+                                                                            <% if (_addUserSelectOther) { %>
+                                                                            <select class="form-control js-select-maybe-other" id="newUser_<%= field.fieldName %>_sel"
+                                                                                    data-select-other-base="newUser_<%= field.fieldName %>"
+                                                                                    <%= field.required ? 'required' : '' %>>
+                                                                                <option value="">--- Please Select ---</option>
+                                                                                <% field.options.forEach((option) => { %>
+                                                                                    <option value="<%= option.value %>" data-is-other="<%= option.isOther ? '1' : '' %>">
+                                                                                        <% 
+                                                                                        let optionLabel = '';
+                                                                                        if (typeof option.label === 'string') {
+                                                                                            optionLabel = option.label;
+                                                                                        } else if (option.label && option.label[formConfig.defaultLanguage]) {
+                                                                                            optionLabel = option.label[formConfig.defaultLanguage];
+                                                                                        } else if (option.label && option.label.zh) {
+                                                                                            optionLabel = option.label.zh;
+                                                                                        } else {
+                                                                                            optionLabel = option.value || '';
+                                                                                        }
+                                                                                        %>
+                                                                                        <%= optionLabel %>
+                                                                                    </option>
+                                                                                <% }); %>
+                                                                            </select>
+                                                                            <input type="text" class="form-control mt-2 d-none js-select-other-text"
+                                                                                   id="newUser_<%= field.fieldName %>_other"
+                                                                                   placeholder="請填寫 / Please specify"
+                                                                                   autocomplete="off">
+                                                                            <input type="hidden" name="<%= field.fieldName %>" id="newUser_<%= field.fieldName %>_hidden" value="">
+                                                                            <% } else { %>
                                                                             <select class="form-control" id="newUser<%= field.fieldName %>" name="<%= field.fieldName %>" <%= field.required ? 'required' : '' %>>
                                                                                 <option value="">--- Please Select ---</option>
                                                                                 <% field.options.forEach((option) => { %>
@@ -659,6 +744,7 @@
                                                                                     </option>
                                                                                 <% }); %>
                                                                             </select>
+                                                                            <% } %>
                                                                         <% } else if (field.type === 'checkbox' && field.options) { %>
                                                                             <div class="checkbox-group">
                                                                                 <% field.options.forEach((option, optionIndex) => { %>
@@ -845,7 +931,11 @@
                                     </div>
                                 </div>
                             </div>
-                            <table id="usersTable" class="display">
+                            <div class="column-toggle-panel">
+                                <p class="mb-2 small text-muted">欄位顯示（可勾選暫時隱藏/顯示）</p>
+                                <div id="columnToggleList" class="column-toggle-list"></div>
+                            </div>
+                            <table id="usersTable" class="display nowrap">
                                 <thead>
                                     <tr>
                                         <th><input type="checkbox" id="selectAll" /></th>
@@ -931,7 +1021,7 @@
                                                     -
                                                 <% } %>
                                             </td>
-                                            <td>
+                                            <td data-order="<%= user.isCheckIn ? 1 : 0 %>">
                                                 <input type="checkbox" class="checkin-toggle" data-_id="<%= user._id %>" <%= user.isCheckIn ? 'checked' : '' %> />
                                             </td>
                                             <td>
@@ -1012,6 +1102,9 @@
         const table = $('#usersTable').DataTable({
             pageLength: 50,
             dom: 'rtip', // no default filter - use advanced search panel
+            scrollX: true,
+            scrollCollapse: true,
+            autoWidth: false,
             columnDefs: [
                 {
                     targets: 0, // Select checkbox column
@@ -1026,8 +1119,18 @@
                 },
                 {
                     targets: -2, // Checked In column
-                    orderable: false,
-                    searchable: false
+                    type: 'num',
+                    orderable: true,
+                    searchable: false,
+                    render: function(data, type, row, meta) {
+                        if (type === 'sort' || type === 'type') {
+                            const tr = meta.settings.aoData[meta.row].nTr;
+                            const td = tr && tr.cells ? tr.cells[meta.col] : null;
+                            const v = td ? td.getAttribute('data-order') : null;
+                            return v !== null && v !== '' ? parseInt(v, 10) : 0;
+                        }
+                        return data;
+                    }
                 },
                 {
                     targets: -1, // Actions column
@@ -1050,6 +1153,36 @@
                 updateBatchSendSmsButton();
             }
         });
+
+        // 欄位顯示切換（暫時生效，重新整理後回復）
+        function initColumnToggles() {
+            const $list = $('#columnToggleList');
+            $list.empty();
+            $('#usersTable thead th').each(function(idx) {
+                const headerText = ($(this).text() || '').trim() || ('Column ' + (idx + 1));
+                const isProtected = idx === 0 || idx === (totalColumns - 1); // 勾選欄、Actions 欄不提供隱藏
+                if (isProtected) return;
+                const checked = table.column(idx).visible();
+                const safeLabel = $('<div>').text(headerText).html();
+                const itemHtml =
+                    '<label class="column-toggle-item">' +
+                        '<input type="checkbox" class="column-toggle-checkbox" data-col-index="' + idx + '" ' + (checked ? 'checked' : '') + '>' +
+                        '<span>' + safeLabel + '</span>' +
+                    '</label>';
+                $list.append(itemHtml);
+            });
+        }
+
+        $(document).on('change', '.column-toggle-checkbox', function() {
+            const colIndex = parseInt($(this).attr('data-col-index'), 10);
+            const shouldShow = $(this).is(':checked');
+            if (!Number.isNaN(colIndex)) {
+                table.column(colIndex).visible(shouldShow, false);
+                table.columns.adjust().draw(false);
+            }
+        });
+
+        initColumnToggles();
 
         // --- 進階搜尋：多條件 AND（例如 姓名=John doe 且 公司=government）---
         const searchableFieldNames = [];
@@ -2046,6 +2179,7 @@
                     } else {
                         row.removeClass('checkin-true').addClass('checkin-false');
                     }
+                    row.find('td').eq(row.find('td').length - 2).attr('data-order', isCheckIn ? 1 : 0);
 
                     // Show success alert
                     const alertHtml = `
@@ -2283,8 +2417,53 @@
             $('#newUserForm')[0].reset();
         });
 
+        function syncSelectWithOtherAdmin(selectEl) {
+            if (!selectEl || !selectEl.getAttribute('data-select-other-base')) return;
+            var base = selectEl.getAttribute('data-select-other-base');
+            var hidden = document.getElementById(base + '_hidden');
+            var other = document.getElementById(base + '_other');
+            if (!hidden || !other) return;
+            var opt = selectEl.options[selectEl.selectedIndex];
+            var isOther = opt && opt.getAttribute('data-is-other') === '1';
+            if (isOther) {
+                $(other).removeClass('d-none');
+                if (selectEl.hasAttribute('required')) other.setAttribute('required', 'required');
+                else other.removeAttribute('required');
+                hidden.value = (other.value || '').trim();
+            } else {
+                $(other).addClass('d-none');
+                other.removeAttribute('required');
+                other.value = '';
+                other.setCustomValidity('');
+                hidden.value = selectEl.value || '';
+            }
+        }
+        $(document).on('change', '#newUserForm .js-select-maybe-other', function() {
+            syncSelectWithOtherAdmin(this);
+        });
+        $(document).on('input', '#newUserForm .js-select-other-text', function() {
+            var id = this.id;
+            if (!id || id.indexOf('_other') === -1) return;
+            var base = id.replace(/_other$/, '');
+            var sel = document.getElementById(base + '_sel');
+            if (sel) syncSelectWithOtherAdmin(sel);
+        });
+
         $('#newUserForm').on('submit', function(e) {
             e.preventDefault();
+            $('#newUserForm .js-select-maybe-other').each(function() { syncSelectWithOtherAdmin(this); });
+            var newUserFormEl = document.getElementById('newUserForm');
+            $('#newUserForm .js-select-other-text').each(function() {
+                if (!$(this).hasClass('d-none') && this.hasAttribute('required') && !((this.value || '').trim())) {
+                    this.setCustomValidity('請填寫此欄位');
+                } else {
+                    this.setCustomValidity('');
+                }
+            });
+            if (newUserFormEl && !newUserFormEl.checkValidity()) {
+                newUserFormEl.reportValidity();
+                return;
+            }
             
             // Dynamically collect form data
             const userData = {
@@ -2420,6 +2599,11 @@
                     const createdAtTd = $(rowNode).find('td').eq(createdAtTdIndex);
                     if (createdAtTd.length) {
                         createdAtTd.attr('data-order', timestamp);
+                    }
+                    const checkInTdIndex = totalTds - 2;
+                    const checkInTd = $(rowNode).find('td').eq(checkInTdIndex);
+                    if (checkInTd.length) {
+                        checkInTd.attr('data-order', 0);
                     }
                     
                     // Hide form and show button

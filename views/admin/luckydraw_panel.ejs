@@ -182,9 +182,48 @@
     const winnerList = document.getElementById('winnerList');
     const manualWinnerSelect = document.getElementById('manualWinnerSelect');
 
-    // 初始化 Socket.IO 並加入 luckydraw room
-    const socket = io();
-    socket.emit('join_luckydraw', { eventId, type: 'panel' });
+    // 初始化 Socket.IO 並加入 luckydraw room；heartbeat 保持連線，避免閒置靜默斷線
+    const HEARTBEAT_INTERVAL_MS = 15000;  // 每 15 秒送一次心跳
+    const HEARTBEAT_TIMEOUT_MS = 25000;   // 超過 25 秒沒收到 ack 則重連
+    let socket = io();
+    let lastHeartbeatAckAt = Date.now();
+    let heartbeatTimer = null;
+    let heartbeatCheckTimer = null;
+
+    function joinLuckydrawRoom() {
+        socket.emit('join_luckydraw', { eventId, type: 'panel' });
+    }
+
+    function startHeartbeat() {
+        lastHeartbeatAckAt = Date.now();
+        if (heartbeatTimer) clearInterval(heartbeatTimer);
+        if (heartbeatCheckTimer) clearInterval(heartbeatCheckTimer);
+        heartbeatTimer = setInterval(() => {
+            if (socket.connected) socket.emit('luckydraw:heartbeat');
+        }, HEARTBEAT_INTERVAL_MS);
+        heartbeatCheckTimer = setInterval(() => {
+            if (Date.now() - lastHeartbeatAckAt > HEARTBEAT_TIMEOUT_MS && socket.connected) {
+                console.warn('[Luckydraw Panel] Heartbeat timeout, reconnecting...');
+                socket.disconnect();
+                socket.connect();
+            }
+        }, 5000);
+    }
+
+    function stopHeartbeat() {
+        if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+        if (heartbeatCheckTimer) { clearInterval(heartbeatCheckTimer); heartbeatCheckTimer = null; }
+    }
+
+    socket.on('connect', () => {
+        joinLuckydrawRoom();
+        startHeartbeat();
+    });
+    socket.on('luckydraw:heartbeat_ack', () => { lastHeartbeatAckAt = Date.now(); });
+    socket.on('disconnect', stopHeartbeat);
+    socket.on('connect_error', stopHeartbeat);
+
+    if (socket.connected) { joinLuckydrawRoom(); startHeartbeat(); }
 
     const controllerToast = document.getElementById('controllerToast');
     let toastTimer = null;

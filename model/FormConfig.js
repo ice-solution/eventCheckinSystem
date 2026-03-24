@@ -31,7 +31,9 @@ const formFieldSchema = new mongoose.Schema({
         label: {
             zh: String, // 中文選項標籤
             en: String  // 英文選項標籤
-        }
+        },
+        // select：勾選後，用戶選此選項時可另行輸入自訂文字（儲存為該欄位最終值）
+        isOther: { type: Boolean, default: false }
     }],
     validation: {
         minLength: Number,

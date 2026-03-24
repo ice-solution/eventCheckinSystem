@@ -70,8 +70,34 @@
 
 ---
 
-## 五、小結
+## 五、Heartbeat 與防靜默斷線
+
+為避免使用者閒置過久導致 **靜默斷線** 或 **僵屍連線**（TCP 已斷但兩端未即時得知），系統做了兩層保活：
+
+### 1. Socket.IO 底層 ping/pong
+
+- 服務端在 `socket.js` 初始化時設定 **pingInterval**（預設 10 秒）、**pingTimeout**（預設 8 秒），比 Socket.IO 預設值更短，可較快偵測到死連線。
+- 可選環境變數：`SOCKET_PING_INTERVAL`、`SOCKET_PING_TIMEOUT`（單位 ms），見 `ENV_CONFIGURATION.md`。
+
+### 2. 應用層 heartbeat（LuckyDraw Panel / Display）
+
+- **客戶端**（Panel 與 Display 頁）每約 **15 秒** 發送一次 `luckydraw:heartbeat`。
+- **服務端** 收到後立即回傳 `luckydraw:heartbeat_ack`（帶 `ts`）。
+- 客戶端若超過 **25 秒** 未收到 ack 且仍自認為已連線，會主動 `disconnect()` 再 `connect()` 以強制重連並重新 `join_luckydraw`。
+
+| 事件（客戶端 → 服務端） | 說明 |
+|------------------------|------|
+| `luckydraw:heartbeat`  | 客戶端定時發送，用於保活與偵測靜默斷線 |
+
+| 事件（服務端 → 客戶端） | 說明 |
+|------------------------|------|
+| `luckydraw:heartbeat_ack` | 服務端回應心跳，客戶端據此更新「最後存活時間」 |
+
+---
+
+## 六、小結
 
 - Socket.IO 與 Express 共用同一個 HTTP server，由 `socket.js` 的 `initSocket(server)` 初始化，CORS 與 app 一致。
 - LuckyDraw 以 `luckydraw:${eventId}` 為 room，Panel 與 Display 先 join 再收發事件。
 - **Draw count 一改動就會透過 `luckydraw_panel_draw_count` → `luckydraw:draw_count` 通知同 room 的前端**，無需重新整理頁面。
+- **Heartbeat** 可維持長時間閒置下的連線，並在靜默斷線後自動重連。

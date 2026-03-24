@@ -256,25 +256,37 @@
                                                                 <label class="form-label">選項設定</label>
                                                                 <div id="options-<%= actualSectionIndex %>-<%= actualFieldIndex %>">
                                                                     <% field.options.forEach((option, optionIndex) => { %>
-                                                                        <div class="row mb-2">
-                                                                            <div class="col-md-3">
+                                                                        <div class="row mb-2 align-items-center">
+                                                                            <div class="col-md-2">
                                                                                 <input type="text" class="form-control form-control-sm" 
                                                                                        placeholder="選項值" value="<%= option.value %>"
                                                                                        onchange="updateOption(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>, 'value', this.value)">
                                                                             </div>
-                                                                            <div class="col-md-3">
+                                                                            <div class="col-md-2">
                                                                                 <input type="text" class="form-control form-control-sm" 
                                                                                        placeholder="中文標籤" 
                                                                                        value="<%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>"
                                                                                        onchange="updateOptionLabel(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>, 'zh', this.value)">
                                                                             </div>
-                                                                            <div class="col-md-3">
+                                                                            <div class="col-md-2">
                                                                                 <input type="text" class="form-control form-control-sm" 
                                                                                        placeholder="English Label" 
                                                                                        value="<%= option.label && option.label.en ? option.label.en : '' %>"
                                                                                        onchange="updateOptionLabel(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>, 'en', this.value)">
                                                                             </div>
+                                                                            <% if (field.type === 'select') { %>
                                                                             <div class="col-md-3">
+                                                                                <div class="form-check mb-0">
+                                                                                    <input type="checkbox" class="form-check-input" id="opt-other-<%= actualSectionIndex %>-<%= actualFieldIndex %>-<%= optionIndex %>"
+                                                                                           <%= option.isOther ? 'checked' : '' %>
+                                                                                           onchange="updateOptionFlag(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>, 'isOther', this.checked)">
+                                                                                    <label class="form-check-label small" for="opt-other-<%= actualSectionIndex %>-<%= actualFieldIndex %>-<%= optionIndex %>">其他（用戶可自填）</label>
+                                                                                </div>
+                                                                            </div>
+                                                                            <% } else { %>
+                                                                            <div class="col-md-3"></div>
+                                                                            <% } %>
+                                                                            <div class="col-md-3 text-end">
                                                                                 <button type="button" class="btn btn-outline-danger btn-sm" 
                                                                                         onclick="removeOption(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>)">
                                                                                     <i class="fas fa-trash"></i>
@@ -530,6 +542,16 @@
         }
     }
 
+    // 更新選項布林欄位（例如 select「其他可自填」）
+    function updateOptionFlag(sectionIndex, fieldIndex, optionIndex, property, checked) {
+        if (formConfig.sections[sectionIndex] && 
+            formConfig.sections[sectionIndex].fields[fieldIndex] &&
+            formConfig.sections[sectionIndex].fields[fieldIndex].options[optionIndex]) {
+            formConfig.sections[sectionIndex].fields[fieldIndex].options[optionIndex][property] = !!checked;
+            updatePreview();
+        }
+    }
+
     // 添加選項
     async function addOption(sectionIndex, fieldIndex) {
         if (!formConfig.sections[sectionIndex].fields[fieldIndex].options) {
@@ -540,7 +562,8 @@
             label: {
                 zh: '',
                 en: ''
-            }
+            },
+            isOther: false
         });
         
         // 先保存到資料庫，然後重新載入頁面
@@ -716,7 +739,9 @@
                             html += '<select class="form-select" disabled>';
                             html += '<option>--- ' + (previewLanguage === 'zh' ? '請選擇' : 'Please select') + ' ---</option>';
                             field.options.forEach(function(option) {
-                                html += '<option value="' + option.value + '">' + getMultilingualText(option.label, previewLanguage) + '</option>';
+                                var lab = getMultilingualText(option.label, previewLanguage);
+                                if (option.isOther) lab += (previewLanguage === 'zh' ? '（可自填）' : ' (specify)');
+                                html += '<option value="' + (option.value || '').replace(/"/g, '&quot;') + '">' + lab + '</option>';
                             });
                             html += '</select>';
                         } else if (field.type === 'checkbox' && field.options) {
