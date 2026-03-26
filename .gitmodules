@@ -1,0 +1,4 @@
+[submodule "games"]
+	path = games
+	url = git@github.com:ice-solution/ba_game_build.git
+	branch = main
