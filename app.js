@@ -62,6 +62,25 @@ app.set('view engine', 'ejs'); // 設置 EJS 作為模板引擎
 app.set('views', './views'); // 設置視圖文件夾
 
 app.use(express.static(path.join(__dirname, 'public'))); // 提供 public 文件夾中的靜態文件
+// 提供 games/ 內的靜態檔案（掛載到 /games）
+app.use('/games', express.static(path.join(__dirname, 'games')));
+
+// 若 /games 直接打開，希望能顯示 games 的首頁（若 build 的入口不是 index.html，需自行調整檔名）
+app.get('/games', (req, res) => {
+    const fs = require('fs');
+    const indexPath = path.join(__dirname, 'games', 'index.html');
+    if (fs.existsSync(indexPath)) {
+        return res.sendFile(indexPath);
+    }
+    // 沒有 index.html 時，直接回 404（/games/game/xxx 會由 express.static 提供）
+    return res.status(404).send('Not found');
+});
+
+// 讓 /games/game/:slug 能自動打到 games/game/:slug/index.html
+// （通常缺少尾端 / 時 static 可能不會直接回傳 index.html）
+app.get('/games/game/:slug', (req, res) => {
+    return res.redirect(301, `/games/game/${req.params.slug}/`);
+});
 
 // 設置全局變量
 app.use((req, res, next) => {
