@@ -76,10 +76,12 @@ app.get('/games', (req, res) => {
     return res.status(404).send('Not found');
 });
 
-// 讓 /games/game/:slug 能自動打到 games/game/:slug/index.html
-// （通常缺少尾端 / 時 static 可能不會直接回傳 index.html）
-app.get('/games/game/:slug', (req, res) => {
-    return res.redirect(301, `/games/game/${req.params.slug}/`);
+// 讓 /games/game/:slug（沒有尾端 /）能自動導到 /games/game/:slug/
+// 注意：Express 預設會把有尾端 / 的路徑也 match 到 '/games/game/:slug'，
+// 會造成 redirect loop，所以用 regex 只匹配「完全沒有尾端 /」的情況。
+app.get(/^\/games\/game\/([^/]+)$/, (req, res) => {
+    const slug = req.params && req.params[0] ? req.params[0] : '';
+    return res.redirect(301, `/games/game/${slug}/`);
 });
 
 // 設置全局變量
