@@ -3,7 +3,8 @@
     "allow": [
       "Bash(grep -E \"\\\\.md$\")",
       "Bash(grep \"\\\\.js$\")",
-      "Bash(grep -E \"socket|\\\\.js$\")"
+      "Bash(grep -E \"socket|\\\\.js$\")",
+      "Bash(awk '{print $9, \"\\(\" $5 \"\\)\"}')"
     ]
   }
 }

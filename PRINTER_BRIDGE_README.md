@@ -16,7 +16,7 @@
 ### 1. 安裝 Python 依賴
 
 ```bash
-pip install -r printer_bridge_requirements.txt
+pip install -r printer/printer_bridge_requirements.txt
 ```
 
 ### 2. 配置環境變量（可選）
@@ -39,7 +39,7 @@ FLASK_DEBUG=False
 ### 3. 啟動服務
 
 ```bash
-python printer_bridge.py
+python printer/printer_bridge.py
 ```
 
 服務將在 `http://localhost:5000` 啟動，並自動嘗試發現打印機 IP
@@ -181,7 +181,7 @@ printBadge('張三', 'ABC 公司', 'USER123');
 
 ## 標籤尺寸配置
 
-當前設定為 **62mm x 100mm**，可以在 `printer_bridge.py` 中修改：
+當前設定為 **62mm x 100mm**，可以在 `printer/printer_bridge.py` 中修改：
 
 ```python
 LABEL_WIDTH_MM = 62
@@ -196,7 +196,7 @@ LABEL_HEIGHT_MM = 100
 
 ```bash
 # 直接運行發現模組
-python printer_discovery.py
+python printer/printer_discovery.py
 ```
 
 ### 在代碼中使用
