@@ -4,7 +4,13 @@
       "Bash(grep -E \"\\\\.md$\")",
       "Bash(grep \"\\\\.js$\")",
       "Bash(grep -E \"socket|\\\\.js$\")",
-      "Bash(awk '{print $9, \"\\(\" $5 \"\\)\"}')"
+      "Bash(awk '{print $9, \"\\(\" $5 \"\\)\"}')",
+      "PowerShell(Add-Type -AssemblyName System.IO; $bytes = [System.IO.File]::ReadAllBytes\\(\"D:\\\\User\\\\Downloads\\\\BACheckin System - Operation Deck.pdf\"\\); $text = [System.Text.Encoding]::UTF8.GetString\\($bytes\\); $text | Select-String -Pattern \"\\(?<=BT\\\\s\\)\\(.+?\\)\\(?=\\\\sET\\)\" -AllMatches | ForEach-Object { $_.Matches } | Select-Object -First 50 | ForEach-Object { $_.Value })",
+      "Bash(python3 -c \"import pdfplumber; print\\('pdfplumber ok'\\)\")",
+      "Bash(python3 -c \"import PyPDF2; print\\('PyPDF2 ok'\\)\")",
+      "Bash(pdftotext \"D:/User/Downloads/BACheckin System - Operation Deck.pdf\" -)",
+      "WebFetch(domain:marketplace.microsoft.com)",
+      "WebSearch"
     ]
   }
 }
