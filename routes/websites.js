@@ -5,6 +5,15 @@ const path = require('path');
 const Event = require('../model/Event');
 const eventsController = require('../controllers/eventsController');
 const Transaction = require('../model/Transaction');
+const { getBannerRenderData } = require('../utils/bannerCache');
+
+// 為活動頁面注入帶 ?t= 的 banner URL（依檔案修改時間，避免 CDN 快取舊圖）
+router.param('event_id', (req, res, next, eventId) => {
+    if (/^[0-9a-fA-F]{24}$/.test(eventId)) {
+        Object.assign(res.locals, getBannerRenderData(eventId));
+    }
+    next();
+});
 
 // 路由到 demo_website/index.ejs
 router.get('/:event_id', (req, res) => {

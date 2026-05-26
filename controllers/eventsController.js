@@ -3775,6 +3775,22 @@ exports.renderEmailHtml = async (req, res) => {
     }
 };
 
+function normalizeTicketTitle(title) {
+    if (!title) return { zh: '', en: '' };
+    if (typeof title === 'string') return { zh: title, en: title };
+    return {
+        zh: (title.zh || '').trim(),
+        en: (title.en || title.zh || '').trim()
+    };
+}
+
+function getPaymentTicketTitle(ticket, lang = 'zh') {
+    if (!ticket) return '';
+    const t = normalizeTicketTitle(ticket.title);
+    if (lang === 'en') return t.en || t.zh || 'Ticket';
+    return t.zh || t.en || '票券';
+}
+
 function isPaymentTicketInRange(ticket, now = new Date()) {
     if (!ticket) return false;
     const from = ticket.datetimeFrom ? new Date(ticket.datetimeFrom) : null;
@@ -3797,7 +3813,7 @@ function normalizePaymentTicket(ticket) {
         t.datetimeTo = swap;
     }
     return {
-        title: t.title,
+        title: normalizeTicketTitle(t.title),
         price: t.price,
         datetimeFrom: t.datetimeFrom || undefined,
         datetimeTo: t.datetimeTo || undefined
@@ -3903,7 +3919,7 @@ exports.stripeCheckout = async (req, res) => {
             userEmail: email,
             userName: name,
             ticketId: ticket._id,
-            ticketTitle: ticket.title,
+            ticketTitle: getPaymentTicketTitle(ticket, lang),
             ticketPrice: ticket.price,
             stripeSessionId: 'pending',
             paymentGateway: gateway,
@@ -3911,17 +3927,19 @@ exports.stripeCheckout = async (req, res) => {
             userFormData
         });
 
+        const ticketTitleDisplay = getPaymentTicketTitle(ticket, lang);
+
         if (gateway === 'wonder') {
             const callbackUrl = `${baseUrl}/web/webhook/wonder`;
             const redirectUrl = `${baseUrl}/web/${event_id}/register/success?session_id=${transaction._id}${langQuery}`;
             const { paymentUrl, orderId } = await wonderPayment.createOrder({
                 referenceNumber: transaction._id.toString(),
                 currency: 'HKD',
-                ticketTitle: ticket.title,
+                ticketTitle: ticketTitleDisplay,
                 amount: ticket.price,
                 callbackUrl,
                 redirectUrl,
-                note: `Event: ${event_id}, Ticket: ${ticket.title}`
+                note: `Event: ${event_id}, Ticket: ${ticketTitleDisplay}`
             });
             transaction.stripeSessionId = orderId || transaction._id.toString();
             await transaction.save();
@@ -3945,7 +3963,7 @@ exports.stripeCheckout = async (req, res) => {
             line_items: [{
                 price_data: {
                     currency: (process.env.STRIPE_CURRENCY || 'hkd').toLowerCase(),
-                    product_data: { name: ticket.title || 'Ticket' },
+                    product_data: { name: ticketTitleDisplay || 'Ticket' },
                     unit_amount: Math.round(Number(ticket.price) * 100) // 轉為分
                 },
                 quantity: 1
@@ -4802,16 +4820,8 @@ exports.showBannerManagement = async (req, res) => {
             return res.status(404).send('Event not found');
         }
         
-        // 檢查當前 banner 是否存在（優先檢查 eventId 的 banner，如果沒有則檢查默認 banner）
-        const eventBannerPath = `public/exvent/${eventId}.jpg`;
-        const defaultBannerPath = 'public/exvent/banner.jpg';
-        
-        let currentBanner = null;
-        if (fs.existsSync(eventBannerPath)) {
-            currentBanner = `/exvent/${eventId}.jpg`;
-        } else if (fs.existsSync(defaultBannerPath)) {
-            currentBanner = '/exvent/banner.jpg';
-        }
+        const { getCurrentBannerPreviewUrl } = require('../utils/bannerCache');
+        const currentBanner = getCurrentBannerPreviewUrl(eventId);
         
         res.render('admin/banner_management', { 
             event, 

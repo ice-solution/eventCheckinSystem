@@ -162,8 +162,8 @@
         <div id="carouselExampleCaptions" class="carousel slide" data-ride="carousel">
             <div class="carousel-inner">
                 <div class="carousel-item active">
-                    <img src="/exvent/<%= event_id %>.jpg" class="d-block w-100" alt="第一張圖片" 
-                         onerror="this.src='/exvent/banner.jpg'">
+                    <img src="<%= typeof eventBannerSrc !== 'undefined' ? eventBannerSrc : '/exvent/' + event_id + '.jpg' %>" class="d-block w-100" alt="第一張圖片" 
+                         onerror="this.onerror=null;this.src='<%= typeof fallbackBannerSrc !== 'undefined' ? fallbackBannerSrc : '/exvent/banner.jpg' %>'">
                     <div class="carousel-caption d-none d-md-block">
                         
                     </div>
@@ -402,21 +402,33 @@
             <!-- 票券選擇（如果適用） -->
             <% if (paymentTickets && paymentTickets.length > 0) { %>
                 <div class="form-section">
-                    <h3>票券選擇</h3>
+                    <h3 class="section-title" data-zh="票券選擇" data-en="Ticket Selection">票券選擇</h3>
                     <div class="form-row">
-                        <label class="form-label" for="ticketId">
+                        <label class="form-label field-label" for="ticketId"
+                               data-zh="選擇票券" data-en="Select Ticket">
                             選擇票券 <span class="required">*</span>
                         </label>
                         <div class="form-input">
                             <select class="form-control" id="ticketId" name="ticketId" required>
-                                <option value="">--- 請選擇票券 ---</option>
+                                <option value="" data-zh="--- 請選擇票券 ---" data-en="--- Please select a ticket ---">--- 請選擇票券 ---</option>
                                 <% paymentTickets.forEach(function(ticket) { 
                                     const now = new Date();
                                     const from = ticket.datetimeFrom ? new Date(ticket.datetimeFrom) : null;
                                     const to = ticket.datetimeTo ? new Date(ticket.datetimeTo) : (ticket.datetime ? new Date(ticket.datetime) : null);
                                     const inRange = (!from || now >= from) && (!to || now <= to);
+                                    let ticketTitleZh = '';
+                                    let ticketTitleEn = '';
+                                    if (ticket.title && typeof ticket.title === 'object') {
+                                        ticketTitleZh = ticket.title.zh || ticket.title.en || '';
+                                        ticketTitleEn = ticket.title.en || ticket.title.zh || '';
+                                    } else {
+                                        ticketTitleZh = ticket.title || '';
+                                        ticketTitleEn = ticket.title || '';
+                                    }
                                     if (inRange) { %>
-                                        <option value="<%= ticket._id %>"><%= ticket.title %> - $<%= ticket.price %></option>
+                                        <option value="<%= ticket._id %>"
+                                                data-zh="<%= ticketTitleZh %> - $<%= ticket.price %>"
+                                                data-en="<%= ticketTitleEn %> - $<%= ticket.price %>"><%= ticketTitleZh %> - $<%= ticket.price %></option>
                                 <%  } 
                                 }); %>
                             </select>

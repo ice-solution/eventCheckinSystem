@@ -2356,14 +2356,24 @@
             return { from, to };
         }
 
+        function getTicketTitleParts(ticket) {
+            if (ticket.title && typeof ticket.title === 'object') {
+                return { zh: ticket.title.zh || '', en: ticket.title.en || '' };
+            }
+            const s = ticket.title || '';
+            return { zh: s, en: s };
+        }
+
         // 渲染票券列表
         function renderTickets() {
             let html = '';
             paymentTickets.forEach((ticket, idx) => {
                 const range = getTicketRangeValues(ticket);
+                const titles = getTicketTitleParts(ticket);
                 html += `
                     <div class="ticket-item mb-2" data-idx="${idx}">
-                        <input type="text" class="form-control d-inline-block w-auto mr-2 ticket-title" placeholder="Ticket Name" value="${ticket.title || ''}" style="width:120px;">
+                        <input type="text" class="form-control d-inline-block w-auto mr-1 ticket-title-zh" placeholder="票券名稱（中文）" value="${(titles.zh || '').replace(/"/g, '&quot;')}" style="width:130px;">
+                        <input type="text" class="form-control d-inline-block w-auto mr-2 ticket-title-en" placeholder="Ticket name (EN)" value="${(titles.en || '').replace(/"/g, '&quot;')}" style="width:130px;">
                         <input type="number" class="form-control d-inline-block w-auto mr-2 ticket-price" placeholder="Price" value="${ticket.price || ''}" style="width:100px;">
                         <input type="datetime-local" class="form-control d-inline-block w-auto mr-1 ticket-datetime-from" value="${toDatetimeLocalValue(range.from)}" style="width:180px;" title="開始日期時間">
                         <span class="mr-1 text-muted">–</span>
@@ -2378,7 +2388,7 @@
         // 新增票券
         $(document).on('click', '#addTicketBtn', function(e) {
             e.preventDefault();
-            paymentTickets.push({ title: '', price: '', datetimeFrom: '', datetimeTo: '' });
+            paymentTickets.push({ title: { zh: '', en: '' }, price: '', datetimeFrom: '', datetimeTo: '' });
             renderTickets();
         });
 
@@ -2390,10 +2400,13 @@
         });
 
         // 編輯票券
-        $(document).on('change', '.ticket-title, .ticket-price, .ticket-datetime-from, .ticket-datetime-to', function() {
+        $(document).on('change', '.ticket-title-zh, .ticket-title-en, .ticket-price, .ticket-datetime-from, .ticket-datetime-to', function() {
             const idx = $(this).closest('.ticket-item').data('idx');
             const row = $(this).closest('.ticket-item');
-            paymentTickets[idx].title = row.find('.ticket-title').val();
+            paymentTickets[idx].title = {
+                zh: row.find('.ticket-title-zh').val(),
+                en: row.find('.ticket-title-en').val()
+            };
             paymentTickets[idx].price = Number(row.find('.ticket-price').val());
             paymentTickets[idx].datetimeFrom = row.find('.ticket-datetime-from').val();
             paymentTickets[idx].datetimeTo = row.find('.ticket-datetime-to').val();
