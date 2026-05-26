@@ -6,6 +6,7 @@ const Event = require('../model/Event');
 const eventsController = require('../controllers/eventsController');
 const Transaction = require('../model/Transaction');
 const { getBannerRenderData } = require('../utils/bannerCache');
+const { normalizeTicketsForView } = require('../utils/paymentTicket');
 
 // 為活動頁面注入帶 ?t= 的 banner URL（依檔案修改時間，避免 CDN 快取舊圖）
 router.param('event_id', (req, res, next, eventId) => {
@@ -27,7 +28,7 @@ router.get('/:event_id/register', async (req, res) => {
     const event = await Event.findById(event_id);
     let paymentTickets = [];
     if (event && event.isPaymentEvent && Array.isArray(event.PaymentTickets)) {
-        paymentTickets = event.PaymentTickets;
+        paymentTickets = normalizeTicketsForView(event.PaymentTickets);
     }
     
     // 獲取表單配置

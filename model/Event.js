@@ -48,10 +48,8 @@ const winnerSchema = new mongoose.Schema({
 });
 
 const ticketSchema = new mongoose.Schema({
-    title: {
-        zh: { type: String, default: '' },
-        en: { type: String, default: '' }
-    },
+    // Mixed：相容舊版字串 title 與新版 { zh, en }
+    title: { type: mongoose.Schema.Types.Mixed, default: () => ({ zh: '', en: '' }) },
     price: { type: Number, required: true },
     /** @deprecated 舊單一截止日，新資料請用 datetimeTo */
     datetime: { type: Date },

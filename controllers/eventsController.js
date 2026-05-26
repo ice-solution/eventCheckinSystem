@@ -285,7 +285,11 @@ exports.getEventUsersByEventID = async (req, res) => {
             }
         }
         
-        res.render('admin/users', { event, formConfig }); // 渲染用戶頁面，傳遞事件信息和表單配置
+        const eventForView = event.toObject ? event.toObject() : event;
+        if (eventForView.PaymentTickets && eventForView.PaymentTickets.length) {
+            eventForView.PaymentTickets = normalizeTicketsForView(eventForView.PaymentTickets);
+        }
+        res.render('admin/users', { event: eventForView, formConfig });
     } catch (error) {
         console.error('Error fetching event:', error);
         res.status(500).json({ message: 'Error fetching event' });
@@ -3775,17 +3779,14 @@ exports.renderEmailHtml = async (req, res) => {
     }
 };
 
-function normalizeTicketTitle(title) {
-    if (!title) return { zh: '', en: '' };
-    if (typeof title === 'string') return { zh: title, en: title };
-    return {
-        zh: (title.zh || '').trim(),
-        en: (title.en || title.zh || '').trim()
-    };
-}
+const {
+    normalizeTicketTitle,
+    normalizePaymentTicketForSave,
+    normalizeTicketsForView
+} = require('../utils/paymentTicket');
 
 function getPaymentTicketTitle(ticket, lang = 'zh') {
-    if (!ticket) return '';
+    if (!ticket) return lang === 'en' ? 'Ticket' : '票券';
     const t = normalizeTicketTitle(ticket.title);
     if (lang === 'en') return t.en || t.zh || 'Ticket';
     return t.zh || t.en || '票券';
@@ -3801,23 +3802,7 @@ function isPaymentTicketInRange(ticket, now = new Date()) {
 }
 
 function normalizePaymentTicket(ticket) {
-    const t = { ...ticket };
-    if (t.datetimeFrom) t.datetimeFrom = new Date(t.datetimeFrom);
-    if (t.datetimeTo) t.datetimeTo = new Date(t.datetimeTo);
-    if (t.datetime) t.datetime = new Date(t.datetime);
-    // 舊欄位 datetime 視為結束時間
-    if (!t.datetimeTo && t.datetime) t.datetimeTo = t.datetime;
-    if (t.datetimeFrom && t.datetimeTo && t.datetimeFrom > t.datetimeTo) {
-        const swap = t.datetimeFrom;
-        t.datetimeFrom = t.datetimeTo;
-        t.datetimeTo = swap;
-    }
-    return {
-        title: normalizeTicketTitle(t.title),
-        price: t.price,
-        datetimeFrom: t.datetimeFrom || undefined,
-        datetimeTo: t.datetimeTo || undefined
-    };
+    return normalizePaymentTicketForSave(ticket);
 }
 
 // 更新付費活動設定

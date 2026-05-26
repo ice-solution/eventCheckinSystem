@@ -2413,9 +2413,34 @@
             delete paymentTickets[idx].datetime;
         });
 
+        function syncPaymentTicketsFromDom() {
+            $('.ticket-item').each(function() {
+                const idx = $(this).data('idx');
+                if (idx === undefined || !paymentTickets[idx]) return;
+                const row = $(this);
+                paymentTickets[idx].title = {
+                    zh: (row.find('.ticket-title-zh').val() || '').trim(),
+                    en: (row.find('.ticket-title-en').val() || '').trim()
+                };
+                paymentTickets[idx].price = Number(row.find('.ticket-price').val()) || 0;
+                paymentTickets[idx].datetimeFrom = row.find('.ticket-datetime-from').val();
+                paymentTickets[idx].datetimeTo = row.find('.ticket-datetime-to').val();
+                delete paymentTickets[idx].datetime;
+            });
+        }
+
         // 提交 payment event form
         $(document).on('submit', '#paymentEventForm', function(e) {
             e.preventDefault();
+            syncPaymentTicketsFromDom();
+            const missingTitle = paymentTickets.some(t => {
+                const title = t.title || {};
+                return !(title.zh && title.zh.trim()) && !(title.en && title.en.trim());
+            });
+            if (missingTitle) {
+                alert('請為每張票券填寫中文或英文名稱（至少填一種語言）');
+                return;
+            }
             const checked = $('#paymentEvent').is(':checked');
             $.ajax({
                 url: `/events/${eventId}/paymentEvent`,

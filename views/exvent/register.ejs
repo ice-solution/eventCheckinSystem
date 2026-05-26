@@ -416,19 +416,14 @@
                                     const from = ticket.datetimeFrom ? new Date(ticket.datetimeFrom) : null;
                                     const to = ticket.datetimeTo ? new Date(ticket.datetimeTo) : (ticket.datetime ? new Date(ticket.datetime) : null);
                                     const inRange = (!from || now >= from) && (!to || now <= to);
-                                    let ticketTitleZh = '';
-                                    let ticketTitleEn = '';
-                                    if (ticket.title && typeof ticket.title === 'object') {
-                                        ticketTitleZh = ticket.title.zh || ticket.title.en || '';
-                                        ticketTitleEn = ticket.title.en || ticket.title.zh || '';
-                                    } else {
-                                        ticketTitleZh = ticket.title || '';
-                                        ticketTitleEn = ticket.title || '';
-                                    }
+                                    const tZh = (ticket.title && ticket.title.zh) ? ticket.title.zh : '';
+                                    const tEn = (ticket.title && ticket.title.en) ? ticket.title.en : '';
+                                    const optZh = tZh ? (tZh + ' - $' + ticket.price) : ('票券 - $' + ticket.price);
+                                    const optEn = (tEn || tZh) ? ((tEn || tZh) + ' - $' + ticket.price) : ('Ticket - $' + ticket.price);
                                     if (inRange) { %>
                                         <option value="<%= ticket._id %>"
-                                                data-zh="<%= ticketTitleZh %> - $<%= ticket.price %>"
-                                                data-en="<%= ticketTitleEn %> - $<%= ticket.price %>"><%= ticketTitleZh %> - $<%= ticket.price %></option>
+                                                data-zh="<%= optZh %>"
+                                                data-en="<%= optEn %>"><%= optZh %></option>
                                 <%  } 
                                 }); %>
                             </select>
@@ -438,8 +433,8 @@
             <% } %>
 
             <div class="btn-container">
-                <button type="button" class="btn btn-secondary" onclick="history.back()">返回</button>
-                <button type="submit" class="btn btn-primary">下一步</button>
+                <button type="button" class="btn btn-secondary lang-text" data-zh="返回" data-en="Back" onclick="history.back()">返回</button>
+                <button type="submit" class="btn btn-primary lang-text" data-zh="下一步" data-en="Next">下一步</button>
             </div>
         </form>
         
@@ -595,6 +590,17 @@
                     $label.text(zhText);
                 } else if (currentLanguage === 'en' && enText) {
                     $label.text(enText);
+                }
+            });
+
+            // 更新按鈕文字（返回、下一步等）
+            $('.lang-text').each(function() {
+                const zhText = $(this).data('zh');
+                const enText = $(this).data('en');
+                if (currentLanguage === 'zh' && zhText) {
+                    $(this).text(zhText);
+                } else if (currentLanguage === 'en' && enText) {
+                    $(this).text(enText);
                 }
             });
 
