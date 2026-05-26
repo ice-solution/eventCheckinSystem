@@ -1,0 +1,768 @@
+<%- include ("components/header") %>
+<%- include ("components/menu", { eventId: eventId }) %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+
+<style>
+    .seating-wrap { display: flex; gap: 16px; min-height: calc(100vh - 200px); align-items: stretch; }
+    .seating-sidebar {
+        width: 360px; flex-shrink: 0; border: 1px solid #dee2e6; border-radius: 8px; padding: 12px;
+        background: #fafafa; max-height: 78vh; overflow: auto;
+    }
+    .seating-canvas-wrap {
+        flex: 1; position: relative; display: flex; flex-direction: column; min-width: 0;
+    }
+    .seating-canvas-toolbar {
+        display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+        margin-bottom: 8px; padding: 8px 10px; background: #f8f9fa; border-radius: 8px;
+        border: 1px solid #dee2e6; font-size: 13px;
+    }
+    .seating-canvas-toolbar input[type="range"] { width: 160px; vertical-align: middle; }
+    .seating-canvas-toolbar .toolbar-hint { color: #6c757d; font-size: 12px; max-width: 100%; }
+    .seating-canvas-scroll {
+        overflow: auto;
+        max-height: calc(100vh - 300px);
+        min-height: 520px;
+        position: relative;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        background: #e8eaed;
+    }
+    .seating-canvas-scale { display: inline-block; vertical-align: top; }
+    .seating-canvas {
+        position: relative;
+        width: 5200px;
+        height: 3800px;
+        min-width: 5200px;
+        min-height: 3800px;
+        background: #f0f2f5 url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><path fill="%23e0e3e8" d="M0 0h1v20H0zm19 0h1v20h-1zM0 0h20v1H0zm0 19h20v1H0z"/></svg>');
+    }
+    .guest-group-title { font-size: 13px; font-weight: 600; color: #495057; margin: 12px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #dee2e6; }
+    .guest-row {
+        display: flex; align-items: center; justify-content: space-between; gap: 8px;
+        padding: 6px 8px; margin-bottom: 6px; background: #fff; border: 1px solid #e9ecef; border-radius: 6px;
+        cursor: grab; font-size: 13px;
+    }
+    .guest-row.dragging { opacity: 0.5; }
+    .guest-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .companion-stepper { display: inline-flex; align-items: center; border: 1px solid #ced4da; border-radius: 6px; overflow: hidden; background: #fff; }
+    .companion-stepper button { width: 28px; height: 28px; border: none; background: #f8f9fa; cursor: pointer; font-size: 16px; line-height: 1; }
+    .companion-stepper button:hover { background: #e9ecef; }
+    .companion-stepper span { min-width: 28px; text-align: center; font-size: 13px; }
+    .stat-line { font-size: 12px; color: #6c757d; margin-bottom: 10px; }
+    /* 圓桌：環狀坐位 + 中央桌號與佔用率環 */
+    .round-table {
+        position: absolute; width: 300px; min-height: 340px;
+        cursor: move; user-select: none;
+    }
+    .round-table.drag-over .rt-plate { box-shadow: 0 0 0 3px rgba(40,167,69,.45); }
+    .rt-toolbar {
+        display: flex; align-items: center; justify-content: space-between; gap: 6px;
+        margin-bottom: 6px; font-size: 12px; font-weight: 600; color: #495057;
+    }
+    .rt-toolbar .cap-row { display: flex; align-items: center; gap: 4px; margin: 0; font-weight: normal; }
+    .rt-toolbar .cap-row input { width: 44px; padding: 2px 4px; font-size: 12px; height: 26px; }
+    .rt-plate {
+        position: relative; width: 280px; height: 280px; margin: 0 auto;
+        border-radius: 50%;
+        background: radial-gradient(circle at 50% 45%, #fff 0%, #f8f9fb 55%, #eef1f5 100%);
+        border: 1px solid #d0d4dc;
+        box-shadow: 0 6px 18px rgba(0,0,0,.1), inset 0 0 0 1px rgba(255,255,255,.8);
+    }
+    .rt-plate::before {
+        content: ''; position: absolute; inset: 14px; border-radius: 50%;
+        border: 1px solid rgba(100, 160, 220, .25);
+        pointer-events: none;
+    }
+    .rt-center {
+        position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+        width: 112px; height: 112px; text-align: center; z-index: 2; pointer-events: none;
+    }
+    .rt-center-num {
+        position: absolute; left: 50%; top: 50%; transform: translate(-50%, -52%);
+        font-size: 36px; font-weight: 700; color: #a67c2d;
+        text-shadow: 0 1px 0 rgba(255,255,255,.9); line-height: 1;
+    }
+    .rt-ring-svg { position: absolute; left: 0; top: 0; width: 112px; height: 112px; transform: rotate(-90deg); }
+    .rt-ring-bg { fill: none; stroke: #e2e4e8; stroke-width: 8; }
+    .rt-ring-fill { fill: none; stroke: #c9a44a; stroke-width: 8; stroke-linecap: round;
+        transition: stroke-dashoffset .35s ease;
+    }
+    .rt-seats-layer {
+        position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 3;
+        pointer-events: none;
+    }
+    .rt-slot {
+        position: absolute; width: 44px; height: 44px; margin-left: -22px; margin-top: -22px;
+        border-radius: 50%; pointer-events: auto;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 11px; font-weight: 600; text-align: center; line-height: 1.1;
+        transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .rt-slot.empty {
+        border: 2px dashed #b8c0cc; background: rgba(255,255,255,.75); color: #94a0b0;
+        font-size: 16px; font-weight: 400;
+        pointer-events: none;
+    }
+    .rt-slot.empty::after { content: '+'; opacity: .55; }
+    .rt-slot.guest {
+        padding: 2px; overflow: hidden;
+        border: 3px solid transparent;
+        border-top-color: var(--rt-brd, #c9a227);
+        border-right-color: var(--rt-brd, #c9a227);
+        border-bottom-color: var(--rt-brd, #c9a227);
+        background: var(--rt-bg, #e3f0ff); color: #333;
+        box-shadow: 0 2px 6px rgba(0,0,0,.12);
+        cursor: pointer;
+    }
+    .rt-slot.guest .rt-name {
+        display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        font-size: 11px;
+        pointer-events: none;
+    }
+    .rt-slot.companion {
+        background: linear-gradient(180deg, #d9eefc 0%, #c5e3fa 100%);
+        border: 1px solid #9cc8e8; color: #1a5a8a; font-size: 12px; font-weight: 700;
+        box-shadow: 0 1px 4px rgba(0,0,0,.08);
+        pointer-events: none;
+    }
+    .rt-slot .rt-remove {
+        position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; padding: 0;
+        border: none; border-radius: 50%; background: #fff; color: #c00; font-size: 12px; line-height: 1;
+        cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.2); z-index: 4;
+        pointer-events: auto;
+    }
+    .rt-slot.guest:hover, .rt-slot.companion:hover { transform: scale(1.06); z-index: 5; }
+    .rt-foot { margin-top: 6px; text-align: center; font-size: 11px; color: #6c757d; }
+    .rt-foot .btn { font-size: 11px; padding: 2px 8px; }
+    .toolbar-top { margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+</style>
+
+<div id="right-panel" class="right-panel">
+    <%- include ("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap">
+                    <strong class="card-title">排桌設定 — <%= eventName || eventId %></strong>
+                    <div>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnReloadApi">重新載入</button>
+                        <button type="button" class="btn btn-success btn-sm" id="btnSave">儲存</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="toolbar-top">
+                        <label class="mb-0">分類欄位（FormConfig）</label>
+                        <select id="categoryField" class="form-control form-control-sm" style="width: 220px;"></select>
+                        <button type="button" class="btn btn-primary btn-sm" id="btnAddTable">新增圓桌</button>
+                        <span class="stat-line mb-0" id="statUnassignedToolbar"></span>
+                    </div>
+                    <div id="alertSeating" class="alert alert-danger" style="display:none;"></div>
+                    <div class="seating-wrap">
+                        <div class="seating-sidebar">
+                            <div id="guestListMount"></div>
+                        </div>
+                        <div class="seating-canvas-wrap" id="canvasWrap">
+                            <div class="seating-canvas-toolbar">
+                                <span class="mb-0 font-weight-bold">畫布</span>
+                                <label class="mb-0">縮放</label>
+                                <input type="range" id="canvasZoom" min="10" max="100" step="5" value="55" title="縮放僅影響畫面，儲存座標不變">
+                                <span id="canvasZoomPct" class="text-monospace">55%</span>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnZoomFit">適合視窗</button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="btnLayoutGrid" title="依目前桌數排成多列網格">圓桌網格排列</button>
+                                <button type="button" class="btn btn-sm btn-outline-success" id="btnExportPng">匯出 PNG</button>
+                                <span class="toolbar-hint">畫布可捲動；20 桌以上建議先「網格排列」再微調。匯出為完整畫布解析度。</span>
+                            </div>
+                            <div class="seating-canvas-scroll" id="canvasScroll">
+                                <div class="seating-canvas-scale" id="seatingCanvasScale" style="transform-origin: 0 0;">
+                                    <div class="seating-canvas" id="seatingCanvas"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include ("components/footer") %>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script>
+(function() {
+    const eventId = '<%= eventId %>';
+    let users = <%- usersJson %>;
+    let formFields = <%- formFieldsJson %>;
+    let state = {
+        categoryFieldName: 'company',
+        companionByUserId: {},
+        tables: []
+    };
+
+    try {
+        const initial = <%- seatingJson %>;
+        if (initial && typeof initial === 'object') {
+            state.categoryFieldName = initial.categoryFieldName || 'company';
+            state.companionByUserId = initial.companionByUserId && typeof initial.companionByUserId === 'object'
+                ? initial.companionByUserId : {};
+            state.tables = Array.isArray(initial.tables) ? initial.tables : [];
+        }
+    } catch (e) { console.error(e); }
+
+    const $cat = document.getElementById('categoryField');
+    const $guestMount = document.getElementById('guestListMount');
+    const $canvas = document.getElementById('seatingCanvas');
+    const $canvasScroll = document.getElementById('canvasScroll');
+    const $canvasScale = document.getElementById('seatingCanvasScale');
+    const $canvasZoom = document.getElementById('canvasZoom');
+    const $alert = document.getElementById('alertSeating');
+
+    var CANVAS_TABLE_W = 300;
+    var CANVAS_TABLE_H = 360;
+    var MIN_CANVAS_W = 5200;
+    var MIN_CANVAS_H = 3800;
+
+    function getCanvasZoom() {
+        var v = parseInt($canvasZoom.value, 10);
+        if (isNaN(v) || v < 10) v = 100;
+        return v / 100;
+    }
+    function applyCanvasZoom() {
+        var z = getCanvasZoom();
+        $canvasScale.style.transform = 'scale(' + z + ')';
+        var el = document.getElementById('canvasZoomPct');
+        if (el) el.textContent = Math.round(z * 100) + '%';
+    }
+    function sizeCanvasFromTables() {
+        var pad = 120;
+        var maxR = MIN_CANVAS_W;
+        var maxB = MIN_CANVAS_H;
+        state.tables.forEach(function(t) {
+            var x = t.x != null ? t.x : 40;
+            var y = t.y != null ? t.y : 40;
+            maxR = Math.max(maxR, x + CANVAS_TABLE_W + pad);
+            maxB = Math.max(maxB, y + CANVAS_TABLE_H + pad);
+        });
+        $canvas.style.width = maxR + 'px';
+        $canvas.style.height = maxB + 'px';
+    }
+    function layoutTablesGrid() {
+        var n = state.tables.length;
+        if (n === 0) return;
+        var cols = Math.ceil(Math.sqrt(n));
+        cols = Math.max(4, Math.min(cols, 8));
+        var gapX = 48;
+        var gapY = 48;
+        var startX = 80;
+        var startY = 80;
+        var cellW = CANVAS_TABLE_W + gapX;
+        var cellH = CANVAS_TABLE_H + gapY;
+        state.tables.forEach(function(t, i) {
+            var col = i % cols;
+            var row = Math.floor(i / cols);
+            t.x = startX + col * cellW;
+            t.y = startY + row * cellH;
+        });
+        renderGuestList();
+        renderTables();
+    }
+    function zoomFitViewport() {
+        if (!$canvasScroll || !$canvas) return;
+        sizeCanvasFromTables();
+        var w = $canvas.offsetWidth;
+        var h = $canvas.offsetHeight;
+        var zw = (w > 0) ? ($canvasScroll.clientWidth - 32) / w : 1;
+        var zh = (h > 0) ? ($canvasScroll.clientHeight - 32) / h : 1;
+        var z = Math.min(1, zw, zh);
+        z = Math.max(0.1, z);
+        var pct = Math.round(z * 100);
+        pct = Math.max(10, Math.min(100, Math.round(pct / 5) * 5));
+        $canvasZoom.value = String(pct);
+        applyCanvasZoom();
+    }
+
+    function showErr(msg) {
+        $alert.style.display = msg ? 'block' : 'none';
+        $alert.textContent = msg || '';
+    }
+
+    function seatsForUser(uid) {
+        const n = parseInt(state.companionByUserId[uid], 10) || 0;
+        return Math.max(0, n) + 1;
+    }
+
+    function assignedUserIds() {
+        const set = {};
+        state.tables.forEach(t => {
+            (t.userIds || []).forEach(uid => { set[uid] = true; });
+        });
+        return set;
+    }
+
+    function tableSeatsUsed(t) {
+        let s = 0;
+        (t.userIds || []).forEach(uid => { s += seatsForUser(uid); });
+        return s;
+    }
+
+    function findUser(uid) {
+        return users.find(u => u._id === uid);
+    }
+
+    function categoryLabel(fieldName) {
+        const f = formFields.find(x => x.fieldName === fieldName);
+        return f ? f.label : fieldName;
+    }
+
+    function renderCategorySelect() {
+        $cat.innerHTML = '';
+        formFields.forEach(f => {
+            const opt = document.createElement('option');
+            opt.value = f.fieldName;
+            opt.textContent = f.label + ' (' + f.fieldName + ')';
+            if (f.fieldName === state.categoryFieldName) opt.selected = true;
+            $cat.appendChild(opt);
+        });
+        $cat.onchange = function() {
+            state.categoryFieldName = $cat.value;
+            renderGuestList();
+        };
+    }
+
+    function renderGuestList() {
+        const field = state.categoryFieldName || 'company';
+        const inTable = assignedUserIds();
+        const unassigned = users.filter(u => !inTable[u._id]);
+        const groups = {};
+        unassigned.forEach(u => {
+            const raw = u[field];
+            const key = (raw !== undefined && raw !== null && String(raw).trim() !== '') ? String(raw).trim() : '(未填)';
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(u);
+        });
+        const keys = Object.keys(groups).sort((a, b) => a.localeCompare(b, 'zh-HK'));
+
+        let html = '<div class="stat-line" id="statUnassignedInner"></div>';
+        keys.forEach(k => {
+            html += '<div class="guest-group-title">' + escapeHtml(k) + '</div>';
+            groups[k].forEach(u => {
+                const uid = u._id;
+                const comp = parseInt(state.companionByUserId[uid], 10) || 0;
+                html += '<div class="guest-row" draggable="true" data-user-id="' + uid + '">' +
+                    '<span class="guest-name" title="' + escapeAttr(u.name || '') + '">' + escapeHtml(u.name || uid) + '</span>' +
+                    '<span class="text-muted small mr-1">攜眷</span>' +
+                    '<div class="companion-stepper" data-user-id="' + uid + '">' +
+                    '<button type="button" data-d="-1">−</button>' +
+                    '<span>' + comp + '</span>' +
+                    '<button type="button" data-d="1">+</button>' +
+                    '</div></div>';
+            });
+        });
+        $guestMount.innerHTML = html || '<p class="text-muted small">暫無未排桌來賓</p>';
+
+        $guestMount.querySelectorAll('.guest-row').forEach(row => {
+            row.addEventListener('dragstart', function(e) {
+                e.dataTransfer.setData('text/user-id', row.getAttribute('data-user-id'));
+                row.classList.add('dragging');
+            });
+            row.addEventListener('dragend', function() { row.classList.remove('dragging'); });
+        });
+        $guestMount.querySelectorAll('.companion-stepper').forEach(box => {
+            box.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', function(ev) {
+                    ev.preventDefault(); ev.stopPropagation();
+                    const uid = box.getAttribute('data-user-id');
+                    const d = parseInt(btn.getAttribute('data-d'), 10);
+                    let v = parseInt(state.companionByUserId[uid], 10) || 0;
+                    v = Math.max(0, Math.min(20, v + d));
+                    state.companionByUserId[uid] = v;
+                    validateAllTables();
+                    renderGuestList();
+                    renderTables();
+                    updateStat();
+                });
+            });
+        });
+        updateStat();
+    }
+
+    function escapeHtml(s) {
+        const d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+    function escapeAttr(s) {
+        return String(s).replace(/"/g, '&quot;');
+    }
+
+    function updateStat() {
+        const inTable = assignedUserIds();
+        const unassigned = users.filter(u => !inTable[u._id]).length;
+        const totalSeats = users.reduce((sum, u) => sum + (inTable[u._id] ? 0 : seatsForUser(u._id)), 0);
+        const txt = '未排桌：' + unassigned + ' 人（左側剩餘總席次估算 ' + totalSeats + '，含攜眷）';
+        const el1 = document.getElementById('statUnassignedInner');
+        const el2 = document.getElementById('statUnassignedToolbar');
+        if (el1) el1.textContent = txt;
+        if (el2) el2.textContent = txt;
+    }
+
+    function validateAllTables() {
+        state.tables.forEach(t => {
+            const cap = Math.max(1, parseInt(t.capacity, 10) || 10);
+            t.capacity = cap;
+            let used = tableSeatsUsed(t);
+            while (used > cap && (t.userIds || []).length > 0) {
+                t.userIds.pop();
+                used = tableSeatsUsed(t);
+            }
+        });
+    }
+
+    var RT_PALETTE = [
+        { brd: '#c9a227', bg: '#e3f0ff' },
+        { brd: '#c62828', bg: '#ffebee' },
+        { brd: '#2e7d32', bg: '#e8f5e9' },
+        { brd: '#6a1b9a', bg: '#f3e5f5' },
+        { brd: '#1565c0', bg: '#e3f2fd' },
+        { brd: '#ef6c00', bg: '#fff3e0' }
+    ];
+    function hashCat(str) {
+        var s = String(str || '(未填)');
+        var h = 0;
+        for (var i = 0; i < s.length; i++) h = ((h << 5) - h) + s.charCodeAt(i) | 0;
+        return Math.abs(h);
+    }
+    function categoryColorsForUser(uid) {
+        var u = findUser(uid);
+        var field = state.categoryFieldName || 'company';
+        var raw = u ? u[field] : '';
+        var key = (raw !== undefined && raw !== null && String(raw).trim() !== '') ? String(raw).trim() : '(未填)';
+        var p = RT_PALETTE[hashCat(key) % RT_PALETTE.length];
+        return { brd: p.brd, bg: p.bg, label: key };
+    }
+
+    /** 將每桌 capacity 個坐位依序填入：每位來賓 1 格本人 + 攜眷格 */
+    function buildSeatSlots(t, cap) {
+        var slots = [];
+        var i;
+        for (i = 0; i < cap; i++) slots.push({ kind: 'empty' });
+        var pos = 0;
+        var uids = t.userIds || [];
+        for (i = 0; i < uids.length; i++) {
+            var uid = uids[i];
+            var need = seatsForUser(uid);
+            if (pos + need > cap) break;
+            slots[pos] = { kind: 'guest', uid: uid };
+            var k;
+            for (k = 1; k < need; k++) {
+                slots[pos + k] = { kind: 'companion', forUid: uid, idx: k };
+            }
+            pos += need;
+        }
+        return slots;
+    }
+
+    function polarSlotXY(index, total, cx, cy, radius) {
+        var angle = (index / total) * 2 * Math.PI - Math.PI / 2;
+        return {
+            left: cx + radius * Math.cos(angle),
+            top: cy + radius * Math.sin(angle)
+        };
+    }
+
+    function renderTables() {
+        $canvas.innerHTML = '';
+        var R = 118;
+        var cx = 140;
+        var cy = 140;
+        var ringR = 48;
+        var ringC = 2 * Math.PI * ringR;
+
+        state.tables.forEach(function(t, idx) {
+            var div = document.createElement('div');
+            div.className = 'round-table';
+            div.style.left = (t.x || 40) + 'px';
+            div.style.top = (t.y || 40) + 'px';
+            div.dataset.tableId = t.id;
+
+            var used = tableSeatsUsed(t);
+            var cap = Math.max(1, parseInt(t.capacity, 10) || 10);
+            var pct = cap > 0 ? Math.min(1, used / cap) : 0;
+            var dashOff = ringC * (1 - pct);
+
+            var slots = buildSeatSlots(t, cap);
+
+            var toolbar = document.createElement('div');
+            toolbar.className = 'rt-toolbar';
+            toolbar.innerHTML = '<span>第 ' + (idx + 1) + ' 桌</span>' +
+                '<div class="cap-row">上限 <input type="number" min="1" max="999" value="' + cap + '" class="form-control form-control-sm tbl-cap"/></div>';
+
+            var plate = document.createElement('div');
+            plate.className = 'rt-plate';
+
+            var center = document.createElement('div');
+            center.className = 'rt-center';
+            center.innerHTML =
+                '<svg class="rt-ring-svg" viewBox="0 0 112 112" aria-hidden="true">' +
+                '<circle class="rt-ring-bg" cx="56" cy="56" r="' + ringR + '"/>' +
+                '<circle class="rt-ring-fill" cx="56" cy="56" r="' + ringR + '"' +
+                ' stroke-dasharray="' + ringC + '"' +
+                ' stroke-dashoffset="' + dashOff + '"/>' +
+                '</svg>' +
+                '<div class="rt-center-num">' + (idx + 1) + '</div>';
+
+            var layer = document.createElement('div');
+            layer.className = 'rt-seats-layer';
+
+            var si;
+            for (si = 0; si < cap; si++) {
+                var slotEl = document.createElement('div');
+                var slot = slots[si];
+                var xy = polarSlotXY(si, cap, cx, cy, R);
+                slotEl.style.left = xy.left + 'px';
+                slotEl.style.top = xy.top + 'px';
+
+                if (slot.kind === 'empty') {
+                    slotEl.className = 'rt-slot empty';
+                    slotEl.title = '空位';
+                } else if (slot.kind === 'companion') {
+                    slotEl.className = 'rt-slot companion';
+                    slotEl.textContent = '+1';
+                    slotEl.title = '攜眷';
+                } else {
+                    slotEl.className = 'rt-slot guest';
+                    slotEl.title = '點擊姓名或圓圈：移回左側未排桌';
+                    var cols = categoryColorsForUser(slot.uid);
+                    slotEl.style.setProperty('--rt-brd', cols.brd);
+                    slotEl.style.setProperty('--rt-bg', cols.bg);
+                    var u = findUser(slot.uid);
+                    var nm = document.createElement('span');
+                    nm.className = 'rt-name';
+                    nm.textContent = (u && u.name) ? u.name : slot.uid;
+                    slotEl.appendChild(nm);
+                    var rm = document.createElement('button');
+                    rm.type = 'button';
+                    rm.className = 'rt-remove';
+                    rm.innerHTML = '&times;';
+                    rm.title = '移出此桌';
+                    var unassignThisGuest = function(ev) {
+                        if (ev) {
+                            ev.preventDefault();
+                            ev.stopPropagation();
+                        }
+                        t.userIds = (t.userIds || []).filter(function(id) { return id !== slot.uid; });
+                        showErr('');
+                        renderGuestList();
+                        renderTables();
+                    };
+                    rm.addEventListener('click', unassignThisGuest);
+                    slotEl.addEventListener('click', function(ev) {
+                        if (ev.target.closest('.rt-remove')) return;
+                        unassignThisGuest(ev);
+                    });
+                    slotEl.appendChild(rm);
+                }
+                layer.appendChild(slotEl);
+            }
+
+            plate.appendChild(center);
+            plate.appendChild(layer);
+
+            var foot = document.createElement('div');
+            foot.className = 'rt-foot';
+            foot.innerHTML = '<span>已佔 ' + used + ' / ' + cap + ' 席（含攜眷）</span> ' +
+                '<button type="button" class="btn btn-sm btn-outline-danger tbl-remove">移除此桌</button>';
+
+            div.appendChild(toolbar);
+            div.appendChild(plate);
+            div.appendChild(foot);
+
+            var capInput = div.querySelector('.tbl-cap');
+            capInput.addEventListener('change', function() {
+                t.capacity = Math.max(1, parseInt(capInput.value, 10) || 10);
+                validateAllTables();
+                renderGuestList();
+                renderTables();
+            });
+            capInput.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+
+            div.querySelector('.tbl-remove').addEventListener('click', function(e) {
+                e.stopPropagation();
+                state.tables = state.tables.filter(function(x) { return x.id !== t.id; });
+                renderGuestList();
+                renderTables();
+            });
+
+            div.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                div.classList.add('drag-over');
+            }, true);
+            div.addEventListener('dragleave', function(e) {
+                if (!div.contains(e.relatedTarget)) div.classList.remove('drag-over');
+            });
+            div.addEventListener('drop', function(e) {
+                e.preventDefault();
+                div.classList.remove('drag-over');
+                var uid = e.dataTransfer.getData('text/user-id');
+                if (!uid) return;
+                if ((t.userIds || []).indexOf(uid) >= 0) return;
+                var trial = { userIds: (t.userIds || []).concat([uid]), capacity: cap };
+                var newUsed = tableSeatsUsed({ userIds: trial.userIds });
+                if (newUsed > cap) {
+                    showErr('此桌已滿或攜眷人數超出上限，請調整攜眷或人數上限。');
+                    setTimeout(function() { showErr(''); }, 3500);
+                    return;
+                }
+                t.userIds = trial.userIds;
+                showErr('');
+                renderGuestList();
+                renderTables();
+            });
+
+            var dragTable = false, startX, startY, origX, origY, zoomFactor = 1;
+            div.addEventListener('mousedown', function(e) {
+                if (e.target.closest('input') || e.target.closest('button') || e.target.closest('.rt-slot')) return;
+                dragTable = true;
+                zoomFactor = getCanvasZoom();
+                startX = e.clientX;
+                startY = e.clientY;
+                origX = t.x || 40;
+                origY = t.y || 40;
+                e.preventDefault();
+            });
+            document.addEventListener('mousemove', function(e) {
+                if (!dragTable) return;
+                var dx = e.clientX - startX, dy = e.clientY - startY;
+                t.x = origX + dx / zoomFactor;
+                t.y = origY + dy / zoomFactor;
+                div.style.left = t.x + 'px';
+                div.style.top = t.y + 'px';
+            });
+            document.addEventListener('mouseup', function() { dragTable = false; });
+
+            $canvas.appendChild(div);
+        });
+        sizeCanvasFromTables();
+    }
+
+    document.getElementById('btnAddTable').addEventListener('click', function() {
+        var id = 'tbl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+        var n = state.tables.length + 1;
+        var cols = Math.ceil(Math.sqrt(n));
+        cols = Math.max(4, Math.min(cols, 8));
+        var gapX = 48;
+        var gapY = 48;
+        var startX = 80;
+        var startY = 80;
+        var cellW = CANVAS_TABLE_W + gapX;
+        var cellH = CANVAS_TABLE_H + gapY;
+        var i = n - 1;
+        var col = i % cols;
+        var row = Math.floor(i / cols);
+        state.tables.push({
+            id: id,
+            x: startX + col * cellW,
+            y: startY + row * cellH,
+            capacity: 10,
+            userIds: []
+        });
+        renderTables();
+    });
+
+    $canvasZoom.addEventListener('input', applyCanvasZoom);
+    document.getElementById('btnZoomFit').addEventListener('click', zoomFitViewport);
+    document.getElementById('btnLayoutGrid').addEventListener('click', function() {
+        if (state.tables.length === 0) {
+            alert('請先新增圓桌');
+            return;
+        }
+        if (!confirm('將依目前桌數重新排列成網格，是否繼續？')) return;
+        layoutTablesGrid();
+        zoomFitViewport();
+    });
+    document.getElementById('btnExportPng').addEventListener('click', function() {
+        var btn = document.getElementById('btnExportPng');
+        if (typeof html2canvas === 'undefined') {
+            alert('無法載入匯出套件（html2canvas），請檢查網路或稍後再試。');
+            return;
+        }
+        sizeCanvasFromTables();
+        btn.disabled = true;
+        var prevZ = $canvasZoom.value;
+        $canvasZoom.value = '100';
+        applyCanvasZoom();
+        setTimeout(function() {
+            html2canvas($canvas, {
+                scale: 1,
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#f0f2f5',
+                logging: false,
+                width: $canvas.offsetWidth,
+                height: $canvas.offsetHeight
+            }).then(function(canvas) {
+                var link = document.createElement('a');
+                link.download = 'seating-' + eventId + '.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }).catch(function(err) {
+                console.error(err);
+                alert('匯出失敗，請重試或縮小畫布後再匯出。');
+            }).finally(function() {
+                $canvasZoom.value = prevZ;
+                applyCanvasZoom();
+                btn.disabled = false;
+            });
+        }, 80);
+    });
+
+    document.getElementById('btnSave').addEventListener('click', function() {
+        showErr('');
+        validateAllTables();
+        fetch('/events/' + eventId + '/seating-arrangement/api', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                categoryFieldName: state.categoryFieldName,
+                companionByUserId: state.companionByUserId,
+                tables: state.tables
+            })
+        }).then(function(r) {
+            return r.json().then(function(j) {
+                if (!r.ok) throw new Error(j.message || '儲存失敗');
+                alert('已儲存');
+            });
+        }).catch(function(err) {
+            alert(err.message || '儲存失敗');
+        });
+    });
+
+    document.getElementById('btnReloadApi').addEventListener('click', function() {
+        fetch('/events/' + eventId + '/seating-arrangement/api')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                users = data.users || users;
+                state.categoryFieldName = data.seating.categoryFieldName || 'company';
+                state.companionByUserId = data.seating.companionByUserId || {};
+                state.tables = data.seating.tables || [];
+                renderCategorySelect();
+                renderGuestList();
+                renderTables();
+            })
+            .catch(function() { alert('載入失敗'); });
+    });
+
+    renderCategorySelect();
+    if (!state.tables || state.tables.length === 0) {
+        state.tables = [
+            { id: 'tbl_default_1', x: 80, y: 80, capacity: 10, userIds: [] },
+            { id: 'tbl_default_2', x: 340, y: 120, capacity: 10, userIds: [] }
+        ];
+    }
+    renderGuestList();
+    renderTables();
+    applyCanvasZoom();
+    setTimeout(zoomFitViewport, 100);
+})();
+</script>

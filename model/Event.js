@@ -50,7 +50,10 @@ const winnerSchema = new mongoose.Schema({
 const ticketSchema = new mongoose.Schema({
     title: { type: String, required: true },
     price: { type: Number, required: true },
-    datetime: { type: Date, required: true }
+    /** @deprecated 舊單一截止日，新資料請用 datetimeTo */
+    datetime: { type: Date },
+    datetimeFrom: { type: Date },
+    datetimeTo: { type: Date }
 });
 
 // 掃瞄加分用戶 schema
@@ -101,6 +104,18 @@ const eventSchema = new mongoose.Schema({
         sendReminderEmail: { type: Boolean, default: false }, // 是否立即發送提示電郵
         sendThankYouEmail: { type: Boolean, default: false }, // 是否立即發送感謝電郵
         welcomeMessageMethod: { type: String, enum: ['email', 'sms', 'both'], default: 'email' } // 歡迎消息發送方式：email/sms/both
+    },
+    // 排桌：左側依 FormConfig 欄位分類、右側圓桌拖放；攜眷數 N 則佔席 (N+1)
+    seatingArrangement: {
+        categoryFieldName: { type: String, default: 'company' },
+        companionByUserId: { type: mongoose.Schema.Types.Mixed, default: {} },
+        tables: [{
+            id: { type: String, required: true },
+            x: { type: Number, default: 48 },
+            y: { type: Number, default: 48 },
+            capacity: { type: Number, default: 10 },
+            userIds: [{ type: String }]
+        }]
     },
     // 附件列表
     attachments: [{

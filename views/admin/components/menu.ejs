@@ -30,6 +30,11 @@
                     <a href="/events/<%=eventId%>"> <i class="menu-icon fa fa-clipboard-list"></i>RSVP </a>
                 </li>
                 <% } %>
+                <% if (can('seating')) { %>
+                <li>
+                    <a href="/events/<%=eventId%>/seating-arrangement"> <i class="menu-icon fa fa-th"></i>排桌 Seating</a>
+                </li>
+                <% } %>
                 <% if (can('guestList')) { %>
                 <li>
                     <a href="/events/<%=eventId%>/guest-list"> <i class="menu-icon fa fa-users"></i>Guest List </a>

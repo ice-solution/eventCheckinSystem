@@ -140,6 +140,11 @@ router.get('/:eventId/attendees/create', eventsController.renderCreateAttendeePa
 router.get('/:eventId/guest-list/export', eventsController.exportGuestList); // 導出 Guest List 為 Excel（必須在 guest-list 路由之前）
 router.get('/:eventId/guest-list', eventsController.renderGuestListPage); // Guest List 路由
 
+// 排桌（依 FormConfig 分類、圓桌拖放、攜眷佔席）
+router.get('/:eventId/seating-arrangement', eventsController.renderSeatingArrangementPage);
+router.get('/:eventId/seating-arrangement/api', eventsController.getSeatingArrangementApi);
+router.put('/:eventId/seating-arrangement/api', eventsController.saveSeatingArrangementApi);
+
 // Guest List 管理路由
 router.post('/:eventId/guest-list', eventsController.addGuestToList); // 添加來賓到 Guest List
 router.put('/:eventId/guest-list/:guestId', eventsController.updateGuestInList); // 更新 Guest List 中的來賓

@@ -6,6 +6,7 @@
 const EVENT_FUNCTIONS = [
     { key: 'rsvp', label: 'RSVP / User List', pathMatch: /^\/events\/[^/]+\/?$/ },
     { key: 'rsvp', label: 'Edit Event Name', pathMatch: /^\/events\/[^/]+\/edit-name/ },
+    { key: 'seating', label: '排桌 Seating', pathMatch: /^\/events\/[^/]+\/seating-arrangement/ },
     { key: 'guestList', label: 'Guest List', pathMatch: /^\/events\/[^/]+\/guest-list/ },
     { key: 'emailTemplate', label: 'Email Template', pathMatch: /^\/events\/[^/]+\/emailTemplate/ },
     { key: 'smsTemplate', label: 'SMS Template', pathMatch: /^\/events\/[^/]+\/smsTemplate/ },

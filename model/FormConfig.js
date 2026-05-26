@@ -18,6 +18,11 @@ const formFieldSchema = new mongoose.Schema({
         type: Boolean, 
         default: false 
     },
+    // 是否在註冊頁等前台表單顯示供用戶填寫
+    display: {
+        type: Boolean,
+        default: true
+    },
     visible: { 
         type: Boolean, 
         default: true 

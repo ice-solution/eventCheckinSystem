@@ -212,7 +212,8 @@
                                 });
                                 %>
                                 <% sortedFields.forEach((field, fieldIndex) => { %>
-                                    <% if (field.visible) { %>
+                                    <% const fieldDisplayed = field.display !== undefined ? field.display : field.visible !== false; %>
+                                    <% if (fieldDisplayed) { %>
                                         <% var _selectHasOther = (field.type === 'select' && field.options && field.options.some(function (o) { return o && o.isOther; })); %>
                                         <% var _fieldControlId = (field.type === 'select' && _selectHasOther) ? (field.fieldName + '_sel') : field.fieldName; %>
                                         <div class="form-row">
@@ -411,8 +412,10 @@
                                 <option value="">--- 請選擇票券 ---</option>
                                 <% paymentTickets.forEach(function(ticket) { 
                                     const now = new Date();
-                                    const ticketTime = ticket.datetime ? new Date(ticket.datetime) : null;
-                                    if (!ticketTime || ticketTime >= now) { %>
+                                    const from = ticket.datetimeFrom ? new Date(ticket.datetimeFrom) : null;
+                                    const to = ticket.datetimeTo ? new Date(ticket.datetimeTo) : (ticket.datetime ? new Date(ticket.datetime) : null);
+                                    const inRange = (!from || now >= from) && (!to || now <= to);
+                                    if (inRange) { %>
                                         <option value="<%= ticket._id %>"><%= ticket.title %> - $<%= ticket.price %></option>
                                 <%  } 
                                 }); %>

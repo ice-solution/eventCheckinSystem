@@ -2333,6 +2333,7 @@
             const html = `
                 <form id="paymentEventForm" class="mt-3">
                     <h5>Ticket Settings</h5>
+                    <p class="text-muted small mb-2">每張票券可設定可購買時段（開始 – 結束）；留空則不限制該端。</p>
                     <div id="ticketsList"></div>
                     <button type="button" class="btn btn-primary btn-sm" id="addTicketBtn">Add Ticket</button>
                     <button type="submit" class="btn btn-success btn-sm ml-2">Save Payment Settings</button>
@@ -2342,15 +2343,31 @@
             renderTickets();
         }
 
+        function toDatetimeLocalValue(val) {
+            if (!val) return '';
+            const d = new Date(val);
+            if (isNaN(d.getTime())) return '';
+            return d.toISOString().slice(0, 16);
+        }
+
+        function getTicketRangeValues(ticket) {
+            const from = ticket.datetimeFrom || '';
+            const to = ticket.datetimeTo || ticket.datetime || '';
+            return { from, to };
+        }
+
         // 渲染票券列表
         function renderTickets() {
             let html = '';
             paymentTickets.forEach((ticket, idx) => {
+                const range = getTicketRangeValues(ticket);
                 html += `
                     <div class="ticket-item mb-2" data-idx="${idx}">
                         <input type="text" class="form-control d-inline-block w-auto mr-2 ticket-title" placeholder="Ticket Name" value="${ticket.title || ''}" style="width:120px;">
                         <input type="number" class="form-control d-inline-block w-auto mr-2 ticket-price" placeholder="Price" value="${ticket.price || ''}" style="width:100px;">
-                        <input type="datetime-local" class="form-control d-inline-block w-auto mr-2 ticket-datetime" value="${ticket.datetime ? new Date(ticket.datetime).toISOString().slice(0,16) : ''}" style="width:180px;">
+                        <input type="datetime-local" class="form-control d-inline-block w-auto mr-1 ticket-datetime-from" value="${toDatetimeLocalValue(range.from)}" style="width:180px;" title="開始日期時間">
+                        <span class="mr-1 text-muted">–</span>
+                        <input type="datetime-local" class="form-control d-inline-block w-auto mr-2 ticket-datetime-to" value="${toDatetimeLocalValue(range.to)}" style="width:180px;" title="結束日期時間">
                         <button type="button" class="btn btn-danger btn-sm remove-ticket">Delete</button>
                     </div>
                 `;
@@ -2361,7 +2378,7 @@
         // 新增票券
         $(document).on('click', '#addTicketBtn', function(e) {
             e.preventDefault();
-            paymentTickets.push({ title: '', price: '', datetime: '' });
+            paymentTickets.push({ title: '', price: '', datetimeFrom: '', datetimeTo: '' });
             renderTickets();
         });
 
@@ -2373,12 +2390,14 @@
         });
 
         // 編輯票券
-        $(document).on('change', '.ticket-title, .ticket-price, .ticket-datetime', function() {
+        $(document).on('change', '.ticket-title, .ticket-price, .ticket-datetime-from, .ticket-datetime-to', function() {
             const idx = $(this).closest('.ticket-item').data('idx');
             const row = $(this).closest('.ticket-item');
             paymentTickets[idx].title = row.find('.ticket-title').val();
             paymentTickets[idx].price = Number(row.find('.ticket-price').val());
-            paymentTickets[idx].datetime = row.find('.ticket-datetime').val();
+            paymentTickets[idx].datetimeFrom = row.find('.ticket-datetime-from').val();
+            paymentTickets[idx].datetimeTo = row.find('.ticket-datetime-to').val();
+            delete paymentTickets[idx].datetime;
         });
 
         // 提交 payment event form

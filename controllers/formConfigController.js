@@ -55,6 +55,13 @@ const migrateFormConfig = (formConfig) => {
                 }
                 
                 // 遷移 options
+                if (migratedField.display === undefined) {
+                    migratedField.display = field.visible !== false;
+                }
+                if (migratedField.visible === undefined) {
+                    migratedField.visible = migratedField.display !== false;
+                }
+                
                 if (field.options) {
                     migratedField.options = field.options.map(option => {
                         const migratedOption = { ...option };
@@ -116,6 +123,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'email',
                     required: true,
+                    display: true,
                     visible: true,
                     placeholder: {
                         zh: '例如：peterwong@abccompany.com',
@@ -131,6 +139,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'text',
                     required: true,
+                    display: true,
                     visible: true,
                     placeholder: {
                         zh: '例如：王小明',
@@ -146,6 +155,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'select',
                     required: true,
+                    display: true,
                     visible: true,
                     order: 3,
                     options: [
@@ -169,6 +179,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'tel',
                     required: true,
+                    display: true,
                     visible: true,
                     placeholder: {
                         zh: '例如：區號 - 電話號碼',
@@ -184,6 +195,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'select',
                     required: true,
+                    display: true,
                     visible: true,
                     order: 5,
                     options: [
@@ -202,6 +214,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'text',
                     required: true,
+                    display: true,
                     visible: true,
                     placeholder: {
                         zh: '例如：ABC 公司',
@@ -217,6 +230,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'text',
                     required: true,
+                    display: true,
                     visible: true,
                     placeholder: {
                         zh: '例如：資深經理',
@@ -232,6 +246,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'select',
                     required: false,
+                    display: true,
                     visible: true,
                     order: 8,
                     options: [
@@ -251,6 +266,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'select',
                     required: false,
+                    display: true,
                     visible: true,
                     order: 9,
                     options: [
@@ -269,6 +285,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'select',
                     required: false,
+                    display: true,
                     visible: true,
                     order: 10,
                     options: [
@@ -286,6 +303,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'textarea',
                     required: false,
+                    display: true,
                     visible: true,
                     placeholder: {
                         zh: '請輸入任何特殊需求或備註',
@@ -445,6 +463,15 @@ exports.renderFormConfigPage = async (req, res) => {
                 ...getDefaultFormConfig()
             });
             await formConfig.save();
+        } else {
+            const migratedConfig = migrateFormConfig(formConfig);
+            const needsDisplayMigration = formConfig.sections && formConfig.sections.some(sec =>
+                (sec.fields || []).some(f => f.display === undefined)
+            );
+            if (needsDisplayMigration) {
+                Object.assign(formConfig, migratedConfig);
+                await formConfig.save();
+            }
         }
         
         res.render('admin/form_config', { 

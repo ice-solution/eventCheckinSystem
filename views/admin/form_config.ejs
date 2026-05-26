@@ -170,11 +170,12 @@
                                                     const originalFieldIndex = section.fields.findIndex(f => f._id ? f._id.toString() === field._id.toString() : f.fieldName === field.fieldName);
                                                     const actualFieldIndex = originalFieldIndex >= 0 ? originalFieldIndex : fieldIndex;
                                                     %>
-                                                    <div class="field-item <%= field.visible ? '' : 'hidden-field' %>" data-field-index="<%= actualFieldIndex %>">
+                                                    <% const fieldDisplayed = field.display !== undefined ? field.display : field.visible !== false; %>
+                                                    <div class="field-item <%= fieldDisplayed ? '' : 'hidden-field' %>" data-field-index="<%= actualFieldIndex %>">
                                                         <div class="field-controls">
                                                             <div class="form-check form-switch">
                                                                 <input class="form-check-input" type="checkbox" 
-                                                                       <%= field.visible ? 'checked' : '' %>
+                                                                       <%= fieldDisplayed ? 'checked' : '' %>
                                                                        onchange="toggleField(<%= actualSectionIndex %>, <%= actualFieldIndex %>)">
                                                                 <label class="form-check-label">
                                                                     <strong><%= field.label %></strong>
@@ -220,12 +221,20 @@
                                                                     <option value="radio" <%= field.type === 'radio' ? 'selected' : '' %>>Radio</option>
                                                                 </select>
                                                             </div>
-                                                            <div class="col-md-2">
+                                                            <div class="col-md-1">
                                                                 <label class="form-label">Required</label>
                                                                 <div class="form-check">
                                                                     <input class="form-check-input" type="checkbox" 
                                                                            <%= field.required ? 'checked' : '' %>
                                                                            onchange="updateFieldProperty(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'required', this.checked)">
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-1">
+                                                                <label class="form-label">Display</label>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox" 
+                                                                           <%= fieldDisplayed ? 'checked' : '' %>
+                                                                           onchange="updateFieldDisplay(<%= actualSectionIndex %>, <%= actualFieldIndex %>, this.checked)">
                                                                 </div>
                                                             </div>
                                                             <div class="col-md-2">
@@ -502,10 +511,33 @@
         }
     }
 
+    function isFieldDisplayed(field) {
+        if (!field) return true;
+        if (field.display !== undefined) return field.display !== false;
+        return field.visible !== false;
+    }
+
+    function updateFieldDisplay(sectionIndex, fieldIndex, checked) {
+        if (!formConfig.sections[sectionIndex] || !formConfig.sections[sectionIndex].fields[fieldIndex]) return;
+        const field = formConfig.sections[sectionIndex].fields[fieldIndex];
+        field.display = !!checked;
+        field.visible = !!checked;
+        const fieldElement = document.querySelector('[data-section-index="' + sectionIndex + '"] [data-field-index="' + fieldIndex + '"]');
+        if (fieldElement) {
+            fieldElement.classList.toggle('hidden-field', !checked);
+        }
+        const topSwitch = fieldElement && fieldElement.querySelector('.field-controls .form-check-input');
+        if (topSwitch) topSwitch.checked = !!checked;
+        updatePreview();
+    }
+
     // 更新字段屬性
     async function updateFieldProperty(sectionIndex, fieldIndex, property, value) {
         if (formConfig.sections[sectionIndex] && formConfig.sections[sectionIndex].fields[fieldIndex]) {
             formConfig.sections[sectionIndex].fields[fieldIndex][property] = value;
+            if (property === 'display') {
+                formConfig.sections[sectionIndex].fields[fieldIndex].visible = !!value;
+            }
             
             // 如果更改了字段類型，需要處理選項
             if (property === 'type') {
@@ -590,17 +622,19 @@
         }
     }
 
-    // 切換字段顯示
+    // 切換字段顯示（頂部 switch 與 Display 勾選同步）
     function toggleField(sectionIndex, fieldIndex) {
         const field = formConfig.sections[sectionIndex].fields[fieldIndex];
-        field.visible = !field.visible;
+        const next = !isFieldDisplayed(field);
+        field.display = next;
+        field.visible = next;
         
         const fieldElement = document.querySelector('[data-section-index="' + sectionIndex + '"] [data-field-index="' + fieldIndex + '"]');
-        if (field.visible) {
-            fieldElement.classList.remove('hidden-field');
-        } else {
-            fieldElement.classList.add('hidden-field');
+        if (fieldElement) {
+            fieldElement.classList.toggle('hidden-field', !next);
         }
+        const displayCheckbox = fieldElement && fieldElement.querySelector('input[type="checkbox"][onchange*="updateFieldDisplay"]');
+        if (displayCheckbox) displayCheckbox.checked = next;
         updatePreview();
     }
 
@@ -625,6 +659,7 @@
             label: '新字段',
             type: 'text',
             required: false,
+            display: true,
             visible: true,
             placeholder: '',
             order: formConfig.sections[sectionIndex].fields.length + 1
@@ -729,7 +764,7 @@
                 html += '<h5>' + getMultilingualText(section.sectionTitle, previewLanguage) + '</h5>';
                 
                 section.fields.forEach(function(field) {
-                    if (field.visible) {
+                    if (isFieldDisplayed(field)) {
                         html += '<div class="mb-2">';
                         html += '<label class="form-label">' + getMultilingualText(field.label, previewLanguage);
                         if (field.required) html += ' <span class="text-danger">*</span>';
@@ -854,6 +889,7 @@
                         label: field.label,
                         type: field.type,
                         required: field.required,
+                        display: field.display !== undefined ? field.display : field.visible !== false,
                         visible: field.visible,
                         placeholder: field.placeholder,
                         options: field.options || [],
@@ -910,17 +946,21 @@
                         sectionTitle: section.sectionTitle || { zh: '新區塊', en: 'New Section' },
                         visible: section.visible !== undefined ? section.visible : true,
                         order: section.order || 0,
-                        fields: (section.fields || []).map(field => ({
+                        fields: (section.fields || []).map(field => {
+                            const disp = field.display !== undefined ? field.display : (field.visible !== undefined ? field.visible : true);
+                            return {
                             fieldName: field.fieldName || 'newField',
                             label: field.label || { zh: '', en: '' },
                             type: field.type || 'text',
                             required: field.required || false,
-                            visible: field.visible !== undefined ? field.visible : true,
+                            display: disp,
+                            visible: disp,
                             placeholder: field.placeholder || { zh: '', en: '' },
                             options: field.options || [],
                             validation: field.validation || {},
                             order: field.order || 0
-                        }))
+                        };
+                        })
                     }));
                     
                     // 保存配置
