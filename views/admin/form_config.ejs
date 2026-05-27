@@ -92,6 +92,47 @@
                                 </div>
                             </div>
 
+                            <!-- 條款 / T&C 設定 -->
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6>Terms & Conditions (T&C)</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="termsEnabled"
+                                               <%= (formConfig.terms && formConfig.terms.enabled) ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="termsEnabled">
+                                            啟用條款同意（啟用後，訪客必須勾選同意才可提交）
+                                        </label>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label">勾選框文字 (ZH)</label>
+                                            <input type="text" class="form-control" id="termsLabelZh"
+                                                   value="<%= (formConfig.terms && formConfig.terms.label && formConfig.terms.label.zh) ? formConfig.terms.label.zh : '' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Checkbox label (EN)</label>
+                                            <input type="text" class="form-control" id="termsLabelEn"
+                                                   value="<%= (formConfig.terms && formConfig.terms.label && formConfig.terms.label.en) ? formConfig.terms.label.en : '' %>">
+                                        </div>
+                                    </div>
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">條款內容 (ZH)</label>
+                                            <textarea class="form-control" id="termsContentZh" rows="6"
+                                                      placeholder="可輸入多行文字"><%= (formConfig.terms && formConfig.terms.content && formConfig.terms.content.zh) ? formConfig.terms.content.zh : '' %></textarea>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Terms content (EN)</label>
+                                            <textarea class="form-control" id="termsContentEn" rows="6"
+                                                      placeholder="Multi-line text supported"><%= (formConfig.terms && formConfig.terms.content && formConfig.terms.content.en) ? formConfig.terms.content.en : '' %></textarea>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted d-block mt-2">提示：Register 頁會顯示內容框 + 同意勾選框；未勾選無法提交。</small>
+                                </div>
+                            </div>
+
                             <!-- 語言設置 -->
                             <div class="card mb-3">
                                 <div class="card-header">
@@ -405,6 +446,11 @@
     let formConfig = <%- JSON.stringify(formConfig) %>;
     const eventId = '<%= event._id %>';
     let currentLanguage = 'zh'; // 當前編輯語言
+
+    // 初始化 T&C 欄位（避免舊資料缺少）
+    if (!formConfig.terms) {
+        formConfig.terms = { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } };
+    }
 
     // 切換語言
     function switchLanguage(lang) {
@@ -818,6 +864,17 @@
         try {
             const registerPageEnabled = document.getElementById('registerPageEnabled').checked;
             const registerClosedMessage = document.getElementById('registerClosedMessage').value || '';
+            const terms = {
+                enabled: !!document.getElementById('termsEnabled').checked,
+                label: {
+                    zh: (document.getElementById('termsLabelZh').value || '').trim(),
+                    en: (document.getElementById('termsLabelEn').value || '').trim()
+                },
+                content: {
+                    zh: document.getElementById('termsContentZh').value || '',
+                    en: document.getElementById('termsContentEn').value || ''
+                }
+            };
             const response = await fetch('/formConfig/' + eventId + '/config', {
                 method: 'PUT',
                 headers: {
@@ -827,7 +884,8 @@
                     sections: formConfig.sections,
                     defaultLanguage: formConfig.defaultLanguage,
                     registerPageEnabled: registerPageEnabled,
-                    registerClosedMessage: registerClosedMessage
+                    registerClosedMessage: registerClosedMessage,
+                    terms
                 })
             });
             
@@ -879,6 +937,7 @@
             // 創建要導出的配置對象（移除 MongoDB 相關字段）
             const exportData = {
                 defaultLanguage: formConfig.defaultLanguage,
+                terms: formConfig.terms || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } },
                 sections: formConfig.sections.map(section => ({
                     sectionName: section.sectionName,
                     sectionTitle: section.sectionTitle,
@@ -941,6 +1000,7 @@
                 if (confirm('確定要導入此配置嗎？這將覆蓋現有的表單配置。')) {
                     // 更新 formConfig
                     formConfig.defaultLanguage = importedData.defaultLanguage || formConfig.defaultLanguage;
+                    formConfig.terms = importedData.terms || formConfig.terms || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } };
                     formConfig.sections = importedData.sections.map(section => ({
                         sectionName: section.sectionName || '新區塊',
                         sectionTitle: section.sectionTitle || { zh: '新區塊', en: 'New Section' },
@@ -985,6 +1045,24 @@
 
     // 初始化預覽
     updatePreview();
+
+    // 初始化 T&C UI（載入 formConfig.terms 到表單欄位）
+    (function initTermsUi() {
+        try {
+            const t = formConfig.terms || {};
+            const enabledEl = document.getElementById('termsEnabled');
+            const labelZhEl = document.getElementById('termsLabelZh');
+            const labelEnEl = document.getElementById('termsLabelEn');
+            const contentZhEl = document.getElementById('termsContentZh');
+            const contentEnEl = document.getElementById('termsContentEn');
+            if (!enabledEl) return;
+            enabledEl.checked = !!t.enabled;
+            if (labelZhEl) labelZhEl.value = (t.label && t.label.zh) ? t.label.zh : labelZhEl.value;
+            if (labelEnEl) labelEnEl.value = (t.label && t.label.en) ? t.label.en : labelEnEl.value;
+            if (contentZhEl) contentZhEl.value = (t.content && t.content.zh) ? t.content.zh : contentZhEl.value;
+            if (contentEnEl) contentEnEl.value = (t.content && t.content.en) ? t.content.en : contentEnEl.value;
+        } catch (_) {}
+    })();
 </script>
 
 <%- include ("components/footer") %>

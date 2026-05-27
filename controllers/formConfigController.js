@@ -96,6 +96,35 @@ const migrateFormConfig = (formConfig) => {
     if (!migratedConfig.defaultLanguage) {
         migratedConfig.defaultLanguage = 'zh';
     }
+
+    // 確保有 terms 設定
+    if (!migratedConfig.terms || typeof migratedConfig.terms !== 'object') {
+        migratedConfig.terms = {
+            enabled: false,
+            label: {
+                zh: '本人已閱讀並同意上述須知，確認繼續預約及積分扣款程序。',
+                en: 'I have read and agree to the terms above, and confirm to proceed.'
+            },
+            content: { zh: '', en: '' }
+        };
+    } else {
+        migratedConfig.terms.enabled = !!migratedConfig.terms.enabled;
+        if (!migratedConfig.terms.label || typeof migratedConfig.terms.label !== 'object') {
+            migratedConfig.terms.label = {
+                zh: '本人已閱讀並同意上述須知，確認繼續預約及積分扣款程序。',
+                en: 'I have read and agree to the terms above, and confirm to proceed.'
+            };
+        } else {
+            migratedConfig.terms.label.zh = migratedConfig.terms.label.zh || '本人已閱讀並同意上述須知，確認繼續預約及積分扣款程序。';
+            migratedConfig.terms.label.en = migratedConfig.terms.label.en || 'I have read and agree to the terms above, and confirm to proceed.';
+        }
+        if (!migratedConfig.terms.content || typeof migratedConfig.terms.content !== 'object') {
+            migratedConfig.terms.content = { zh: '', en: '' };
+        } else {
+            migratedConfig.terms.content.zh = migratedConfig.terms.content.zh || '';
+            migratedConfig.terms.content.en = migratedConfig.terms.content.en || '';
+        }
+    }
     
     return migratedConfig;
 };
@@ -105,6 +134,14 @@ exports.getDefaultFormConfig = () => ({
     defaultLanguage: 'zh',
     registerPageEnabled: true,
     registerClosedMessage: '',
+    terms: {
+        enabled: false,
+        label: {
+            zh: '本人已閱讀並同意上述須知，確認繼續預約及積分扣款程序。',
+            en: 'I have read and agree to the terms above, and confirm to proceed.'
+        },
+        content: { zh: '', en: '' }
+    },
     sections: [
         {
             sectionName: 'contact_info',
@@ -360,7 +397,7 @@ exports.getFormConfig = async (req, res) => {
 exports.updateFormConfig = async (req, res) => {
     try {
         const { eventId } = req.params;
-        const { sections, defaultLanguage, registerPageEnabled, registerClosedMessage } = req.body;
+        const { sections, defaultLanguage, registerPageEnabled, registerClosedMessage, terms } = req.body;
         
         // 驗證事件是否存在
         const event = await Event.findById(eventId);
@@ -386,6 +423,10 @@ exports.updateFormConfig = async (req, res) => {
             if (typeof registerClosedMessage === 'string') {
                 formConfig.registerClosedMessage = registerClosedMessage;
             }
+            if (terms && typeof terms === 'object') {
+                const migrated = migrateFormConfig({ sections: formConfig.sections, terms });
+                formConfig.terms = migrated.terms;
+            }
             await formConfig.save();
         } else {
             // 創建新配置
@@ -395,7 +436,8 @@ exports.updateFormConfig = async (req, res) => {
                 sections: sections || defaultConfig.sections,
                 defaultLanguage: defaultLanguage || defaultConfig.defaultLanguage,
                 registerPageEnabled: typeof registerPageEnabled === 'boolean' ? registerPageEnabled : defaultConfig.registerPageEnabled,
-                registerClosedMessage: typeof registerClosedMessage === 'string' ? registerClosedMessage : (defaultConfig.registerClosedMessage || '')
+                registerClosedMessage: typeof registerClosedMessage === 'string' ? registerClosedMessage : (defaultConfig.registerClosedMessage || ''),
+                terms: terms && typeof terms === 'object' ? migrateFormConfig({ sections: (sections || defaultConfig.sections), terms }).terms : defaultConfig.terms
             });
             await formConfig.save();
         }

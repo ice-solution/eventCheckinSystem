@@ -92,6 +92,20 @@ const formConfigSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    // Terms & Conditions（需同意才可提交）
+    terms: {
+        enabled: { type: Boolean, default: false },
+        // 勾選框文字（雙語）
+        label: {
+            zh: { type: String, default: '本人已閱讀並同意上述須知，確認繼續預約及積分扣款程序。' },
+            en: { type: String, default: 'I have read and agree to the terms above, and confirm to proceed.' }
+        },
+        // 條款內容（雙語，可用多行文字）
+        content: {
+            zh: { type: String, default: '' },
+            en: { type: String, default: '' }
+        }
+    },
     sections: [formSectionSchema],
     createdAt: { 
         type: Date, 

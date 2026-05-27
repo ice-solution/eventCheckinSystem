@@ -77,7 +77,7 @@ router.get('/:event_id/register', async (req, res) => {
         });
     }
     
-    res.render('exvent/register', { event_id, paymentTickets, formConfig: formConfig });
+    res.render('exvent/register', { event_id, event, paymentTickets, formConfig: formConfig });
 });
 // 路由到註冊成功頁面（session_id 可為 Stripe session_id、Wonder order_id 或 Transaction _id）
 router.get('/:event_id/register/success', async (req, res) => {

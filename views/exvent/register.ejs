@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Event 登記</title>
+    <title><%= event && event.name ? event.name : 'Event' %> - 登記</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         body {
@@ -137,6 +137,107 @@
             border-radius: 5px;
             margin-top: 20px;
         }
+        .terms-header {
+            display: flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 16px;
+        }
+        .terms-header .section-title {
+            margin-bottom: 0;
+        }
+        .terms-open-link {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #3498db;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        .terms-open-link:hover {
+            color: #2980b9;
+        }
+        .terms-agree-row.form-check {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            text-align: left;
+            padding-left: 0 !important;
+            margin-left: 0;
+            margin-bottom: 0;
+        }
+        .terms-agree-row .form-check-input {
+            position: static;
+            margin-left: 0;
+            margin-top: 0.2rem;
+            flex-shrink: 0;
+        }
+        .terms-agree-row .form-check-label {
+            padding-left: 0;
+            margin-left: 0;
+            line-height: 1.5;
+        }
+        .terms-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 2000;
+            background: rgba(0, 0, 0, 0.55);
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .terms-overlay.is-open {
+            display: flex;
+        }
+        .terms-modal {
+            background: #fff;
+            width: 100%;
+            max-width: 720px;
+            max-height: 85vh;
+            border-radius: 10px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .terms-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .terms-modal-header h4 {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        .terms-modal-close {
+            border: none;
+            background: transparent;
+            font-size: 1.75rem;
+            line-height: 1;
+            color: #6c757d;
+            cursor: pointer;
+            padding: 0 4px;
+        }
+        .terms-modal-close:hover {
+            color: #2c3e50;
+        }
+        .terms-modal-body {
+            margin: 16px 20px 20px;
+            padding: 16px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            max-height: calc(85vh - 120px);
+            color: #2c3e50;
+            line-height: 1.6;
+        }
         @media (max-width: 768px) {
             .form-row {
                 flex-direction: column;
@@ -181,7 +282,7 @@
 
         <div class="form-header">
             <br><br>
-            <h1 id="formTitle">立即登記！</h1>
+            <h1 id="formTitle"><%= event && event.name ? event.name : 'Event' %></h1>
             <p class="text-muted" id="formSubtitle">請填寫以下資料完成活動報名</p>
         </div>
 
@@ -432,6 +533,36 @@
                 </div>
             <% } %>
 
+            <!-- Terms & Conditions（需同意才可提交） -->
+            <% if (formConfig && formConfig.terms && formConfig.terms.enabled) { %>
+                <div class="form-section terms-section">
+                    <div class="terms-header">
+                        <h3 class="section-title" data-zh="條款與細則" data-en="Terms & Conditions">條款與細則</h3>
+                        <a href="#" class="terms-open-link lang-text" id="termsOpenLink" role="button"
+                           data-zh="(條款)" data-en="(terms)">(terms)</a>
+                    </div>
+                    <div class="form-check terms-agree-row">
+                        <input class="form-check-input" type="checkbox" id="termsAgree" required>
+                        <label class="form-check-label"
+                               for="termsAgree"
+                               data-zh="<%= (formConfig.terms.label && formConfig.terms.label.zh ? formConfig.terms.label.zh : '') %>"
+                               data-en="<%= (formConfig.terms.label && formConfig.terms.label.en ? formConfig.terms.label.en : '') %>"><%= (formConfig.terms.label && formConfig.terms.label.zh ? formConfig.terms.label.zh : '') %></label>
+                    </div>
+                </div>
+
+                <div id="termsOverlay" class="terms-overlay" aria-hidden="true">
+                    <div class="terms-modal" role="dialog" aria-modal="true" aria-labelledby="termsModalTitle">
+                        <div class="terms-modal-header">
+                            <h4 id="termsModalTitle" class="lang-text" data-zh="條款與細則" data-en="Terms & Conditions">Terms & Conditions</h4>
+                            <button type="button" class="terms-modal-close" id="termsModalClose" aria-label="Close">&times;</button>
+                        </div>
+                        <div class="terms-modal-body" id="termsContent"
+                             data-zh="<%= (formConfig.terms.content && formConfig.terms.content.zh ? formConfig.terms.content.zh : '') %>"
+                             data-en="<%= (formConfig.terms.content && formConfig.terms.content.en ? formConfig.terms.content.en : '') %>"><%= (formConfig.terms.content && formConfig.terms.content.zh ? formConfig.terms.content.zh : '') %></div>
+                    </div>
+                </div>
+            <% } %>
+
             <div class="btn-container">
                 <button type="button" class="btn btn-secondary lang-text" data-zh="返回" data-en="Back" onclick="history.back()">返回</button>
                 <button type="submit" class="btn btn-primary lang-text" data-zh="下一步" data-en="Next">下一步</button>
@@ -460,6 +591,7 @@
         // 語言設置：優先使用 URL 參數，否則使用默認語言
         const urlLanguage = getLanguageFromURL();
         let currentLanguage = urlLanguage || '<%= formConfig.defaultLanguage || "zh" %>';
+        const eventName = <%- JSON.stringify(event && event.name ? event.name : 'Event') %>;
         
         // 初始化語言按鈕狀態
         $(document).ready(function() {
@@ -504,12 +636,11 @@
 
         // 更新頁面語言
         function updatePageLanguage() {
-            // 更新標題和副標題
+            // 標題使用活動名稱；副標題隨語言切換
+            $('#formTitle').text(eventName);
             if (currentLanguage === 'zh') {
-                $('#formTitle').text('立即登記！');
                 $('#formSubtitle').text('請填寫以下資料完成活動報名');
             } else {
-                $('#formTitle').text('Register Now!');
                 $('#formSubtitle').text('Please fill in the following information to complete event registration');
             }
 
@@ -592,6 +723,15 @@
                     $label.text(enText);
                 }
             });
+
+            // 更新 T&C 內容
+            const $termsContent = $('#termsContent');
+            if ($termsContent.length) {
+                const zhText = $termsContent.data('zh');
+                const enText = $termsContent.data('en');
+                if (currentLanguage === 'zh') $termsContent.text(zhText || '');
+                else $termsContent.text(enText || zhText || '');
+            }
 
             // 更新按鈕文字（返回、下一步等）
             $('.lang-text').each(function() {
@@ -706,6 +846,59 @@
             };
 
         }
+
+        // T&C overlay 與驗證
+        function initTermsUi() {
+            const overlay = document.getElementById('termsOverlay');
+            const openLink = document.getElementById('termsOpenLink');
+            const closeBtn = document.getElementById('termsModalClose');
+            const agreeEl = document.getElementById('termsAgree');
+
+            function openTermsOverlay(e) {
+                if (e) e.preventDefault();
+                if (!overlay) return;
+                overlay.classList.add('is-open');
+                overlay.setAttribute('aria-hidden', 'false');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeTermsOverlay() {
+                if (!overlay) return;
+                overlay.classList.remove('is-open');
+                overlay.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+            }
+
+            if (openLink) {
+                openLink.addEventListener('click', openTermsOverlay);
+            }
+            if (closeBtn) {
+                closeBtn.addEventListener('click', closeTermsOverlay);
+            }
+            if (overlay) {
+                overlay.addEventListener('click', function(e) {
+                    if (e.target === overlay) closeTermsOverlay();
+                });
+            }
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && overlay && overlay.classList.contains('is-open')) {
+                    closeTermsOverlay();
+                }
+            });
+
+            if (agreeEl) {
+                agreeEl.addEventListener('change', function() {
+                    this.setCustomValidity('');
+                });
+                agreeEl.addEventListener('invalid', function() {
+                    const msg = currentLanguage === 'zh'
+                        ? '請先閱讀並勾選同意條款，才可提交。'
+                        : 'Please agree to the terms before submitting.';
+                    this.setCustomValidity(msg);
+                });
+            }
+        }
+        initTermsUi();
 
         // stripe public key
         const STRIPE_PK = '<%= process.env.STRIPE_PK || "" %>';
