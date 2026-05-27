@@ -233,10 +233,17 @@
             border: 1px solid #dee2e6;
             border-radius: 8px;
             overflow-y: auto;
-            white-space: pre-wrap;
             max-height: calc(85vh - 120px);
             color: #2c3e50;
             line-height: 1.6;
+        }
+        .terms-modal-body p {
+            margin-bottom: 0.75rem;
+        }
+        .terms-modal-body ul,
+        .terms-modal-body ol {
+            margin-bottom: 0.75rem;
+            padding-left: 1.25rem;
         }
         @media (max-width: 768px) {
             .form-row {
@@ -556,11 +563,13 @@
                             <h4 id="termsModalTitle" class="lang-text" data-zh="條款與細則" data-en="Terms & Conditions">Terms & Conditions</h4>
                             <button type="button" class="terms-modal-close" id="termsModalClose" aria-label="Close">&times;</button>
                         </div>
-                        <div class="terms-modal-body" id="termsContent"
-                             data-zh="<%= (formConfig.terms.content && formConfig.terms.content.zh ? formConfig.terms.content.zh : '') %>"
-                             data-en="<%= (formConfig.terms.content && formConfig.terms.content.en ? formConfig.terms.content.en : '') %>"><%= (formConfig.terms.content && formConfig.terms.content.zh ? formConfig.terms.content.zh : '') %></div>
+                        <div class="terms-modal-body" id="termsContent"><%- (formConfig.terms.content && formConfig.terms.content.zh ? formConfig.terms.content.zh : '') %></div>
                     </div>
                 </div>
+                <script type="application/json" id="termsContentJson"><%- JSON.stringify({
+                    zh: (formConfig.terms.content && formConfig.terms.content.zh) ? formConfig.terms.content.zh : '',
+                    en: (formConfig.terms.content && formConfig.terms.content.en) ? formConfig.terms.content.en : ''
+                }) %></script>
             <% } %>
 
             <div class="btn-container">
@@ -592,6 +601,20 @@
         const urlLanguage = getLanguageFromURL();
         let currentLanguage = urlLanguage || '<%= formConfig.defaultLanguage || "zh" %>';
         const eventName = <%- JSON.stringify(event && event.name ? event.name : 'Event') %>;
+        const termsContentByLang = (function() {
+            const el = document.getElementById('termsContentJson');
+            if (!el) return { zh: '', en: '' };
+            try { return JSON.parse(el.textContent); } catch (_) { return { zh: '', en: '' }; }
+        })();
+
+        function renderTermsContentHtml() {
+            const $termsContent = $('#termsContent');
+            if (!$termsContent.length) return;
+            const html = currentLanguage === 'en'
+                ? (termsContentByLang.en || termsContentByLang.zh || '')
+                : (termsContentByLang.zh || termsContentByLang.en || '');
+            $termsContent.html(html);
+        }
         
         // 初始化語言按鈕狀態
         $(document).ready(function() {
@@ -724,14 +747,8 @@
                 }
             });
 
-            // 更新 T&C 內容
-            const $termsContent = $('#termsContent');
-            if ($termsContent.length) {
-                const zhText = $termsContent.data('zh');
-                const enText = $termsContent.data('en');
-                if (currentLanguage === 'zh') $termsContent.text(zhText || '');
-                else $termsContent.text(enText || zhText || '');
-            }
+            // 更新 T&C 內容（支援 HTML）
+            renderTermsContentHtml();
 
             // 更新按鈕文字（返回、下一步等）
             $('.lang-text').each(function() {
