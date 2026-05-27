@@ -563,7 +563,7 @@
                             <h4 id="termsModalTitle" class="lang-text" data-zh="條款與細則" data-en="Terms & Conditions">Terms & Conditions</h4>
                             <button type="button" class="terms-modal-close" id="termsModalClose" aria-label="Close">&times;</button>
                         </div>
-                        <div class="terms-modal-body" id="termsContent"><%- (formConfig.terms.content && formConfig.terms.content.zh ? formConfig.terms.content.zh : '') %></div>
+                        <div class="terms-modal-body" id="termsContent"></div>
                     </div>
                 </div>
                 <script type="application/json" id="termsContentJson"><%- JSON.stringify({
@@ -607,13 +607,34 @@
             try { return JSON.parse(el.textContent); } catch (_) { return { zh: '', en: '' }; }
         })();
 
+        /** 是否為區塊級 HTML（p/div/ul 等），此類內容直接渲染 */
+        function termsLooksLikeBlockHtml(s) {
+            return /<\s*\/?\s*(p|div|ul|ol|li|h[1-6]|table|tbody|tr|td|th|blockquote|section|article|br)\b/i.test(s);
+        }
+
+        /** 純文字或簡單 HTML：保留換行；完整 HTML 區塊則原樣輸出 */
+        function formatTermsContent(raw) {
+            const s = String(raw || '');
+            if (!s.trim()) return '';
+            if (termsLooksLikeBlockHtml(s)) {
+                return s;
+            }
+            const normalized = s.replace(/\r\n/g, '\n');
+            if (/<[a-z][\s\S]*?>/i.test(normalized)) {
+                return normalized.replace(/\n/g, '<br>');
+            }
+            const div = document.createElement('div');
+            div.textContent = normalized;
+            return div.innerHTML.replace(/\n/g, '<br>');
+        }
+
         function renderTermsContentHtml() {
             const $termsContent = $('#termsContent');
             if (!$termsContent.length) return;
-            const html = currentLanguage === 'en'
+            const raw = currentLanguage === 'en'
                 ? (termsContentByLang.en || termsContentByLang.zh || '')
                 : (termsContentByLang.zh || termsContentByLang.en || '');
-            $termsContent.html(html);
+            $termsContent.html(formatTermsContent(raw));
         }
         
         // 初始化語言按鈕狀態
