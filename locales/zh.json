@@ -53,7 +53,11 @@
     "enabled": "已啟用",
     "disabled": "已停用",
     "required": "必填",
-    "optional": "選填"
+    "optional": "選填",
+    "backToEvents": "返回活動列表",
+    "backToAdmin": "返回後台",
+    "saving": "儲存中...",
+    "deleting": "刪除中..."
   },
   "menu": {
     "adminTitle": "後台管理",
@@ -91,14 +95,48 @@
     "importUsers": "批量匯入",
     "scan": "簽到掃描"
   },
+  "home": {
+    "welcome": "歡迎使用活動管理系統",
+    "eventList": "活動列表"
+  },
   "events_list": {
     "title": "活動列表",
     "createEvent": "建立活動",
     "eventName": "活動名稱",
-    "startDate": "開始日期",
-    "endDate": "結束日期",
+    "startTime": "開始時間",
+    "endTime": "結束時間",
     "createdAt": "建立時間",
-    "manage": "管理"
+    "userCount": "報名人數",
+    "noEvents": "沒有活動",
+    "backToAdmin": "返回後台"
+  },
+  "create_event": {
+    "title": "建立新活動",
+    "eventName": "活動名稱",
+    "startTime": "活動開始時間",
+    "endTime": "活動結束時間",
+    "submit": "建立活動",
+    "successMsg": "活動建立成功！正在跳轉...",
+    "errorMsg": "建立活動失敗，請稍後再試。"
+  },
+  "edit_event_name": {
+    "title": "修改活動名稱",
+    "label": "活動名稱",
+    "required": "請輸入活動名稱",
+    "saving": "儲存中...",
+    "saved": "已更新活動名稱。",
+    "error": "更新失敗"
+  },
+  "auth_users": {
+    "title": "用戶登入管理",
+    "addUser": "新增用戶",
+    "adminNote": "Admin 為系統唯一最高權限帳號，僅能透過 server 建立。以下為一般用戶，可設定可存取的活動與功能。",
+    "username": "帳號",
+    "role": "角色",
+    "allowedEventsCount": "可存取活動數",
+    "actions": "操作",
+    "setPermissions": "設定權限",
+    "noUsers": "尚無其他用戶"
   },
   "auth": {
     "title": "登入管理",

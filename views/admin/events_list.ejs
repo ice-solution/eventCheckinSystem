@@ -12,17 +12,17 @@
                     <div class="col-md-12">
                         <div class="card">
                             <div class="card-header">
-                                <strong class="card-title">My Events List</strong>
+                                <strong class="card-title"><%= t('events_list.title') %></strong>
                             </div>
                             <div class="card-body">
                                 <table id="bootstrap-data-table" class="table table-bordered">
                                     <thead>
                                         <tr>
-                                            <th>Event Name</th>
-                                            <th>Start Time</th>
-                                            <th>End Time</th>
-                                            <th>Created At</th>
-                                            <th>User Count</th>
+                                            <th><%= t('events_list.eventName') %></th>
+                                            <th><%= t('events_list.startTime') %></th>
+                                            <th><%= t('events_list.endTime') %></th>
+                                            <th><%= t('events_list.createdAt') %></th>
+                                            <th><%= t('events_list.userCount') %></th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -38,13 +38,13 @@
                                             <% }); %>
                                         <% } else { %>
                                             <tr>
-                                                <td colspan="5" class="text-center">No events found</td>
+                                                <td colspan="5" class="text-center"><%= t('events_list.noEvents') %></td>
                                             </tr>
                                         <% } %>
                                     </tbody>
                                 </table>
-                                <a href="/events/create" class="btn btn-primary">Create Event</a>
-                                <a href="/admin" class="btn btn-primary">Back to Admin</a>
+                                <a href="/events/create" class="btn btn-primary"><%= t('events_list.createEvent') %></a>
+                                <a href="/admin" class="btn btn-secondary"><%= t('common.backToAdmin') %></a>
                             </div>
                         </div>
                     </div>

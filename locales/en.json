@@ -53,7 +53,11 @@
     "enabled": "Enabled",
     "disabled": "Disabled",
     "required": "Required",
-    "optional": "Optional"
+    "optional": "Optional",
+    "backToEvents": "Back to Events",
+    "backToAdmin": "Back to Admin",
+    "saving": "Saving...",
+    "deleting": "Deleting..."
   },
   "menu": {
     "adminTitle": "Admin",
@@ -91,14 +95,48 @@
     "importUsers": "Bulk Import",
     "scan": "Check-in Scan"
   },
+  "home": {
+    "welcome": "Welcome to Event Management System",
+    "eventList": "Event List"
+  },
   "events_list": {
-    "title": "Events List",
+    "title": "My Events List",
     "createEvent": "Create Event",
     "eventName": "Event Name",
-    "startDate": "Start Date",
-    "endDate": "End Date",
+    "startTime": "Start Time",
+    "endTime": "End Time",
     "createdAt": "Created At",
-    "manage": "Manage"
+    "userCount": "User Count",
+    "noEvents": "No events found",
+    "backToAdmin": "Back to Admin"
+  },
+  "create_event": {
+    "title": "Create New Event",
+    "eventName": "Event Name",
+    "startTime": "Event Start Time",
+    "endTime": "Event End Time",
+    "submit": "Create Event",
+    "successMsg": "Event created successfully! Redirecting...",
+    "errorMsg": "Failed to create event. Please try again later."
+  },
+  "edit_event_name": {
+    "title": "Edit Event Name",
+    "label": "Event Name",
+    "required": "Please enter event name",
+    "saving": "Saving...",
+    "saved": "Event name updated.",
+    "error": "Update failed"
+  },
+  "auth_users": {
+    "title": "User Login Management",
+    "addUser": "Add User",
+    "adminNote": "Admin is the system's highest privilege account and can only be created via the server. The following are general users whose accessible events and functions can be configured.",
+    "username": "Username",
+    "role": "Role",
+    "allowedEventsCount": "Allowed Events",
+    "actions": "Actions",
+    "setPermissions": "Set Permissions",
+    "noUsers": "No other users"
   },
   "auth": {
     "title": "Login Management",
