@@ -8,6 +8,9 @@ const axios = require('axios');
 const path = require('path');
 const WonderSignature = require(path.join(__dirname, '../nodejs/wonder_signature'));
 
+// 與 nodejs/main.js 一致，credential 時間戳用 UTC
+process.env.TZ = 'UTC';
+
 const WONDER_ECHO_URI = '/svc/payment/api/v1/openapi/echo';
 const WONDER_ORDER_API_PATH = '/svc/payment/api/v1/openapi/orders';
 
@@ -19,14 +22,14 @@ function getPaymentBaseUrl() {
         : 'https://gateway.wonder.today';
 }
 
-/** 本地時間 YYYYMMDDHHMMSS（Wonder credential 用；避免時區造成驗證失敗） */
+/** UTC 時間 YYYYMMDDHHMMSS（Wonder credential 用） */
 function formatTimeToYYYYMMDDHHMMSS(date = new Date()) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const hours = String(date.getUTCHours()).padStart(2, '0');
+    const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(date.getUTCSeconds()).padStart(2, '0');
     return `${year}${month}${day}${hours}${minutes}${seconds}`;
 }
 
@@ -49,14 +52,15 @@ function getWonderConfig() {
  * @param {string} method - HTTP method e.g. 'POST'
  * @param {string} uri - path e.g. '/svc/payment/api/v1/openapi/orders'
  * @param {string} bodyString - 請求 body 的 JSON 字串
+ * @param {string} [credentialTime] - 與 body 內時間戳一致時傳入（echo auth 用）
  */
-function getWonderAuthHeaders(privateKey, appId, method, uri, bodyString) {
+function getWonderAuthHeaders(privateKey, appId, method, uri, bodyString, credentialTime) {
     if (!privateKey || !appId) {
         throw new Error('WONDER_PRIVATE_KEY and WONDER_APP_ID are required for Wonder authentication');
     }
     const wonderSignature = new WonderSignature();
     const nonce = WonderSignature.generateRandomString(16);
-    const now = formatTimeToYYYYMMDDHHMMSS();
+    const now = credentialTime || formatTimeToYYYYMMDDHHMMSS();
     const credential = `${appId}/${now}/Wonder-RSA-SHA256`;
     const signature = wonderSignature.signature(privateKey, credential, nonce, method, uri, bodyString || null);
     return {
@@ -82,7 +86,7 @@ async function wonderAuthenticate() {
     const method = 'POST';
     const uri = WONDER_ECHO_URI;
 
-    const authHeaders = getWonderAuthHeaders(privateKey, appId, method, uri, authBodyString);
+    const authHeaders = getWonderAuthHeaders(privateKey, appId, method, uri, authBodyString, now);
     const url = `${baseUrl}${WONDER_ECHO_URI}`;
     const headers = {
         'Content-Type': 'application/json',
@@ -144,7 +148,6 @@ async function createOrder(params) {
     // order 依官方設定：reference_number, charge_fee, note, callback_url, redirect_url
     const body = {
         app_id: appId,
-        customer_uuid: customerUuid || '00000000-0000-0000-0000-000000000000',
         order: {
             reference_number: String(params.referenceNumber || ''),
             charge_fee: amountStr,
@@ -154,6 +157,9 @@ async function createOrder(params) {
             redirect_url: params.redirectUrl
         }
     };
+    if (customerUuid) {
+        body.customer_uuid = customerUuid;
+    }
 
     const plainText = JSON.stringify(body);
     const query = 'with_payment_link=true';
@@ -164,9 +170,8 @@ async function createOrder(params) {
     if (!privateKey || !privateKey.includes('BEGIN')) {
         throw new Error('WONDER_PRIVATE_KEY is required for create order signature');
     }
-    // Step 2: auth 成功後，用我們自己的簽名呼叫 create order
-    // 註：部分 Wonder 環境驗證 signature 時只取 path 不含 query，因此簽名用 WONDER_ORDER_API_PATH
-    const orderAuthHeaders = getWonderAuthHeaders(privateKey, appId, method, WONDER_ORDER_API_PATH, plainText);
+    // Step 2: 簽名 URI 必須與實際請求 path+query 一致（與 nodejs 參考 echo 只簽 path 不同，orders 含 query）
+    const orderAuthHeaders = getWonderAuthHeaders(privateKey, appId, method, uriWithQuery, plainText);
     const headers = {
         'Content-Type': 'application/json',
         'Credential': orderAuthHeaders.Credential,
