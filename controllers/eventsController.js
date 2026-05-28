@@ -285,7 +285,11 @@ exports.getEventUsersByEventID = async (req, res) => {
             }
         }
         
-        res.render('admin/users', { event, formConfig }); // 渲染用戶頁面，傳遞事件信息和表單配置
+        const eventForView = event.toObject ? event.toObject() : event;
+        if (eventForView.PaymentTickets && eventForView.PaymentTickets.length) {
+            eventForView.PaymentTickets = normalizeTicketsForView(eventForView.PaymentTickets);
+        }
+        res.render('admin/users', { event: eventForView, formConfig });
     } catch (error) {
         console.error('Error fetching event:', error);
         res.status(500).json({ message: 'Error fetching event' });
@@ -3775,6 +3779,32 @@ exports.renderEmailHtml = async (req, res) => {
     }
 };
 
+const {
+    normalizeTicketTitle,
+    normalizePaymentTicketForSave,
+    normalizeTicketsForView
+} = require('../utils/paymentTicket');
+
+function getPaymentTicketTitle(ticket, lang = 'zh') {
+    if (!ticket) return lang === 'en' ? 'Ticket' : '票券';
+    const t = normalizeTicketTitle(ticket.title);
+    if (lang === 'en') return t.en || t.zh || 'Ticket';
+    return t.zh || t.en || '票券';
+}
+
+function isPaymentTicketInRange(ticket, now = new Date()) {
+    if (!ticket) return false;
+    const from = ticket.datetimeFrom ? new Date(ticket.datetimeFrom) : null;
+    const to = ticket.datetimeTo ? new Date(ticket.datetimeTo) : (ticket.datetime ? new Date(ticket.datetime) : null);
+    if (from && now < from) return false;
+    if (to && now > to) return false;
+    return true;
+}
+
+function normalizePaymentTicket(ticket) {
+    return normalizePaymentTicketForSave(ticket);
+}
+
 // 更新付費活動設定
 exports.updatePaymentEvent = async (req, res) => {
     const { eventId } = req.params;
@@ -3785,7 +3815,9 @@ exports.updatePaymentEvent = async (req, res) => {
             return res.status(404).json({ message: 'Event not found' });
         }
         if (typeof isPaymentEvent !== 'undefined') event.isPaymentEvent = isPaymentEvent;
-        if (Array.isArray(PaymentTickets)) event.PaymentTickets = PaymentTickets;
+        if (Array.isArray(PaymentTickets)) {
+            event.PaymentTickets = PaymentTickets.map(normalizePaymentTicket);
+        }
         await event.save();
         res.status(200).json({ message: 'Payment event updated', event });
     } catch (error) {
@@ -3855,6 +3887,9 @@ exports.stripeCheckout = async (req, res) => {
         if (!event) return res.status(404).json({ message: 'Event not found' });
         const ticket = event.PaymentTickets.id(ticketId);
         if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+        if (!isPaymentTicketInRange(ticket)) {
+            return res.status(400).json({ message: '此票券目前不在可購買時段內' });
+        }
 
         // 付款回調／重導向一律用 .env 的 DOMAIN，不用 req，避免從 localhost 發起時導回 localhost
         const baseUrl = getPublicBaseUrl();
@@ -3869,7 +3904,7 @@ exports.stripeCheckout = async (req, res) => {
             userEmail: email,
             userName: name,
             ticketId: ticket._id,
-            ticketTitle: ticket.title,
+            ticketTitle: getPaymentTicketTitle(ticket, lang),
             ticketPrice: ticket.price,
             stripeSessionId: 'pending',
             paymentGateway: gateway,
@@ -3877,17 +3912,19 @@ exports.stripeCheckout = async (req, res) => {
             userFormData
         });
 
+        const ticketTitleDisplay = getPaymentTicketTitle(ticket, lang);
+
         if (gateway === 'wonder') {
             const callbackUrl = `${baseUrl}/web/webhook/wonder`;
             const redirectUrl = `${baseUrl}/web/${event_id}/register/success?session_id=${transaction._id}${langQuery}`;
             const { paymentUrl, orderId } = await wonderPayment.createOrder({
                 referenceNumber: transaction._id.toString(),
                 currency: 'HKD',
-                ticketTitle: ticket.title,
+                ticketTitle: ticketTitleDisplay,
                 amount: ticket.price,
                 callbackUrl,
                 redirectUrl,
-                note: `Event: ${event_id}, Ticket: ${ticket.title}`
+                note: `Event: ${event_id}, Ticket: ${ticketTitleDisplay}`
             });
             transaction.stripeSessionId = orderId || transaction._id.toString();
             await transaction.save();
@@ -3911,7 +3948,7 @@ exports.stripeCheckout = async (req, res) => {
             line_items: [{
                 price_data: {
                     currency: (process.env.STRIPE_CURRENCY || 'hkd').toLowerCase(),
-                    product_data: { name: ticket.title || 'Ticket' },
+                    product_data: { name: ticketTitleDisplay || 'Ticket' },
                     unit_amount: Math.round(Number(ticket.price) * 100) // 轉為分
                 },
                 quantity: 1
@@ -4768,16 +4805,8 @@ exports.showBannerManagement = async (req, res) => {
             return res.status(404).send('Event not found');
         }
         
-        // 檢查當前 banner 是否存在（優先檢查 eventId 的 banner，如果沒有則檢查默認 banner）
-        const eventBannerPath = `public/exvent/${eventId}.jpg`;
-        const defaultBannerPath = 'public/exvent/banner.jpg';
-        
-        let currentBanner = null;
-        if (fs.existsSync(eventBannerPath)) {
-            currentBanner = `/exvent/${eventId}.jpg`;
-        } else if (fs.existsSync(defaultBannerPath)) {
-            currentBanner = '/exvent/banner.jpg';
-        }
+        const { getCurrentBannerPreviewUrl } = require('../utils/bannerCache');
+        const currentBanner = getCurrentBannerPreviewUrl(eventId);
         
         res.render('admin/banner_management', { 
             event, 
@@ -4842,5 +4871,151 @@ exports.deleteBanner = async (req, res) => {
     } catch (error) {
         console.error('Error deleting banner:', error);
         res.redirect(`/events/${eventId}/banner?error=刪除 banner 失敗：${error.message}`);
+    }
+};
+
+const FormConfig = require('../model/FormConfig');
+const formConfigController = require('./formConfigController');
+
+function buildSeatingFormFieldOptions(formConfigDoc) {
+    const migrated = formConfigController.migrateFormConfig(
+        formConfigDoc && typeof formConfigDoc.toObject === 'function' ? formConfigDoc.toObject() : formConfigDoc
+    );
+    const fieldMap = new Map();
+    if (migrated.sections) {
+        migrated.sections.forEach(section => {
+            if (!section || section.visible === false || !Array.isArray(section.fields)) return;
+            section.fields.forEach(field => {
+                if (!field || field.visible === false || !field.fieldName) return;
+                if (fieldMap.has(field.fieldName)) return;
+                let label = '';
+                if (typeof field.label === 'string') label = field.label;
+                else if (field.label && (field.label.zh || field.label.en)) {
+                    label = field.label.zh || field.label.en;
+                } else label = field.fieldName;
+                fieldMap.set(field.fieldName, { fieldName: field.fieldName, label });
+            });
+        });
+    }
+    const list = Array.from(fieldMap.values());
+    if (!list.find(f => f.fieldName === 'company')) {
+        list.unshift({ fieldName: 'company', label: '公司' });
+    }
+    return list;
+}
+
+/** 排桌設定頁 */
+exports.renderSeatingArrangementPage = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).send('Event not found');
+
+        let formConfig = await FormConfig.findOne({ eventId });
+        if (!formConfig) {
+            formConfig = new FormConfig({ eventId, ...formConfigController.getDefaultFormConfig() });
+            await formConfig.save();
+        }
+        const fieldOptions = buildSeatingFormFieldOptions(formConfig);
+
+        const users = (event.users || []).map(u => {
+            const o = u.toObject ? u.toObject({ minimize: false }) : u;
+            return {
+                _id: o._id.toString(),
+                name: o.name || '',
+                email: o.email || '',
+                company: o.company || '',
+                ...o
+            };
+        });
+
+        const seating = event.seatingArrangement
+            ? (event.seatingArrangement.toObject ? event.seatingArrangement.toObject() : event.seatingArrangement)
+            : { categoryFieldName: 'company', companionByUserId: {}, tables: [] };
+
+        res.render('admin/seating_arrangement', {
+            eventId,
+            eventName: event.name || '',
+            usersJson: JSON.stringify(users),
+            formFieldsJson: JSON.stringify(fieldOptions),
+            seatingJson: JSON.stringify(seating)
+        });
+    } catch (err) {
+        console.error('renderSeatingArrangementPage:', err);
+        res.status(500).send('載入排桌頁失敗');
+    }
+};
+
+exports.getSeatingArrangementApi = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        const event = await Event.findById(eventId).select('seatingArrangement users');
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+        const seating = event.seatingArrangement
+            ? (event.seatingArrangement.toObject ? event.seatingArrangement.toObject() : event.seatingArrangement)
+            : { categoryFieldName: 'company', companionByUserId: {}, tables: [] };
+        const users = (event.users || []).map(u => {
+            const o = u.toObject ? u.toObject({ minimize: false }) : u;
+            return { _id: o._id.toString(), name: o.name || '', email: o.email || '', company: o.company || '', ...o };
+        });
+        res.json({ seating, users });
+    } catch (err) {
+        console.error('getSeatingArrangementApi:', err);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+exports.saveSeatingArrangementApi = async (req, res) => {
+    const { eventId } = req.params;
+    const { categoryFieldName, companionByUserId, tables } = req.body || {};
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+
+        const userIdSet = new Set((event.users || []).map(u => u._id.toString()));
+        const safeCompanion = companionByUserId && typeof companionByUserId === 'object' ? companionByUserId : {};
+        const safeTables = Array.isArray(tables) ? tables : [];
+
+        const assigned = new Set();
+        for (let ti = 0; ti < safeTables.length; ti++) {
+            const t = safeTables[ti];
+            if (!t || !t.id) return res.status(400).json({ message: '每張桌必須有 id' });
+            const cap = Math.max(1, parseInt(t.capacity, 10) || 10);
+            const uids = Array.isArray(t.userIds) ? t.userIds : [];
+            let seats = 0;
+            for (let i = 0; i < uids.length; i++) {
+                const uid = String(uids[i]);
+                if (!userIdSet.has(uid)) {
+                    return res.status(400).json({ message: `無效的來賓 ID: ${uid}` });
+                }
+                if (assigned.has(uid)) {
+                    return res.status(400).json({ message: '同一位來賓不可重複分配到多桌' });
+                }
+                assigned.add(uid);
+                const c = Math.max(0, parseInt(safeCompanion[uid], 10) || 0);
+                seats += 1 + c;
+            }
+            if (seats > cap) {
+                return res.status(400).json({ message: `第 ${ti + 1} 桌人數（含攜眷）超過該桌上限 ${cap}` });
+            }
+        }
+
+        event.seatingArrangement = {
+            categoryFieldName: (categoryFieldName && String(categoryFieldName).trim()) || 'company',
+            companionByUserId: safeCompanion,
+            tables: safeTables.map(t => ({
+                id: String(t.id),
+                x: typeof t.x === 'number' ? t.x : parseFloat(t.x) || 48,
+                y: typeof t.y === 'number' ? t.y : parseFloat(t.y) || 48,
+                capacity: Math.max(1, parseInt(t.capacity, 10) || 10),
+                userIds: (Array.isArray(t.userIds) ? t.userIds : []).map(id => String(id))
+            }))
+        };
+        event.markModified('seatingArrangement');
+        await event.save();
+        res.json({ success: true });
+    } catch (err) {
+        console.error('saveSeatingArrangementApi:', err);
+        res.status(500).json({ message: err.message || 'Server error' });
     }
 };

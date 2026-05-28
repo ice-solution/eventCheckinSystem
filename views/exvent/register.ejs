@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Event 登記</title>
+    <title><%= event && event.name ? event.name : 'Event' %> - 登記</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         body {
             background-color: #f8f9fa;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'A','Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         .container {
             max-width: 800px;
@@ -29,6 +29,10 @@
             color: #2c3e50;
             font-weight: 600;
             margin-bottom: 10px;
+            text-align: center;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            hyphens: auto;
         }
         .form-section {
             margin-bottom: 30px;
@@ -137,7 +141,118 @@
             border-radius: 5px;
             margin-top: 20px;
         }
+        .terms-header {
+            display: flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 16px;
+        }
+        .terms-header .section-title {
+            margin-bottom: 0;
+        }
+        .terms-open-link {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #3498db;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        .terms-open-link:hover {
+            color: #2980b9;
+        }
+        .terms-agree-row.form-check {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            text-align: left;
+            padding-left: 0 !important;
+            margin-left: 0;
+            margin-bottom: 0;
+        }
+        .terms-agree-row .form-check-input {
+            position: static;
+            margin-left: 0;
+            margin-top: 0.2rem;
+            flex-shrink: 0;
+        }
+        .terms-agree-row .form-check-label {
+            padding-left: 0;
+            margin-left: 0;
+            line-height: 1.5;
+        }
+        .terms-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 2000;
+            background: rgba(0, 0, 0, 0.55);
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .terms-overlay.is-open {
+            display: flex;
+        }
+        .terms-modal {
+            background: #fff;
+            width: 100%;
+            max-width: 720px;
+            max-height: 85vh;
+            border-radius: 10px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .terms-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .terms-modal-header h4 {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        .terms-modal-close {
+            border: none;
+            background: transparent;
+            font-size: 1.75rem;
+            line-height: 1;
+            color: #6c757d;
+            cursor: pointer;
+            padding: 0 4px;
+        }
+        .terms-modal-close:hover {
+            color: #2c3e50;
+        }
+        .terms-modal-body {
+            margin: 16px 20px 20px;
+            padding: 16px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            overflow-y: auto;
+            max-height: calc(85vh - 120px);
+            color: #2c3e50;
+            line-height: 1.6;
+        }
+        .terms-modal-body p {
+            margin-bottom: 0.75rem;
+        }
+        .terms-modal-body ul,
+        .terms-modal-body ol {
+            margin-bottom: 0.75rem;
+            padding-left: 1.25rem;
+        }
         @media (max-width: 768px) {
+            .form-header h1 {
+                font-size: 100%;
+            }
             .form-row {
                 flex-direction: column;
                 align-items: flex-start;
@@ -153,6 +268,13 @@
                 width: 100%;
                 max-width: none;
             }
+            /* responsive：按鈕縮小約 30% */
+            .btn {
+                padding: 8px 20px;
+                min-width: 84px;
+                font-size: 0.85rem;
+                margin: 0 6px;
+            }
         }
     </style>
 </head>
@@ -162,8 +284,8 @@
         <div id="carouselExampleCaptions" class="carousel slide" data-ride="carousel">
             <div class="carousel-inner">
                 <div class="carousel-item active">
-                    <img src="/exvent/<%= event_id %>.jpg" class="d-block w-100" alt="第一張圖片" 
-                         onerror="this.src='/exvent/banner.jpg'">
+                    <img src="<%= typeof eventBannerSrc !== 'undefined' ? eventBannerSrc : '/exvent/' + event_id + '.jpg' %>" class="d-block w-100" alt="第一張圖片" 
+                         onerror="this.onerror=null;this.src='<%= typeof fallbackBannerSrc !== 'undefined' ? fallbackBannerSrc : '/exvent/banner.jpg' %>'">
                     <div class="carousel-caption d-none d-md-block">
                         
                     </div>
@@ -181,7 +303,7 @@
 
         <div class="form-header">
             <br><br>
-            <h1 id="formTitle">立即登記！</h1>
+            <h1 id="formTitle"><%= event && event.name ? event.name : 'Event' %></h1>
             <p class="text-muted" id="formSubtitle">請填寫以下資料完成活動報名</p>
         </div>
 
@@ -212,7 +334,8 @@
                                 });
                                 %>
                                 <% sortedFields.forEach((field, fieldIndex) => { %>
-                                    <% if (field.visible) { %>
+                                    <% const fieldDisplayed = field.display !== undefined ? field.display : field.visible !== false; %>
+                                    <% if (fieldDisplayed) { %>
                                         <% var _selectHasOther = (field.type === 'select' && field.options && field.options.some(function (o) { return o && o.isOther; })); %>
                                         <% var _fieldControlId = (field.type === 'select' && _selectHasOther) ? (field.fieldName + '_sel') : field.fieldName; %>
                                         <div class="form-row">
@@ -401,19 +524,28 @@
             <!-- 票券選擇（如果適用） -->
             <% if (paymentTickets && paymentTickets.length > 0) { %>
                 <div class="form-section">
-                    <h3>票券選擇</h3>
+                    <h3 class="section-title" data-zh="票券選擇" data-en="Ticket Selection">票券選擇</h3>
                     <div class="form-row">
-                        <label class="form-label" for="ticketId">
+                        <label class="form-label field-label" for="ticketId"
+                               data-zh="選擇票券" data-en="Select Ticket">
                             選擇票券 <span class="required">*</span>
                         </label>
                         <div class="form-input">
                             <select class="form-control" id="ticketId" name="ticketId" required>
-                                <option value="">--- 請選擇票券 ---</option>
+                                <option value="" data-zh="--- 請選擇票券 ---" data-en="--- Please select a ticket ---">--- 請選擇票券 ---</option>
                                 <% paymentTickets.forEach(function(ticket) { 
                                     const now = new Date();
-                                    const ticketTime = ticket.datetime ? new Date(ticket.datetime) : null;
-                                    if (!ticketTime || ticketTime >= now) { %>
-                                        <option value="<%= ticket._id %>"><%= ticket.title %> - $<%= ticket.price %></option>
+                                    const from = ticket.datetimeFrom ? new Date(ticket.datetimeFrom) : null;
+                                    const to = ticket.datetimeTo ? new Date(ticket.datetimeTo) : (ticket.datetime ? new Date(ticket.datetime) : null);
+                                    const inRange = (!from || now >= from) && (!to || now <= to);
+                                    const tZh = (ticket.title && ticket.title.zh) ? ticket.title.zh : '';
+                                    const tEn = (ticket.title && ticket.title.en) ? ticket.title.en : '';
+                                    const optZh = tZh ? (tZh + ' - $' + ticket.price) : ('票券 - $' + ticket.price);
+                                    const optEn = (tEn || tZh) ? ((tEn || tZh) + ' - $' + ticket.price) : ('Ticket - $' + ticket.price);
+                                    if (inRange) { %>
+                                        <option value="<%= ticket._id %>"
+                                                data-zh="<%= optZh %>"
+                                                data-en="<%= optEn %>"><%= optZh %></option>
                                 <%  } 
                                 }); %>
                             </select>
@@ -422,9 +554,73 @@
                 </div>
             <% } %>
 
+            <!-- Terms & Conditions（需同意才可提交） -->
+            <% if (formConfig && formConfig.terms && formConfig.terms.enabled) { %>
+                <div class="form-section terms-section">
+                    <div class="terms-header">
+                        <h3 class="section-title" data-zh="條款與細則" data-en="Terms & Conditions">條款與細則</h3>
+                        <a href="#" class="terms-open-link lang-text" id="termsOpenLink" role="button"
+                           data-zh="(條款)" data-en="(terms)">(terms)</a>
+                    </div>
+                    <div class="form-check terms-agree-row">
+                        <input class="form-check-input" type="checkbox" id="termsAgree" required>
+                        <label class="form-check-label"
+                               for="termsAgree"
+                               data-zh="<%= (formConfig.terms.label && formConfig.terms.label.zh ? formConfig.terms.label.zh : '') %>"
+                               data-en="<%= (formConfig.terms.label && formConfig.terms.label.en ? formConfig.terms.label.en : '') %>"><%= (formConfig.terms.label && formConfig.terms.label.zh ? formConfig.terms.label.zh : '') %></label>
+                    </div>
+                </div>
+
+                <div id="termsOverlay" class="terms-overlay" aria-hidden="true">
+                    <div class="terms-modal" role="dialog" aria-modal="true" aria-labelledby="termsModalTitle">
+                        <div class="terms-modal-header">
+                            <h4 id="termsModalTitle" class="lang-text" data-zh="條款與細則" data-en="Terms & Conditions">Terms & Conditions</h4>
+                            <button type="button" class="terms-modal-close" id="termsModalClose" aria-label="Close">&times;</button>
+                        </div>
+                        <div class="terms-modal-body" id="termsContent"></div>
+                    </div>
+                </div>
+                <script type="application/json" id="termsContentJson"><%- JSON.stringify({
+                    zh: (formConfig.terms.content && formConfig.terms.content.zh) ? formConfig.terms.content.zh : '',
+                    en: (formConfig.terms.content && formConfig.terms.content.en) ? formConfig.terms.content.en : ''
+                }) %></script>
+            <% } %>
+
+            <!-- Agreement（功能同 Terms & Conditions） -->
+            <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
+                <div class="form-section agreement-section">
+                    <div class="terms-header">
+                        <h3 class="section-title" data-zh="協議" data-en="Agreement">協議</h3>
+                        <a href="#" class="terms-open-link lang-text" id="agreementOpenLink" role="button"
+                           data-zh="(協議)" data-en="(agreement)">(agreement)</a>
+                    </div>
+                    <div class="form-check terms-agree-row">
+                        <input class="form-check-input" type="checkbox" id="agreementAgree" required>
+                        <label class="form-check-label"
+                               for="agreementAgree"
+                               data-zh="<%= (formConfig.agreement.label && formConfig.agreement.label.zh ? formConfig.agreement.label.zh : '') %>"
+                               data-en="<%= (formConfig.agreement.label && formConfig.agreement.label.en ? formConfig.agreement.label.en : '') %>"><%= (formConfig.agreement.label && formConfig.agreement.label.zh ? formConfig.agreement.label.zh : '') %></label>
+                    </div>
+                </div>
+
+                <div id="agreementOverlay" class="terms-overlay" aria-hidden="true">
+                    <div class="terms-modal" role="dialog" aria-modal="true" aria-labelledby="agreementModalTitle">
+                        <div class="terms-modal-header">
+                            <h4 id="agreementModalTitle" class="lang-text" data-zh="協議" data-en="Agreement">Agreement</h4>
+                            <button type="button" class="terms-modal-close" id="agreementModalClose" aria-label="Close">&times;</button>
+                        </div>
+                        <div class="terms-modal-body" id="agreementContent"></div>
+                    </div>
+                </div>
+                <script type="application/json" id="agreementContentJson"><%- JSON.stringify({
+                    zh: (formConfig.agreement.content && formConfig.agreement.content.zh) ? formConfig.agreement.content.zh : '',
+                    en: (formConfig.agreement.content && formConfig.agreement.content.en) ? formConfig.agreement.content.en : ''
+                }) %></script>
+            <% } %>
+
             <div class="btn-container">
-                <button type="button" class="btn btn-secondary" onclick="history.back()">返回</button>
-                <button type="submit" class="btn btn-primary">下一步</button>
+                <button type="button" class="btn btn-secondary lang-text" data-zh="返回" data-en="Back" onclick="history.back()">返回</button>
+                <button type="submit" class="btn btn-primary lang-text" data-zh="下一步" data-en="Next">下一步</button>
             </div>
         </form>
         
@@ -450,6 +646,63 @@
         // 語言設置：優先使用 URL 參數，否則使用默認語言
         const urlLanguage = getLanguageFromURL();
         let currentLanguage = urlLanguage || '<%= formConfig.defaultLanguage || "zh" %>';
+        const formConfigEventName = <%- JSON.stringify(formConfig && formConfig.eventDisplayName ? formConfig.eventDisplayName : { zh: '', en: '' }) %>;
+        const fallbackEventName = <%- JSON.stringify(event && event.name ? event.name : 'Event') %>;
+        function getHeaderEventName(lang) {
+            const zh = (formConfigEventName && formConfigEventName.zh) ? String(formConfigEventName.zh).trim() : '';
+            const en = (formConfigEventName && formConfigEventName.en) ? String(formConfigEventName.en).trim() : '';
+            if (lang === 'en') return en || zh || fallbackEventName;
+            return zh || en || fallbackEventName;
+        }
+        const termsContentByLang = (function() {
+            const el = document.getElementById('termsContentJson');
+            if (!el) return { zh: '', en: '' };
+            try { return JSON.parse(el.textContent); } catch (_) { return { zh: '', en: '' }; }
+        })();
+        const agreementContentByLang = (function() {
+            const el = document.getElementById('agreementContentJson');
+            if (!el) return { zh: '', en: '' };
+            try { return JSON.parse(el.textContent); } catch (_) { return { zh: '', en: '' }; }
+        })();
+
+        /** 是否為區塊級 HTML（p/div/ul 等），此類內容直接渲染 */
+        function termsLooksLikeBlockHtml(s) {
+            return /<\s*\/?\s*(p|div|ul|ol|li|h[1-6]|table|tbody|tr|td|th|blockquote|section|article|br)\b/i.test(s);
+        }
+
+        /** 純文字或簡單 HTML：保留換行；完整 HTML 區塊則原樣輸出 */
+        function formatTermsContent(raw) {
+            const s = String(raw || '');
+            if (!s.trim()) return '';
+            if (termsLooksLikeBlockHtml(s)) {
+                return s;
+            }
+            const normalized = s.replace(/\r\n/g, '\n');
+            if (/<[a-z][\s\S]*?>/i.test(normalized)) {
+                return normalized.replace(/\n/g, '<br>');
+            }
+            const div = document.createElement('div');
+            div.textContent = normalized;
+            return div.innerHTML.replace(/\n/g, '<br>');
+        }
+
+        function renderTermsContentHtml() {
+            const $termsContent = $('#termsContent');
+            if (!$termsContent.length) return;
+            const raw = currentLanguage === 'en'
+                ? (termsContentByLang.en || termsContentByLang.zh || '')
+                : (termsContentByLang.zh || termsContentByLang.en || '');
+            $termsContent.html(formatTermsContent(raw));
+        }
+
+        function renderAgreementContentHtml() {
+            const $content = $('#agreementContent');
+            if (!$content.length) return;
+            const raw = currentLanguage === 'en'
+                ? (agreementContentByLang.en || agreementContentByLang.zh || '')
+                : (agreementContentByLang.zh || agreementContentByLang.en || '');
+            $content.html(formatTermsContent(raw));
+        }
         
         // 初始化語言按鈕狀態
         $(document).ready(function() {
@@ -494,12 +747,11 @@
 
         // 更新頁面語言
         function updatePageLanguage() {
-            // 更新標題和副標題
+            // 標題使用 FormConfig eventDisplayName（留空則 fallback event.name）
+            $('#formTitle').text(getHeaderEventName(currentLanguage));
             if (currentLanguage === 'zh') {
-                $('#formTitle').text('立即登記！');
                 $('#formSubtitle').text('請填寫以下資料完成活動報名');
             } else {
-                $('#formTitle').text('Register Now!');
                 $('#formSubtitle').text('Please fill in the following information to complete event registration');
             }
 
@@ -580,6 +832,21 @@
                     $label.text(zhText);
                 } else if (currentLanguage === 'en' && enText) {
                     $label.text(enText);
+                }
+            });
+
+            // 更新 T&C 內容（支援 HTML）
+            renderTermsContentHtml();
+            renderAgreementContentHtml();
+
+            // 更新按鈕文字（返回、下一步等）
+            $('.lang-text').each(function() {
+                const zhText = $(this).data('zh');
+                const enText = $(this).data('en');
+                if (currentLanguage === 'zh' && zhText) {
+                    $(this).text(zhText);
+                } else if (currentLanguage === 'en' && enText) {
+                    $(this).text(enText);
                 }
             });
 
@@ -685,6 +952,73 @@
             };
 
         }
+
+        function initOverlayAndValidation(opts) {
+            const overlay = document.getElementById(opts.overlayId);
+            const openLink = document.getElementById(opts.openLinkId);
+            const closeBtn = document.getElementById(opts.closeBtnId);
+            const agreeEl = document.getElementById(opts.agreeId);
+
+            function openOverlay(e) {
+                if (e) e.preventDefault();
+                if (!overlay) return;
+                overlay.classList.add('is-open');
+                overlay.setAttribute('aria-hidden', 'false');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeOverlay() {
+                if (!overlay) return;
+                overlay.classList.remove('is-open');
+                overlay.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+            }
+
+            if (openLink) openLink.addEventListener('click', openOverlay);
+            if (closeBtn) closeBtn.addEventListener('click', closeOverlay);
+            if (overlay) {
+                overlay.addEventListener('click', function(e) {
+                    if (e.target === overlay) closeOverlay();
+                });
+            }
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && overlay && overlay.classList.contains('is-open')) {
+                    closeOverlay();
+                }
+            });
+
+            if (agreeEl) {
+                agreeEl.addEventListener('change', function() {
+                    this.setCustomValidity('');
+                });
+                agreeEl.addEventListener('invalid', function() {
+                    const msg = currentLanguage === 'zh'
+                        ? (opts.invalidMsgZh || '請先閱讀並勾選同意，才可提交。')
+                        : (opts.invalidMsgEn || 'Please agree before submitting.');
+                    this.setCustomValidity(msg);
+                });
+            }
+        }
+
+        // Terms & Conditions
+        initOverlayAndValidation({
+            overlayId: 'termsOverlay',
+            openLinkId: 'termsOpenLink',
+            closeBtnId: 'termsModalClose',
+            agreeId: 'termsAgree',
+            invalidMsgZh: '請先閱讀並勾選同意條款，才可提交。',
+            invalidMsgEn: 'Please agree to the terms before submitting.'
+        });
+
+        // Agreement
+        initOverlayAndValidation({
+            overlayId: 'agreementOverlay',
+            openLinkId: 'agreementOpenLink',
+            closeBtnId: 'agreementModalClose',
+            agreeId: 'agreementAgree',
+            invalidMsgZh: '請先閱讀並勾選同意協議，才可提交。',
+            invalidMsgEn: 'Please agree to the agreement before submitting.'
+        });
 
         // stripe public key
         const STRIPE_PK = '<%= process.env.STRIPE_PK || "" %>';

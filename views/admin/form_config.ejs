@@ -92,6 +92,150 @@
                                 </div>
                             </div>
 
+                            <!-- Event Banner Management（搬到 FormConfig） -->
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6>Event Banner Management</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-7">
+                                            <% if (currentBanner) { %>
+                                                <div class="mb-2">
+                                                    <img src="<%= currentBanner %>" alt="Current Banner" style="max-width: 100%; max-height: 220px; border-radius: 8px; border: 1px solid #dee2e6;">
+                                                </div>
+                                                <form action="/events/<%= event._id %>/banner/delete" method="POST"
+                                                      onsubmit="return confirm('確定要刪除當前的 banner 嗎？')" style="display:inline;">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="fas fa-trash"></i> Delete Banner
+                                                    </button>
+                                                </form>
+                                            <% } else { %>
+                                                <p class="text-muted mb-2">目前沒有 Banner</p>
+                                            <% } %>
+                                        </div>
+                                        <div class="col-md-5">
+                                            <form action="/events/<%= event._id %>/banner/upload" method="POST" enctype="multipart/form-data">
+                                                <div class="mb-2">
+                                                    <label class="form-label">Upload new banner (JPG/PNG, max 5MB)</label>
+                                                    <input type="file" name="banner" class="form-control" accept="image/png,image/jpeg,image/jpg" required>
+                                                </div>
+                                                <button type="submit" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-upload"></i> Upload
+                                                </button>
+                                            </form>
+                                            <small class="text-muted d-block mt-2">上傳後如未即時更新，請重新整理頁面。</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Register Header Event Name（可覆蓋 event.name） -->
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6>Register Header Event Name</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Event name (ZH)</label>
+                                            <input type="text" class="form-control" id="eventDisplayNameZh"
+                                                   value="<%= (formConfig.eventDisplayName && formConfig.eventDisplayName.zh) ? formConfig.eventDisplayName.zh : '' %>"
+                                                   placeholder="留空則使用 event.name">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Event name (EN)</label>
+                                            <input type="text" class="form-control" id="eventDisplayNameEn"
+                                                   value="<%= (formConfig.eventDisplayName && formConfig.eventDisplayName.en) ? formConfig.eventDisplayName.en : '' %>"
+                                                   placeholder="Leave blank to use event.name">
+                                        </div>
+                                    </div>
+                                    <small class="text-muted d-block mt-2">Register page header 會依語言顯示此名稱（留空則顯示 event.name）。</small>
+                                </div>
+                            </div>
+
+                            <!-- 條款 / T&C 設定 -->
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6>Terms & Conditions (T&C)</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="termsEnabled"
+                                               <%= (formConfig.terms && formConfig.terms.enabled) ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="termsEnabled">
+                                            啟用條款同意（啟用後，訪客必須勾選同意才可提交）
+                                        </label>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label">勾選框文字 (ZH)</label>
+                                            <input type="text" class="form-control" id="termsLabelZh"
+                                                   value="<%= (formConfig.terms && formConfig.terms.label && formConfig.terms.label.zh) ? formConfig.terms.label.zh : '' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Checkbox label (EN)</label>
+                                            <input type="text" class="form-control" id="termsLabelEn"
+                                                   value="<%= (formConfig.terms && formConfig.terms.label && formConfig.terms.label.en) ? formConfig.terms.label.en : '' %>">
+                                        </div>
+                                    </div>
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">條款內容 (ZH)</label>
+                                            <textarea class="form-control" id="termsContentZh" rows="6"
+                                                      placeholder="可輸入多行文字"><%= (formConfig.terms && formConfig.terms.content && formConfig.terms.content.zh) ? formConfig.terms.content.zh : '' %></textarea>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Terms content (EN)</label>
+                                            <textarea class="form-control" id="termsContentEn" rows="6"
+                                                      placeholder="Multi-line text supported"><%= (formConfig.terms && formConfig.terms.content && formConfig.terms.content.en) ? formConfig.terms.content.en : '' %></textarea>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted d-block mt-2">提示：Register 頁點 (terms) 以彈層顯示；純文字換行會保留；亦支援 HTML（&lt;p&gt;、&lt;ul&gt;、&lt;br&gt; 等）；未勾選同意無法提交。</small>
+                                </div>
+                            </div>
+
+                            <!-- Agreement（功能同 T&C） -->
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6>Agreement</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="agreementEnabled"
+                                               <%= (formConfig.agreement && formConfig.agreement.enabled) ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="agreementEnabled">
+                                            啟用 Agreement（啟用後，訪客必須勾選同意才可提交）
+                                        </label>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label">勾選框文字 (ZH)</label>
+                                            <input type="text" class="form-control" id="agreementLabelZh"
+                                                   value="<%= (formConfig.agreement && formConfig.agreement.label && formConfig.agreement.label.zh) ? formConfig.agreement.label.zh : '' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Checkbox label (EN)</label>
+                                            <input type="text" class="form-control" id="agreementLabelEn"
+                                                   value="<%= (formConfig.agreement && formConfig.agreement.label && formConfig.agreement.label.en) ? formConfig.agreement.label.en : '' %>">
+                                        </div>
+                                    </div>
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">內容 (ZH)</label>
+                                            <textarea class="form-control" id="agreementContentZh" rows="6"
+                                                      placeholder="可輸入多行文字"><%= (formConfig.agreement && formConfig.agreement.content && formConfig.agreement.content.zh) ? formConfig.agreement.content.zh : '' %></textarea>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Content (EN)</label>
+                                            <textarea class="form-control" id="agreementContentEn" rows="6"
+                                                      placeholder="Multi-line text supported"><%= (formConfig.agreement && formConfig.agreement.content && formConfig.agreement.content.en) ? formConfig.agreement.content.en : '' %></textarea>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted d-block mt-2">提示：Register 頁點 (agreement) 以彈層顯示；純文字換行會保留；亦支援 HTML。</small>
+                                </div>
+                            </div>
+
                             <!-- 語言設置 -->
                             <div class="card mb-3">
                                 <div class="card-header">
@@ -170,11 +314,12 @@
                                                     const originalFieldIndex = section.fields.findIndex(f => f._id ? f._id.toString() === field._id.toString() : f.fieldName === field.fieldName);
                                                     const actualFieldIndex = originalFieldIndex >= 0 ? originalFieldIndex : fieldIndex;
                                                     %>
-                                                    <div class="field-item <%= field.visible ? '' : 'hidden-field' %>" data-field-index="<%= actualFieldIndex %>">
+                                                    <% const fieldDisplayed = field.display !== undefined ? field.display : field.visible !== false; %>
+                                                    <div class="field-item <%= fieldDisplayed ? '' : 'hidden-field' %>" data-field-index="<%= actualFieldIndex %>">
                                                         <div class="field-controls">
                                                             <div class="form-check form-switch">
                                                                 <input class="form-check-input" type="checkbox" 
-                                                                       <%= field.visible ? 'checked' : '' %>
+                                                                       <%= fieldDisplayed ? 'checked' : '' %>
                                                                        onchange="toggleField(<%= actualSectionIndex %>, <%= actualFieldIndex %>)">
                                                                 <label class="form-check-label">
                                                                     <strong><%= field.label %></strong>
@@ -220,12 +365,20 @@
                                                                     <option value="radio" <%= field.type === 'radio' ? 'selected' : '' %>>Radio</option>
                                                                 </select>
                                                             </div>
-                                                            <div class="col-md-2">
+                                                            <div class="col-md-1">
                                                                 <label class="form-label">Required</label>
                                                                 <div class="form-check">
                                                                     <input class="form-check-input" type="checkbox" 
                                                                            <%= field.required ? 'checked' : '' %>
                                                                            onchange="updateFieldProperty(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'required', this.checked)">
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-1">
+                                                                <label class="form-label">Display</label>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox" 
+                                                                           <%= fieldDisplayed ? 'checked' : '' %>
+                                                                           onchange="updateFieldDisplay(<%= actualSectionIndex %>, <%= actualFieldIndex %>, this.checked)">
                                                                 </div>
                                                             </div>
                                                             <div class="col-md-2">
@@ -397,6 +550,17 @@
     const eventId = '<%= event._id %>';
     let currentLanguage = 'zh'; // 當前編輯語言
 
+    // 初始化 T&C 欄位（避免舊資料缺少）
+    if (!formConfig.terms) {
+        formConfig.terms = { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } };
+    }
+    if (!formConfig.agreement) {
+        formConfig.agreement = { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } };
+    }
+    if (!formConfig.eventDisplayName) {
+        formConfig.eventDisplayName = { zh: '', en: '' };
+    }
+
     // 切換語言
     function switchLanguage(lang) {
         currentLanguage = lang;
@@ -502,10 +666,33 @@
         }
     }
 
+    function isFieldDisplayed(field) {
+        if (!field) return true;
+        if (field.display !== undefined) return field.display !== false;
+        return field.visible !== false;
+    }
+
+    function updateFieldDisplay(sectionIndex, fieldIndex, checked) {
+        if (!formConfig.sections[sectionIndex] || !formConfig.sections[sectionIndex].fields[fieldIndex]) return;
+        const field = formConfig.sections[sectionIndex].fields[fieldIndex];
+        field.display = !!checked;
+        field.visible = !!checked;
+        const fieldElement = document.querySelector('[data-section-index="' + sectionIndex + '"] [data-field-index="' + fieldIndex + '"]');
+        if (fieldElement) {
+            fieldElement.classList.toggle('hidden-field', !checked);
+        }
+        const topSwitch = fieldElement && fieldElement.querySelector('.field-controls .form-check-input');
+        if (topSwitch) topSwitch.checked = !!checked;
+        updatePreview();
+    }
+
     // 更新字段屬性
     async function updateFieldProperty(sectionIndex, fieldIndex, property, value) {
         if (formConfig.sections[sectionIndex] && formConfig.sections[sectionIndex].fields[fieldIndex]) {
             formConfig.sections[sectionIndex].fields[fieldIndex][property] = value;
+            if (property === 'display') {
+                formConfig.sections[sectionIndex].fields[fieldIndex].visible = !!value;
+            }
             
             // 如果更改了字段類型，需要處理選項
             if (property === 'type') {
@@ -590,17 +777,19 @@
         }
     }
 
-    // 切換字段顯示
+    // 切換字段顯示（頂部 switch 與 Display 勾選同步）
     function toggleField(sectionIndex, fieldIndex) {
         const field = formConfig.sections[sectionIndex].fields[fieldIndex];
-        field.visible = !field.visible;
+        const next = !isFieldDisplayed(field);
+        field.display = next;
+        field.visible = next;
         
         const fieldElement = document.querySelector('[data-section-index="' + sectionIndex + '"] [data-field-index="' + fieldIndex + '"]');
-        if (field.visible) {
-            fieldElement.classList.remove('hidden-field');
-        } else {
-            fieldElement.classList.add('hidden-field');
+        if (fieldElement) {
+            fieldElement.classList.toggle('hidden-field', !next);
         }
+        const displayCheckbox = fieldElement && fieldElement.querySelector('input[type="checkbox"][onchange*="updateFieldDisplay"]');
+        if (displayCheckbox) displayCheckbox.checked = next;
         updatePreview();
     }
 
@@ -625,6 +814,7 @@
             label: '新字段',
             type: 'text',
             required: false,
+            display: true,
             visible: true,
             placeholder: '',
             order: formConfig.sections[sectionIndex].fields.length + 1
@@ -729,7 +919,7 @@
                 html += '<h5>' + getMultilingualText(section.sectionTitle, previewLanguage) + '</h5>';
                 
                 section.fields.forEach(function(field) {
-                    if (field.visible) {
+                    if (isFieldDisplayed(field)) {
                         html += '<div class="mb-2">';
                         html += '<label class="form-label">' + getMultilingualText(field.label, previewLanguage);
                         if (field.required) html += ' <span class="text-danger">*</span>';
@@ -783,6 +973,32 @@
         try {
             const registerPageEnabled = document.getElementById('registerPageEnabled').checked;
             const registerClosedMessage = document.getElementById('registerClosedMessage').value || '';
+            const eventDisplayName = {
+                zh: (document.getElementById('eventDisplayNameZh').value || '').trim(),
+                en: (document.getElementById('eventDisplayNameEn').value || '').trim()
+            };
+            const terms = {
+                enabled: !!document.getElementById('termsEnabled').checked,
+                label: {
+                    zh: (document.getElementById('termsLabelZh').value || '').trim(),
+                    en: (document.getElementById('termsLabelEn').value || '').trim()
+                },
+                content: {
+                    zh: document.getElementById('termsContentZh').value || '',
+                    en: document.getElementById('termsContentEn').value || ''
+                }
+            };
+            const agreement = {
+                enabled: !!document.getElementById('agreementEnabled').checked,
+                label: {
+                    zh: (document.getElementById('agreementLabelZh').value || '').trim(),
+                    en: (document.getElementById('agreementLabelEn').value || '').trim()
+                },
+                content: {
+                    zh: document.getElementById('agreementContentZh').value || '',
+                    en: document.getElementById('agreementContentEn').value || ''
+                }
+            };
             const response = await fetch('/formConfig/' + eventId + '/config', {
                 method: 'PUT',
                 headers: {
@@ -792,7 +1008,10 @@
                     sections: formConfig.sections,
                     defaultLanguage: formConfig.defaultLanguage,
                     registerPageEnabled: registerPageEnabled,
-                    registerClosedMessage: registerClosedMessage
+                    registerClosedMessage: registerClosedMessage,
+                    eventDisplayName,
+                    terms,
+                    agreement
                 })
             });
             
@@ -844,6 +1063,9 @@
             // 創建要導出的配置對象（移除 MongoDB 相關字段）
             const exportData = {
                 defaultLanguage: formConfig.defaultLanguage,
+                eventDisplayName: formConfig.eventDisplayName || { zh: '', en: '' },
+                terms: formConfig.terms || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } },
+                agreement: formConfig.agreement || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } },
                 sections: formConfig.sections.map(section => ({
                     sectionName: section.sectionName,
                     sectionTitle: section.sectionTitle,
@@ -854,6 +1076,7 @@
                         label: field.label,
                         type: field.type,
                         required: field.required,
+                        display: field.display !== undefined ? field.display : field.visible !== false,
                         visible: field.visible,
                         placeholder: field.placeholder,
                         options: field.options || [],
@@ -905,22 +1128,29 @@
                 if (confirm('確定要導入此配置嗎？這將覆蓋現有的表單配置。')) {
                     // 更新 formConfig
                     formConfig.defaultLanguage = importedData.defaultLanguage || formConfig.defaultLanguage;
+                    formConfig.terms = importedData.terms || formConfig.terms || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } };
+                    formConfig.agreement = importedData.agreement || formConfig.agreement || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } };
+                    formConfig.eventDisplayName = importedData.eventDisplayName || formConfig.eventDisplayName || { zh: '', en: '' };
                     formConfig.sections = importedData.sections.map(section => ({
                         sectionName: section.sectionName || '新區塊',
                         sectionTitle: section.sectionTitle || { zh: '新區塊', en: 'New Section' },
                         visible: section.visible !== undefined ? section.visible : true,
                         order: section.order || 0,
-                        fields: (section.fields || []).map(field => ({
+                        fields: (section.fields || []).map(field => {
+                            const disp = field.display !== undefined ? field.display : (field.visible !== undefined ? field.visible : true);
+                            return {
                             fieldName: field.fieldName || 'newField',
                             label: field.label || { zh: '', en: '' },
                             type: field.type || 'text',
                             required: field.required || false,
-                            visible: field.visible !== undefined ? field.visible : true,
+                            display: disp,
+                            visible: disp,
                             placeholder: field.placeholder || { zh: '', en: '' },
                             options: field.options || [],
                             validation: field.validation || {},
                             order: field.order || 0
-                        }))
+                        };
+                        })
                     }));
                     
                     // 保存配置
@@ -945,6 +1175,53 @@
 
     // 初始化預覽
     updatePreview();
+
+    // 初始化 T&C UI（載入 formConfig.terms 到表單欄位）
+    (function initTermsUi() {
+        try {
+            const t = formConfig.terms || {};
+            const enabledEl = document.getElementById('termsEnabled');
+            const labelZhEl = document.getElementById('termsLabelZh');
+            const labelEnEl = document.getElementById('termsLabelEn');
+            const contentZhEl = document.getElementById('termsContentZh');
+            const contentEnEl = document.getElementById('termsContentEn');
+            if (!enabledEl) return;
+            enabledEl.checked = !!t.enabled;
+            if (labelZhEl) labelZhEl.value = (t.label && t.label.zh) ? t.label.zh : labelZhEl.value;
+            if (labelEnEl) labelEnEl.value = (t.label && t.label.en) ? t.label.en : labelEnEl.value;
+            if (contentZhEl) contentZhEl.value = (t.content && t.content.zh) ? t.content.zh : contentZhEl.value;
+            if (contentEnEl) contentEnEl.value = (t.content && t.content.en) ? t.content.en : contentEnEl.value;
+        } catch (_) {}
+    })();
+
+    // 初始化 Agreement UI
+    (function initAgreementUi() {
+        try {
+            const a = formConfig.agreement || {};
+            const enabledEl = document.getElementById('agreementEnabled');
+            const labelZhEl = document.getElementById('agreementLabelZh');
+            const labelEnEl = document.getElementById('agreementLabelEn');
+            const contentZhEl = document.getElementById('agreementContentZh');
+            const contentEnEl = document.getElementById('agreementContentEn');
+            if (!enabledEl) return;
+            enabledEl.checked = !!a.enabled;
+            if (labelZhEl) labelZhEl.value = (a.label && a.label.zh) ? a.label.zh : labelZhEl.value;
+            if (labelEnEl) labelEnEl.value = (a.label && a.label.en) ? a.label.en : labelEnEl.value;
+            if (contentZhEl) contentZhEl.value = (a.content && a.content.zh) ? a.content.zh : contentZhEl.value;
+            if (contentEnEl) contentEnEl.value = (a.content && a.content.en) ? a.content.en : contentEnEl.value;
+        } catch (_) {}
+    })();
+
+    // 初始化 eventDisplayName UI
+    (function initEventDisplayNameUi() {
+        try {
+            const n = formConfig.eventDisplayName || {};
+            const zhEl = document.getElementById('eventDisplayNameZh');
+            const enEl = document.getElementById('eventDisplayNameEn');
+            if (zhEl) zhEl.value = n.zh || zhEl.value;
+            if (enEl) enEl.value = n.en || enEl.value;
+        } catch (_) {}
+    })();
 </script>
 
 <%- include ("components/footer") %>

@@ -19,14 +19,14 @@ function getPaymentBaseUrl() {
         : 'https://gateway.wonder.today';
 }
 
-/** UTC 時間 YYYYMMDDHHMMSS（Wonder credential 用） */
+/** 本地時間 YYYYMMDDHHMMSS（Wonder credential 用；避免時區造成驗證失敗） */
 function formatTimeToYYYYMMDDHHMMSS(date = new Date()) {
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(date.getUTCDate()).padStart(2, '0');
-    const hours = String(date.getUTCHours()).padStart(2, '0');
-    const minutes = String(date.getUTCMinutes()).padStart(2, '0');
-    const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
     return `${year}${month}${day}${hours}${minutes}${seconds}`;
 }
 
@@ -164,8 +164,9 @@ async function createOrder(params) {
     if (!privateKey || !privateKey.includes('BEGIN')) {
         throw new Error('WONDER_PRIVATE_KEY is required for create order signature');
     }
-    // Step 2: auth 成功後，用我們自己的簽名（uri 含 query，對 order body 簽名）呼叫 create order
-    const orderAuthHeaders = getWonderAuthHeaders(privateKey, appId, method, uriWithQuery, plainText);
+    // Step 2: auth 成功後，用我們自己的簽名呼叫 create order
+    // 註：部分 Wonder 環境驗證 signature 時只取 path 不含 query，因此簽名用 WONDER_ORDER_API_PATH
+    const orderAuthHeaders = getWonderAuthHeaders(privateKey, appId, method, WONDER_ORDER_API_PATH, plainText);
     const headers = {
         'Content-Type': 'application/json',
         'Credential': orderAuthHeaders.Credential,

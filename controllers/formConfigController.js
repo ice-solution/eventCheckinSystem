@@ -55,6 +55,13 @@ const migrateFormConfig = (formConfig) => {
                 }
                 
                 // 遷移 options
+                if (migratedField.display === undefined) {
+                    migratedField.display = field.visible !== false;
+                }
+                if (migratedField.visible === undefined) {
+                    migratedField.visible = migratedField.display !== false;
+                }
+                
                 if (field.options) {
                     migratedField.options = field.options.map(option => {
                         const migratedOption = { ...option };
@@ -89,6 +96,72 @@ const migrateFormConfig = (formConfig) => {
     if (!migratedConfig.defaultLanguage) {
         migratedConfig.defaultLanguage = 'zh';
     }
+
+    // 確保有 eventDisplayName
+    if (!migratedConfig.eventDisplayName || typeof migratedConfig.eventDisplayName !== 'object') {
+        migratedConfig.eventDisplayName = { zh: '', en: '' };
+    } else {
+        migratedConfig.eventDisplayName.zh = migratedConfig.eventDisplayName.zh || '';
+        migratedConfig.eventDisplayName.en = migratedConfig.eventDisplayName.en || '';
+    }
+
+    // 確保有 terms 設定
+    if (!migratedConfig.terms || typeof migratedConfig.terms !== 'object') {
+        migratedConfig.terms = {
+            enabled: false,
+            label: {
+                zh: '本人已閱讀並同意上述須知，確認繼續預約及積分扣款程序。',
+                en: 'I have read and agree to the terms above, and confirm to proceed.'
+            },
+            content: { zh: '', en: '' }
+        };
+    } else {
+        migratedConfig.terms.enabled = !!migratedConfig.terms.enabled;
+        if (!migratedConfig.terms.label || typeof migratedConfig.terms.label !== 'object') {
+            migratedConfig.terms.label = {
+                zh: '本人已閱讀並同意上述須知，確認繼續預約及積分扣款程序。',
+                en: 'I have read and agree to the terms above, and confirm to proceed.'
+            };
+        } else {
+            migratedConfig.terms.label.zh = migratedConfig.terms.label.zh || '本人已閱讀並同意上述須知，確認繼續預約及積分扣款程序。';
+            migratedConfig.terms.label.en = migratedConfig.terms.label.en || 'I have read and agree to the terms above, and confirm to proceed.';
+        }
+        if (!migratedConfig.terms.content || typeof migratedConfig.terms.content !== 'object') {
+            migratedConfig.terms.content = { zh: '', en: '' };
+        } else {
+            migratedConfig.terms.content.zh = migratedConfig.terms.content.zh || '';
+            migratedConfig.terms.content.en = migratedConfig.terms.content.en || '';
+        }
+    }
+
+    // 確保有 agreement 設定
+    if (!migratedConfig.agreement || typeof migratedConfig.agreement !== 'object') {
+        migratedConfig.agreement = {
+            enabled: false,
+            label: {
+                zh: '本人已閱讀並同意上述協議內容。',
+                en: 'I have read and agree to the agreement above.'
+            },
+            content: { zh: '', en: '' }
+        };
+    } else {
+        migratedConfig.agreement.enabled = !!migratedConfig.agreement.enabled;
+        if (!migratedConfig.agreement.label || typeof migratedConfig.agreement.label !== 'object') {
+            migratedConfig.agreement.label = {
+                zh: '本人已閱讀並同意上述協議內容。',
+                en: 'I have read and agree to the agreement above.'
+            };
+        } else {
+            migratedConfig.agreement.label.zh = migratedConfig.agreement.label.zh || '本人已閱讀並同意上述協議內容。';
+            migratedConfig.agreement.label.en = migratedConfig.agreement.label.en || 'I have read and agree to the agreement above.';
+        }
+        if (!migratedConfig.agreement.content || typeof migratedConfig.agreement.content !== 'object') {
+            migratedConfig.agreement.content = { zh: '', en: '' };
+        } else {
+            migratedConfig.agreement.content.zh = migratedConfig.agreement.content.zh || '';
+            migratedConfig.agreement.content.en = migratedConfig.agreement.content.en || '';
+        }
+    }
     
     return migratedConfig;
 };
@@ -98,6 +171,23 @@ exports.getDefaultFormConfig = () => ({
     defaultLanguage: 'zh',
     registerPageEnabled: true,
     registerClosedMessage: '',
+    eventDisplayName: { zh: '', en: '' },
+    terms: {
+        enabled: false,
+        label: {
+            zh: '本人已閱讀並同意上述須知，確認繼續預約及積分扣款程序。',
+            en: 'I have read and agree to the terms above, and confirm to proceed.'
+        },
+        content: { zh: '', en: '' }
+    },
+    agreement: {
+        enabled: false,
+        label: {
+            zh: '本人已閱讀並同意上述協議內容。',
+            en: 'I have read and agree to the agreement above.'
+        },
+        content: { zh: '', en: '' }
+    },
     sections: [
         {
             sectionName: 'contact_info',
@@ -116,6 +206,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'email',
                     required: true,
+                    display: true,
                     visible: true,
                     placeholder: {
                         zh: '例如：peterwong@abccompany.com',
@@ -131,6 +222,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'text',
                     required: true,
+                    display: true,
                     visible: true,
                     placeholder: {
                         zh: '例如：王小明',
@@ -146,6 +238,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'select',
                     required: true,
+                    display: true,
                     visible: true,
                     order: 3,
                     options: [
@@ -169,6 +262,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'tel',
                     required: true,
+                    display: true,
                     visible: true,
                     placeholder: {
                         zh: '例如：區號 - 電話號碼',
@@ -184,6 +278,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'select',
                     required: true,
+                    display: true,
                     visible: true,
                     order: 5,
                     options: [
@@ -202,6 +297,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'text',
                     required: true,
+                    display: true,
                     visible: true,
                     placeholder: {
                         zh: '例如：ABC 公司',
@@ -217,6 +313,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'text',
                     required: true,
+                    display: true,
                     visible: true,
                     placeholder: {
                         zh: '例如：資深經理',
@@ -232,6 +329,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'select',
                     required: false,
+                    display: true,
                     visible: true,
                     order: 8,
                     options: [
@@ -251,6 +349,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'select',
                     required: false,
+                    display: true,
                     visible: true,
                     order: 9,
                     options: [
@@ -269,6 +368,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'select',
                     required: false,
+                    display: true,
                     visible: true,
                     order: 10,
                     options: [
@@ -286,6 +386,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'textarea',
                     required: false,
+                    display: true,
                     visible: true,
                     placeholder: {
                         zh: '請輸入任何特殊需求或備註',
@@ -342,7 +443,7 @@ exports.getFormConfig = async (req, res) => {
 exports.updateFormConfig = async (req, res) => {
     try {
         const { eventId } = req.params;
-        const { sections, defaultLanguage, registerPageEnabled, registerClosedMessage } = req.body;
+        const { sections, defaultLanguage, registerPageEnabled, registerClosedMessage, terms, agreement, eventDisplayName } = req.body;
         
         // 驗證事件是否存在
         const event = await Event.findById(eventId);
@@ -368,6 +469,18 @@ exports.updateFormConfig = async (req, res) => {
             if (typeof registerClosedMessage === 'string') {
                 formConfig.registerClosedMessage = registerClosedMessage;
             }
+            if (eventDisplayName && typeof eventDisplayName === 'object') {
+                const migrated = migrateFormConfig({ sections: formConfig.sections, eventDisplayName });
+                formConfig.eventDisplayName = migrated.eventDisplayName;
+            }
+            if (terms && typeof terms === 'object') {
+                const migrated = migrateFormConfig({ sections: formConfig.sections, terms });
+                formConfig.terms = migrated.terms;
+            }
+            if (agreement && typeof agreement === 'object') {
+                const migrated = migrateFormConfig({ sections: formConfig.sections, agreement });
+                formConfig.agreement = migrated.agreement;
+            }
             await formConfig.save();
         } else {
             // 創建新配置
@@ -377,7 +490,16 @@ exports.updateFormConfig = async (req, res) => {
                 sections: sections || defaultConfig.sections,
                 defaultLanguage: defaultLanguage || defaultConfig.defaultLanguage,
                 registerPageEnabled: typeof registerPageEnabled === 'boolean' ? registerPageEnabled : defaultConfig.registerPageEnabled,
-                registerClosedMessage: typeof registerClosedMessage === 'string' ? registerClosedMessage : (defaultConfig.registerClosedMessage || '')
+                registerClosedMessage: typeof registerClosedMessage === 'string' ? registerClosedMessage : (defaultConfig.registerClosedMessage || ''),
+                eventDisplayName: eventDisplayName && typeof eventDisplayName === 'object'
+                    ? migrateFormConfig({ sections: (sections || defaultConfig.sections), eventDisplayName }).eventDisplayName
+                    : defaultConfig.eventDisplayName,
+                terms: terms && typeof terms === 'object'
+                    ? migrateFormConfig({ sections: (sections || defaultConfig.sections), terms }).terms
+                    : defaultConfig.terms,
+                agreement: agreement && typeof agreement === 'object'
+                    ? migrateFormConfig({ sections: (sections || defaultConfig.sections), agreement }).agreement
+                    : defaultConfig.agreement
             });
             await formConfig.save();
         }
@@ -445,11 +567,24 @@ exports.renderFormConfigPage = async (req, res) => {
                 ...getDefaultFormConfig()
             });
             await formConfig.save();
+        } else {
+            const migratedConfig = migrateFormConfig(formConfig);
+            const needsDisplayMigration = formConfig.sections && formConfig.sections.some(sec =>
+                (sec.fields || []).some(f => f.display === undefined)
+            );
+            if (needsDisplayMigration) {
+                Object.assign(formConfig, migratedConfig);
+                await formConfig.save();
+            }
         }
         
+        const { getCurrentBannerPreviewUrl } = require('../utils/bannerCache');
+        const currentBanner = getCurrentBannerPreviewUrl(eventId);
+
         res.render('admin/form_config', { 
             event: event, 
-            formConfig: formConfig 
+            formConfig: formConfig,
+            currentBanner
         });
         
     } catch (error) {

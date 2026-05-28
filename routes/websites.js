@@ -5,6 +5,16 @@ const path = require('path');
 const Event = require('../model/Event');
 const eventsController = require('../controllers/eventsController');
 const Transaction = require('../model/Transaction');
+const { getBannerRenderData } = require('../utils/bannerCache');
+const { normalizeTicketsForView } = require('../utils/paymentTicket');
+
+// 為活動頁面注入帶 ?t= 的 banner URL（依檔案修改時間，避免 CDN 快取舊圖）
+router.param('event_id', (req, res, next, eventId) => {
+    if (/^[0-9a-fA-F]{24}$/.test(eventId)) {
+        Object.assign(res.locals, getBannerRenderData(eventId));
+    }
+    next();
+});
 
 // 路由到 demo_website/index.ejs
 router.get('/:event_id', (req, res) => {
@@ -18,7 +28,7 @@ router.get('/:event_id/register', async (req, res) => {
     const event = await Event.findById(event_id);
     let paymentTickets = [];
     if (event && event.isPaymentEvent && Array.isArray(event.PaymentTickets)) {
-        paymentTickets = event.PaymentTickets;
+        paymentTickets = normalizeTicketsForView(event.PaymentTickets);
     }
     
     // 獲取表單配置
@@ -67,7 +77,7 @@ router.get('/:event_id/register', async (req, res) => {
         });
     }
     
-    res.render('exvent/register', { event_id, paymentTickets, formConfig: formConfig });
+    res.render('exvent/register', { event_id, event, paymentTickets, formConfig: formConfig });
 });
 // 路由到註冊成功頁面（session_id 可為 Stripe session_id、Wonder order_id 或 Transaction _id）
 router.get('/:event_id/register/success', async (req, res) => {

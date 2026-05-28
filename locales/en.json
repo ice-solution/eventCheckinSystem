@@ -485,7 +485,7 @@
     "eventTemplateLabel": "(Event Template)", "globalTemplateLabel": "(Global Template)",
     "batchEmailFailed": "Failed to send email. Please try again.",
     "emailSettingsTitle": "Email Settings", "saveEmailSettings": "Save Email Settings",
-    "ticketSettingsTitle": "Ticket Settings", "addTicketBtn": "Add Ticket", "savePaymentSettings": "Save Payment Settings",
+    "ticketSettingsTitle": "Ticket Settings", "ticketTimeSlotNote": "Each ticket can have a purchase time window (start – end); leave blank for no restriction.", "addTicketBtn": "Add Ticket", "savePaymentSettings": "Save Payment Settings",
     "viewQrCode": "View QR Code", "deleteBtn": "Delete",
     "batchEmailSummaryTitle": "Send Summary", "emailTypeResultLabel": "Email Type",
     "successLabel": "Success", "failedLabel": "Failed", "skippedLabel": "Skipped", "totalLabel": "Total", "detailsLabel": "Details",
