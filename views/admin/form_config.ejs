@@ -92,6 +92,68 @@
                                 </div>
                             </div>
 
+                            <!-- Event Banner Management（搬到 FormConfig） -->
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6>Event Banner Management</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-7">
+                                            <% if (currentBanner) { %>
+                                                <div class="mb-2">
+                                                    <img src="<%= currentBanner %>" alt="Current Banner" style="max-width: 100%; max-height: 220px; border-radius: 8px; border: 1px solid #dee2e6;">
+                                                </div>
+                                                <form action="/events/<%= event._id %>/banner/delete" method="POST"
+                                                      onsubmit="return confirm('確定要刪除當前的 banner 嗎？')" style="display:inline;">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="fas fa-trash"></i> Delete Banner
+                                                    </button>
+                                                </form>
+                                            <% } else { %>
+                                                <p class="text-muted mb-2">目前沒有 Banner</p>
+                                            <% } %>
+                                        </div>
+                                        <div class="col-md-5">
+                                            <form action="/events/<%= event._id %>/banner/upload" method="POST" enctype="multipart/form-data">
+                                                <div class="mb-2">
+                                                    <label class="form-label">Upload new banner (JPG/PNG, max 5MB)</label>
+                                                    <input type="file" name="banner" class="form-control" accept="image/png,image/jpeg,image/jpg" required>
+                                                </div>
+                                                <button type="submit" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-upload"></i> Upload
+                                                </button>
+                                            </form>
+                                            <small class="text-muted d-block mt-2">上傳後如未即時更新，請重新整理頁面。</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Register Header Event Name（可覆蓋 event.name） -->
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6>Register Header Event Name</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Event name (ZH)</label>
+                                            <input type="text" class="form-control" id="eventDisplayNameZh"
+                                                   value="<%= (formConfig.eventDisplayName && formConfig.eventDisplayName.zh) ? formConfig.eventDisplayName.zh : '' %>"
+                                                   placeholder="留空則使用 event.name">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Event name (EN)</label>
+                                            <input type="text" class="form-control" id="eventDisplayNameEn"
+                                                   value="<%= (formConfig.eventDisplayName && formConfig.eventDisplayName.en) ? formConfig.eventDisplayName.en : '' %>"
+                                                   placeholder="Leave blank to use event.name">
+                                        </div>
+                                    </div>
+                                    <small class="text-muted d-block mt-2">Register page header 會依語言顯示此名稱（留空則顯示 event.name）。</small>
+                                </div>
+                            </div>
+
                             <!-- 條款 / T&C 設定 -->
                             <div class="card mb-3">
                                 <div class="card-header">
@@ -130,6 +192,47 @@
                                         </div>
                                     </div>
                                     <small class="text-muted d-block mt-2">提示：Register 頁點 (terms) 以彈層顯示；純文字換行會保留；亦支援 HTML（&lt;p&gt;、&lt;ul&gt;、&lt;br&gt; 等）；未勾選同意無法提交。</small>
+                                </div>
+                            </div>
+
+                            <!-- Agreement（功能同 T&C） -->
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6>Agreement</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="agreementEnabled"
+                                               <%= (formConfig.agreement && formConfig.agreement.enabled) ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="agreementEnabled">
+                                            啟用 Agreement（啟用後，訪客必須勾選同意才可提交）
+                                        </label>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label">勾選框文字 (ZH)</label>
+                                            <input type="text" class="form-control" id="agreementLabelZh"
+                                                   value="<%= (formConfig.agreement && formConfig.agreement.label && formConfig.agreement.label.zh) ? formConfig.agreement.label.zh : '' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Checkbox label (EN)</label>
+                                            <input type="text" class="form-control" id="agreementLabelEn"
+                                                   value="<%= (formConfig.agreement && formConfig.agreement.label && formConfig.agreement.label.en) ? formConfig.agreement.label.en : '' %>">
+                                        </div>
+                                    </div>
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">內容 (ZH)</label>
+                                            <textarea class="form-control" id="agreementContentZh" rows="6"
+                                                      placeholder="可輸入多行文字"><%= (formConfig.agreement && formConfig.agreement.content && formConfig.agreement.content.zh) ? formConfig.agreement.content.zh : '' %></textarea>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Content (EN)</label>
+                                            <textarea class="form-control" id="agreementContentEn" rows="6"
+                                                      placeholder="Multi-line text supported"><%= (formConfig.agreement && formConfig.agreement.content && formConfig.agreement.content.en) ? formConfig.agreement.content.en : '' %></textarea>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted d-block mt-2">提示：Register 頁點 (agreement) 以彈層顯示；純文字換行會保留；亦支援 HTML。</small>
                                 </div>
                             </div>
 
@@ -450,6 +553,12 @@
     // 初始化 T&C 欄位（避免舊資料缺少）
     if (!formConfig.terms) {
         formConfig.terms = { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } };
+    }
+    if (!formConfig.agreement) {
+        formConfig.agreement = { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } };
+    }
+    if (!formConfig.eventDisplayName) {
+        formConfig.eventDisplayName = { zh: '', en: '' };
     }
 
     // 切換語言
@@ -864,6 +973,10 @@
         try {
             const registerPageEnabled = document.getElementById('registerPageEnabled').checked;
             const registerClosedMessage = document.getElementById('registerClosedMessage').value || '';
+            const eventDisplayName = {
+                zh: (document.getElementById('eventDisplayNameZh').value || '').trim(),
+                en: (document.getElementById('eventDisplayNameEn').value || '').trim()
+            };
             const terms = {
                 enabled: !!document.getElementById('termsEnabled').checked,
                 label: {
@@ -873,6 +986,17 @@
                 content: {
                     zh: document.getElementById('termsContentZh').value || '',
                     en: document.getElementById('termsContentEn').value || ''
+                }
+            };
+            const agreement = {
+                enabled: !!document.getElementById('agreementEnabled').checked,
+                label: {
+                    zh: (document.getElementById('agreementLabelZh').value || '').trim(),
+                    en: (document.getElementById('agreementLabelEn').value || '').trim()
+                },
+                content: {
+                    zh: document.getElementById('agreementContentZh').value || '',
+                    en: document.getElementById('agreementContentEn').value || ''
                 }
             };
             const response = await fetch('/formConfig/' + eventId + '/config', {
@@ -885,7 +1009,9 @@
                     defaultLanguage: formConfig.defaultLanguage,
                     registerPageEnabled: registerPageEnabled,
                     registerClosedMessage: registerClosedMessage,
-                    terms
+                    eventDisplayName,
+                    terms,
+                    agreement
                 })
             });
             
@@ -937,7 +1063,9 @@
             // 創建要導出的配置對象（移除 MongoDB 相關字段）
             const exportData = {
                 defaultLanguage: formConfig.defaultLanguage,
+                eventDisplayName: formConfig.eventDisplayName || { zh: '', en: '' },
                 terms: formConfig.terms || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } },
+                agreement: formConfig.agreement || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } },
                 sections: formConfig.sections.map(section => ({
                     sectionName: section.sectionName,
                     sectionTitle: section.sectionTitle,
@@ -1001,6 +1129,8 @@
                     // 更新 formConfig
                     formConfig.defaultLanguage = importedData.defaultLanguage || formConfig.defaultLanguage;
                     formConfig.terms = importedData.terms || formConfig.terms || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } };
+                    formConfig.agreement = importedData.agreement || formConfig.agreement || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } };
+                    formConfig.eventDisplayName = importedData.eventDisplayName || formConfig.eventDisplayName || { zh: '', en: '' };
                     formConfig.sections = importedData.sections.map(section => ({
                         sectionName: section.sectionName || '新區塊',
                         sectionTitle: section.sectionTitle || { zh: '新區塊', en: 'New Section' },
@@ -1061,6 +1191,35 @@
             if (labelEnEl) labelEnEl.value = (t.label && t.label.en) ? t.label.en : labelEnEl.value;
             if (contentZhEl) contentZhEl.value = (t.content && t.content.zh) ? t.content.zh : contentZhEl.value;
             if (contentEnEl) contentEnEl.value = (t.content && t.content.en) ? t.content.en : contentEnEl.value;
+        } catch (_) {}
+    })();
+
+    // 初始化 Agreement UI
+    (function initAgreementUi() {
+        try {
+            const a = formConfig.agreement || {};
+            const enabledEl = document.getElementById('agreementEnabled');
+            const labelZhEl = document.getElementById('agreementLabelZh');
+            const labelEnEl = document.getElementById('agreementLabelEn');
+            const contentZhEl = document.getElementById('agreementContentZh');
+            const contentEnEl = document.getElementById('agreementContentEn');
+            if (!enabledEl) return;
+            enabledEl.checked = !!a.enabled;
+            if (labelZhEl) labelZhEl.value = (a.label && a.label.zh) ? a.label.zh : labelZhEl.value;
+            if (labelEnEl) labelEnEl.value = (a.label && a.label.en) ? a.label.en : labelEnEl.value;
+            if (contentZhEl) contentZhEl.value = (a.content && a.content.zh) ? a.content.zh : contentZhEl.value;
+            if (contentEnEl) contentEnEl.value = (a.content && a.content.en) ? a.content.en : contentEnEl.value;
+        } catch (_) {}
+    })();
+
+    // 初始化 eventDisplayName UI
+    (function initEventDisplayNameUi() {
+        try {
+            const n = formConfig.eventDisplayName || {};
+            const zhEl = document.getElementById('eventDisplayNameZh');
+            const enEl = document.getElementById('eventDisplayNameEn');
+            if (zhEl) zhEl.value = n.zh || zhEl.value;
+            if (enEl) enEl.value = n.en || enEl.value;
         } catch (_) {}
     })();
 </script>

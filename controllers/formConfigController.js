@@ -97,6 +97,14 @@ const migrateFormConfig = (formConfig) => {
         migratedConfig.defaultLanguage = 'zh';
     }
 
+    // 確保有 eventDisplayName
+    if (!migratedConfig.eventDisplayName || typeof migratedConfig.eventDisplayName !== 'object') {
+        migratedConfig.eventDisplayName = { zh: '', en: '' };
+    } else {
+        migratedConfig.eventDisplayName.zh = migratedConfig.eventDisplayName.zh || '';
+        migratedConfig.eventDisplayName.en = migratedConfig.eventDisplayName.en || '';
+    }
+
     // 確保有 terms 設定
     if (!migratedConfig.terms || typeof migratedConfig.terms !== 'object') {
         migratedConfig.terms = {
@@ -125,6 +133,35 @@ const migrateFormConfig = (formConfig) => {
             migratedConfig.terms.content.en = migratedConfig.terms.content.en || '';
         }
     }
+
+    // 確保有 agreement 設定
+    if (!migratedConfig.agreement || typeof migratedConfig.agreement !== 'object') {
+        migratedConfig.agreement = {
+            enabled: false,
+            label: {
+                zh: '本人已閱讀並同意上述協議內容。',
+                en: 'I have read and agree to the agreement above.'
+            },
+            content: { zh: '', en: '' }
+        };
+    } else {
+        migratedConfig.agreement.enabled = !!migratedConfig.agreement.enabled;
+        if (!migratedConfig.agreement.label || typeof migratedConfig.agreement.label !== 'object') {
+            migratedConfig.agreement.label = {
+                zh: '本人已閱讀並同意上述協議內容。',
+                en: 'I have read and agree to the agreement above.'
+            };
+        } else {
+            migratedConfig.agreement.label.zh = migratedConfig.agreement.label.zh || '本人已閱讀並同意上述協議內容。';
+            migratedConfig.agreement.label.en = migratedConfig.agreement.label.en || 'I have read and agree to the agreement above.';
+        }
+        if (!migratedConfig.agreement.content || typeof migratedConfig.agreement.content !== 'object') {
+            migratedConfig.agreement.content = { zh: '', en: '' };
+        } else {
+            migratedConfig.agreement.content.zh = migratedConfig.agreement.content.zh || '';
+            migratedConfig.agreement.content.en = migratedConfig.agreement.content.en || '';
+        }
+    }
     
     return migratedConfig;
 };
@@ -134,11 +171,20 @@ exports.getDefaultFormConfig = () => ({
     defaultLanguage: 'zh',
     registerPageEnabled: true,
     registerClosedMessage: '',
+    eventDisplayName: { zh: '', en: '' },
     terms: {
         enabled: false,
         label: {
             zh: '本人已閱讀並同意上述須知，確認繼續預約及積分扣款程序。',
             en: 'I have read and agree to the terms above, and confirm to proceed.'
+        },
+        content: { zh: '', en: '' }
+    },
+    agreement: {
+        enabled: false,
+        label: {
+            zh: '本人已閱讀並同意上述協議內容。',
+            en: 'I have read and agree to the agreement above.'
         },
         content: { zh: '', en: '' }
     },
@@ -397,7 +443,7 @@ exports.getFormConfig = async (req, res) => {
 exports.updateFormConfig = async (req, res) => {
     try {
         const { eventId } = req.params;
-        const { sections, defaultLanguage, registerPageEnabled, registerClosedMessage, terms } = req.body;
+        const { sections, defaultLanguage, registerPageEnabled, registerClosedMessage, terms, agreement, eventDisplayName } = req.body;
         
         // 驗證事件是否存在
         const event = await Event.findById(eventId);
@@ -423,9 +469,17 @@ exports.updateFormConfig = async (req, res) => {
             if (typeof registerClosedMessage === 'string') {
                 formConfig.registerClosedMessage = registerClosedMessage;
             }
+            if (eventDisplayName && typeof eventDisplayName === 'object') {
+                const migrated = migrateFormConfig({ sections: formConfig.sections, eventDisplayName });
+                formConfig.eventDisplayName = migrated.eventDisplayName;
+            }
             if (terms && typeof terms === 'object') {
                 const migrated = migrateFormConfig({ sections: formConfig.sections, terms });
                 formConfig.terms = migrated.terms;
+            }
+            if (agreement && typeof agreement === 'object') {
+                const migrated = migrateFormConfig({ sections: formConfig.sections, agreement });
+                formConfig.agreement = migrated.agreement;
             }
             await formConfig.save();
         } else {
@@ -437,7 +491,15 @@ exports.updateFormConfig = async (req, res) => {
                 defaultLanguage: defaultLanguage || defaultConfig.defaultLanguage,
                 registerPageEnabled: typeof registerPageEnabled === 'boolean' ? registerPageEnabled : defaultConfig.registerPageEnabled,
                 registerClosedMessage: typeof registerClosedMessage === 'string' ? registerClosedMessage : (defaultConfig.registerClosedMessage || ''),
-                terms: terms && typeof terms === 'object' ? migrateFormConfig({ sections: (sections || defaultConfig.sections), terms }).terms : defaultConfig.terms
+                eventDisplayName: eventDisplayName && typeof eventDisplayName === 'object'
+                    ? migrateFormConfig({ sections: (sections || defaultConfig.sections), eventDisplayName }).eventDisplayName
+                    : defaultConfig.eventDisplayName,
+                terms: terms && typeof terms === 'object'
+                    ? migrateFormConfig({ sections: (sections || defaultConfig.sections), terms }).terms
+                    : defaultConfig.terms,
+                agreement: agreement && typeof agreement === 'object'
+                    ? migrateFormConfig({ sections: (sections || defaultConfig.sections), agreement }).agreement
+                    : defaultConfig.agreement
             });
             await formConfig.save();
         }
@@ -516,9 +578,13 @@ exports.renderFormConfigPage = async (req, res) => {
             }
         }
         
+        const { getCurrentBannerPreviewUrl } = require('../utils/bannerCache');
+        const currentBanner = getCurrentBannerPreviewUrl(eventId);
+
         res.render('admin/form_config', { 
             event: event, 
-            formConfig: formConfig 
+            formConfig: formConfig,
+            currentBanner
         });
         
     } catch (error) {

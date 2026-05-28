@@ -261,6 +261,13 @@
                 width: 100%;
                 max-width: none;
             }
+            /* responsive：按鈕縮小約 30% */
+            .btn {
+                padding: 8px 20px;
+                min-width: 84px;
+                font-size: 0.85rem;
+                margin: 0 6px;
+            }
         }
     </style>
 </head>
@@ -572,6 +579,38 @@
                 }) %></script>
             <% } %>
 
+            <!-- Agreement（功能同 Terms & Conditions） -->
+            <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
+                <div class="form-section agreement-section">
+                    <div class="terms-header">
+                        <h3 class="section-title" data-zh="協議" data-en="Agreement">協議</h3>
+                        <a href="#" class="terms-open-link lang-text" id="agreementOpenLink" role="button"
+                           data-zh="(協議)" data-en="(agreement)">(agreement)</a>
+                    </div>
+                    <div class="form-check terms-agree-row">
+                        <input class="form-check-input" type="checkbox" id="agreementAgree" required>
+                        <label class="form-check-label"
+                               for="agreementAgree"
+                               data-zh="<%= (formConfig.agreement.label && formConfig.agreement.label.zh ? formConfig.agreement.label.zh : '') %>"
+                               data-en="<%= (formConfig.agreement.label && formConfig.agreement.label.en ? formConfig.agreement.label.en : '') %>"><%= (formConfig.agreement.label && formConfig.agreement.label.zh ? formConfig.agreement.label.zh : '') %></label>
+                    </div>
+                </div>
+
+                <div id="agreementOverlay" class="terms-overlay" aria-hidden="true">
+                    <div class="terms-modal" role="dialog" aria-modal="true" aria-labelledby="agreementModalTitle">
+                        <div class="terms-modal-header">
+                            <h4 id="agreementModalTitle" class="lang-text" data-zh="協議" data-en="Agreement">Agreement</h4>
+                            <button type="button" class="terms-modal-close" id="agreementModalClose" aria-label="Close">&times;</button>
+                        </div>
+                        <div class="terms-modal-body" id="agreementContent"></div>
+                    </div>
+                </div>
+                <script type="application/json" id="agreementContentJson"><%- JSON.stringify({
+                    zh: (formConfig.agreement.content && formConfig.agreement.content.zh) ? formConfig.agreement.content.zh : '',
+                    en: (formConfig.agreement.content && formConfig.agreement.content.en) ? formConfig.agreement.content.en : ''
+                }) %></script>
+            <% } %>
+
             <div class="btn-container">
                 <button type="button" class="btn btn-secondary lang-text" data-zh="返回" data-en="Back" onclick="history.back()">返回</button>
                 <button type="submit" class="btn btn-primary lang-text" data-zh="下一步" data-en="Next">下一步</button>
@@ -600,9 +639,21 @@
         // 語言設置：優先使用 URL 參數，否則使用默認語言
         const urlLanguage = getLanguageFromURL();
         let currentLanguage = urlLanguage || '<%= formConfig.defaultLanguage || "zh" %>';
-        const eventName = <%- JSON.stringify(event && event.name ? event.name : 'Event') %>;
+        const formConfigEventName = <%- JSON.stringify(formConfig && formConfig.eventDisplayName ? formConfig.eventDisplayName : { zh: '', en: '' }) %>;
+        const fallbackEventName = <%- JSON.stringify(event && event.name ? event.name : 'Event') %>;
+        function getHeaderEventName(lang) {
+            const zh = (formConfigEventName && formConfigEventName.zh) ? String(formConfigEventName.zh).trim() : '';
+            const en = (formConfigEventName && formConfigEventName.en) ? String(formConfigEventName.en).trim() : '';
+            if (lang === 'en') return en || zh || fallbackEventName;
+            return zh || en || fallbackEventName;
+        }
         const termsContentByLang = (function() {
             const el = document.getElementById('termsContentJson');
+            if (!el) return { zh: '', en: '' };
+            try { return JSON.parse(el.textContent); } catch (_) { return { zh: '', en: '' }; }
+        })();
+        const agreementContentByLang = (function() {
+            const el = document.getElementById('agreementContentJson');
             if (!el) return { zh: '', en: '' };
             try { return JSON.parse(el.textContent); } catch (_) { return { zh: '', en: '' }; }
         })();
@@ -635,6 +686,15 @@
                 ? (termsContentByLang.en || termsContentByLang.zh || '')
                 : (termsContentByLang.zh || termsContentByLang.en || '');
             $termsContent.html(formatTermsContent(raw));
+        }
+
+        function renderAgreementContentHtml() {
+            const $content = $('#agreementContent');
+            if (!$content.length) return;
+            const raw = currentLanguage === 'en'
+                ? (agreementContentByLang.en || agreementContentByLang.zh || '')
+                : (agreementContentByLang.zh || agreementContentByLang.en || '');
+            $content.html(formatTermsContent(raw));
         }
         
         // 初始化語言按鈕狀態
@@ -680,8 +740,8 @@
 
         // 更新頁面語言
         function updatePageLanguage() {
-            // 標題使用活動名稱；副標題隨語言切換
-            $('#formTitle').text(eventName);
+            // 標題使用 FormConfig eventDisplayName（留空則 fallback event.name）
+            $('#formTitle').text(getHeaderEventName(currentLanguage));
             if (currentLanguage === 'zh') {
                 $('#formSubtitle').text('請填寫以下資料完成活動報名');
             } else {
@@ -770,6 +830,7 @@
 
             // 更新 T&C 內容（支援 HTML）
             renderTermsContentHtml();
+            renderAgreementContentHtml();
 
             // 更新按鈕文字（返回、下一步等）
             $('.lang-text').each(function() {
@@ -885,14 +946,13 @@
 
         }
 
-        // T&C overlay 與驗證
-        function initTermsUi() {
-            const overlay = document.getElementById('termsOverlay');
-            const openLink = document.getElementById('termsOpenLink');
-            const closeBtn = document.getElementById('termsModalClose');
-            const agreeEl = document.getElementById('termsAgree');
+        function initOverlayAndValidation(opts) {
+            const overlay = document.getElementById(opts.overlayId);
+            const openLink = document.getElementById(opts.openLinkId);
+            const closeBtn = document.getElementById(opts.closeBtnId);
+            const agreeEl = document.getElementById(opts.agreeId);
 
-            function openTermsOverlay(e) {
+            function openOverlay(e) {
                 if (e) e.preventDefault();
                 if (!overlay) return;
                 overlay.classList.add('is-open');
@@ -900,27 +960,23 @@
                 document.body.style.overflow = 'hidden';
             }
 
-            function closeTermsOverlay() {
+            function closeOverlay() {
                 if (!overlay) return;
                 overlay.classList.remove('is-open');
                 overlay.setAttribute('aria-hidden', 'true');
                 document.body.style.overflow = '';
             }
 
-            if (openLink) {
-                openLink.addEventListener('click', openTermsOverlay);
-            }
-            if (closeBtn) {
-                closeBtn.addEventListener('click', closeTermsOverlay);
-            }
+            if (openLink) openLink.addEventListener('click', openOverlay);
+            if (closeBtn) closeBtn.addEventListener('click', closeOverlay);
             if (overlay) {
                 overlay.addEventListener('click', function(e) {
-                    if (e.target === overlay) closeTermsOverlay();
+                    if (e.target === overlay) closeOverlay();
                 });
             }
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape' && overlay && overlay.classList.contains('is-open')) {
-                    closeTermsOverlay();
+                    closeOverlay();
                 }
             });
 
@@ -930,13 +986,32 @@
                 });
                 agreeEl.addEventListener('invalid', function() {
                     const msg = currentLanguage === 'zh'
-                        ? '請先閱讀並勾選同意條款，才可提交。'
-                        : 'Please agree to the terms before submitting.';
+                        ? (opts.invalidMsgZh || '請先閱讀並勾選同意，才可提交。')
+                        : (opts.invalidMsgEn || 'Please agree before submitting.');
                     this.setCustomValidity(msg);
                 });
             }
         }
-        initTermsUi();
+
+        // Terms & Conditions
+        initOverlayAndValidation({
+            overlayId: 'termsOverlay',
+            openLinkId: 'termsOpenLink',
+            closeBtnId: 'termsModalClose',
+            agreeId: 'termsAgree',
+            invalidMsgZh: '請先閱讀並勾選同意條款，才可提交。',
+            invalidMsgEn: 'Please agree to the terms before submitting.'
+        });
+
+        // Agreement
+        initOverlayAndValidation({
+            overlayId: 'agreementOverlay',
+            openLinkId: 'agreementOpenLink',
+            closeBtnId: 'agreementModalClose',
+            agreeId: 'agreementAgree',
+            invalidMsgZh: '請先閱讀並勾選同意協議，才可提交。',
+            invalidMsgEn: 'Please agree to the agreement before submitting.'
+        });
 
         // stripe public key
         const STRIPE_PK = '<%= process.env.STRIPE_PK || "" %>';

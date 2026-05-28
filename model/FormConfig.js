@@ -92,6 +92,11 @@ const formConfigSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    // 註冊頁 Header 顯示名稱（可覆蓋 event.name）
+    eventDisplayName: {
+        zh: { type: String, default: '' },
+        en: { type: String, default: '' }
+    },
     // Terms & Conditions（需同意才可提交）
     terms: {
         enabled: { type: Boolean, default: false },
@@ -101,6 +106,18 @@ const formConfigSchema = new mongoose.Schema({
             en: { type: String, default: 'I have read and agree to the terms above, and confirm to proceed.' }
         },
         // 條款內容（雙語，可用多行文字）
+        content: {
+            zh: { type: String, default: '' },
+            en: { type: String, default: '' }
+        }
+    },
+    // Agreement（功能同 Terms & Conditions）
+    agreement: {
+        enabled: { type: Boolean, default: false },
+        label: {
+            zh: { type: String, default: '本人已閱讀並同意上述協議內容。' },
+            en: { type: String, default: 'I have read and agree to the agreement above.' }
+        },
         content: {
             zh: { type: String, default: '' },
             en: { type: String, default: '' }
