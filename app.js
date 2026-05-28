@@ -30,6 +30,7 @@ const path = require('path'); // 引入 path 模組
 const bcrypt = require('bcrypt');
 const { render } = require('ejs');
 const { initSocket } = require('./socket'); // 引入 socket.js
+const { translate, getDict, resolveLang } = require('./utils/i18n');
 
 const app = express();
 const PORT = process.env.PORT || 3377;
@@ -94,11 +95,15 @@ app.use((req, res, next) => {
     } else {
         res.locals.userForMenu = null;
     }
+    const lang = resolveLang(req);
+    res.locals.lang = lang;
+    res.locals.t = (key) => translate(lang, key);
+    res.locals.i18nDict = getDict(lang);
     next();
 });
 
 // 連接到 MongoDB
-mongoose.connect(process.env.mongodb, {
+mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 })
@@ -165,6 +170,19 @@ app.post('/login', async (req, res) => {
 app.get('/logout', (req, res) => {
     req.session.destroy(); // 銷毀 session
     res.redirect('/login'); // 重定向到登入頁面
+});
+
+app.get('/set-lang', (req, res) => {
+    const lang = req.query.lang === 'en' ? 'en' : 'zh';
+    req.session.lang = lang;
+    const referer = req.get('Referer') || '/events/list';
+    try {
+        const u = new URL(referer);
+        u.searchParams.delete('lang');
+        res.redirect(u.toString());
+    } catch (e) {
+        res.redirect(referer);
+    }
 });
 
 // 中間件：檢查是否登入

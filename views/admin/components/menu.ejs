@@ -10,99 +10,99 @@
                 <% const can = function(key) { return isAdmin || allowedFuncs.includes(key); }; %>
                 <% const canAccessThisEvent = !eventId || isAdmin || (eventId && allowedEvents.some(function(id) { return id && id.toString() === (eventId && eventId.toString()); })); %>
 
-                <li class="menu-title">Admin</li>
+                <li class="menu-title"><%= t('menu.adminTitle') %></li>
                 <li>
-                    <a href="/events/list"> <i class="menu-icon fa fa-calendar-alt"></i>Events </a>
+                    <a href="/events/list"> <i class="menu-icon fa fa-calendar-alt"></i><%= t('menu.events') %> </a>
                 </li>
                 <% if (isAdmin) { %>
                 <li>
-                    <a href="/auth/users"> <i class="menu-icon fa fa-user-cog"></i>用戶登入管理 </a>
+                    <a href="/auth/users"> <i class="menu-icon fa fa-user-cog"></i><%= t('menu.userManagement') %> </a>
                 </li>
                 <% } %>
 
                 <% if (eventId && canAccessThisEvent) { %>
-                <li class="menu-title">Event Items</li>
+                <li class="menu-title"><%= t('menu.eventItems') %></li>
                 <li>
-                    <a href="/events/<%=eventId%>/edit-name"> <i class="menu-icon fa fa-edit"></i>Edit Event Name</a>
+                    <a href="/events/<%=eventId%>/edit-name"> <i class="menu-icon fa fa-edit"></i><%= t('menu.editEventName') %></a>
                 </li>
                 <% if (can('rsvp')) { %>
                 <li>
-                    <a href="/events/<%=eventId%>"> <i class="menu-icon fa fa-clipboard-list"></i>RSVP </a>
+                    <a href="/events/<%=eventId%>"> <i class="menu-icon fa fa-clipboard-list"></i><%= t('menu.rsvp') %> </a>
                 </li>
                 <% } %>
                 <% if (can('guestList')) { %>
                 <li>
-                    <a href="/events/<%=eventId%>/guest-list"> <i class="menu-icon fa fa-users"></i>Guest List </a>
+                    <a href="/events/<%=eventId%>/guest-list"> <i class="menu-icon fa fa-users"></i><%= t('menu.guestList') %> </a>
                 </li>
                 <% } %>
                 <% if (can('emailTemplate')) { %>
                 <li>
-                    <a href="/events/<%=eventId%>/emailTemplate"> <i class="menu-icon fa fa-envelope"></i>Event template email </a>
+                    <a href="/events/<%=eventId%>/emailTemplate"> <i class="menu-icon fa fa-envelope"></i><%= t('menu.emailTemplate') %> </a>
                 </li>
                 <% } %>
                 <% if (can('smsTemplate')) { %>
                 <li>
-                    <a href="/events/<%=eventId%>/smsTemplate"> <i class="menu-icon fa fa-comment"></i>SMS Template </a>
+                    <a href="/events/<%=eventId%>/smsTemplate"> <i class="menu-icon fa fa-comment"></i><%= t('menu.smsTemplate') %> </a>
                 </li>
                 <% } %>
                 <% if (can('badges')) { %>
                 <li>
-                    <a href="/events/<%=eventId%>/badges"> <i class="menu-icon fa fa-id-card"></i>Badge Design </a>
+                    <a href="/events/<%=eventId%>/badges"> <i class="menu-icon fa fa-id-card"></i><%= t('menu.badgeDesign') %> </a>
                 </li>
                 <% } %>
                 <% if (can('qrcodeLogin')) { %>
                 <li>
-                    <a href="/events/<%=eventId%>/qrcodeLogin" target="_blank"> <i class="menu-icon fa fa-qrcode"></i>QR code login page</a>
+                    <a href="/events/<%=eventId%>/qrcodeLogin" target="_blank"> <i class="menu-icon fa fa-qrcode"></i><%= t('menu.qrcodeLogin') %></a>
                 </li>
                 <% } %>
                 <% if (can('scanPointUsers')) { %>
                 <li>
-                    <a href="/events/<%=eventId%>/scan-point-users"> <i class="menu-icon fa fa-barcode"></i>Scan Point Management</a>
+                    <a href="/events/<%=eventId%>/scan-point-users"> <i class="menu-icon fa fa-barcode"></i><%= t('menu.scanPoint') %></a>
                 </li>
                 <% } %>
                 <% if (can('treasureHunt')) { %>
                 <li>
-                    <a href="/events/<%=eventId%>/treasure-hunt"> <i class="menu-icon fa fa-compass"></i>Treasure Hunt</a>
+                    <a href="/events/<%=eventId%>/treasure-hunt"> <i class="menu-icon fa fa-compass"></i><%= t('menu.treasureHunt') %></a>
                 </li>
                 <% } %>
                 <% if (can('luckydrawList') || can('luckydrawPanel') || can('luckydrawAward') || can('luckydrawOpen') || can('luckydrawSetting') || can('prizes')) { %>
                 <li class="menu-item-has-children dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <i class="menu-icon fa fa-bar-chart"></i>Lucky Draw</a>
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <i class="menu-icon fa fa-bar-chart"></i><%= t('menu.luckyDraw') %></a>
                     <ul class="sub-menu children dropdown-menu">
-                        <% if (can('luckydrawList')) { %><li><i class="menu-icon fa fa-rotate-left"></i><a href="/events/<%=eventId%>/luckydraw/list">Luckydraw List</a></li><% } %>
-                        <% if (can('luckydrawPanel')) { %><li><i class="menu-icon fa fa-tablet"></i><a href="/events/<%=eventId%>/luckydraw/panel">LuckyDraw Panel (iPad)</a></li><% } %>
-                        <% if (can('luckydrawAward')) { %><li><i class="menu-icon fa fa-list-alt"></i><a target="_blank" href="/events/<%=eventId%>/luckydraw/award">Award List</a></li><% } %>
-                        <% if (can('luckydrawOpen')) { %><li><i class="menu-icon fa fa-area-chart"></i><a target="_blank" href="/games/app/luckydraw_1/?id=<%= eventId %>">Open LuckyDraw Page</a></li><% } %>
-                        <% if (can('luckydrawSetting')) { %><li><i class="menu-icon fa fa-cog"></i><a href="/events/<%=eventId%>/luckydraw_setting">LuckyDraw Setting</a></li><% } %>
-                        <% if (can('luckydrawSetting')) { %><li><i class="menu-icon fa fa-sliders-h"></i><a href="/events/<%=eventId%>/luckydraw-config/edit">Game Config</a></li><% } %>
-                        <% if (can('prizes')) { %><li><i class="menu-icon fa fa-gift"></i><a href="/prizes/<%=eventId%>/prizes/list">Prize Management</a></li><% } %>
+                        <% if (can('luckydrawList')) { %><li><i class="menu-icon fa fa-rotate-left"></i><a href="/events/<%=eventId%>/luckydraw/list"><%= t('menu.luckydrawList') %></a></li><% } %>
+                        <% if (can('luckydrawPanel')) { %><li><i class="menu-icon fa fa-tablet"></i><a href="/events/<%=eventId%>/luckydraw/panel"><%= t('menu.luckydrawPanel') %></a></li><% } %>
+                        <% if (can('luckydrawAward')) { %><li><i class="menu-icon fa fa-list-alt"></i><a target="_blank" href="/events/<%=eventId%>/luckydraw/award"><%= t('menu.awardList') %></a></li><% } %>
+                        <% if (can('luckydrawOpen')) { %><li><i class="menu-icon fa fa-area-chart"></i><a target="_blank" href="/games/app/luckydraw_1/?id=<%= eventId %>"><%= t('menu.openLuckydraw') %></a></li><% } %>
+                        <% if (can('luckydrawSetting')) { %><li><i class="menu-icon fa fa-cog"></i><a href="/events/<%=eventId%>/luckydraw_setting"><%= t('menu.luckydrawSetting') %></a></li><% } %>
+                        <% if (can('luckydrawSetting')) { %><li><i class="menu-icon fa fa-sliders-h"></i><a href="/events/<%=eventId%>/luckydraw-config/edit"><%= t('menu.gameConfig') %></a></li><% } %>
+                        <% if (can('prizes')) { %><li><i class="menu-icon fa fa-gift"></i><a href="/prizes/<%=eventId%>/prizes/list"><%= t('menu.prizeManagement') %></a></li><% } %>
                     </ul>
                 </li>
                 <% } %>
                 <% if (can('votes')) { %>
                 <li>
-                    <a href="/votes/<%=eventId%>/admin"> <i class="menu-icon fa fa-check-square-o"></i>Vote Management</a>
+                    <a href="/votes/<%=eventId%>/admin"> <i class="menu-icon fa fa-check-square-o"></i><%= t('menu.voteManagement') %></a>
                 </li>
                 <% } %>
                 <% if (can('website') || can('formConfig')) { %>
                 <li class="menu-item-has-children dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <i class="menu-icon fa fa-globe"></i>Website Content</a>
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <i class="menu-icon fa fa-globe"></i><%= t('menu.websiteContent') %></a>
                     <ul class="sub-menu children dropdown-menu">
-                        <% if (can('website')) { %><li><i class="menu-icon fa fa-link"></i><a target="_blank" href="/web/<%=eventId%>">Website Link</a></li><% } %>
-                        <% if (can('website')) { %><li><i class="menu-icon fa fa-user-plus"></i><a target="_blank" href="/web/<%=eventId%>/register">Registration Page</a></li><% } %>
-                        <% if (can('rsvp')) { %><li><i class="menu-icon fa fa-sign-in-alt"></i><a target="_blank" href="/events/<%=eventId%>/login">Event User Login</a></li><% } %>
-                        <% if (can('formConfig')) { %><li><i class="menu-icon fa fa-cog"></i><a href="/formConfig/<%=eventId%>">Registration Page Config</a></li><% } %>
+                        <% if (can('website')) { %><li><i class="menu-icon fa fa-link"></i><a target="_blank" href="/web/<%=eventId%>"><%= t('menu.websiteLink') %></a></li><% } %>
+                        <% if (can('website')) { %><li><i class="menu-icon fa fa-user-plus"></i><a target="_blank" href="/web/<%=eventId%>/register"><%= t('menu.registrationPage') %></a></li><% } %>
+                        <% if (can('rsvp')) { %><li><i class="menu-icon fa fa-sign-in-alt"></i><a target="_blank" href="/events/<%=eventId%>/login"><%= t('menu.eventUserLogin') %></a></li><% } %>
+                        <% if (can('formConfig')) { %><li><i class="menu-icon fa fa-cog"></i><a href="/formConfig/<%=eventId%>"><%= t('menu.registrationConfig') %></a></li><% } %>
                     </ul>
                 </li>
                 <% } %>
                 <% if (can('transactions')) { %>
                 <li>
-                    <a href="/events/<%=eventId%>/transactions"> <i class="menu-icon fa fa-credit-card"></i>Transaction record</a>
+                    <a href="/events/<%=eventId%>/transactions"> <i class="menu-icon fa fa-credit-card"></i><%= t('menu.transactionRecord') %></a>
                 </li>
                 <% } %>
                 <% if (can('attachments')) { %>
                 <li>
-                    <a href="/events/<%=eventId%>/attachments"> <i class="menu-icon fa fa-paperclip"></i>Attachments</a>
+                    <a href="/events/<%=eventId%>/attachments"> <i class="menu-icon fa fa-paperclip"></i><%= t('menu.attachments') %></a>
                 </li>
                 <% } %>
                 <% } %>

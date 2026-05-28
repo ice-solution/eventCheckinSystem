@@ -8,13 +8,23 @@
     </div>
     <div class="top-right">
         <div class="header-menu">
-            
+            <div class="lang-switcher" style="display:inline-block; margin-right:12px; vertical-align:middle;">
+                <a href="/set-lang?lang=zh"
+                   style="margin-right:4px; text-decoration:none;"
+                   class="btn btn-xs <%= lang === 'zh' ? 'btn-primary' : 'btn-outline-secondary' %>">
+                    <span class="flag-icon flag-icon-hk"></span> 中文
+                </a>
+                <a href="/set-lang?lang=en"
+                   style="text-decoration:none;"
+                   class="btn btn-xs <%= lang === 'en' ? 'btn-primary' : 'btn-outline-secondary' %>">
+                    <span class="flag-icon flag-icon-gb"></span> EN
+                </a>
+            </div>
 
             <div class="user-area dropdown float-right">
-                
 
                 <div class="user-menu dropdown-menu">
-                    <a class="nav-link" href="/logout"><i class="fa fa-power -off"></i>Logout</a>
+                    <a class="nav-link" href="/logout"><i class="fa fa-power-off"></i> <%= t('common.logout') %></a>
                 </div>
             </div>
         </div>
