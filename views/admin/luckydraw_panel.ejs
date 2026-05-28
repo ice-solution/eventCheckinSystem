@@ -1,92 +1,26 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>LuckyDraw Control Panel</title>
-    <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
-    <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
-    <link rel="stylesheet" href="/admin/assets/css/style.css">
-
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-        }
-        .control-panel-container {
-            padding: 20px;
-        }
-        .control-card {
-            border-radius: 8px;
-            padding: 20px;
-            background-color: #ffffff;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-        }
-        .section-title {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 12px;
-        }
-        .form-group label {
-            font-weight: 600;
-        }
-        .winner-list {
-            max-height: 350px;
-            overflow-y: auto;
-            padding: 0;
-            margin: 0;
-            list-style: none;
-        }
-        .winner-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 10px;
-            border-bottom: 1px solid #eee;
-            font-size: 14px;
-        }
-        .winner-main {
-            display: flex;
-            flex-direction: column;
-        }
-        .winner-name {
-            font-weight: 600;
-        }
-        .winner-meta {
-            font-size: 12px;
-            color: #666;
-        }
-        .connection-toast {
-            position: fixed;
-            top: 80px;
-            right: 20px;
-            z-index: 2000;
-            padding: 8px 14px;
-            border-radius: 4px;
-            font-size: 13px;
-            color: #fff;
-            background-color: rgba(220, 53, 69, 0.9); /* default danger */
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s ease-in-out;
-        }
-        .connection-toast.show {
-            opacity: 1;
-        }
-        .connection-toast.success {
-            background-color: rgba(40, 167, 69, 0.9);
-        }
-        .connection-toast.warning {
-            background-color: rgba(255, 193, 7, 0.9);
-        }
-        @media (max-width: 992px) {
-            .control-panel-container {
-                padding: 10px;
-            }
-        }
-    </style>
-</head>
-<body>
 <%- include("components/header") %>
 <%- include("components/menu", { eventId: eventId }) %>
+
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+
+<style>
+    .control-panel-container { padding: 20px; }
+    .control-card { border-radius: 8px; padding: 20px; background-color: #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+    .section-title { font-size: 18px; font-weight: bold; margin-bottom: 12px; }
+    .form-group label { font-weight: 600; }
+    .winner-list { max-height: 350px; overflow-y: auto; padding: 0; margin: 0; list-style: none; }
+    .winner-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid #eee; font-size: 14px; }
+    .winner-main { display: flex; flex-direction: column; }
+    .winner-name { font-weight: 600; }
+    .winner-meta { font-size: 12px; color: #666; }
+    .connection-toast { position: fixed; top: 80px; right: 20px; z-index: 2000; padding: 8px 14px; border-radius: 4px; font-size: 13px; color: #fff; background-color: rgba(220,53,69,0.9); opacity: 0; pointer-events: none; transition: opacity 0.2s ease-in-out; }
+    .connection-toast.show { opacity: 1; }
+    .connection-toast.success { background-color: rgba(40,167,69,0.9); }
+    .connection-toast.warning { background-color: rgba(255,193,7,0.9); }
+    @media (max-width: 992px) { .control-panel-container { padding: 10px; } }
+</style>
 
 <div id="right-panel" class="right-panel">
     <%- include("components/rightpanel_header") %>
@@ -96,18 +30,21 @@
             <div class="row control-panel-container">
                 <div class="col-lg-7 col-md-12 mb-3">
                     <div class="card control-card">
-                        <div class="section-title">Draw Control (iPad-friendly)</div>
+                        <div class="section-title"><%= t('luckydraw_panel.drawControl') %></div>
                         <div class="form-group">
-                            <label for="prizeSelect">Select prize:</label>
+                            <label for="prizeSelect"><%= t('luckydraw_panel.selectPrize') %></label>
                             <div class="mb-2" id="prizeImageContainer" style="display:none; text-align:center;">
-                                <img id="prizeImage" src="" alt="Select prize" style="max-width: 200px; max-height: 150px; border-radius: 8px; border: 2px solid #eee;">
+                                <img id="prizeImage" src="" alt="" style="max-width: 200px; max-height: 150px; border-radius: 8px; border: 2px solid #eee;">
                             </div>
                             <select id="prizeSelect" class="form-control" required>
-                                <option value="">Please select a prize</option>
+                                <option value=""><%= t('luckydraw_panel.selectPrizeDefault') %></option>
                                 <% prizes.forEach(prize => { %>
                                     <% if (prize.unit > 0) { %>
-                                        <option value="<%= prize._id %>" data-name="<%= prize.name %>" data-image="<%= prize.pictureUrl || prize.picture || '' %>">
-                                            <%= prize.name %> (remaining: <%= prize.unit %>)
+                                        <option value="<%= prize._id %>"
+                                                data-name="<%= prize.name %>"
+                                                data-image="<%= prize.pictureUrl || prize.picture || '' %>"
+                                                data-remaining="<%= prize.unit %>">
+                                            <%= prize.name %> (<%= t('luckydraw_panel.remaining') %>: <%= prize.unit %>)
                                         </option>
                                     <% } %>
                                 <% }); %>
@@ -116,46 +53,44 @@
 
                         <div class="form-row">
                             <div class="form-group col-md-4">
-                                <label for="drawCount">Draw count:</label>
+                                <label for="drawCount"><%= t('luckydraw_panel.drawCount') %></label>
                                 <input type="number" id="drawCount" class="form-control" min="1" value="1">
                             </div>
                         </div>
 
                         <div class="form-group mt-3">
-                            <button id="btn-draw-once" class="btn btn-primary btn-block mb-2">Draw 1</button>
-                            <button id="btn-draw-multi" class="btn btn-success btn-block mb-2">Draw (by count above)</button>
-                            <button id="btn-cancel-last" class="btn btn-warning btn-block mb-2">Cancel Last Winner</button>
-                            <button id="btn-reset-winner-order" type="button" class="btn btn-outline-secondary btn-block mb-2">Reset Winner No</button>
-                            <small class="text-muted d-block">重置後下一個號碼 = 目前名單中最大號碼 + 1（例如刪除了第 4 號後重置，下一抽會是 4）</small>
+                            <button id="btn-draw-once" class="btn btn-primary btn-block mb-2"><%= t('luckydraw_panel.drawOne') %></button>
+                            <button id="btn-draw-multi" class="btn btn-success btn-block mb-2"><%= t('luckydraw_panel.drawMulti') %></button>
+                            <button id="btn-cancel-last" class="btn btn-warning btn-block mb-2"><%= t('luckydraw_panel.cancelLast') %></button>
+                            <button id="btn-reset-winner-order" type="button" class="btn btn-outline-secondary btn-block mb-2"><%= t('luckydraw_panel.resetWinnerNo') %></button>
+                            <small class="text-muted d-block"><%= t('luckydraw_panel.resetWinnerNote') %></small>
                         </div>
 
                         <hr>
 
-                        <div class="section-title">Manual Winner</div>
+                        <div class="section-title"><%= t('luckydraw_panel.manualWinner') %></div>
                         <div class="form-group">
-                            <label for="manualWinnerSelect">Select participant:</label>
+                            <label for="manualWinnerSelect"><%= t('luckydraw_panel.selectParticipant') %></label>
                             <select id="manualWinnerSelect" class="form-control">
-                                <option value="">Please select a participant</option>
+                                <option value=""><%= t('luckydraw_panel.selectParticipantDefault') %></option>
                                 <% availablePeople.forEach(person => { %>
                                     <option value="<%= person._id %>">
                                         <%= person.company || '' %>
-                                        <% if (person.table) { %> | Table: <%= person.table %> <% } %>
+                                        <% if (person.table) { %> | <%= t('luckydraw_panel.tableLabel') %>: <%= person.table %> <% } %>
                                         | <%= person.name %>
                                     </option>
                                 <% }); %>
                             </select>
                         </div>
-                        <button id="btn-set-manual-winner" class="btn btn-info btn-block">Set as Winner</button>
+                        <button id="btn-set-manual-winner" class="btn btn-info btn-block"><%= t('luckydraw_panel.setAsWinner') %></button>
                     </div>
                 </div>
 
                 <div class="col-lg-5 col-md-12 mb-3">
                     <div class="card control-card">
-                        <div class="section-title">Session Winners</div>
+                        <div class="section-title"><%= t('luckydraw_panel.sessionWinners') %></div>
                         <ul id="winnerList" class="winner-list"></ul>
-                        <small class="text-muted d-block mt-2">
-                            This list shows winners from this panel session only. See "Luckydraw List" for full records.
-                        </small>
+                        <small class="text-muted d-block mt-2"><%= t('luckydraw_panel.sessionNote') %></small>
                     </div>
                 </div>
             </div>
@@ -169,8 +104,10 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
     const allPeople = <%- JSON.stringify(availablePeople) %>;
-    const allPrizes = <%- JSON.stringify(prizes) %>; // 保存所有獎品數據
+    const allPrizes = <%- JSON.stringify(prizes) %>;
     const eventId = '<%= eventId %>';
+    const _REMAINING_LABEL = '<%= t("luckydraw_panel.remaining") %>';
+    const _TABLE_LABEL = '<%= t("luckydraw_panel.tableLabel") %>';
 
     let availablePeople = [...allPeople];
     const sessionWinners = [];
@@ -182,30 +119,23 @@
     const winnerList = document.getElementById('winnerList');
     const manualWinnerSelect = document.getElementById('manualWinnerSelect');
 
-    // 初始化 Socket.IO 並加入 luckydraw room；heartbeat 保持連線，避免閒置靜默斷線
-    const HEARTBEAT_INTERVAL_MS = 15000;  // 每 15 秒送一次心跳
-    const HEARTBEAT_TIMEOUT_MS = 25000;   // 超過 25 秒沒收到 ack 則重連
+    const HEARTBEAT_INTERVAL_MS = 15000;
+    const HEARTBEAT_TIMEOUT_MS = 25000;
     let socket = io();
     let lastHeartbeatAckAt = Date.now();
     let heartbeatTimer = null;
     let heartbeatCheckTimer = null;
 
-    function joinLuckydrawRoom() {
-        socket.emit('join_luckydraw', { eventId, type: 'panel' });
-    }
+    function joinLuckydrawRoom() { socket.emit('join_luckydraw', { eventId, type: 'panel' }); }
 
     function startHeartbeat() {
         lastHeartbeatAckAt = Date.now();
         if (heartbeatTimer) clearInterval(heartbeatTimer);
         if (heartbeatCheckTimer) clearInterval(heartbeatCheckTimer);
-        heartbeatTimer = setInterval(() => {
-            if (socket.connected) socket.emit('luckydraw:heartbeat');
-        }, HEARTBEAT_INTERVAL_MS);
+        heartbeatTimer = setInterval(() => { if (socket.connected) socket.emit('luckydraw:heartbeat'); }, HEARTBEAT_INTERVAL_MS);
         heartbeatCheckTimer = setInterval(() => {
             if (Date.now() - lastHeartbeatAckAt > HEARTBEAT_TIMEOUT_MS && socket.connected) {
-                console.warn('[Luckydraw Panel] Heartbeat timeout, reconnecting...');
-                socket.disconnect();
-                socket.connect();
+                socket.disconnect(); socket.connect();
             }
         }, 5000);
     }
@@ -215,14 +145,10 @@
         if (heartbeatCheckTimer) { clearInterval(heartbeatCheckTimer); heartbeatCheckTimer = null; }
     }
 
-    socket.on('connect', () => {
-        joinLuckydrawRoom();
-        startHeartbeat();
-    });
+    socket.on('connect', () => { joinLuckydrawRoom(); startHeartbeat(); });
     socket.on('luckydraw:heartbeat_ack', () => { lastHeartbeatAckAt = Date.now(); });
     socket.on('disconnect', stopHeartbeat);
     socket.on('connect_error', stopHeartbeat);
-
     if (socket.connected) { joinLuckydrawRoom(); startHeartbeat(); }
 
     const controllerToast = document.getElementById('controllerToast');
@@ -235,17 +161,12 @@
         if (type === 'warning') controllerToast.classList.add('warning');
         controllerToast.classList.add('show');
         if (toastTimer) clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => {
-            controllerToast.classList.remove('show');
-        }, 2000);
+        toastTimer = setTimeout(() => { controllerToast.classList.remove('show'); }, 2000);
     }
 
     function updatePrizePreview() {
         const selectedOption = prizeSelect.options[prizeSelect.selectedIndex];
-        if (!selectedOption || !selectedOption.value) {
-            prizeImageContainer.style.display = 'none';
-            return;
-        }
+        if (!selectedOption || !selectedOption.value) { prizeImageContainer.style.display = 'none'; return; }
         const imagePath = selectedOption.dataset.image;
         if (imagePath && imagePath.trim() !== '') {
             prizeImage.src = imagePath;
@@ -258,57 +179,35 @@
     function sendPrizeSelection() {
         const selectedOption = prizeSelect.options[prizeSelect.selectedIndex];
         if (selectedOption && selectedOption.value) {
-            const prizeName = selectedOption.dataset.name || selectedOption.text.split('(')[0].trim();
-            const prizeImage = selectedOption.dataset.image || '';
-            socket.emit('luckydraw_panel_prize_selected', { 
-                eventId, 
-                prizeName: prizeName,
-                prizeImage: prizeImage
+            socket.emit('luckydraw_panel_prize_selected', {
+                eventId,
+                prizeName: selectedOption.dataset.name || selectedOption.text.split('(')[0].trim(),
+                prizeImage: selectedOption.dataset.image || ''
             });
         } else {
-            // 清除獎品選擇
-            socket.emit('luckydraw_panel_prize_selected', { 
-                eventId, 
-                prizeName: null,
-                prizeImage: null
-            });
+            socket.emit('luckydraw_panel_prize_selected', { eventId, prizeName: null, prizeImage: null });
         }
     }
 
-    prizeSelect.addEventListener('change', () => {
-        updatePrizePreview();
-        sendPrizeSelection();
-    });
+    prizeSelect.addEventListener('change', () => { updatePrizePreview(); sendPrizeSelection(); });
 
-    // Draw count 改動時透過 socket 通知前端（blur + change + input 防抖）
     function emitDrawCount() {
         const count = Math.max(1, parseInt(drawCountInput.value || '1', 10));
         drawCountInput.value = count;
         socket.emit('luckydraw_panel_draw_count', { eventId, drawCount: count });
     }
-
     drawCountInput.addEventListener('blur', emitDrawCount);
     drawCountInput.addEventListener('change', emitDrawCount);
-
     let drawCountDebounceTimer = null;
     drawCountInput.addEventListener('input', () => {
         if (drawCountDebounceTimer) clearTimeout(drawCountDebounceTimer);
-        drawCountDebounceTimer = setTimeout(() => {
-            drawCountDebounceTimer = null;
-            emitDrawCount();
-        }, 400);
-    });
-    
-    document.addEventListener('DOMContentLoaded', () => {
-        updatePrizePreview();
-        // 頁面載入後，如果有已選擇的獎品，發送選擇事件
-        setTimeout(sendPrizeSelection, 500);
+        drawCountDebounceTimer = setTimeout(() => { drawCountDebounceTimer = null; emitDrawCount(); }, 400);
     });
 
+    document.addEventListener('DOMContentLoaded', () => { updatePrizePreview(); setTimeout(sendPrizeSelection, 500); });
+
     async function cancelWinner(winner) {
-        if (!confirm(`Are you sure you want to cancel the win for ${winner.name}?`)) {
-            return;
-        }
+        if (!confirm(t('luckydraw_panel.confirmCancelWinner').replace('{name}', winner.name))) return;
         try {
             const res = await fetch(`/events/${eventId}/luckydraw`, {
                 method: 'DELETE',
@@ -316,57 +215,37 @@
                 body: JSON.stringify({ _id: winner._id })
             });
             if (!res.ok) {
-                const msg = await res.text();
-                alert('Failed to cancel winner: ' + msg);
+                alert(t('luckydraw_panel.cancelWinnerFailed') + await res.text());
                 return;
             }
-            // 從 sessionWinners 中移除
             const index = sessionWinners.findIndex(w => String(w._id) === String(winner._id));
-            if (index !== -1) {
-                sessionWinners.splice(index, 1);
-                renderWinnerList();
-            }
+            if (index !== -1) { sessionWinners.splice(index, 1); renderWinnerList(); }
 
-            // 還原獎品數量
             if (winner.prizeId) {
                 const option = Array.from(prizeSelect.options).find(o => o.value === winner.prizeId);
                 if (option) {
-                    const text = option.text;
-                    const match = text.match(/\(remaining: (\d+)\)/);
-                    const currentRemaining = match ? parseInt(match[1]) : 0;
+                    const currentRemaining = parseInt(option.dataset.remaining || '0', 10);
                     updatePrizeOptionText(option, currentRemaining + 1);
                 } else {
-                    // 選項不存在（因為數量為0時被移除了），需要重新創建
                     const prize = allPrizes.find(p => String(p._id) === String(winner.prizeId));
                     const newOption = document.createElement('option');
                     newOption.value = winner.prizeId;
-                    newOption.dataset.name = winner.prizeName || prize?.name || 'Unknown prize';
+                    newOption.dataset.name = winner.prizeName || prize?.name || '';
                     newOption.dataset.image = prize?.pictureUrl || prize?.picture || '';
-                    newOption.text = `${winner.prizeName || prize?.name || 'Unknown prize'} (remaining: 1)`;
-                    if (prizeSelect.options.length > 1) {
-                        prizeSelect.insertBefore(newOption, prizeSelect.options[1]);
-                    } else {
-                        prizeSelect.appendChild(newOption);
-                    }
+                    newOption.dataset.remaining = '1';
+                    newOption.text = `${winner.prizeName || prize?.name || ''} (${_REMAINING_LABEL}: 1)`;
+                    if (prizeSelect.options.length > 1) prizeSelect.insertBefore(newOption, prizeSelect.options[1]);
+                    else prizeSelect.appendChild(newOption);
                 }
             }
 
-            // 還原參與者到可用列表
-            availablePeople.push({
-                _id: winner._id,
-                name: winner.name,
-                company: winner.company,
-                table: winner.table
-            });
-            
-            // 更新手動選擇下拉列表
+            availablePeople.push({ _id: winner._id, name: winner.name, company: winner.company, table: winner.table });
             const manualOption = document.createElement('option');
             manualOption.value = winner._id;
-            manualOption.text = `${winner.company || ''} ${winner.table ? ' | Table: ' + winner.table : ''} | ${winner.name}`;
+            manualOption.text = `${winner.company || ''}${winner.table ? ' | ' + _TABLE_LABEL + ': ' + winner.table : ''} | ${winner.name}`;
             manualWinnerSelect.appendChild(manualOption);
         } catch (err) {
-            console.error(err);
-            alert('Error cancelling winner');
+            alert(t('luckydraw_panel.cancelWinnerError'));
         }
     }
 
@@ -378,136 +257,74 @@
             li.dataset.id = w._id;
             li.style.cursor = 'pointer';
             li.style.userSelect = 'none';
-            li.title = 'Click to cancel this winner';
-            // 使用中獎編號（order）取代序號
+            li.title = t('luckydraw_panel.confirmCancelWinner').replace('{name}', w.name);
             const orderNumber = w.order || '';
             li.innerHTML = `
                 <div class="winner-main">
                     <span class="winner-name">${orderNumber ? orderNumber + '. ' : ''}${w.name}</span>
                     <span class="winner-meta">
-                        ${w.company || ''} ${w.table ? ' | Table: ' + w.table : ''} ${w.prizeName ? ' | 🎁 ' + w.prizeName : ''}
+                        ${w.company || ''} ${w.table ? ' | ' + _TABLE_LABEL + ': ' + w.table : ''} ${w.prizeName ? ' | 🎁 ' + w.prizeName : ''}
                     </span>
-                </div>
-            `;
-            // 添加点击事件
-            li.addEventListener('click', () => {
-                cancelWinner(w);
-            });
-            // 添加悬停效果
-            li.addEventListener('mouseenter', () => {
-                li.style.backgroundColor = '#f8f9fa';
-            });
-            li.addEventListener('mouseleave', () => {
-                li.style.backgroundColor = '';
-            });
+                </div>`;
+            li.addEventListener('click', () => cancelWinner(w));
+            li.addEventListener('mouseenter', () => { li.style.backgroundColor = '#f8f9fa'; });
+            li.addEventListener('mouseleave', () => { li.style.backgroundColor = ''; });
             winnerList.appendChild(li);
         });
     }
 
-    // 連線狀態提示（控制器本身）
-    socket.on('connect', () => {
-        showControllerToast('Controller connected to server', 'success');
-    });
-
-    socket.on('disconnect', () => {
-        showControllerToast('Controller disconnected. Please check network.', 'warning');
-    });
-
-    // 來自伺服器的控制器狀態廣播（同一 event 的所有頁面都會收到）
+    socket.on('connect', () => { showControllerToast(t('luckydraw_panel.connectedToast'), 'success'); });
+    socket.on('disconnect', () => { showControllerToast(t('luckydraw_panel.disconnectedToast'), 'warning'); });
     socket.on('luckydraw:controller_status', ({ status }) => {
-        if (status === 'online') {
-            showControllerToast('Controller ready. You can start drawing.', 'success');
-        } else if (status === 'offline') {
-            showControllerToast('Controller not connected', 'warning');
-        }
+        if (status === 'online') showControllerToast(t('luckydraw_panel.controllerReady'), 'success');
+        else if (status === 'offline') showControllerToast(t('luckydraw_panel.controllerOffline'), 'warning');
     });
 
     function pickRandomPerson() {
-        if (availablePeople.length === 0) {
-            alert('Everyone has been drawn!');
-            return null;
-        }
+        if (availablePeople.length === 0) { alert(t('luckydraw_panel.noPeople')); return null; }
         const idx = Math.floor(Math.random() * availablePeople.length);
         return availablePeople.splice(idx, 1)[0];
     }
 
     function getSelectedPrize() {
-        if (!prizeSelect.value) {
-            alert('Please select a prize first!');
-            return null;
-        }
+        if (!prizeSelect.value) { alert(t('luckydraw_panel.noPrizeSelected')); return null; }
         const option = prizeSelect.options[prizeSelect.selectedIndex];
-        const text = option.text;
-        const match = text.match(/\(remaining: (\d+)\)/);
-        if (!match) {
-            alert('Unable to get prize stock info!');
-            return null;
-        }
-        const remaining = parseInt(match[1]);
-        if (remaining <= 0) {
-            alert('Selected prize is out of stock!');
-            return null;
-        }
-        return {
-            prizeId: option.value,
-            prizeName: option.dataset.name || '',
-            remaining,
-            option
-        };
+        const remaining = parseInt(option.dataset.remaining || '0', 10);
+        if (isNaN(remaining) || remaining <= 0) { alert(t('luckydraw_panel.outOfStock')); return null; }
+        return { prizeId: option.value, prizeName: option.dataset.name || '', remaining, option };
     }
 
     function updatePrizeOptionText(option, newRemaining) {
         if (newRemaining <= 0) {
             option.remove();
-            if (prizeSelect.options.length > 0) {
-                prizeSelect.selectedIndex = 0;
-            }
+            if (prizeSelect.options.length > 0) prizeSelect.selectedIndex = 0;
         } else {
-            option.text = option.text.replace(/\(remaining: \d+\)/, `(remaining: ${newRemaining})`);
+            option.dataset.remaining = newRemaining;
+            option.text = `${option.dataset.name || option.text.split('(')[0].trim()} (${_REMAINING_LABEL}: ${newRemaining})`;
         }
     }
 
     async function confirmWinner(person) {
         const prizeInfo = getSelectedPrize();
         if (!prizeInfo) return;
-
-        const payload = {
-            _id: person._id,
-            name: person.name,
-            company: person.company,
-            table: person.table,
-            prizeId: prizeInfo.prizeId
-        };
-
+        const payload = { _id: person._id, name: person.name, company: person.company, table: person.table, prizeId: prizeInfo.prizeId };
         try {
             const res = await fetch(`/events/${eventId}/luckydraw`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            if (!res.ok) {
-                const msg = await res.text();
-                alert('Failed to add winner: ' + msg);
-                return;
-            }
+            if (!res.ok) { alert(t('luckydraw_panel.addWinnerFailed') + await res.text()); return; }
             const data = await res.json();
-            const winner = {
-                ...data.winner,
-                prizeName: prizeInfo.prizeName
-            };
-            sessionWinners.push(winner);
+            sessionWinners.push({ ...data.winner, prizeName: prizeInfo.prizeName });
             renderWinnerList();
-
-            const newRemaining = prizeInfo.remaining - 1;
-            updatePrizeOptionText(prizeInfo.option, newRemaining);
+            updatePrizeOptionText(prizeInfo.option, prizeInfo.remaining - 1);
         } catch (err) {
-            console.error(err);
-            alert('Error adding winner');
+            alert(t('luckydraw_panel.addWinnerError'));
         }
     }
 
     document.getElementById('btn-draw-once').addEventListener('click', async () => {
-        // 通知展示頁開始動畫
         socket.emit('luckydraw_panel_start', { eventId });
         const person = pickRandomPerson();
         if (!person) return;
@@ -517,175 +334,92 @@
     document.getElementById('btn-draw-multi').addEventListener('click', async () => {
         const prizeInfo = getSelectedPrize();
         if (!prizeInfo) return;
-        
         const count = Math.max(1, parseInt(drawCountInput.value || '1', 10));
-        
-        if (prizeInfo.remaining <= 0) {
-            alert('Prize is out of stock. Cannot draw.');
-            return;
-        }
-
-        if (count > prizeInfo.remaining) {
-            alert(`Insufficient prize stock. You can only draw ${prizeInfo.remaining} at most.`);
-            return;
-        }
-
-        if (availablePeople.length < count) {
-            alert(`Not enough participants. Only ${availablePeople.length} available.`);
-            return;
-        }
-
-        // 通知展示頁開始動畫（只通知一次）
+        if (prizeInfo.remaining <= 0) { alert(t('luckydraw_panel.outOfStock')); return; }
+        if (count > prizeInfo.remaining) { alert(t('luckydraw_panel.insufficientStock').replace('{n}', prizeInfo.remaining)); return; }
+        if (availablePeople.length < count) { alert(t('luckydraw_panel.insufficientPeople').replace('{n}', availablePeople.length)); return; }
         socket.emit('luckydraw_panel_start', { eventId });
-
         try {
-            // 使用批量抽獎 API
             const res = await fetch(`/events/${eventId}/luckydraw/batch`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    count: count,
-                    prizeId: prizeInfo.prizeId
-                })
+                body: JSON.stringify({ count, prizeId: prizeInfo.prizeId })
             });
-
-            if (!res.ok) {
-                const msg = await res.text();
-                alert('Batch draw failed: ' + msg);
-                return;
-            }
-
+            if (!res.ok) { alert(t('luckydraw_panel.batchDrawFailed') + await res.text()); return; }
             const data = await res.json();
-            
-            // 更新可用人員列表（移除已中獎的人）
             if (data.winners && Array.isArray(data.winners)) {
                 data.winners.forEach(winner => {
                     const index = availablePeople.findIndex(p => String(p._id) === String(winner._id));
-                    if (index !== -1) {
-                        availablePeople.splice(index, 1);
-                    }
-                    sessionWinners.push({
-                        ...winner,
-                        prizeName: prizeInfo.prizeName
-                    });
+                    if (index !== -1) availablePeople.splice(index, 1);
+                    sessionWinners.push({ ...winner, prizeName: prizeInfo.prizeName });
                 });
             }
-
             renderWinnerList();
-
-            // 更新獎品選項文字
-            const newRemaining = prizeInfo.remaining - data.actualCount;
-            updatePrizeOptionText(prizeInfo.option, newRemaining);
-
-            // Socket 事件已經由後端 API 發送，這裡不需要再發送
-            // 後端會自動發送 luckydraw:winner_added 事件給所有連接的客戶端
+            updatePrizeOptionText(prizeInfo.option, prizeInfo.remaining - data.actualCount);
         } catch (err) {
-            console.error(err);
-            alert('Error during batch draw: ' + err.message);
+            alert(t('luckydraw_panel.batchDrawError') + err.message);
         }
     });
 
     document.getElementById('btn-cancel-last').addEventListener('click', async () => {
-        if (sessionWinners.length === 0) {
-            alert('There is no winner to cancel.');
-            return;
-        }
+        if (sessionWinners.length === 0) { alert(t('luckydraw_panel.cancelLastNoWinner')); return; }
         const lastWinner = sessionWinners[sessionWinners.length - 1];
-        if (!confirm(`Are you sure you want to cancel the win for ${lastWinner.name}?`)) {
-            return;
-        }
+        if (!confirm(t('luckydraw_panel.confirmCancelWinner').replace('{name}', lastWinner.name))) return;
         try {
             const res = await fetch(`/events/${eventId}/luckydraw`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ _id: lastWinner._id })
             });
-            if (!res.ok) {
-                const msg = await res.text();
-                alert('Failed to cancel winner: ' + msg);
-                return;
-            }
+            if (!res.ok) { alert(t('luckydraw_panel.cancelWinnerFailed') + await res.text()); return; }
             sessionWinners.pop();
             renderWinnerList();
-
-            // 還原獎品數量
             if (lastWinner.prizeId) {
                 const option = Array.from(prizeSelect.options).find(o => o.value === lastWinner.prizeId);
                 if (option) {
-                    const text = option.text;
-                    const match = text.match(/\(remaining: (\d+)\)/);
-                    const currentRemaining = match ? parseInt(match[1]) : 0;
-                    updatePrizeOptionText(option, currentRemaining + 1);
+                    updatePrizeOptionText(option, parseInt(option.dataset.remaining || '0', 10) + 1);
                 } else {
-                    // 選項不存在（因為數量為0時被移除了），需要重新創建
                     const prize = allPrizes.find(p => String(p._id) === String(lastWinner.prizeId));
                     const newOption = document.createElement('option');
                     newOption.value = lastWinner.prizeId;
-                    newOption.dataset.name = lastWinner.prizeName || prize?.name || 'Unknown prize';
+                    newOption.dataset.name = lastWinner.prizeName || prize?.name || '';
                     newOption.dataset.image = prize?.pictureUrl || prize?.picture || '';
-                    newOption.text = `${lastWinner.prizeName || prize?.name || 'Unknown prize'} (remaining: 1)`;
-                    if (prizeSelect.options.length > 1) {
-                        prizeSelect.insertBefore(newOption, prizeSelect.options[1]);
-                    } else {
-                        prizeSelect.appendChild(newOption);
-                    }
+                    newOption.dataset.remaining = '1';
+                    newOption.text = `${lastWinner.prizeName || prize?.name || ''} (${_REMAINING_LABEL}: 1)`;
+                    if (prizeSelect.options.length > 1) prizeSelect.insertBefore(newOption, prizeSelect.options[1]);
+                    else prizeSelect.appendChild(newOption);
                 }
             }
-
-            availablePeople.push({
-                _id: lastWinner._id,
-                name: lastWinner.name,
-                company: lastWinner.company,
-                table: lastWinner.table
-            });
+            availablePeople.push({ _id: lastWinner._id, name: lastWinner.name, company: lastWinner.company, table: lastWinner.table });
         } catch (err) {
-            console.error(err);
-            alert('Error cancelling winner');
+            alert(t('luckydraw_panel.cancelWinnerError'));
         }
     });
 
     document.getElementById('btn-reset-winner-order').addEventListener('click', async () => {
-        if (!confirm('將 Winner No 計數重置為「目前名單中的最大號碼」。下一筆抽獎會從該號碼 + 1 開始（可填補已刪除的號碼）。確定？')) {
-            return;
-        }
+        if (!confirm(t('luckydraw_panel.resetOrderConfirm'))) return;
         try {
             const res = await fetch(`/events/${eventId}/luckydraw/reset-winner-order`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });
             const data = await res.json().catch(() => ({}));
-            if (!res.ok) {
-                alert('Reset failed: ' + (data.message || res.statusText));
-                return;
-            }
-            showControllerToast(`已重置：下一個 Winner No = ${data.nextWinnerOrder}`, 'success');
-            alert(`已重置。\n目前最大號碼：${data.maxLuckydrawOrder}\n下一筆將使用號碼：${data.nextWinnerOrder}`);
+            if (!res.ok) { alert(t('luckydraw_panel.resetOrderFailed') + (data.message || res.statusText)); return; }
+            showControllerToast(t('luckydraw_panel.resetOrderSuccess').replace('{n}', data.nextWinnerOrder), 'success');
+            alert(t('luckydraw_panel.resetSuccess').replace('{max}', data.maxLuckydrawOrder).replace('{next}', data.nextWinnerOrder));
         } catch (err) {
-            console.error(err);
-            alert('Error resetting winner order');
+            alert(t('luckydraw_panel.resetOrderError'));
         }
     });
 
     document.getElementById('btn-set-manual-winner').addEventListener('click', async () => {
         const selectedId = manualWinnerSelect.value;
-        if (!selectedId) {
-            alert('Please select a participant first');
-            return;
-        }
+        if (!selectedId) { alert(t('luckydraw_panel.noParticipantSelected')); return; }
         const index = availablePeople.findIndex(p => String(p._id) === String(selectedId));
-        if (index === -1) {
-            alert('Selected participant not found. They may have already won or are not on the list.');
-            return;
-        }
-        // 通知展示頁開始動畫
+        if (index === -1) { alert(t('luckydraw_panel.participantNotFound')); return; }
         socket.emit('luckydraw_panel_start', { eventId });
         const person = availablePeople.splice(index, 1)[0];
         await confirmWinner(person);
         manualWinnerSelect.value = '';
     });
 </script>
-
-</body>
-</html>
-
-

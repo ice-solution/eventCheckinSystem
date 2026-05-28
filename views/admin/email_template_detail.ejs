@@ -8,19 +8,19 @@
         referrerpolicy="origin"></script>
     <script>
         tinymce.init({
-            selector: '#content', // WYSIWYG 編輯器的選擇器
+            selector: '#content',
             plugins: 'image code link',
             toolbar: 'undo redo | fontselect | styleselect | bold italic | alignleft aligncenter alignright | image link | code',
             font_formats: '標楷體=DFKai-SB,BiauKai,AR PL UKai TW;微軟正黑體=Microsoft JhengHei,微軟正黑體;新細明體=PMingLiU,新細明體;細明體=MingLiU,細明體;Arial=arial,helvetica,sans-serif;Comic Sans MS=comic sans ms,sans-serif;Courier New=courier new,courier;Georgia=georgia,palatino;Helvetica=helvetica;Impact=impact,chicago;Symbol=symbol;Tahoma=tahoma,arial,helvetica,sans-serif;Terminal=terminal,monaco;Times New Roman=times new roman,times;Trebuchet MS=trebuchet ms,geneva;Verdana=verdana,geneva;Webdings=webdings;Wingdings=wingdings,zapf dingbats',
             font_family_formats: '標楷體=DFKai-SB,BiauKai,AR PL UKai TW;微軟正黑體=Microsoft JhengHei,微軟正黑體;新細明體=PMingLiU,新細明體;細明體=MingLiU,細明體;Arial=arial,helvetica,sans-serif;Comic Sans MS=comic sans ms,sans-serif;Courier New=courier new,courier;Georgia=georgia,palatino;Helvetica=helvetica;Impact=impact,chicago;Symbol=symbol;Tahoma=tahoma,arial,helvetica,sans-serif;Terminal=terminal,monaco;Times New Roman=times new roman,times;Trebuchet MS=trebuchet ms,geneva;Verdana=verdana,geneva;Webdings=webdings;Wingdings=wingdings,zapf dingbats',
             content_css: '/admin/assets/css/tinymce-custom-fonts.css',
             content_style: 'body { font-family: Arial, sans-serif; } * { font-family: inherit; }',
-            images_upload_url: '/emailTemplate/upload', // 圖片上傳的路由
+            images_upload_url: '/emailTemplate/upload',
             automatic_uploads: true,
-            convert_urls: true, // 啟用 URL 轉換
-            relative_urls: false, // 使用絕對 URL
-            remove_script_host: false, // 保留主機名
-            document_base_url: window.location.origin, // 設置基礎 URL
+            convert_urls: true,
+            relative_urls: false,
+            remove_script_host: false,
+            document_base_url: window.location.origin,
             file_picker_types: 'image',
             file_picker_callback: function (callback, value, meta) {
                 if (meta.filetype === 'image') {
@@ -38,17 +38,13 @@
                     input.click();
                 }
             },
-            // 圖片處理配置
             image_advtab: true,
             image_dimensions: true,
             image_class_list: [
                 {title: 'Responsive', value: 'img-fluid'}
             ],
-            // 只對 banner 圖片使用絕對 URL，其他圖片保持相對路徑
             urlconverter_callback: function(url, node, on_save, name) {
-                // 檢查是否為 banner 相關的圖片
                 if (url && (url.includes('banner') || url.includes('exvent'))) {
-                    // 對 banner 圖片使用絕對 URL
                     if (url.indexOf('http') !== 0 && url.indexOf('//') !== 0) {
                         if (url.indexOf('/') === 0) {
                             return window.location.origin + url;
@@ -57,7 +53,6 @@
                         }
                     }
                 }
-                // 其他圖片（如 QR code）保持相對路徑
                 return url;
             }
         });
@@ -70,65 +65,64 @@
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <strong class="card-title">Event Email Template</strong>
+                            <strong class="card-title"><%= t('create_email_template.title') %></strong>
                         </div>
                         <div class="card-body">
         <form id="emailTemplateForm">
             <div class="form-group">
-                <label for="subject">Email Subject</label>
+                <label for="subject"><%= t('create_email_template.subjectLabel') %></label>
                 <input type="text" class="form-control" id="subject" value="<%= template.subject %>" required>
             </div>
             <div class="form-group">
-                <label for="type">Email Type</label>
+                <label for="type"><%= t('create_email_template.typeLabel') %></label>
                 <select class="form-control" id="type" required>
-                    <option value="invitation" <%= template.type === 'invitation' ? 'selected' : '' %>>Invitation Email</option>
-                    <option value="welcome" <%= template.type === 'welcome' ? 'selected' : '' %>>Welcome Email</option>
-                    <option value="knowledge" <%= template.type === 'knowledge' ? 'selected' : '' %>>Knowledge Email</option>
-                    <option value="reminder" <%= template.type === 'reminder' ? 'selected' : '' %>>Reminder Email</option>
-                    <option value="invoice" <%= template.type === 'invoice' ? 'selected' : '' %>>發票 email (Invoice)</option>
-                    <option value="payment_receipt" <%= template.type === 'payment_receipt' ? 'selected' : '' %>>付款憑證 email (Payment Receipt)</option>
+                    <option value="invitation" <%= template.type === 'invitation' ? 'selected' : '' %>><%= t('create_email_template.typeInvitation') %></option>
+                    <option value="welcome" <%= template.type === 'welcome' ? 'selected' : '' %>><%= t('create_email_template.typeWelcome') %></option>
+                    <option value="knowledge" <%= template.type === 'knowledge' ? 'selected' : '' %>><%= t('create_email_template.typeKnowledge') %></option>
+                    <option value="reminder" <%= template.type === 'reminder' ? 'selected' : '' %>><%= t('create_email_template.typeReminder') %></option>
+                    <option value="invoice" <%= template.type === 'invoice' ? 'selected' : '' %>><%= t('create_email_template.typeInvoice') %></option>
+                    <option value="payment_receipt" <%= template.type === 'payment_receipt' ? 'selected' : '' %>><%= t('create_email_template.typePaymentReceipt') %></option>
                 </select>
             </div>
             <div class="form-group">
-                <label for="body">Email Content</label>
+                <label for="body"><%= t('create_email_template.contentLabel') %></label>
                 <textarea class="form-control" name="content" id="content" rows="10">
                     <%= template.content %>
                 </textarea>
             </div>
-                            <button type="submit" class="btn btn-primary">Save Template</button>
-                            <button type="button" class="btn btn-danger" onclick="deleteTemplate()">Delete Template</button>
+                            <button type="submit" class="btn btn-primary"><%= t('create_email_template.saveBtn') %></button>
+                            <button type="button" class="btn btn-danger" onclick="deleteTemplate()"><%= t('create_email_template.deleteTemplateBtn') %></button>
                             <% if (eventId) { %>
-                            <a href="/events/<%= eventId %>/emailTemplate" class="btn btn-secondary">Back to Event Email Template List</a>
+                            <a href="/events/<%= eventId %>/emailTemplate" class="btn btn-secondary"><%= t('create_email_template.backToEventList') %></a>
                             <% } else { %>
-                            <a href="/emailTemplate" class="btn btn-secondary">Back to Admin</a>
+                            <a href="/emailTemplate" class="btn btn-secondary"><%= t('common.backToAdmin') %></a>
                             <% } %>
                             </form>
                             <div id="alertContainer" class="mt-3"></div>
-                            
+
                             <hr>
-                            <h5>Send Email</h5>
+                            <h5><%= t('create_email_template.sendEmailTitle') %></h5>
                             <form id="sendEmailForm">
                                 <div class="form-group">
-                                    <label for="recipient">Recipients</label>
-                                    <textarea class="form-control" id="recipient" rows="3" placeholder="Please enter recipient email addresses"></textarea>
+                                    <label for="recipient"><%= t('create_email_template.recipientsLabel') %></label>
+                                    <textarea class="form-control" id="recipient" rows="3" placeholder="<%= t('create_email_template.recipientsPlaceholder') %>"></textarea>
                                 </div>
-                                <button type="submit" class="btn btn-success">Send Email</button>
+                                <button type="submit" class="btn btn-success"><%= t('create_email_template.sendEmailBtn') %></button>
                             </form>
                         </div>
                     </div>
-                    
-                    <!-- 郵件追蹤統計 -->
+
                     <% if (stats) { %>
                     <div class="card mt-3">
                         <div class="card-header">
-                            <strong class="card-title">郵件追蹤統計 (Email Tracking Statistics)</strong>
+                            <strong class="card-title"><%= t('create_email_template.statsTitle') %></strong>
                         </div>
                         <div class="card-body">
                             <div class="row">
                                 <div class="col-md-3">
                                     <div class="card bg-primary text-white">
                                         <div class="card-body">
-                                            <h5>總發送數</h5>
+                                            <h5><%= t('common.total') %></h5>
                                             <h3><%= stats.total %></h3>
                                         </div>
                                     </div>
@@ -136,7 +130,7 @@
                                 <div class="col-md-3">
                                     <div class="card bg-success text-white">
                                         <div class="card-body">
-                                            <h5>成功發送</h5>
+                                            <h5><%= t('common.send') %></h5>
                                             <h3><%= stats.sent %></h3>
                                         </div>
                                     </div>
@@ -144,20 +138,20 @@
                                 <div class="col-md-3">
                                     <div class="card bg-info text-white">
                                         <div class="card-body">
-                                            <h5>打開數</h5>
+                                            <h5><%= t('create_email_template.statsOpened') %></h5>
                                             <h3><%= stats.opened %></h3>
-                                            <small>打開率: <%= stats.openRate %>%</small>
+                                            <small><%= t('create_email_template.statsOpenRate') %>: <%= stats.openRate %>%</small>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
                                     <div class="card bg-warning text-white">
                                         <div class="card-body">
-                                            <h5>點擊數</h5>
+                                            <h5><%= t('create_email_template.statsClicked') %></h5>
                                             <h3><%= stats.clicked %></h3>
-                                            <small>點擊率: <%= stats.clickRate %>%</small>
+                                            <small><%= t('create_email_template.statsClickRate') %>: <%= stats.clickRate %>%</small>
                                             <br>
-                                            <small>點擊打開比: <%= stats.clickToOpenRate %>%</small>
+                                            <small><%= t('create_email_template.statsClickToOpen') %>: <%= stats.clickToOpenRate %>%</small>
                                         </div>
                                     </div>
                                 </div>
@@ -168,30 +162,30 @@
 
                     <div class="card mt-3">
                         <div class="card-header">
-                            <strong class="card-title">Send Records (發送記錄)</strong>
+                            <strong class="card-title"><%= t('create_email_template.sendRecordsTitle') %></strong>
                         </div>
                         <div class="card-body">
 
                             <table id="email-records-data-table" class="table table-bordered">
                                 <thead>
                                     <tr>
-                                        <th>Send Time (發送時間)</th>
-                                        <th>Recipients (收件人)</th>
-                                        <th>Status (狀態)</th>
-                                        <th>Opened (打開)</th>
-                                        <th>Clicked (點擊)</th>
+                                        <th><%= t('email_records.colSendTime') %></th>
+                                        <th><%= t('email_records.colRecipient') %></th>
+                                        <th><%= t('common.status') %></th>
+                                        <th><%= t('create_email_template.statsOpened') %></th>
+                                        <th><%= t('create_email_template.statsClicked') %></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <% emailRecords.forEach(function(record) { %>
                                         <tr>
                                             <td>
-                                                <%= new Date(record.created_at).toLocaleString('zh-HK', { 
+                                                <%= new Date(record.created_at).toLocaleString('zh-HK', {
                                                     timeZone: 'Asia/Hong_Kong',
-                                                    year: 'numeric', 
-                                                    month: '2-digit', 
-                                                    day: '2-digit', 
-                                                    hour: '2-digit', 
+                                                    year: 'numeric',
+                                                    month: '2-digit',
+                                                    day: '2-digit',
+                                                    hour: '2-digit',
                                                     minute: '2-digit',
                                                     second: '2-digit',
                                                     hour12: false
@@ -208,41 +202,41 @@
                                             <td>
                                                 <% if (record.opened_at) { %>
                                                     <span class="badge badge-info">
-                                                        ✓ <%= record.opened_count || 1 %> 次
+                                                        ✓ <%= record.opened_count || 1 %> <%= t('email_records.timesUnit') %>
                                                     </span>
                                                     <br>
-                                                    <small><%= new Date(record.opened_at).toLocaleString('zh-HK', { 
+                                                    <small><%= new Date(record.opened_at).toLocaleString('zh-HK', {
                                                         timeZone: 'Asia/Hong_Kong',
-                                                        year: 'numeric', 
-                                                        month: '2-digit', 
-                                                        day: '2-digit', 
-                                                        hour: '2-digit', 
+                                                        year: 'numeric',
+                                                        month: '2-digit',
+                                                        day: '2-digit',
+                                                        hour: '2-digit',
                                                         minute: '2-digit',
                                                         second: '2-digit',
                                                         hour12: false
                                                     }) %></small>
                                                 <% } else { %>
-                                                    <span class="badge badge-secondary">未打開</span>
+                                                    <span class="badge badge-secondary"><%= t('email_records.notOpened') %></span>
                                                 <% } %>
                                             </td>
                                             <td>
                                                 <% if (record.clicked_at) { %>
                                                     <span class="badge badge-warning">
-                                                        ✓ <%= record.clicked_count || 1 %> 次
+                                                        ✓ <%= record.clicked_count || 1 %> <%= t('email_records.timesUnit') %>
                                                     </span>
                                                     <br>
-                                                    <small><%= new Date(record.clicked_at).toLocaleString('zh-HK', { 
+                                                    <small><%= new Date(record.clicked_at).toLocaleString('zh-HK', {
                                                         timeZone: 'Asia/Hong_Kong',
-                                                        year: 'numeric', 
-                                                        month: '2-digit', 
-                                                        day: '2-digit', 
-                                                        hour: '2-digit', 
+                                                        year: 'numeric',
+                                                        month: '2-digit',
+                                                        day: '2-digit',
+                                                        hour: '2-digit',
                                                         minute: '2-digit',
                                                         second: '2-digit',
                                                         hour12: false
                                                     }) %></small>
                                                 <% } else { %>
-                                                    <span class="badge badge-secondary">未點擊</span>
+                                                    <span class="badge badge-secondary"><%= t('email_records.notClicked') %></span>
                                                 <% } %>
                                             </td>
                                         </tr>
@@ -260,23 +254,31 @@
 <%- include ("components/footer") %>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    // 刪除模板功能
+const _ETD = {
+    deleteConfirm: '<%= t("create_email_template.deleteTemplateConfirm") %>',
+    deleteSuccess: '<%= t("create_email_template.deleteSuccess") %>',
+    deleteFailed: '<%= t("create_email_template.deleteFailed") %>',
+    saveSuccess: '<%= t("create_email_template.saveSuccess") %>',
+    saveFailed: '<%= t("create_email_template.saveFailed") %>',
+    sendSuccess: '<%= t("create_email_template.sendSuccess") %>',
+    sendFailed: '<%= t("create_email_template.sendFailed") %>'
+};
+
     function deleteTemplate() {
-        if (confirm('Are you sure you want to delete this email template? This action cannot be undone!')) {
+        if (confirm(_ETD.deleteConfirm)) {
             $.ajax({
                 url: '/emailTemplate/<%= template._id %>',
                 type: 'DELETE',
                 success: function(response) {
                     const alertHtml = `
                         <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            Email template deleted successfully! Redirecting...
+                            ${_ETD.deleteSuccess}
                             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
                         </div>
                     `;
                     $('#alertContainer').append(alertHtml);
-                    // 跳轉回列表頁面
                     setTimeout(() => {
                         <% if (eventId) { %>
                         window.location.href = '/events/<%= eventId %>/emailTemplate';
@@ -286,10 +288,9 @@
                     }, 1500);
                 },
                 error: function(xhr, status, error) {
-                    console.error('Error deleting email template:', error);
                     const alertHtml = `
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            Failed to delete email template. Please try again later.
+                            ${_ETD.deleteFailed}
                             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
@@ -303,43 +304,38 @@
 
     $(document).ready(function () {
             $('#emailTemplateForm').on('submit', function (e) {
-                e.preventDefault(); // 防止表單默認提交
+                e.preventDefault();
 
                 const emailTemplate = {
                     subject: $('#subject').val(),
                     type: $('#type').val(),
-                    content: tinymce.get('content').getContent(), // 獲取 WYSIWYG 編輯器的內容
+                    content: tinymce.get('content').getContent(),
                 };
 
-                // 發送 AJAX 請求保存電子郵件模板
                 $.ajax({
-                    url: '/emailTemplate/<%= template._id %>', // 假設您有一個保存電子郵件模板的路由
+                    url: '/emailTemplate/<%= template._id %>',
                     type: 'PUT',
                     contentType: 'application/json',
                     data: JSON.stringify(emailTemplate),
                     success: function (response) {
-                        // 顯示成功的 alert
                         const alertHtml = `
                             <div class="alert alert-success alert-dismissible fade show" role="alert">
-                                Email template saved successfully!
+                                ${_ETD.saveSuccess}
                                 <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                                     <span aria-hidden="true">&times;</span>
                                 </button>
                             </div>
                         `;
                         $('#alertContainer').append(alertHtml);
-                        // 自動隱藏 alert
                         setTimeout(() => {
                             $('.alert').alert('close');
                         }, 1500);
-                        // 清空表單
                         $('#emailTemplateForm')[0].reset();
                     },
                     error: function (xhr, status, error) {
-                        console.error('Error saving email template:', error);
                         const alertHtml = `
                             <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                Failed to save email template. Please try again later.
+                                ${_ETD.saveFailed}
                                 <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                                     <span aria-hidden="true">&times;</span>
                                 </button>
@@ -348,51 +344,44 @@
                         $('#alertContainer').append(alertHtml);
                     }
                 }).done(function () {
-                    // page refresh
                     location.reload();
                 });
             });
         });
 
         $('#sendEmailForm').on('submit', function (e) {
-            e.preventDefault(); // 防止表單默認提交
+            e.preventDefault();
 
             const emailData = {
                 recipient: $('#recipient').val(),
                 subject: $('#subject').val(),
-                content: tinymce.get('content').getContent(), // 獲取 WYSIWYG 編輯器的內容
+                content: tinymce.get('content').getContent(),
             };
 
-            // 發送 AJAX 請求發送電子郵件
             $.ajax({
-                url: '/emailTemplate/<%= template._id %>/send', // 假設您有一個發送電子郵件的路由
+                url: '/emailTemplate/<%= template._id %>/send',
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify(emailData),
                 success: function (response) {
-                    // 顯示成功的 alert
                     const alertHtml = `
                             <div class="alert alert-success alert-dismissible fade show" role="alert">
-                                Email sent successfully!
+                                ${_ETD.sendSuccess}
                                 <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                                     <span aria-hidden="true">&times;</span>
                                 </button>
                             </div>
                     `;
                     $('#alertContainer').append(alertHtml);
-                    // 自動隱藏 alert
                     setTimeout(() => {
                         $('.alert').alert('close');
                     }, 1500);
-                    // 清空表單
                     $('#sendEmailForm')[0].reset();
-                    // 重新加載頁面以顯示最新的發送記錄
                 },
                 error: function (xhr, status, error) {
-                    console.error('Error sending email:', error);
                     const alertHtml = `
                             <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                Failed to send email. Please try again later.
+                                ${_ETD.sendFailed}
                                 <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                                     <span aria-hidden="true">&times;</span>
                                 </button>
@@ -401,7 +390,6 @@
                     $('#alertContainer').append(alertHtml);
                 }
             }).done(function () {
-                // 重新加載頁面以顯示最新的發送記錄
                 location.reload();
             });
         });
@@ -420,12 +408,12 @@
 <script type="text/javascript">
     $(document).ready(function () {
         $('#email-records-data-table').DataTable({
-            "order": [[0, "desc"]], // 根據第一列（發送時間）降序排序   
+            "order": [[0, "desc"]],
             "columnDefs": [
-                { "type": "date", "targets": 0 }//date column formatted like "03/23/2018 10:25:13 AM".
+                { "type": "date", "targets": 0 }
             ],
-            "pageLength": 10, // 每頁顯示 10 條記錄
-            "lengthMenu": [5, 10, 25, 50], // 分頁選項
+            "pageLength": 10,
+            "lengthMenu": [5, 10, 25, 50],
         });
 
     });

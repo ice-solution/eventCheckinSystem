@@ -7,26 +7,26 @@
     <div id="right-panel" class="right-panel">
         <%- include ("components/rightpanel_header") %>
         <div class="content">
-            <h2>Create Login User</h2>
+            <h2><%= t('create_auth.heading') %></h2>
             <form id="createUserForm" action="/auth/create" method="POST">
                 <div class="form-group">
-                    <label for="username">Username</label>
+                    <label for="username"><%= t('create_auth.usernameLabel') %></label>
                     <input type="text" class="form-control" id="username" name="username" required>
                 </div>
                 <div class="form-group">
-                    <label for="password">Password</label>
+                    <label for="password"><%= t('create_auth.passwordLabel') %></label>
                     <input type="password" class="form-control" id="password" name="password" required>
                 </div>
                 <div class="form-group">
-                    <label for="role">Role</label>
+                    <label for="role"><%= t('create_auth.roleLabel') %></label>
                     <select class="form-control" id="role" name="role" required>
-                        <option value="admin">Admin</option>
-                        <option value="reception">Reception</option>
-                        <option value="staff">Staff</option>
-                        <option value="user">User</option>
+                        <option value="admin"><%= t('create_auth.roleAdmin') %></option>
+                        <option value="reception"><%= t('create_auth.roleReception') %></option>
+                        <option value="staff"><%= t('create_auth.roleStaff') %></option>
+                        <option value="user"><%= t('create_auth.roleUser') %></option>
                     </select>
                 </div>
-                <button type="submit" class="btn btn-primary">Create User</button>
+                <button type="submit" class="btn btn-primary"><%= t('create_auth.createBtn') %></button>
             </form>
         </div>
     </div>

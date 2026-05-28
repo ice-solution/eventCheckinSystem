@@ -11,17 +11,17 @@
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <strong class="card-title">Prize Management - <%= event.name %></strong>
+                            <strong class="card-title"><%= t('prize_list.title') %> - <%= event.name %></strong>
                         </div>
                         <div class="card-body">
                             <table id="bootstrap-data-table" class="table table-bordered">
                                 <thead>
                                     <tr>
-                                        <th>Prize Name</th>
-                                        <th>Image</th>
-                                        <th>Quantity</th>
-                                        <th>Created At</th>
-                                        <th>Actions</th>
+                                        <th><%= t('prize_list.prizeName') %></th>
+                                        <th><%= t('common.image') %></th>
+                                        <th><%= t('common.quantity') %></th>
+                                        <th><%= t('common.created_at') %></th>
+                                        <th><%= t('common.actions') %></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -32,48 +32,40 @@
                                                 <% if (prize.picture) { %>
                                                     <img src="<%= prize.picture %>" alt="<%= prize.name %>" style="max-width: 50px; max-height: 50px; object-fit: cover; border-radius: 4px;">
                                                 <% } else { %>
-                                                    <span class="text-muted">No image</span>
+                                                    <span class="text-muted"><%= t('common.noImage') %></span>
                                                 <% } %>
                                             </td>
                                             <td><%= prize.unit %></td>
                                             <td class="prize-date"><%= prize.created_at %></td>
                                             <td>
-                                                <a href="/prizes/<%= eventId %>/prizes/<%= prize._id %>/edit" class="btn btn-sm btn-primary">Edit</a>
-                                                <button class="btn btn-sm btn-danger" onclick="deletePrize('<%= prize._id %>')">Delete</button>
+                                                <a href="/prizes/<%= eventId %>/prizes/<%= prize._id %>/edit" class="btn btn-sm btn-primary"><%= t('common.edit') %></a>
+                                                <button class="btn btn-sm btn-danger" onclick="deletePrize('<%= prize._id %>')"><%= t('common.delete') %></button>
                                             </td>
                                         </tr>
                                     <% }); %>
                                 </tbody>
                             </table>
                             <div class="mb-3">
-                                <a href="/prizes/<%= eventId %>/prizes/create" class="btn btn-primary">Add Prize</a>
-                                <button type="button" class="btn btn-success" data-toggle="modal" data-target="#batchUploadModal">Batch Upload</button>
-                                <a href="/prizes/<%= eventId %>/prizes/download-sample" class="btn btn-info">Download Template</a>
-                                <button type="button" class="btn btn-danger" onclick="deleteAllPrizes()">Delete All Prizes</button>
-                                <a href="/events/<%= eventId %>" class="btn btn-secondary">Back to Event</a>
+                                <a href="/prizes/<%= eventId %>/prizes/create" class="btn btn-primary"><%= t('prize_list.addPrize') %></a>
+                                <button type="button" class="btn btn-success" data-toggle="modal" data-target="#batchUploadModal"><%= t('prize_list.batchUpload') %></button>
+                                <a href="/prizes/<%= eventId %>/prizes/download-sample" class="btn btn-info"><%= t('prize_list.downloadTemplate') %></a>
+                                <button type="button" class="btn btn-danger" onclick="deleteAllPrizes()"><%= t('prize_list.deleteAll') %></button>
+                                <a href="/events/<%= eventId %>" class="btn btn-secondary"><%= t('prize_list.backToEvent') %></a>
                             </div>
-                            
-                            <!-- Batch Upload Modal -->
-                            <div class="modal fade" id="batchUploadModal" tabindex="-1" role="dialog" aria-labelledby="batchUploadModalLabel" aria-hidden="true">
+
+                            <div class="modal fade" id="batchUploadModal" tabindex="-1" role="dialog" aria-hidden="true">
                                 <div class="modal-dialog" role="document">
                                     <div class="modal-content">
                                         <div class="modal-header">
-                                            <h5 class="modal-title" id="batchUploadModalLabel">Upload Prizes (xlsx)</h5>
-                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                                <span aria-hidden="true">&times;</span>
-                                            </button>
+                                            <h5 class="modal-title"><%= t('prize_list.batchUploadTitle') %></h5>
+                                            <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
                                         </div>
                                         <div class="modal-body">
                                             <form id="batchUploadForm" enctype="multipart/form-data">
                                                 <div class="form-group">
-                                                    <label for="excelFile">Select Excel file (.xlsx)</label>
+                                                    <label for="excelFile"><%= t('prize_list.selectExcel') %></label>
                                                     <input type="file" class="form-control-file" id="excelFile" name="file" accept=".xlsx,.xls" required>
-                                                    <small class="form-text text-muted">
-                                                        Please upload an Excel file with the following columns:<br>
-                                                        - name (Prize name, required)<br>
-                                                        - unit (Quantity, required, number)<br>
-                                                        - picture (Image URL, optional)
-                                                    </small>
+                                                    <small class="form-text text-muted"><%= t('prize_list.excelNote') %></small>
                                                 </div>
                                                 <div id="uploadProgress" class="progress" style="display: none;">
                                                     <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
@@ -82,8 +74,8 @@
                                             </form>
                                         </div>
                                         <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                                            <button type="button" class="btn btn-primary" onclick="submitBatchUpload()">Upload</button>
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('common.cancel') %></button>
+                                            <button type="button" class="btn btn-primary" onclick="submitBatchUpload()"><%= t('common.upload') %></button>
                                         </div>
                                     </div>
                                 </div>
@@ -107,152 +99,74 @@
 <script src="/admin/assets/js/lib/data-table/buttons.print.min.js"></script>
 <script src="/admin/assets/js/lib/data-table/buttons.colVis.min.js"></script>
 <script src="/admin/assets/js/init/datatables-init.js"></script>
-<script type="text/javascript">
+<script>
     $(document).ready(function () {
         $('#bootstrap-data-table').DataTable();
-        
-        // Format date (e.g. en-US or Asia/Taipei)
         $('.prize-date').each(function() {
             const dateStr = $(this).text().trim();
             if (dateStr) {
                 try {
-                    const date = new Date(dateStr);
-                    const formattedDate = date.toLocaleString('en-US', { 
-                        timeZone: 'Asia/Taipei', 
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit',
-                        hour12: false
-                    });
-                    $(this).text(formattedDate);
-                } catch (e) {
-                    console.error('Error formatting date:', e);
-                }
+                    $(this).text(new Date(dateStr).toLocaleString('en-US', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }));
+                } catch (e) {}
             }
         });
     });
 
     function deletePrize(prizeId) {
-        if (confirm('Are you sure you want to delete this prize?')) {
-            fetch(`/prizes/<%= eventId %>/prizes/${prizeId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.message) {
-                    alert(data.message);
-                    location.reload();
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Delete failed');
-            });
+        if (confirm(t('prize_list.confirmDelete'))) {
+            fetch(`/prizes/<%= eventId %>/prizes/${prizeId}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' } })
+            .then(r => r.json())
+            .then(data => { if (data.message) { alert(data.message); location.reload(); } })
+            .catch(() => alert(t('prize_list.deleteFailed')));
         }
     }
 
     function submitBatchUpload() {
-        const fileInput = document.getElementById('excelFile');
-        const file = fileInput.files[0];
-        
-        if (!file) {
-            alert('Please select a file');
-            return;
-        }
-
+        const file = document.getElementById('excelFile').files[0];
+        if (!file) { alert(t('prize_list.selectFile')); return; }
         const formData = new FormData();
         formData.append('file', file);
-
         const progressDiv = document.getElementById('uploadProgress');
         const messageDiv = document.getElementById('uploadMessage');
-        
         progressDiv.style.display = 'block';
         messageDiv.style.display = 'none';
-
-        fetch(`/prizes/<%= eventId %>/prizes/batch-upload`, {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
+        fetch(`/prizes/<%= eventId %>/prizes/batch-upload`, { method: 'POST', body: formData })
+        .then(r => r.json())
         .then(data => {
             progressDiv.style.display = 'none';
             messageDiv.style.display = 'block';
-            
             if (data.success) {
                 messageDiv.className = 'alert alert-success';
-                messageDiv.textContent = `Successfully uploaded ${data.importedCount} prize(s)!`;
-                setTimeout(() => {
-                    location.reload();
-                }, 1500);
+                messageDiv.textContent = t('prize_list.uploadSuccess').replace('{count}', data.importedCount);
+                setTimeout(() => location.reload(), 1500);
             } else {
                 messageDiv.className = 'alert alert-danger';
-                messageDiv.textContent = data.message || 'Upload failed';
+                messageDiv.textContent = data.message || t('prize_list.uploadFailed');
             }
         })
-        .catch(error => {
-            console.error('Error:', error);
+        .catch(err => {
             progressDiv.style.display = 'none';
             messageDiv.style.display = 'block';
             messageDiv.className = 'alert alert-danger';
-            messageDiv.textContent = 'Upload failed: ' + error.message;
+            messageDiv.textContent = t('prize_list.uploadFailed') + ': ' + err.message;
         });
     }
 
     function deleteAllPrizes() {
         const totalPrizes = <%= prizes.length %>;
-        
-        if (totalPrizes === 0) {
-            alert('There are no prizes to delete');
-            return;
-        }
-
-        // 第一次確認
-        if (!confirm(`Warning: You are about to delete all ${totalPrizes} prize(s)!\n\nThis action cannot be undone. Please confirm you want to proceed.`)) {
-            return;
-        }
-
-        // 第二次確認
-        if (!confirm(`Confirm again: Are you sure you want to delete all ${totalPrizes} prize(s)?\n\nThis action cannot be undone!`)) {
-            return;
-        }
-
-        // 第三次確認
-        if (!confirm(`Final confirmation: Do you really want to delete all ${totalPrizes} prize(s)?\n\nType "confirm delete" in the next prompt to complete this action.`)) {
-            return;
-        }
-
-        // Fourth confirmation - require typing "confirm delete"
-        const userInput = prompt(`Please type "confirm delete" to confirm deleting all ${totalPrizes} prize(s):`);
-        if (userInput !== 'confirm delete') {
-            alert('Operation cancelled');
-            return;
-        }
-
-        // 執行刪除
-        fetch(`/prizes/<%= eventId %>/prizes`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
+        if (totalPrizes === 0) { alert(t('prize_list.noPrizes')); return; }
+        const r = (key) => t(key).replace('{count}', totalPrizes);
+        if (!confirm(r('prize_list.deleteAllWarn'))) return;
+        if (!confirm(r('prize_list.deleteAllConfirm'))) return;
+        if (!confirm(r('prize_list.deleteAllFinal'))) return;
+        const userInput = prompt(r('prize_list.deleteAllPrompt'));
+        if (userInput !== 'confirm delete') { alert(t('prize_list.deleteAllCancelled')); return; }
+        fetch(`/prizes/<%= eventId %>/prizes`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' } })
+        .then(r => r.json())
         .then(data => {
-            if (data.success) {
-                alert(`Successfully deleted ${data.deletedCount} prize(s)!`);
-                location.reload();
-            } else {
-                alert('Delete failed: ' + (data.message || 'Unknown error'));
-            }
+            if (data.success) { alert(t('prize_list.deleteAllSuccess').replace('{count}', data.deletedCount)); location.reload(); }
+            else alert(t('prize_list.deleteAllFailed') + (data.message || ''));
         })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Delete failed: ' + error.message);
-        });
+        .catch(err => alert(t('prize_list.deleteAllFailed') + err.message));
     }
-</script> 
+</script>

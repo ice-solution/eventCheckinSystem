@@ -1,74 +1,60 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
-    <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
-    <link rel="stylesheet" href="/admin/assets/css/style.css">
-    <title>Import Users</title>
-</head>
-<body>
-    <%- include("components/header") %>
-    <%- include("components/menu", { eventId: event._id }) %>
-    
-    <div id="right-panel" class="right-panel">
-        <%- include("components/rightpanel_header") %>
-        <div class="content">
-            <div class="animated fadeIn">
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <strong class="card-title">Import Users</strong>
-                            </div>
-                            <div class="card-body">
-                                <p>You can only import columns that exist in the current registration form. Use the column names below as the first row (headers) in your Excel file.</p>
-                                <p class="text-muted mb-3">
-                                    Import rule: if a row has <code>_id</code> and matches an existing user, that user will be updated; if <code>_id</code> is empty, a new user will be created.
-                                </p>
-                                
-                                <% if (importFields && importFields.length > 0) { %>
-                                    <div class="mb-3">
-                                        <h5>Required columns</h5>
-                                        <ul>
-                                            <% importFields.forEach(field => { %>
-                                                <li><strong><%= field.label %></strong> (<code><%= field.fieldName %></code>)</li>
-                                            <% }); %>
-                                        </ul>
-                                    </div>
-                                <% } else { %>
-                                    <div class="alert alert-warning">
-                                        This event does not have any visible form fields. Please configure the registration form before importing users.
-                                    </div>
-                                <% } %>
+<%- include("components/header") %>
+<%- include("components/menu", { eventId: event._id }) %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
 
-                                <form action="/events/<%= event._id %>/import" method="POST" enctype="multipart/form-data">
-                                    <div class="form-group">
-                                        <label for="fileInput">Select xlsx File:</label>
-                                        <input type="file" class="form-control" id="fileInput" name="file" accept=".xlsx" <%= (importFields && importFields.length > 0) ? 'required' : 'disabled' %>>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary" <%= (importFields && importFields.length > 0) ? '' : 'disabled' %>>Import</button>
-                                    <a href="/events/<%= event._id%>" class="btn btn-secondary">Return to User List</a>
-                                    <% if (importFields && importFields.length > 0) { %>
-                                        <a href="/events/<%= event._id %>/import/export-current" class="btn btn-success">Download Current User List (xlsx)</a>
-                                        <a href="/events/<%= event._id %>/import/sample" class="btn btn-info">Download Sample File</a>
-                                    <% } else { %>
-                                        <span class="btn btn-success disabled" aria-disabled="true">Download Current User List (xlsx)</span>
-                                        <span class="btn btn-info disabled" aria-disabled="true">Download Sample File</span>
-                                    <% } %>
-                                </form>
-                            </div>
+<div id="right-panel" class="right-panel">
+    <%- include("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title"><%= t('import_users.title') %></strong>
+                        </div>
+                        <div class="card-body">
+                            <p><%- t('import_users.desc') %></p>
+                            <p class="text-muted mb-3"><%- t('import_users.importRule') %></p>
+
+                            <% if (importFields && importFields.length > 0) { %>
+                                <div class="mb-3">
+                                    <h5><%= t('import_users.requiredColumns') %></h5>
+                                    <ul>
+                                        <% importFields.forEach(field => { %>
+                                            <li><strong><%= field.label %></strong> (<code><%= field.fieldName %></code>)</li>
+                                        <% }); %>
+                                    </ul>
+                                </div>
+                            <% } else { %>
+                                <div class="alert alert-warning"><%= t('import_users.noFields') %></div>
+                            <% } %>
+
+                            <form action="/events/<%= event._id %>/import" method="POST" enctype="multipart/form-data">
+                                <div class="form-group">
+                                    <label for="fileInput"><%= t('import_users.fileInput') %></label>
+                                    <input type="file" class="form-control" id="fileInput" name="file" accept=".xlsx" <%= (importFields && importFields.length > 0) ? 'required' : 'disabled' %>>
+                                </div>
+                                <button type="submit" class="btn btn-primary" <%= (importFields && importFields.length > 0) ? '' : 'disabled' %>><%= t('import_users.importBtn') %></button>
+                                <a href="/events/<%= event._id%>" class="btn btn-secondary"><%= t('import_users.backToUsers') %></a>
+                                <% if (importFields && importFields.length > 0) { %>
+                                    <a href="/events/<%= event._id %>/import/export-current" class="btn btn-success"><%= t('import_users.downloadCurrent') %></a>
+                                    <a href="/events/<%= event._id %>/import/sample" class="btn btn-info"><%= t('import_users.downloadSample') %></a>
+                                <% } else { %>
+                                    <span class="btn btn-success disabled" aria-disabled="true"><%= t('import_users.downloadCurrent') %></span>
+                                    <span class="btn btn-info disabled" aria-disabled="true"><%= t('import_users.downloadSample') %></span>
+                                <% } %>
+                            </form>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <%- include("components/footer") %>
-    <script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
-    <script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
-    <script src="/admin/assets/js/init/datatables-init.js"></script>
-</body>
-</html>
+<%- include("components/footer") %>
+<script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
+<script src="/admin/assets/js/init/datatables-init.js"></script>

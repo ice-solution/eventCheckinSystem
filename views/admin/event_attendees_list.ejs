@@ -1,104 +1,100 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <title>Event Attendees List</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-        /* 添加樣式以美化表單 */
-        .add-attendee-form {
-            display: none; /* 初始隱藏 */
-            margin-top: 20px;
-            padding: 20px;
-            background-color: rgba(255, 255, 255, 0.9);
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-    </style>
-</head>
-<body>
-
 <%- include("components/header") %>
 <%- include("components/menu", { eventId: eventId }) %>
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+<style>
+    .add-attendee-form {
+        display: none;
+        margin-top: 20px;
+        padding: 20px;
+        background-color: rgba(255, 255, 255, 0.9);
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+</style>
 
-<div class="container mt-5">
-    <h1 class="mt-4">Event Attendees List</h1>
-    
-    <!-- 添加描述 -->
-    <p class="lead">這裡是參加者的列表，您可以查看所有參加此活動的來賓。</p>
+<div id="right-panel" class="right-panel">
+    <%- include("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title"><%= t('event_attendees.listHeading') %></strong>
+                        </div>
+                        <div class="card-body">
+                            <p class="lead"><%= t('event_attendees.listDesc') %></p>
 
-    <button id="addAttendeeBtn" class="btn btn-primary mb-3">添加參展商</button>
+                            <button id="addAttendeeBtn" class="btn btn-primary mb-3"><%= t('event_attendees.addBtn') %></button>
 
-    <div class="add-attendee-form" id="addAttendeeForm">
-        <h4>填入參展商資料</h4>
-        <form id="attendeeForm">
-            <div class="form-group">
-                <label for="name">姓名</label>
-                <input type="text" class="form-control" id="name" required>
+                            <div class="add-attendee-form" id="addAttendeeForm">
+                                <h4><%= t('event_attendees.addFormTitle') %></h4>
+                                <form id="attendeeForm">
+                                    <div class="form-group">
+                                        <label for="name"><%= t('common.name') %></label>
+                                        <input type="text" class="form-control" id="name" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="location"><%= t('event_attendees.colLocation') %></label>
+                                        <input type="text" class="form-control" id="location" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="phone"><%= t('common.phone') %></label>
+                                        <input type="text" class="form-control" id="phone" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="email"><%= t('common.email') %></label>
+                                        <input type="email" class="form-control" id="email" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="description"><%= t('common.description') %></label>
+                                        <textarea class="form-control" id="description" rows="3" placeholder="<%= t('event_attendees.descriptionPlaceholder') %>"></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-success"><%= t('common.submit') %></button>
+                                    <button type="button" class="btn btn-danger" id="cancelBtn"><%= t('common.cancel') %></button>
+                                </form>
+                            </div>
+
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th><%= t('event_attendees.colName') %></th>
+                                        <th><%= t('event_attendees.colLocation') %></th>
+                                        <th><%= t('event_attendees.colPhone') %></th>
+                                        <th><%= t('event_attendees.colEmail') %></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attendeesList">
+                                    <% attendees.forEach(attendee => { %>
+                                        <tr>
+                                            <td><%= attendee.name %></td>
+                                            <td><%= attendee.location %></td>
+                                            <td><%= attendee.phone %></td>
+                                            <td><%= attendee.email %></td>
+                                        </tr>
+                                    <% }) %>
+                                </tbody>
+                            </table>
+                            <div id="result" class="mt-3"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="location">地點</label>
-                <input type="text" class="form-control" id="location" required>
-            </div>
-            <div class="form-group">
-                <label for="phone">電話號碼</label>
-                <input type="text" class="form-control" id="phone" required>
-            </div>
-            <div class="form-group">
-                <label for="email">電子郵件</label>
-                <input type="email" class="form-control" id="email" required>
-            </div>
-            <div class="form-group">
-                <label for="description">描述</label>
-                <textarea class="form-control" id="description" rows="3" placeholder="請輸入參展商描述..."></textarea>
-            </div>
-            <button type="submit" class="btn btn-success">提交</button>
-            <button type="button" class="btn btn-danger" id="cancelBtn">取消</button>
-        </form>
+        </div>
     </div>
-
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>姓名</th>
-                <th>地點</th>
-                <th>電話號碼</th>
-                <th>電子郵件</th>
-                <!-- <th>操作</th> -->
-            </tr>
-        </thead>
-        <tbody id="attendeesList">
-            <% attendees.forEach(attendee => { %>
-                <tr>
-                    <td><%= attendee.name %></td>
-                    <td><%= attendee.location %></td>
-                    <td><%= attendee.phone %></td>
-                    <td><%= attendee.email %></td>
-                    <!-- <td>
-                        <a href="/events/<%= eventId %>/attendees/<%= attendee._id %>/points" class="btn btn-info btn-sm">查看</a>
-                        <a href="/events/<%= eventId %>/attendees/<%= attendee._id %>/promote" class="btn btn-warning btn-sm">Add promote</a>
-                    </td> -->
-                </tr>
-            <% }) %>
-        </tbody>
-    </table>
-    <div id="result" class="mt-3"></div>
 </div>
 
 <%- include("components/footer") %>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
     $(document).ready(function() {
-        // 顯示添加參展商表單
         $('#addAttendeeBtn').on('click', function() {
-            $('#addAttendeeForm').toggle(); // 切換顯示
+            $('#addAttendeeForm').toggle();
         });
 
-        // 提交表單
         $('#attendeeForm').on('submit', function(event) {
-            event.preventDefault(); // 防止默認提交
+            event.preventDefault();
 
             const newAttendee = {
                 name: $('#name').val(),
@@ -108,24 +104,22 @@
                 description: $('#description').val()
             };
 
-            // AJAX 請求以添加參展商
             $.ajax({
-                url: `/events/<%= eventId %>/attendees`, // 假設添加參展商的路由
+                url: `/events/<%= eventId %>/attendees`,
                 method: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify(newAttendee),
                 success: function(response) {
-                    // 更新參展商列表
                     $('#attendeesList').append(`
                         <tr>
                             <td>${response.attendee.name}</td>
                             <td>${response.attendee.location}</td>
                             <td>${response.attendee.phone}</td>
                             <td>${response.attendee.email}</td>
-                            <td>${response.attendee.description}</td>
+                        </tr>
                     `);
-                    $('#addAttendeeForm').hide(); // 隱藏表單
-                    $('#attendeeForm')[0].reset(); // 重置表單
+                    $('#addAttendeeForm').hide();
+                    $('#attendeeForm')[0].reset();
                 },
                 error: function(xhr) {
                     alert(xhr.responseJSON.message);
@@ -133,12 +127,8 @@
             });
         });
 
-        // 取消按鈕
         $('#cancelBtn').on('click', function() {
-            $('#addAttendeeForm').hide(); // 隱藏表單
+            $('#addAttendeeForm').hide();
         });
     });
 </script>
-
-</body>
-</html>

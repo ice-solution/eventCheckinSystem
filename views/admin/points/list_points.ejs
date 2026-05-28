@@ -1,46 +1,47 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <title>List Points</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-qrcode/1.0/jquery.qrcode.min.js"></script>
-</head>
-<body>
 <%- include("../components/header") %>
-<%- include("../components/menu") %>
+<%- include("../components/menu", { eventId: eventId }) %>
+<link rel="stylesheet" href="/admin/assets/css/style.css">
 
-<div class="container mt-5">
-    <h2>Points List</h2>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Points</th>
-                <th>Created At</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            <% points.forEach(point => { %>
-                <tr>
-                    <td><%= point._id %></td>
-                    <td><%= point.point %></td>
-                    <td><%= point.created_at.toISOString().slice(0, 10) %></td>
-                    <td>
-                        <a href="/events/<%= eventId %>/points/edit/<%= point._id %>" class="btn btn-warning">Edit</a>
-                        <a href="/events/<%= eventId %>/points/<%= point._id %>" class="btn btn-info generate-qrcode">Click to open QRcode</a>
-                    </td>
-                </tr>
-            <% }); %>
-        </tbody>
-    </table>
+<div id="right-panel" class="right-panel">
+    <%- include("../components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title"><%= t('points_pages.listHeading') %></strong>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th><%= t('points_pages.colId') %></th>
+                                        <th><%= t('points_pages.colPoints') %></th>
+                                        <th><%= t('points_pages.colCreatedAt') %></th>
+                                        <th><%= t('points_pages.colActions') %></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% points.forEach(point => { %>
+                                        <tr>
+                                            <td><%= point._id %></td>
+                                            <td><%= point.point %></td>
+                                            <td><%= point.created_at.toISOString().slice(0, 10) %></td>
+                                            <td>
+                                                <a href="/events/<%= eventId %>/points/edit/<%= point._id %>" class="btn btn-warning btn-sm"><%= t('points_pages.editBtn') %></a>
+                                                <a href="/events/<%= eventId %>/points/<%= point._id %>" class="btn btn-info btn-sm"><%= t('points_pages.viewQrBtn') %></a>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-
-
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<%- include("../components/footer") %>

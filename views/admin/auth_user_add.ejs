@@ -10,21 +10,21 @@
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <strong class="card-title">添加用戶 (Add User)</strong>
+                            <strong class="card-title"><%= t('auth_user_add.title') %></strong>
                         </div>
                         <div class="card-body">
                             <form action="/auth/users/add" method="POST" class="form-horizontal">
                                 <div class="form-group">
-                                    <label for="username">帳號 (Username)</label>
-                                    <input type="text" class="form-control" id="username" name="username" required placeholder="不可使用 admin">
+                                    <label for="username"><%= t('auth_user_add.usernameLabel') %></label>
+                                    <input type="text" class="form-control" id="username" name="username" required placeholder="<%= t('auth_user_add.usernamePlaceholder') %>">
                                 </div>
                                 <div class="form-group">
-                                    <label for="password">密碼 (Password)</label>
+                                    <label for="password"><%= t('auth_user_add.passwordLabel') %></label>
                                     <input type="password" class="form-control" id="password" name="password" required>
                                 </div>
-                                <p class="text-muted">新增後請至「設定權限」為該用戶勾選可存取的活動與功能。</p>
-                                <button type="submit" class="btn btn-primary">建立用戶</button>
-                                <a href="/auth/users" class="btn btn-secondary">取消</a>
+                                <p class="text-muted"><%= t('auth_user_add.note') %></p>
+                                <button type="submit" class="btn btn-primary"><%= t('auth_user_add.createBtn') %></button>
+                                <a href="/auth/users" class="btn btn-secondary"><%= t('common.cancel') %></a>
                             </form>
                         </div>
                     </div>

@@ -10,16 +10,16 @@
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <strong class="card-title">設定權限 - <%= user.username %></strong>
+                            <strong class="card-title"><%= t('auth_user_edit.title') %> - <%= user.username %></strong>
                         </div>
                         <div class="card-body">
                             <form id="permissionsForm" action="/auth/users/<%= user._id %>/permissions" method="POST">
                                 <input type="hidden" name="eventPermissions" id="eventPermissionsInput" value="">
                                 <div class="form-group">
-                                    <label>可存取的活動 (Allowed Events)</label>
-                                    <p class="text-muted small">勾選該用戶可進入的活動；未勾選的活動將無法存取。</p>
+                                    <label><%= t('auth_user_edit.allowedEventsLabel') %></label>
+                                    <p class="text-muted small"><%= t('auth_user_edit.allowedEventsNote') %></p>
                                     <% if (!events || events.length === 0) { %>
-                                        <p class="text-warning">尚無活動，請先建立活動再設定權限。</p>
+                                        <p class="text-warning"><%= t('auth_user_edit.noEvents') %></p>
                                     <% } else { %>
                                     <div class="row">
                                         <% events.forEach(ev => { %>
@@ -36,16 +36,14 @@
                                 </div>
                                 <hr>
                                 <div class="form-group">
-                                    <label>各活動下可使用的功能 (Functions per Event)</label>
-                                    <p class="text-muted small">為每個已勾選的活動，再勾選該用戶可使用哪些功能。</p>
+                                    <label><%= t('auth_user_edit.functionsLabel') %></label>
+                                    <p class="text-muted small"><%= t('auth_user_edit.functionsNote') %></p>
                                     <% events.forEach(ev => { %>
                                         <% const allowedForEvent = (user.allowedEvents || []).some(e => e && e.toString() === ev._id.toString()); %>
                                         <% const perms = (user.eventPermissions || []).find(p => p.eventId && p.eventId.toString() === ev._id.toString()); %>
                                         <% const funcs = perms ? (perms.functions || []) : []; %>
                                         <div class="card mb-2 event-func-card" data-event-id="<%= ev._id %>" style="<%= allowedForEvent ? '' : 'display:none' %>">
-                                            <div class="card-header py-2">
-                                                <strong><%= ev.name %></strong>
-                                            </div>
+                                            <div class="card-header py-2"><strong><%= ev.name %></strong></div>
                                             <div class="card-body py-2">
                                                 <div class="row">
                                                     <% eventFunctions.forEach(fn => { %>
@@ -62,8 +60,8 @@
                                         </div>
                                     <% }); %>
                                 </div>
-                                <button type="submit" class="btn btn-primary">儲存權限</button>
-                                <a href="/auth/users" class="btn btn-secondary">返回用戶列表</a>
+                                <button type="submit" class="btn btn-primary"><%= t('auth_user_edit.saveBtn') %></button>
+                                <a href="/auth/users" class="btn btn-secondary"><%= t('auth_user_edit.backBtn') %></a>
                             </form>
                         </div>
                     </div>
@@ -77,7 +75,6 @@
 (function() {
     const form = document.getElementById('permissionsForm');
     const eventCheckboxes = document.querySelectorAll('.event-checkbox');
-    const eventCards = document.querySelectorAll('.event-func-card');
 
     eventCheckboxes.forEach(function(cb) {
         cb.addEventListener('change', function() {
@@ -87,21 +84,16 @@
         });
     });
 
-    form.addEventListener('submit', function(e) {
+    form.addEventListener('submit', function() {
         const allowedEvents = [];
-        document.querySelectorAll('.event-checkbox:checked').forEach(function(cb) {
-            allowedEvents.push(cb.value);
-        });
+        document.querySelectorAll('.event-checkbox:checked').forEach(function(cb) { allowedEvents.push(cb.value); });
         const eventPermissions = [];
         document.querySelectorAll('.func-checkbox:checked').forEach(function(cb) {
             const eventId = cb.getAttribute('data-event-id');
             const func = cb.getAttribute('data-func');
             if (!eventId || !func) return;
             let ep = eventPermissions.find(function(p) { return p.eventId === eventId; });
-            if (!ep) {
-                ep = { eventId: eventId, functions: [] };
-                eventPermissions.push(ep);
-            }
+            if (!ep) { ep = { eventId: eventId, functions: [] }; eventPermissions.push(ep); }
             ep.functions.push(func);
         });
         document.getElementById('eventPermissionsInput').value = JSON.stringify(eventPermissions);

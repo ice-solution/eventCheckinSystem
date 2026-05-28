@@ -13,32 +13,32 @@
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <strong class="card-title">Guest List</strong>
+                            <strong class="card-title"><%= t('guest_list.title') %></strong>
                             <div class="float-right">
-                                <button id="addGuestBtn" class="btn btn-primary btn-sm" type="button" onclick="if(window.showAddGuestModal){window.showAddGuestModal();} return false;">Add Guest</button>
-                                <button id="importExcelBtn" class="btn btn-success btn-sm ml-2" type="button" onclick="if(window.showImportExcelModal){window.showImportExcelModal();} return false;">Import Excel</button>
+                                <button id="addGuestBtn" class="btn btn-primary btn-sm" type="button" onclick="if(window.showAddGuestModal){window.showAddGuestModal();} return false;"><%= t('guest_list.addGuest') %></button>
+                                <button id="importExcelBtn" class="btn btn-success btn-sm ml-2" type="button" onclick="if(window.showImportExcelModal){window.showImportExcelModal();} return false;"><%= t('guest_list.importExcel') %></button>
                                 <a href="/events/<%= eventId %>/guest-list/export" class="btn btn-info btn-sm ml-2" type="button">
-                                    <i class="fa fa-download"></i> Export Excel
+                                    <i class="fa fa-download"></i> <%= t('guest_list.exportExcel') %>
                                 </a>
                                 <button id="sendSmsBtn" class="btn btn-warning btn-sm ml-2" type="button" onclick="if(window.showSendSmsModal){window.showSendSmsModal();} return false;">
-                                    <i class="fa fa-sms"></i> Send SMS
+                                    <i class="fa fa-sms"></i> <%= t('guest_list.sendSms') %>
                                 </button>
                             </div>
                         </div>
                         <div class="card-body">
                             <div class="alert alert-info">
-                                <strong>Note:</strong> Guest List is a pre-prepared list of guests who have not yet registered through RSVP. You can add them to the RSVP list.
+                                <strong><%= t('guest_list.noteTitle') %>:</strong> <%= t('guest_list.noteBody') %>
                             </div>
                             <table id="guestListTable" class="table table-bordered table-striped">
                                 <thead>
                                     <tr>
-                                        <th>Name</th>
-                                        <th>Email</th>
-                                        <th>Company</th>
-                                        <th>Phone</th>
-                                        <th>Role</th>
-                                        <th>Created At</th>
-                                        <th>Actions</th>
+                                        <th><%= t('common.name') %></th>
+                                        <th><%= t('common.email') %></th>
+                                        <th><%= t('common.company') %></th>
+                                        <th><%= t('common.phone') %></th>
+                                        <th><%= t('common.role') %></th>
+                                        <th><%= t('common.created_at') %></th>
+                                        <th><%= t('common.actions') %></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -60,27 +60,21 @@
                                                     <%= guest.create_at ? new Date(guest.create_at).toLocaleString() : '-' %>
                                                 </td>
                                                 <td>
-                                                    <button class="btn btn-sm btn-primary edit-guest" data-guest-id="<%= guest._id %>" title="Edit" onclick="if(window.showEditGuestModal){window.showEditGuestModal('<%= guest._id %>');} return false;">
-                                                        <i class="fa fa-edit"></i> Edit
+                                                    <button class="btn btn-sm btn-primary edit-guest" data-guest-id="<%= guest._id %>" title="<%= t('common.edit') %>" onclick="if(window.showEditGuestModal){window.showEditGuestModal('<%= guest._id %>');} return false;">
+                                                        <i class="fa fa-edit"></i> <%= t('common.edit') %>
                                                     </button>
-                                                    <button class="btn btn-sm btn-success add-to-rsvp" data-guest-id="<%= guest._id %>" title="Add to RSVP">
-                                                        <i class="fa fa-user-plus"></i> Add to RSVP
+                                                    <button class="btn btn-sm btn-success add-to-rsvp" data-guest-id="<%= guest._id %>" title="<%= t('guest_list.addToRsvp') %>">
+                                                        <i class="fa fa-user-plus"></i> <%= t('guest_list.addToRsvp') %>
                                                     </button>
-                                                    <button class="btn btn-sm btn-danger delete-guest" data-guest-id="<%= guest._id %>" title="Delete">
-                                                        <i class="fa fa-trash"></i> Delete
+                                                    <button class="btn btn-sm btn-danger delete-guest" data-guest-id="<%= guest._id %>" title="<%= t('common.delete') %>">
+                                                        <i class="fa fa-trash"></i> <%= t('common.delete') %>
                                                     </button>
                                                 </td>
                                             </tr>
                                         <% }); %>
                                     <% } else { %>
                                         <tr>
-                                            <td></td>
-                                            <td></td>
-                                            <td></td>
-                                            <td></td>
-                                            <td></td>
-                                            <td></td>
-                                            <td></td>
+                                            <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
                                         </tr>
                                     <% } %>
                                 </tbody>
@@ -98,7 +92,7 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Add Guest</h5>
+                <h5 class="modal-title"><%= t('guest_list.addGuestTitle') %></h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -106,25 +100,25 @@
             <div class="modal-body">
                 <form id="addGuestForm" onsubmit="if(window.submitAddGuestForm){window.submitAddGuestForm();} return false;">
                     <div class="form-group">
-                        <label for="guestName">Name *</label>
+                        <label for="guestName"><%= t('guest_list.nameLabel') %></label>
                         <input type="text" class="form-control" id="guestName" name="name" required>
                     </div>
                     <div class="form-group">
-                        <label for="guestEmail">Email</label>
+                        <label for="guestEmail"><%= t('common.email') %></label>
                         <input type="email" class="form-control" id="guestEmail" name="email">
                     </div>
                     <div class="form-group">
-                        <label for="guestCompany">Company</label>
+                        <label for="guestCompany"><%= t('common.company') %></label>
                         <input type="text" class="form-control" id="guestCompany" name="company">
                     </div>
                     <div class="form-group">
-                        <label for="guestPhone">Phone</label>
+                        <label for="guestPhone"><%= t('common.phone') %></label>
                         <input type="text" class="form-control" id="guestPhone" name="phone">
                     </div>
                     <div class="form-group">
-                        <label for="guestRole">Role</label>
+                        <label for="guestRole"><%= t('common.role') %></label>
                         <select class="form-control" id="guestRole" name="role">
-                            <option value="">--- Please Select ---</option>
+                            <option value=""><%= t('common.selectOption') %></option>
                             <option value="premium">Premium</option>
                             <option value="VVIP">VVIP</option>
                             <option value="VIP">VIP</option>
@@ -133,8 +127,8 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="submitGuestBtn" onclick="if(window.submitAddGuestForm){window.submitAddGuestForm();} return false;">Add Guest</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('common.cancel') %></button>
+                <button type="button" class="btn btn-primary" id="submitGuestBtn" onclick="if(window.submitAddGuestForm){window.submitAddGuestForm();} return false;"><%= t('guest_list.addGuestTitle') %></button>
             </div>
         </div>
     </div>
@@ -145,30 +139,30 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Import Excel</h5>
+                <h5 class="modal-title"><%= t('guest_list.importTitle') %></h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
                 <div class="alert alert-info">
-                    <strong>Excel Format Requirements:</strong>
+                    <strong><%= t('guest_list.importNoteTitle') %></strong>
                     <ul>
-                        <li>First row must contain headers: Name, Email, Company, Phone</li>
-                        <li>Name is a required field</li>
-                        <li>Other fields are optional</li>
+                        <li><%= t('guest_list.importNote1') %></li>
+                        <li><%= t('guest_list.importNote2') %></li>
+                        <li><%= t('guest_list.importNote3') %></li>
                     </ul>
                 </div>
                 <form id="importExcelForm" enctype="multipart/form-data">
                     <div class="form-group">
-                        <label for="excelFile">Select Excel File</label>
+                        <label for="excelFile"><%= t('guest_list.selectFileLabel') %></label>
                         <input type="file" class="form-control-file" id="excelFile" name="file" accept=".xlsx,.xls" required>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="submitImportBtn">Import</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('common.cancel') %></button>
+                <button type="button" class="btn btn-primary" id="submitImportBtn"><%= t('common.import') %></button>
             </div>
         </div>
     </div>
@@ -179,7 +173,7 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Edit Guest</h5>
+                <h5 class="modal-title"><%= t('guest_list.editGuestTitle') %></h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -188,25 +182,25 @@
                 <form id="editGuestForm" onsubmit="if(window.submitEditGuestForm){window.submitEditGuestForm();} return false;">
                     <input type="hidden" id="editGuestId" name="guestId">
                     <div class="form-group">
-                        <label for="editGuestName">Name *</label>
+                        <label for="editGuestName"><%= t('guest_list.nameLabel') %></label>
                         <input type="text" class="form-control" id="editGuestName" name="name" required>
                     </div>
                     <div class="form-group">
-                        <label for="editGuestEmail">Email</label>
+                        <label for="editGuestEmail"><%= t('common.email') %></label>
                         <input type="email" class="form-control" id="editGuestEmail" name="email">
                     </div>
                     <div class="form-group">
-                        <label for="editGuestCompany">Company</label>
+                        <label for="editGuestCompany"><%= t('common.company') %></label>
                         <input type="text" class="form-control" id="editGuestCompany" name="company">
                     </div>
                     <div class="form-group">
-                        <label for="editGuestPhone">Phone</label>
+                        <label for="editGuestPhone"><%= t('common.phone') %></label>
                         <input type="text" class="form-control" id="editGuestPhone" name="phone">
                     </div>
                     <div class="form-group">
-                        <label for="editGuestRole">Role</label>
+                        <label for="editGuestRole"><%= t('common.role') %></label>
                         <select class="form-control" id="editGuestRole" name="role">
-                            <option value="">--- Please Select ---</option>
+                            <option value=""><%= t('common.selectOption') %></option>
                             <option value="premium">Premium</option>
                             <option value="VVIP">VVIP</option>
                             <option value="VIP">VIP</option>
@@ -215,8 +209,8 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="submitEditGuestBtn" onclick="if(window.submitEditGuestForm){window.submitEditGuestForm();} return false;">Update Guest</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('common.cancel') %></button>
+                <button type="button" class="btn btn-primary" id="submitEditGuestBtn" onclick="if(window.submitEditGuestForm){window.submitEditGuestForm();} return false;"><%= t('guest_list.updateGuestBtn') %></button>
             </div>
         </div>
     </div>
@@ -226,146 +220,126 @@
 <script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
 <%- include ("components/footer") %>
 <script>
-    // ============================================
-    // 所有全局函數定義（在 jQuery ready 之前）
-    // ============================================
-    
-    // 顯示 Add Guest Modal
+    // I18N keys baked at render time for use in dynamic JS
+    const _GL = {
+        nameRequired: '<%= t("guest_list.nameRequired") %>',
+        addingBtn: '<%= t("guest_list.addingBtn") %>',
+        updatingBtn: '<%= t("guest_list.updatingBtn") %>',
+        sendingBtn: '<%= t("guest_list.sendingBtn") %>',
+        importingBtn: '<%= t("guest_list.importingBtn") %>',
+        addSuccess: '<%= t("guest_list.addSuccess") %>',
+        updateSuccess: '<%= t("guest_list.updateSuccess") %>',
+        importSuccess: '<%= t("guest_list.importSuccess") %>',
+        addRsvpSuccess: '<%= t("guest_list.addRsvpSuccess") %>',
+        deleteSuccess: '<%= t("guest_list.deleteSuccess") %>',
+        smsSentSuccess: '<%= t("guest_list.smsSentSuccess") %>',
+        smsSelectTemplate: '<%= t("guest_list.smsSelectTemplate") %>',
+        sendSmsFailed: '<%= t("guest_list.sendSmsFailed") %>',
+        addFailed: '<%= t("guest_list.addFailed") %>',
+        updateFailed: '<%= t("guest_list.updateFailed") %>',
+        importFailed: '<%= t("guest_list.importFailed") %>',
+        confirmAddToRsvp: '<%= t("guest_list.confirmAddToRsvp") %>',
+        confirmDelete: '<%= t("guest_list.confirmDelete") %>',
+        sendSmsTitle: '<%= t("guest_list.sendSmsTitle") %>',
+        selectRole: '<%= t("guest_list.selectRole") %>',
+        selectRoleNote: '<%= t("guest_list.selectRoleNote") %>',
+        allRoles: '<%= t("guest_list.allRoles") %>',
+        selectTemplate: '<%= t("guest_list.selectTemplate") %>',
+        pleaseSelectTemplate: '<%= t("guest_list.pleaseSelectTemplate") %>',
+        previewLabel: '<%= t("guest_list.previewLabel") %>',
+        templateContent: '<%= t("guest_list.templateContent") %>',
+        sendSmsBtn: '<%= t("guest_list.sendSmsBtn") %>',
+        cancel: '<%= t("common.cancel") %>'
+    };
+
     window.showAddGuestModal = function() {
-        console.log('showAddGuestModal called');
         var $ = window.jQuery || window.$;
-        if (!$) {
-            alert('System error: jQuery not loaded, please refresh the page and try again');
-            return;
-        }
+        if (!$) return;
         const $modal = $('#addGuestModal');
         const $form = $('#addGuestForm');
-        
-        if ($form.length) {
-            $form[0].reset();
-            $('#guestRole').val('');
-        }
-        
-        if ($modal.length) {
-            $modal.modal('show');
-        } else {
-            alert('Modal not found!');
-        }
+        if ($form.length) { $form[0].reset(); $('#guestRole').val(''); }
+        if ($modal.length) $modal.modal('show');
     };
-    
-    // 顯示 Import Excel Modal
+
     window.showImportExcelModal = function() {
-        console.log('showImportExcelModal called');
         var $ = window.jQuery || window.$;
-        if (!$) {
-            alert('System error: jQuery not loaded, please refresh the page and try again');
-            return;
-        }
+        if (!$) return;
         const $modal = $('#importExcelModal');
         const $form = $('#importExcelForm');
-        
-        if ($form.length) {
-            $form[0].reset();
-        }
-        
-        if ($modal.length) {
-            $modal.modal('show');
-        } else {
-            alert('Import Excel Modal not found!');
-        }
+        if ($form.length) $form[0].reset();
+        if ($modal.length) $modal.modal('show');
     };
-    
-    // 顯示發送 SMS Modal
+
     window.showSendSmsModal = function() {
-        console.log('showSendSmsModal called');
         var $ = window.jQuery || window.$;
-        if (!$) {
-            alert('System error: jQuery not loaded, please refresh the page and try again');
-            return;
-        }
-        
-        const eventId = document.querySelector('[data-event-id]')?.getAttribute('data-event-id') || 
-                       window.location.pathname.match(/\/events\/([^\/]+)/)?.[1];
-        
-        if (!eventId) {
-            alert('Unable to get event ID. Please refresh and try again.');
-            return;
-        }
-        
+        if (!$) return;
+        const eventId = document.querySelector('[data-event-id]')?.getAttribute('data-event-id');
+        if (!eventId) return;
         $.ajax({
             url: `/events/api/${eventId}/smsTemplates`,
             type: 'GET',
-            success: function(templates) {
-                console.log('SMS templates fetched:', templates);
-                showSendSmsModalContent(templates, eventId);
-            },
-            error: function(xhr, status, error) {
-                console.error('Error fetching SMS templates:', xhr, status, error);
-                showSendSmsModalContent([], eventId);
-            }
+            success: function(templates) { buildSendSmsModal(templates, eventId); },
+            error: function() { buildSendSmsModal([], eventId); }
         });
     };
-    
-    function showSendSmsModalContent(templates, eventId) {
+
+    function buildSendSmsModal(templates, eventId) {
         var $ = window.jQuery || window.$;
-        
+        const smsTypeNames = {
+            'welcome': t('sms_template_form.typeWelcome'),
+            'confirmation': t('sms_template_form.typeConfirmation'),
+            'reminder': t('sms_template_form.typeReminder'),
+            'thankYou': t('sms_template_form.typeThankYou'),
+            'invitation': t('sms_template_form.typeInvitation')
+        };
+        const optionsHtml = templates.map(tmpl => {
+            const typeName = smsTypeNames[tmpl.type || 'welcome'] || (tmpl.type || 'welcome');
+            const scope = tmpl.eventId ? '' : ' (Global)';
+            return `<option value="${tmpl._id}">${typeName}${scope} - ${(tmpl.content || '').substring(0, 50)}...</option>`;
+        }).join('');
+
         const modalHtml = `
             <div class="modal fade" id="sendSmsModal" tabindex="-1" role="dialog">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Send SMS to Guest List</h5>
-                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
+                            <h5 class="modal-title">${_GL.sendSmsTitle}</h5>
+                            <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
                         </div>
                         <div class="modal-body">
                             <form id="sendSmsForm">
                                 <div class="form-group">
-                                    <label for="smsRoleFilter">Select Role:</label>
+                                    <label>${_GL.selectRole}</label>
                                     <select class="form-control" id="smsRoleFilter" multiple>
                                         <option value="premium">Premium</option>
                                         <option value="VVIP">VVIP</option>
                                         <option value="VIP">VIP</option>
-                                        <option value="">All Roles</option>
+                                        <option value="">${_GL.allRoles}</option>
                                     </select>
-                                    <small class="form-text text-muted">You can select multiple roles, or select "All Roles" to send to everyone</small>
+                                    <small class="form-text text-muted">${_GL.selectRoleNote}</small>
                                 </div>
                                 <div class="form-group">
-                                    <label for="smsTemplateSelect">Select SMS Template:</label>
+                                    <label>${_GL.selectTemplate}</label>
                                     <select class="form-control" id="smsTemplateSelect" required>
-                                        <option value="">--- Please Select Template ---</option>
-                                        ${templates.map(t => {
-                                            const typeLabel = t.type || 'welcome';
-                                            const typeNames = {
-                                                'welcome': 'Welcome',
-                                                'confirmation': 'Confirmation',
-                                                'reminder': 'Reminder',
-                                                'thankYou': 'Thank You',
-                                                'invitation': 'Invitation'
-                                            };
-                                            const typeName = typeNames[typeLabel] || typeLabel;
-                                            const scope = t.eventId ? '' : ' (Global)';
-                                            return `<option value="${t._id}">${typeName}${scope} - ${(t.content || '').substring(0, 50)}...</option>`;
-                                        }).join('')}
+                                        <option value="">${_GL.pleaseSelectTemplate}</option>
+                                        ${optionsHtml}
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label>Preview:</label>
-                                    <div id="smsPreview" class="alert alert-info" style="display: none;"></div>
+                                    <label>${_GL.previewLabel}</label>
+                                    <div id="smsPreview" class="alert alert-info" style="display:none;"></div>
                                 </div>
-                                <div id="smsStatus" class="alert" style="display: none;"></div>
+                                <div id="smsStatus" class="alert" style="display:none;"></div>
                             </form>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                            <button type="button" class="btn btn-primary" id="confirmSendSmsBtn">Send SMS</button>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">${_GL.cancel}</button>
+                            <button type="button" class="btn btn-primary" id="confirmSendSmsBtn">${_GL.sendSmsBtn}</button>
                         </div>
                     </div>
                 </div>
-            </div>
-        `;
-        
+            </div>`;
+
         $('#sendSmsModal').remove();
         $('body').append(modalHtml);
         $('#sendSmsModal').modal('show');
@@ -373,10 +347,8 @@
         $('#smsTemplateSelect').on('change', function() {
             const templateId = $(this).val();
             if (templateId) {
-                const template = templates.find(t => t._id === templateId);
-                if (template) {
-                    $('#smsPreview').html(`<strong>Template content:</strong><br>${template.content || ''}`).show();
-                }
+                const tmpl = templates.find(t => t._id === templateId);
+                if (tmpl) $('#smsPreview').html(`<strong>${_GL.templateContent}:</strong><br>${tmpl.content || ''}`).show();
             } else {
                 $('#smsPreview').hide();
             }
@@ -385,885 +357,193 @@
         $('#confirmSendSmsBtn').on('click', function() {
             const selectedRoles = $('#smsRoleFilter').val() || [];
             const templateId = $('#smsTemplateSelect').val();
-
-            if (!templateId) {
-                alert('Please select an SMS template');
-                return;
-            }
-
+            if (!templateId) { alert(_GL.smsSelectTemplate); return; }
             const button = $(this);
-            button.prop('disabled', true).text('Sending...');
-
+            button.prop('disabled', true).text(_GL.sendingBtn);
             $.ajax({
                 url: `/events/${eventId}/guest-list/send-sms`,
                 type: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify({
-                    roles: selectedRoles,
-                    templateId: templateId
-                }),
+                data: JSON.stringify({ roles: selectedRoles, templateId }),
                 success: function(response) {
                     $('#smsStatus').removeClass('alert-danger').addClass('alert-success')
-                        .html(`<i class="fa fa-check-circle"></i> ${response.message || 'SMS sent successfully!'}`).show();
-                    setTimeout(() => {
-                        $('#sendSmsModal').modal('hide');
-                        location.reload();
-                    }, 2000);
+                        .html(`<i class="fa fa-check-circle"></i> ${response.message || _GL.smsSentSuccess}`).show();
+                    setTimeout(() => { $('#sendSmsModal').modal('hide'); location.reload(); }, 2000);
                 },
                 error: function(xhr) {
-                    const errorMsg = xhr.responseJSON && xhr.responseJSON.message 
-                        ? xhr.responseJSON.message 
-                        : 'Failed to send SMS, please try again later';
+                    const errorMsg = xhr.responseJSON?.message || _GL.sendSmsFailed;
                     $('#smsStatus').removeClass('alert-success').addClass('alert-danger')
                         .html(`<i class="fa fa-exclamation-circle"></i> ${errorMsg}`).show();
-                    button.prop('disabled', false).text('Send SMS');
+                    button.prop('disabled', false).text(_GL.sendSmsBtn);
                 }
             });
         });
     }
-    
-    // 顯示編輯來賓 Modal
+
     window.showEditGuestModal = function(guestId) {
-        console.log('showEditGuestModal called for guest:', guestId);
         var $ = window.jQuery || window.$;
-        if (!$) {
-            alert('System error: jQuery not loaded, please refresh the page and try again');
-            return;
-        }
-        
+        if (!$) return;
         const row = $(`.edit-guest[data-guest-id="${guestId}"]`).closest('tr');
-        if (row.length === 0) {
-            alert('Unable to find guest data. Please refresh and try again.');
-            return;
-        }
-        
+        if (row.length === 0) return;
         const guest = {
-            id: guestId,
             name: row.find('td:eq(0)').text().trim(),
             email: row.find('td:eq(1)').text().trim(),
             company: row.find('td:eq(2)').text().trim(),
             phone: row.find('td:eq(3)').text().trim(),
-            role: row.find('td:eq(4) .badge').text().trim() || row.find('td:eq(4)').text().trim() || ''
+            role: row.find('td:eq(4) .badge').text().trim() || ''
         };
-        
         $('#editGuestId').val(guestId);
         $('#editGuestName').val(guest.name);
         $('#editGuestEmail').val(guest.email);
         $('#editGuestCompany').val(guest.company);
         $('#editGuestPhone').val(guest.phone);
         $('#editGuestRole').val(guest.role);
-        
         $('#editGuestModal').modal('show');
     };
-    
-    // 提交編輯來賓表單
+
     window.submitEditGuestForm = function() {
-        console.log('submitEditGuestForm called');
         var $ = window.jQuery || window.$;
-        if (!$) {
-            alert('System error: jQuery not loaded, please refresh the page and try again');
-            return;
-        }
-        
-        const eventId = document.querySelector('[data-event-id]')?.getAttribute('data-event-id') || 
-                       window.location.pathname.match(/\/events\/([^\/]+)/)?.[1];
+        if (!$) return;
+        const eventId = document.querySelector('[data-event-id]')?.getAttribute('data-event-id');
         const guestId = $('#editGuestId').val();
-        
-        if (!eventId || !guestId) {
-            alert('Unable to get event ID or guest ID. Please refresh and try again.');
-            return;
-        }
-        
+        if (!eventId || !guestId) return;
         const name = $('#editGuestName').val().trim();
-        if (!name) {
-            alert('Name is required');
-            $('#editGuestName').focus();
-            return;
-        }
-
-        const email = $('#editGuestEmail').val().trim();
-        const company = $('#editGuestCompany').val().trim();
-        const phone = $('#editGuestPhone').val().trim();
-        const role = $('#editGuestRole').val().trim();
-
+        if (!name) { alert(_GL.nameRequired); $('#editGuestName').focus(); return; }
         const button = $('#submitEditGuestBtn');
         const originalText = button.text();
-        button.prop('disabled', true).text('Updating...');
-
+        button.prop('disabled', true).text(_GL.updatingBtn);
         $.ajax({
             url: `/events/${eventId}/guest-list/${guestId}`,
             type: 'PUT',
             contentType: 'application/json',
-            data: JSON.stringify({ name, email, company, phone, role }),
-            success: function(response) {
+            data: JSON.stringify({ name, email: $('#editGuestEmail').val().trim(), company: $('#editGuestCompany').val().trim(), phone: $('#editGuestPhone').val().trim(), role: $('#editGuestRole').val().trim() }),
+            success: function() {
                 $('#editGuestModal').modal('hide');
-                const alertHtml = `
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        Guest updated successfully!
-                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                `;
-                const alertContainer = document.getElementById('alertContainer');
-                if (alertContainer) {
-                    alertContainer.innerHTML = alertHtml;
-                }
+                showAlert('success', _GL.updateSuccess);
                 setTimeout(() => location.reload(), 1000);
             },
             error: function(xhr) {
-                const errorMsg = xhr.responseJSON && xhr.responseJSON.message 
-                    ? xhr.responseJSON.message 
-                    : 'Failed to update guest. Please try again.';
-                alert(errorMsg);
+                alert(xhr.responseJSON?.message || _GL.updateFailed);
             },
-            complete: function() {
-                button.prop('disabled', false).text(originalText);
-            }
+            complete: function() { button.prop('disabled', false).text(originalText); }
         });
     };
-    
-    // 提交添加來賓表單
+
     window.submitAddGuestForm = function() {
-        console.log('submitAddGuestForm called');
         var $ = window.jQuery || window.$;
-        if (!$) {
-            alert('System error: jQuery not loaded, please refresh the page and try again');
-            return;
-        }
-        
-        const eventId = document.querySelector('[data-event-id]')?.getAttribute('data-event-id') || 
-                       window.location.pathname.match(/\/events\/([^\/]+)/)?.[1];
-        
-        if (!eventId) {
-            alert('Unable to get event ID. Please refresh and try again.');
-            return;
-        }
-        
+        if (!$) return;
+        const eventId = document.querySelector('[data-event-id]')?.getAttribute('data-event-id');
+        if (!eventId) return;
         const name = $('#guestName').val().trim();
-        if (!name) {
-            alert('Name is required');
-            $('#guestName').focus();
-            return;
-        }
-
-        const email = $('#guestEmail').val().trim();
-        const company = $('#guestCompany').val().trim();
-        const phone = $('#guestPhone').val().trim();
-        const role = $('#guestRole').val().trim();
-
+        if (!name) { alert(_GL.nameRequired); $('#guestName').focus(); return; }
         const button = $('#submitGuestBtn');
         const originalText = button.text();
-        button.prop('disabled', true).text('Adding...');
-
+        button.prop('disabled', true).text(_GL.addingBtn);
         $.ajax({
             url: `/events/${eventId}/guest-list`,
             type: 'POST',
             contentType: 'application/json',
-            data: JSON.stringify({ name, email, company, phone, role }),
-            success: function(response) {
+            data: JSON.stringify({ name, email: $('#guestEmail').val().trim(), company: $('#guestCompany').val().trim(), phone: $('#guestPhone').val().trim(), role: $('#guestRole').val().trim() }),
+            success: function() {
                 $('#addGuestModal').modal('hide');
-                const alertHtml = `
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        Guest added successfully!
-                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                `;
-                const alertContainer = document.getElementById('alertContainer');
-                if (alertContainer) {
-                    alertContainer.innerHTML = alertHtml;
-                }
+                showAlert('success', _GL.addSuccess);
                 setTimeout(() => location.reload(), 1000);
             },
             error: function(xhr) {
-                const errorMsg = xhr.responseJSON && xhr.responseJSON.message 
-                    ? xhr.responseJSON.message 
-                    : 'Failed to add guest. Please try again.';
-                alert(errorMsg);
+                alert(xhr.responseJSON?.message || _GL.addFailed);
             },
-            complete: function() {
-                button.prop('disabled', false).text(originalText);
-            }
+            complete: function() { button.prop('disabled', false).text(originalText); }
         });
     };
-    
-    // 顯示編輯來賓 Modal
-    window.showEditGuestModal = function(guestId) {
-        console.log('showEditGuestModal called for guest:', guestId);
-        var $ = window.jQuery || window.$;
-        if (!$) {
-            alert('System error: jQuery not loaded, please refresh the page and try again');
-            return;
-        }
-        
-        const row = $(`.edit-guest[data-guest-id="${guestId}"]`).closest('tr');
-        if (row.length === 0) {
-            alert('Unable to find guest data. Please refresh and try again.');
-            return;
-        }
-        
-        const guest = {
-            id: guestId,
-            name: row.find('td:eq(0)').text().trim(),
-            email: row.find('td:eq(1)').text().trim(),
-            company: row.find('td:eq(2)').text().trim(),
-            phone: row.find('td:eq(3)').text().trim(),
-            role: row.find('td:eq(4) .badge').text().trim() || row.find('td:eq(4)').text().trim() || ''
-        };
-        
-        $('#editGuestId').val(guestId);
-        $('#editGuestName').val(guest.name);
-        $('#editGuestEmail').val(guest.email);
-        $('#editGuestCompany').val(guest.company);
-        $('#editGuestPhone').val(guest.phone);
-        $('#editGuestRole').val(guest.role);
-        
-        $('#editGuestModal').modal('show');
-    };
-    
-    // 提交編輯來賓表單
-    window.submitEditGuestForm = function() {
-        console.log('submitEditGuestForm called');
-        var $ = window.jQuery || window.$;
-        if (!$) {
-            alert('System error: jQuery not loaded, please refresh the page and try again');
-            return;
-        }
-        
-        const eventId = document.querySelector('[data-event-id]')?.getAttribute('data-event-id') || 
-                       window.location.pathname.match(/\/events\/([^\/]+)/)?.[1];
-        const guestId = $('#editGuestId').val();
-        
-        if (!eventId || !guestId) {
-            alert('Unable to get event ID or guest ID. Please refresh and try again.');
-            return;
-        }
-        
-        const name = $('#editGuestName').val().trim();
-        if (!name) {
-            alert('Name is required');
-            $('#editGuestName').focus();
-            return;
-        }
 
-        const email = $('#editGuestEmail').val().trim();
-        const company = $('#editGuestCompany').val().trim();
-        const phone = $('#editGuestPhone').val().trim();
-        const role = $('#editGuestRole').val().trim();
-
-        const button = $('#submitEditGuestBtn');
-        const originalText = button.text();
-        button.prop('disabled', true).text('Updating...');
-
-        $.ajax({
-            url: `/events/${eventId}/guest-list/${guestId}`,
-            type: 'PUT',
-            contentType: 'application/json',
-            data: JSON.stringify({ name, email, company, phone, role }),
-            success: function(response) {
-                $('#editGuestModal').modal('hide');
-                const alertHtml = `
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        Guest updated successfully!
-                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                `;
-                const alertContainer = document.getElementById('alertContainer');
-                if (alertContainer) {
-                    alertContainer.innerHTML = alertHtml;
-                }
-                setTimeout(() => location.reload(), 1000);
-            },
-            error: function(xhr) {
-                const errorMsg = xhr.responseJSON && xhr.responseJSON.message 
-                    ? xhr.responseJSON.message 
-                    : 'Failed to update guest. Please try again.';
-                alert(errorMsg);
-            },
-            complete: function() {
-                button.prop('disabled', false).text(originalText);
-            }
-        });
-    };
-    
-    console.log('Global functions defined:', {
-        showAddGuestModal: typeof window.showAddGuestModal,
-        showImportExcelModal: typeof window.showImportExcelModal,
-        showSendSmsModal: typeof window.showSendSmsModal,
-        showEditGuestModal: typeof window.showEditGuestModal,
-        submitAddGuestForm: typeof window.submitAddGuestForm,
-        submitEditGuestForm: typeof window.submitEditGuestForm
-    });
-    
-    // 確保在 footer 載入 jQuery 和 Bootstrap 之後執行
-    console.log('Script tag executed - waiting for jQuery...');
-    
     (function() {
-        // 等待 jQuery 載入
         function waitForJQuery(callback) {
             if (window.jQuery || window.$) {
-                var $ = window.jQuery || window.$;
-                console.log('jQuery found, version:', $.fn.jquery);
-                callback($);
+                callback(window.jQuery || window.$);
             } else {
-                console.log('jQuery not found yet, retrying...');
-                setTimeout(function() {
-                    waitForJQuery(callback);
-                }, 50);
+                setTimeout(function() { waitForJQuery(callback); }, 50);
             }
         }
-        
+
         waitForJQuery(function($) {
-            console.log('=== Guest List Script Started ===');
-            console.log('jQuery version:', $.fn.jquery);
-            console.log('Bootstrap available:', typeof $.fn.modal !== 'undefined');
-            
             $(document).ready(function() {
-                console.log('Document ready - Guest list page loaded');
-        
-        const eventId = '<%= eventId %>';
-        const hasData = <%= (guests && guests.length > 0) ? 'true' : 'false' %>;
-        
-        try {
-            if (hasData) {
-                $('#guestListTable').DataTable({
-                            "order": [[5, "desc"]], // 按創建時間降序排列（Role 是第 5 列，Created At 是第 6 列）
-                            "pageLength": 25,
-                            "language": {
-                                "search": "Search:",
-                                "lengthMenu": "Show _MENU_ entries",
-                                "info": "Showing _START_ to _END_ of _TOTAL_ entries",
-                                "infoEmpty": "沒有記錄",
-                                "infoFiltered": "(從 _MAX_ 筆記錄中過濾)",
-                                "paginate": {
-                                    "first": "首頁",
-                                    "last": "末頁",
-                                    "next": "下一頁",
-                                    "previous": "上一頁"
-                                }
-                            }
-                        });
+                const eventId = '<%= eventId %>';
+                const hasData = <%= (guests && guests.length > 0) ? 'true' : 'false' %>;
+
+                try {
+                    if (hasData) {
+                        $('#guestListTable').DataTable({ "order": [[5, "desc"]], "pageLength": 25 });
                     } else {
-                        // 當沒有數據時，顯示提示訊息
-                        $('#guestListTable tbody').html('<tr><td colspan="6" class="text-center">No guests found (沒有來賓)</td></tr>');
+                        $('#guestListTable tbody').html('<tr><td colspan="7" class="text-center"><%= t("common.noData") %></td></tr>');
                     }
-                } catch (error) {
-                    console.error('Error initializing DataTable:', error);
-                }
+                } catch (error) {}
 
-                // 提交添加來賓表單 - 使用事件委託確保能觸發
-                function submitAddGuestForm() {
-                    console.log('submitAddGuestForm called');
-                    var $ = window.jQuery || window.$;
-                    const name = $('#guestName').val().trim();
-                    if (!name) {
-                        alert('Name is required');
-                        return;
-                    }
-
-                    const email = $('#guestEmail').val().trim();
-                    const company = $('#guestCompany').val().trim();
-                    const phone = $('#guestPhone').val().trim();
-                    const role = $('#guestRole').val().trim();
-
-                    const button = $('#submitGuestBtn');
-                    const originalText = button.text();
-                    button.prop('disabled', true).text('Adding...');
-
-                    $.ajax({
-                        url: `/events/${eventId}/guest-list`,
-                        type: 'POST',
-                        contentType: 'application/json',
-                        data: JSON.stringify({ name, email, company, phone, role }),
-                        success: function(response) {
-                            $('#addGuestModal').modal('hide');
-                            showAlert('success', 'Guest added successfully!');
-                            setTimeout(() => location.reload(), 1000);
-                        },
-                        error: function(xhr) {
-                            console.error('Error adding guest:', xhr.responseText);
-                            const errorMsg = xhr.responseJSON && xhr.responseJSON.message 
-                                ? xhr.responseJSON.message 
-                                : 'Failed to add guest. Please try again.';
-                            showAlert('danger', errorMsg);
-                        },
-                        complete: function() {
-                            button.prop('disabled', false).text(originalText);
-                        }
-                    });
-                }
-                
-                // 暴露到全局作用域
-                window.submitAddGuestForm = submitAddGuestForm;
-                
-                // 使用事件委託綁定（確保動態元素也能觸發）
-                $(document).off('click', '#submitGuestBtn').on('click', '#submitGuestBtn', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('Submit Guest button clicked (delegated event)');
-                    submitAddGuestForm();
-                });
-                
-                // 直接綁定
                 $('#submitGuestBtn').off('click').on('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('Submit Guest button clicked (direct binding)');
-                    submitAddGuestForm();
+                    e.preventDefault(); e.stopPropagation();
+                    window.submitAddGuestForm && window.submitAddGuestForm();
                 });
 
-                // 顯示導入 Excel Modal - 使用多種方式確保能觸發
-                $('#importExcelBtn').off('click').on('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
-                    console.log('Import Excel button clicked (jQuery direct binding)');
-                    if (window.showImportExcelModal) {
-                        window.showImportExcelModal();
-                    }
-                    return false;
-                });
-                
-                $(document).off('click', '#importExcelBtn').on('click', '#importExcelBtn', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
-                    console.log('Import Excel button clicked (jQuery delegated event)');
-                    if (window.showImportExcelModal) {
-                        window.showImportExcelModal();
-                    }
-                    return false;
-                });
-                
-                // 局部函數（使用全局函數）
-                function showImportExcelModal() {
-                    if (window.showImportExcelModal) {
-                        window.showImportExcelModal();
-                    } else {
-                        console.error('window.showImportExcelModal is not defined!');
-                    }
-                }
-
-                // 提交導入 Excel 表單
                 $('#submitImportBtn').on('click', function() {
                     const fileInput = $('#excelFile')[0];
-                    if (!fileInput.files || !fileInput.files[0]) {
-                        alert('Please select a file (請選擇文件)');
-                        return;
-                    }
-
+                    if (!fileInput.files || !fileInput.files[0]) { alert(_GL.importFailed); return; }
                     const formData = new FormData();
                     formData.append('file', fileInput.files[0]);
-
                     const button = $(this);
-                    button.prop('disabled', true).text('Importing...');
-
+                    const originalText = button.text();
+                    button.prop('disabled', true).text(_GL.importingBtn);
                     $.ajax({
                         url: `/events/${eventId}/guest-list/import`,
                         type: 'POST',
                         data: formData,
                         processData: false,
                         contentType: false,
-                        success: function(response) {
+                        success: function() {
                             $('#importExcelModal').modal('hide');
-                            showAlert('success', 'Guests imported successfully!');
+                            showAlert('success', _GL.importSuccess);
                             setTimeout(() => location.reload(), 1000);
                         },
                         error: function(xhr) {
-                            console.error('Error importing guests:', xhr.responseText);
-                            const errorMsg = xhr.responseJSON && xhr.responseJSON.message 
-                                ? xhr.responseJSON.message 
-                                : 'Failed to import guests. Please check the file format.';
-                            showAlert('danger', errorMsg);
+                            showAlert('danger', xhr.responseJSON?.message || _GL.importFailed);
                         },
-                        complete: function() {
-                            button.prop('disabled', false).text('Import (導入)');
-                        }
+                        complete: function() { button.prop('disabled', false).text(originalText); }
                     });
                 });
 
-                // 編輯來賓
                 $('#guestListTable').on('click', '.edit-guest', function() {
                     const guestId = $(this).data('guest-id');
-                    console.log('Edit guest clicked, guestId:', guestId);
-                    if (window.showEditGuestModal) {
-                        window.showEditGuestModal(guestId);
-                    } else {
-                        console.error('window.showEditGuestModal is not defined!');
-                    }
+                    window.showEditGuestModal && window.showEditGuestModal(guestId);
                 });
-                
-                // 添加到 RSVP
+
                 $('#guestListTable').on('click', '.add-to-rsvp', function() {
                     const guestId = $(this).data('guest-id');
-                    if (!confirm('確定要將此來賓添加到 RSVP 列表嗎？(Are you sure you want to add this guest to RSVP list?)')) {
-                        return;
-                    }
-
+                    if (!confirm(_GL.confirmAddToRsvp)) return;
                     $.ajax({
                         url: `/events/${eventId}/guest-list/${guestId}/add-to-rsvp`,
                         type: 'POST',
-                        success: function() {
-                            showAlert('success', 'Guest added to RSVP successfully!');
-                            setTimeout(() => location.reload(), 1000);
-                        },
-                        error: function(xhr) {
-                            console.error('Error adding guest to RSVP:', xhr.responseText);
-                            const errorMsg = xhr.responseJSON && xhr.responseJSON.message 
-                                ? xhr.responseJSON.message 
-                                : 'Failed to add guest to RSVP. Please try again.';
-                            showAlert('danger', errorMsg);
-                        }
+                        success: function() { showAlert('success', _GL.addRsvpSuccess); setTimeout(() => location.reload(), 1000); },
+                        error: function(xhr) { showAlert('danger', xhr.responseJSON?.message || _GL.addFailed); }
                     });
                 });
 
-                // 刪除來賓
                 $('#guestListTable').on('click', '.delete-guest', function() {
                     const guestId = $(this).data('guest-id');
-                    if (!confirm('確定要刪除此來賓嗎？(Are you sure you want to delete this guest?)')) {
-                        return;
-                    }
-
+                    if (!confirm(_GL.confirmDelete)) return;
                     $.ajax({
                         url: `/events/${eventId}/guest-list/${guestId}`,
                         type: 'DELETE',
-                        success: function() {
-                            showAlert('success', 'Guest deleted successfully!');
-                            setTimeout(() => location.reload(), 1000);
-                        },
-                        error: function(xhr) {
-                            console.error('Error deleting guest:', xhr.responseText);
-                            showAlert('danger', 'Failed to delete guest. Please try again.');
-                        }
+                        success: function() { showAlert('success', _GL.deleteSuccess); setTimeout(() => location.reload(), 1000); },
+                        error: function() { showAlert('danger', _GL.addFailed); }
                     });
                 });
 
-                // 顯示提示訊息
                 function showAlert(type, message) {
-                    const alertHtml = `
+                    $('#alertContainer').html(`
                         <div class="alert alert-${type} alert-dismissible fade show" role="alert">
                             ${message}
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                    `;
-                    $('#alertContainer').html(alertHtml);
+                            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+                        </div>`);
                 }
-
-                // 直接綁定 Add Guest 按鈕事件
-                $('#addGuestBtn').on('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('Add Guest button clicked (direct binding)');
-                    showAddGuestModal();
-                });
-                
-                // 同時使用事件委託作為備用
-                $(document).on('click', '#addGuestBtn', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('Add Guest button clicked (delegated event)');
-                    showAddGuestModal();
-                });
-                
-                // 局部函數（使用全局函數）
-                function showAddGuestModal() {
-                    if (window.showAddGuestModal) {
-                        window.showAddGuestModal();
-                    } else {
-                        console.error('window.showAddGuestModal is not defined!');
-                    }
-                }
-                
-                // 測試：檢查按鈕和 Modal 是否存在
-                console.log('Add Guest button exists:', $('#addGuestBtn').length);
-                console.log('Add Guest Modal exists:', $('#addGuestModal').length);
-                console.log('Import Excel button exists:', $('#importExcelBtn').length);
-                console.log('Import Excel Modal exists:', $('#importExcelModal').length);
-                
-                // 確保按鈕可以點擊
-                $('#addGuestBtn, #importExcelBtn').css({
-                    'position': 'relative',
-                    'z-index': '1000',
-                    'pointer-events': 'auto',
-                    'cursor': 'pointer'
-                });
-                
-                // 測試按鈕是否真的存在並且可以訪問
-                setTimeout(function() {
-                    const addBtn = document.getElementById('addGuestBtn');
-                    const importBtn = document.getElementById('importExcelBtn');
-                    
-                    console.log('=== Button Debug Info ===');
-                    console.log('Native DOM - Add Guest button:', addBtn);
-                    console.log('Native DOM - Import Excel button:', importBtn);
-                    console.log('window.showAddGuestModal exists:', typeof window.showAddGuestModal);
-                    console.log('window.showImportExcelModal exists:', typeof window.showImportExcelModal);
-                    
-                    if (addBtn) {
-                        const style = window.getComputedStyle(addBtn);
-                        console.log('Add Guest button computed style:', {
-                            display: style.display,
-                            visibility: style.visibility,
-                            pointerEvents: style.pointerEvents,
-                            zIndex: style.zIndex,
-                            position: style.position
-                        });
-                        console.log('Add Guest button offsetParent:', addBtn.offsetParent);
-                        console.log('Add Guest button disabled:', addBtn.disabled);
-                        console.log('Add Guest button onclick:', addBtn.onclick);
-                        
-                        // 移除所有可能阻止點擊的樣式
-                        addBtn.style.pointerEvents = 'auto';
-                        addBtn.style.zIndex = '9999';
-                        addBtn.style.position = 'relative';
-                        addBtn.style.cursor = 'pointer';
-                        addBtn.disabled = false;
-                        
-                        // 移除所有舊的事件監聽器
-                        var newAddBtn = addBtn.cloneNode(true);
-                        addBtn.parentNode.replaceChild(newAddBtn, addBtn);
-                        addBtn = newAddBtn;
-                        
-                        // 直接設置 onclick（最簡單的方式，優先級最高）
-                        addBtn.setAttribute('onclick', 'if(window.showAddGuestModal){window.showAddGuestModal();} return false;');
-                        addBtn.onclick = function(e) {
-                            console.log('Add Guest button clicked (onclick handler)');
-                            if (window.showAddGuestModal) {
-                                window.showAddGuestModal();
-                            }
-                            return false;
-                        };
-                        
-                        // 使用原生 JavaScript 添加事件監聽器（capture phase，優先級高）
-                        addBtn.addEventListener('click', function(e) {
-                            console.log('Add Guest button clicked (native event listener - capture)');
-                            e.preventDefault();
-                            e.stopPropagation();
-                            e.stopImmediatePropagation();
-                            if (window.showAddGuestModal) {
-                                window.showAddGuestModal();
-                            }
-                            return false;
-                        }, true);
-                        
-                        // 使用原生 JavaScript 添加事件監聽器（bubble phase）
-                        addBtn.addEventListener('click', function(e) {
-                            console.log('Add Guest button clicked (native event listener - bubble)');
-                            e.preventDefault();
-                            e.stopPropagation();
-                            e.stopImmediatePropagation();
-                            if (window.showAddGuestModal) {
-                                window.showAddGuestModal();
-                            }
-                            return false;
-                        }, false);
-                        
-                        // 測試：直接調用函數
-                        console.log('Testing direct function call...');
-                        if (window.showAddGuestModal) {
-                            console.log('Function exists, can be called');
-                        } else {
-                            console.error('Function does not exist!');
-                        }
-                    } else {
-                        console.error('Add Guest button not found in DOM!');
-                    }
-                    
-                    if (importBtn) {
-                        const style = window.getComputedStyle(importBtn);
-                        console.log('Import Excel button computed style:', {
-                            display: style.display,
-                            visibility: style.visibility,
-                            pointerEvents: style.pointerEvents,
-                            zIndex: style.zIndex,
-                            position: style.position
-                        });
-                        console.log('Import Excel button offsetParent:', importBtn.offsetParent);
-                        console.log('Import Excel button disabled:', importBtn.disabled);
-                        
-                        importBtn.style.pointerEvents = 'auto';
-                        importBtn.style.zIndex = '9999';
-                        importBtn.style.position = 'relative';
-                        importBtn.style.cursor = 'pointer';
-                        importBtn.disabled = false;
-                        
-                        // 移除所有舊的事件監聽器
-                        var newImportBtn = importBtn.cloneNode(true);
-                        importBtn.parentNode.replaceChild(newImportBtn, importBtn);
-                        importBtn = newImportBtn;
-                        
-                        // 直接設置 onclick
-                        importBtn.setAttribute('onclick', 'if(window.showImportExcelModal){window.showImportExcelModal();} return false;');
-                        importBtn.onclick = function(e) {
-                            console.log('Import Excel button clicked (onclick handler)');
-                            if (window.showImportExcelModal) {
-                                window.showImportExcelModal();
-                            }
-                            return false;
-                        };
-                        
-                        importBtn.addEventListener('click', function(e) {
-                            console.log('Import Excel button clicked (native event listener)');
-                            e.preventDefault();
-                            e.stopPropagation();
-                            e.stopImmediatePropagation();
-                            if (window.showImportExcelModal) {
-                                window.showImportExcelModal();
-                            }
-                            return false;
-                        }, true);
-                    } else {
-                        console.error('Import Excel button not found in DOM!');
-                    }
-                    
-                    console.log('=== End Button Debug Info ===');
-                }, 500);
-
-                // Send SMS functionality for Guest List
-                $('#sendSmsBtn').on('click', function() {
-                    loadSmsTemplates();
-                });
-
-                function loadSmsTemplates() {
-                    // Fetch SMS templates via API
-                    $.ajax({
-                        url: `/events/api/${eventId}/smsTemplates`,
-                        type: 'GET',
-                        success: function(templates) {
-                            console.log('SMS templates fetched:', templates);
-                            showSendSmsModal(templates);
-                        },
-                        error: function(xhr, status, error) {
-                            console.error('Error fetching SMS templates:', xhr, status, error);
-                            // If API doesn't exist, show modal with empty template list
-                            showSendSmsModal([]);
-                        }
-                    });
-                }
-
-                function showSendSmsModal(templates) {
-                    const modalHtml = `
-                        <div class="modal fade" id="sendSmsModal" tabindex="-1" role="dialog">
-                            <div class="modal-dialog" role="document">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">Send SMS to Guest List</h5>
-                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                            <span aria-hidden="true">&times;</span>
-                                        </button>
-                                    </div>
-                                    <div class="modal-body">
-                                        <form id="sendSmsForm">
-                                            <div class="form-group">
-                                                <label for="smsRoleFilter">選擇角色 (Select Role):</label>
-                                                <select class="form-control" id="smsRoleFilter" multiple>
-                                                    <option value="premium">Premium</option>
-                                                    <option value="VVIP">VVIP</option>
-                                                    <option value="VIP">VIP</option>
-                                                    <option value="">所有角色 (All Roles)</option>
-                                                </select>
-                                                <small class="form-text text-muted">可以選擇多個角色，或選擇"所有角色"發送給所有人</small>
-                                            </div>
-                                            <div class="form-group">
-                                    <label for="smsTemplateSelect">Select SMS Template:</label>
-                                    <select class="form-control" id="smsTemplateSelect" required>
-                                        <option value="">--- Please Select Template ---</option>
-                                                    ${templates.map(t => {
-                                                        const typeLabel = t.type || 'welcome';
-                                            const typeNames = {
-                                                'welcome': 'Welcome',
-                                                'confirmation': 'Confirmation',
-                                                'reminder': 'Reminder',
-                                                'thankYou': 'Thank You',
-                                                'invitation': 'Invitation'
-                                            };
-                                            const typeName = typeNames[typeLabel] || typeLabel;
-                                            const scope = t.eventId ? '' : ' (Global)';
-                                                        return `<option value="${t._id}">${typeName}${scope} - ${(t.content || '').substring(0, 50)}...</option>`;
-                                                    }).join('')}
-                                                </select>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Preview:</label>
-                                                <div id="smsPreview" class="alert alert-info" style="display: none;"></div>
-                                            </div>
-                                            <div id="smsStatus" class="alert" style="display: none;"></div>
-                                        </form>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">取消 (Cancel)</button>
-                                        <button type="button" class="btn btn-primary" id="confirmSendSmsBtn">發送 SMS (Send SMS)</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    
-                    // Remove existing modal if any
-                    $('#sendSmsModal').remove();
-                    $('body').append(modalHtml);
-                    $('#sendSmsModal').modal('show');
-
-                    // Preview template content
-                    $('#smsTemplateSelect').on('change', function() {
-                        const templateId = $(this).val();
-                        if (templateId) {
-                            const template = templates.find(t => t._id === templateId);
-                            if (template) {
-                                $('#smsPreview').html(`<strong>Template content:</strong><br>${template.content || ''}`).show();
-                            }
-                        } else {
-                            $('#smsPreview').hide();
-                        }
-                    });
-
-                    // Confirm send SMS
-                    $('#confirmSendSmsBtn').on('click', function() {
-                        const selectedRoles = $('#smsRoleFilter').val() || [];
-                        const templateId = $('#smsTemplateSelect').val();
-
-                        if (!templateId) {
-                            alert('Please select an SMS template');
-                            return;
-                        }
-
-                        const button = $(this);
-                        button.prop('disabled', true).text('Sending...');
-
-                        $.ajax({
-                            url: `/events/${eventId}/guest-list/send-sms`,
-                            type: 'POST',
-                            contentType: 'application/json',
-                            data: JSON.stringify({
-                                roles: selectedRoles,
-                                templateId: templateId
-                            }),
-                            success: function(response) {
-                                $('#smsStatus').removeClass('alert-danger').addClass('alert-success')
-                                    .html(`<i class="fa fa-check-circle"></i> ${response.message || 'SMS sent successfully!'}`).show();
-                                setTimeout(() => {
-                                    $('#sendSmsModal').modal('hide');
-                                    location.reload();
-                                }, 2000);
-                            },
-                            error: function(xhr) {
-                                const errorMsg = xhr.responseJSON && xhr.responseJSON.message 
-                                    ? xhr.responseJSON.message 
-                                    : '發送 SMS 失敗，請稍後再試';
-                                $('#smsStatus').removeClass('alert-success').addClass('alert-danger')
-                                    .html(`<i class="fa fa-exclamation-circle"></i> ${errorMsg}`).show();
-                                button.prop('disabled', false).text('發送 SMS (Send SMS)');
-                            }
-                        });
-                    });
-                }
-            }); // $(document).ready 結束
-        }); // waitForJQuery callback 結束
-    })(); // 立即執行函數結束
+            });
+        });
+    })();
 </script>
