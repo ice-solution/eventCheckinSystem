@@ -23,6 +23,7 @@ const multer = require('multer');
 const fs = require('fs');
 const { getSocket } = require('../socket'); // 引入 socket 以發送實時更新
 const { embedKaitiFontInEmail } = require('../utils/embedEmailFonts'); // 引入字型嵌入功能
+const { replaceTemplateVariables, buildEmailTemplateAdditionalVars } = require('../utils/replaceTemplateVariables');
 
 /** 取得對外 base URL（依 DOMAIN/domain，缺協議時自動補 https://） */
 function getPublicBaseUrl() {
@@ -37,48 +38,6 @@ function getPrizePictureUrl(picture) {
     if (p.startsWith('http://') || p.startsWith('https://')) return p;
     const base = getPublicBaseUrl();
     return p.startsWith('/') ? base + p : base + '/' + p;
-}
-
-// 動態替換 email template 中的所有 user 字段
-function replaceTemplateVariables(content, user, event, additionalVars = {}) {
-    let result = content;
-    
-    // 將 user 轉換為普通對象（如果是 Mongoose document）
-    const userObj = user.toObject ? user.toObject() : user;
-    
-    // 替換基本字段（優先處理，確保覆蓋）
-    result = result.replace(/\{\{user\.name\}\}/g, userObj.name || '');
-    result = result.replace(/\{\{user\.email\}\}/g, userObj.email || '');
-    result = result.replace(/\{\{user\.company\}\}/g, userObj.company || '');
-    result = result.replace(/\{\{user\.phone\}\}/g, userObj.phone || '');
-    result = result.replace(/\{\{user\.phone_code\}\}/g, userObj.phone_code || '');
-    result = result.replace(/\{\{event\.name\}\}/g, event.name || '');
-    
-    // 動態替換所有 user 對象中的其他字段（包括 formConfig 中定義的字段）
-    Object.keys(userObj).forEach(key => {
-        // 跳過 MongoDB 內部字段
-        if (key.startsWith('_')) {
-            return;
-        }
-        
-        // 替換 {{user.fieldName}} 格式（轉義特殊字符）
-        const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(`\\{\\{user\\.${escapedKey}\\}\\}`, 'g');
-        const value = userObj[key];
-        // 如果值存在，轉換為字符串；否則為空字符串
-        const replacement = value !== undefined && value !== null ? String(value) : '';
-        result = result.replace(regex, replacement);
-    });
-    
-    // 替換額外變量（如 qrCodeUrl, loginUrl, transaction.* 等）
-    Object.keys(additionalVars).forEach(key => {
-        // 轉義特殊字符以支持 transaction.ticketTitle 這樣的鍵
-        const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(`\\{\\{${escapedKey}\\}\\}`, 'g');
-        result = result.replace(regex, additionalVars[key] || '');
-    });
-    
-    return result;
 }
 
 /** 將物件壓平為 {{prefix.key}} 用的變數表（一層，巢狀用 prefix.key） */
@@ -145,7 +104,13 @@ async function sendInvoiceEmail(transaction, event) {
             : { currency: 'HKD', number: String(transaction._id), state: transaction.status || 'pending' };
         const additionalVars = {
             ...flattenForTemplate(transaction.toObject ? transaction.toObject() : transaction, 'transaction'),
-            ...flattenForTemplate(invoiceData, 'invoice')
+            ...flattenForTemplate(invoiceData, 'invoice'),
+            ...buildEmailTemplateAdditionalVars({
+                user: userLike,
+                event: eventDoc,
+                emailTemplateId: emailTemplate ? emailTemplate._id : null,
+                transaction,
+            }),
         };
         const subject = emailTemplate ? emailTemplate.subject : '您的訂單／發票 - ' + (eventDoc.name || '');
         let messageBody = emailTemplate
@@ -175,7 +140,13 @@ async function sendPaymentReceiptEmail(transaction, event, user) {
             : { paid_total: transaction.ticketPrice, currency: 'HKD', number: transaction.stripeSessionId || transaction._id, state: transaction.status || 'paid' };
         const additionalVars = {
             ...flattenForTemplate(transaction.toObject ? transaction.toObject() : transaction, 'transaction'),
-            ...flattenForTemplate(invoiceData, 'invoice')
+            ...flattenForTemplate(invoiceData, 'invoice'),
+            ...buildEmailTemplateAdditionalVars({
+                user: userLike,
+                event: eventDoc,
+                emailTemplateId: emailTemplate ? emailTemplate._id : null,
+                transaction,
+            }),
         };
         const subject = emailTemplate ? emailTemplate.subject : '付款憑證 - ' + (eventDoc.name || '');
         let messageBody = emailTemplate
@@ -580,9 +551,7 @@ exports.sendBulkSMS = async (req, res) => {
 
 exports.sendEmail = async (user, event) => {
     try {
-        // 生成 QR 碼
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
-        const loginUrl = `${getPublicBaseUrl()}/events/${event._id}/login`;
         
         // 查找對應事件的歡迎郵件模板
         let emailTemplate = await EmailTemplate.findOne({ 
@@ -604,11 +573,12 @@ exports.sendEmail = async (user, event) => {
         // 如果找到了郵件模板，使用模板的內容
         if (emailTemplate) {
             subject = emailTemplate.subject;
-            // 使用動態替換函數，支持所有 user 字段
-            messageBody = replaceTemplateVariables(emailTemplate.content, user, event, {
-                qrCodeUrl: qrCodeUrl,
-                loginUrl: loginUrl
+            const additionalVars = buildEmailTemplateAdditionalVars({
+                user,
+                event,
+                emailTemplateId: emailTemplate._id,
             });
+            messageBody = replaceTemplateVariables(emailTemplate.content, user, event, additionalVars);
         }
         
         // 創建郵件記錄並獲取追蹤 ID
@@ -725,9 +695,7 @@ exports.resendEmail = async (req, res) => {
 // 根據類型發送郵件
 exports.sendEmailByType = async (user, event, type = 'welcome', emailTemplateId = null) => {
     try {
-        // 生成 QR 碼
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
-        const loginUrl = `${getPublicBaseUrl()}/events/${event._id}/login`;
         
         // 如果指定了模板 ID，使用指定的模板
         let emailTemplate = null;
@@ -761,11 +729,12 @@ exports.sendEmailByType = async (user, event, type = 'welcome', emailTemplateId 
         // 如果找到了郵件模板，使用模板的內容
         if (emailTemplate) {
             subject = emailTemplate.subject;
-            // 使用動態替換函數，支持所有 user 字段
-            messageBody = replaceTemplateVariables(emailTemplate.content, user, event, {
-                qrCodeUrl: qrCodeUrl,
-                loginUrl: loginUrl
+            const additionalVars = buildEmailTemplateAdditionalVars({
+                user,
+                event,
+                emailTemplateId: emailTemplate._id,
             });
+            messageBody = replaceTemplateVariables(emailTemplate.content, user, event, additionalVars);
         }
         
         // 創建郵件記錄並獲取追蹤 ID
@@ -801,7 +770,6 @@ exports.sendEmailByType = async (user, event, type = 'welcome', emailTemplateId 
 // 發送支付確認郵件
 exports.sendPaymentConfirmationEmail = async (user, event, transaction) => {
     try {
-        // 生成 QR 碼
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
         
         // 查找歡迎郵件模板
@@ -824,13 +792,13 @@ exports.sendPaymentConfirmationEmail = async (user, event, transaction) => {
         // 如果找到了郵件模板，使用模板的內容
         if (emailTemplate) {
             subject = emailTemplate.subject;
-            // 使用動態替換函數，支持所有 user 字段和 transaction 字段
-            messageBody = replaceTemplateVariables(emailTemplate.content, user, event, {
-                qrCodeUrl: qrCodeUrl,
-                'transaction.ticketTitle': transaction.ticketTitle || '',
-                'transaction.ticketPrice': transaction.ticketPrice || '',
-                'transaction.amount': transaction.ticketPrice || ''
+            const additionalVars = buildEmailTemplateAdditionalVars({
+                user,
+                event,
+                emailTemplateId: emailTemplate._id,
+                transaction,
             });
+            messageBody = replaceTemplateVariables(emailTemplate.content, user, event, additionalVars);
         }
         
         // 嵌入標楷體字型到郵件 HTML（如果使用了標楷體）
@@ -4544,14 +4512,12 @@ exports.getEmailRecordDetails = async (req, res) => {
         if (emailRecord.emailTemplate && emailRecord.emailTemplate.content && user) {
             try {
                 const userData = typeof user.toObject === 'function' ? user.toObject() : user;
-                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
-                const loginUrl = `${getPublicBaseUrl()}/events/${event._id}/login`;
-                
-                // Use the same replaceTemplateVariables function to reconstruct the email
-                emailHtml = replaceTemplateVariables(emailRecord.emailTemplate.content, userData, event, {
-                    qrCodeUrl: qrCodeUrl,
-                    loginUrl: loginUrl
+                const additionalVars = buildEmailTemplateAdditionalVars({
+                    user: userData,
+                    event,
+                    emailTemplateId: emailRecord.emailTemplate._id,
                 });
+                emailHtml = replaceTemplateVariables(emailRecord.emailTemplate.content, userData, event, additionalVars);
                 
                 // Add tracking pixel if trackingId exists (same as when sending)
                 if (trackingId) {

@@ -97,6 +97,17 @@
             </div>
                             <button type="submit" class="btn btn-primary">Save Template</button>
                             <a href="/emailTemplate/preview/<%= template._id %>" class="btn btn-outline-info" target="_blank" rel="noopener">Preview HTML</a>
+                            <small class="d-block text-muted mt-2">
+                                <strong>網頁版郵件連結（請貼在模板 HTML，勿寫死 URL）：</strong>
+                                <pre class="bg-light p-2 mt-1 mb-2" style="font-size:12px;white-space:pre-wrap;">&lt;center&gt;
+If you cannot read this message, please &lt;a href="{{emailPreviewUrl}}" target="_blank"&gt;click here&lt;/a&gt;.
+（亦可使用 {{contentUrl}} 或 {{webVersionUrl}}，內容相同）
+&lt;/center&gt;</pre>
+                                發信時會自動換成：<code>{DOMAIN}/emailTemplate/preview/本模板ID?userId=該用戶_id</code>
+                                <br>後台預覽：<code>/emailTemplate/preview/<%= template._id %>?userId=用戶_id</code>
+                                <% if (!eventId) { %><br>全域模板預覽請加 <code>&amp;eventId=活動_id</code><% } %>
+                                <br>發票／付款信可加 <code>&amp;transactionId=Transaction_id</code>
+                            </small>
                             <button type="button" class="btn btn-danger" onclick="deleteTemplate()">Delete Template</button>
                             <% if (eventId) { %>
                             <a href="/events/<%= eventId %>/emailTemplate" class="btn btn-secondary">Back to Event Email Template List</a>
