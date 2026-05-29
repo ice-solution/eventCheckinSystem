@@ -80,6 +80,51 @@ exports.getEmailTemplatesByType = async (req, res) => {
   }
 }
 
+/**
+ * 公開預覽 Email Template HTML（不需登入）
+ * GET /emailTemplate/preview/:id
+ */
+exports.renderEmailTemplatePreview = async (req, res) => {
+  const { id } = req.params
+
+  try {
+    const template = await EmailTemplate.findById(id)
+    if (!template) {
+      return res.status(404).render("pages/email_template_preview", {
+        notFound: true,
+        subject: "",
+        type: "",
+        templateId: id,
+        content: "",
+      })
+    }
+
+    let content = template.content || ""
+    try {
+      content = require("../utils/embedEmailFonts").embedKaitiFontInEmail(content)
+    } catch (fontErr) {
+      console.warn("embedKaitiFontInEmail skipped:", fontErr.message)
+    }
+
+    const baseUrl = getPublicBaseUrl(req)
+    const previewPath = (req.originalUrl || `/emailTemplate/preview/${template._id}`).split("?")[0]
+    const previewUrl = previewPath.startsWith("http") ? previewPath : `${baseUrl}${previewPath}`
+
+    res.render("pages/email_template_preview", {
+      notFound: false,
+      subject: template.subject,
+      type: template.type,
+      eventId: template.eventId,
+      templateId: template._id,
+      content,
+      previewUrl,
+    })
+  } catch (error) {
+    console.error("Error rendering email template preview:", error)
+    res.status(500).send("獲取郵件模板預覽時出現錯誤")
+  }
+}
+
 exports.renderEmailTemplateDetail = async (req, res) => {
   const { eventId, id } = req.params
 

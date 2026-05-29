@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title><%= notFound ? 'Template not found' : (subject || 'Email Template Preview') %></title>
+    <link rel="stylesheet" href="/admin/assets/css/tinymce-custom-fonts.css">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, "Microsoft JhengHei", sans-serif;
+            background: #f0f2f5;
+            color: #222;
+        }
+        .preview-meta {
+            background: #fff;
+            border-bottom: 1px solid #dee2e6;
+            padding: 12px 16px;
+            font-size: 14px;
+        }
+        .preview-meta h1 {
+            margin: 0 0 8px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .preview-meta dl {
+            margin: 0;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 4px 12px;
+        }
+        .preview-meta dt {
+            margin: 0;
+            color: #666;
+            font-weight: 600;
+        }
+        .preview-meta dd { margin: 0; }
+        .preview-frame-wrap {
+            padding: 24px 16px 40px;
+            display: flex;
+            justify-content: center;
+        }
+        .preview-frame {
+            width: 100%;
+            max-width: 720px;
+            background: #fff;
+            box-shadow: 0 2px 12px rgba(0,0,0,.08);
+            padding: 24px;
+            min-height: 200px;
+        }
+        .preview-frame img {
+            max-width: 100%;
+            height: auto;
+        }
+        .preview-empty {
+            text-align: center;
+            padding: 48px 16px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+<% if (notFound) { %>
+    <div class="preview-empty">
+        <h1>找不到郵件模板</h1>
+        <p>Template ID: <%= templateId %></p>
+    </div>
+<% } else { %>
+    <div class="preview-meta">
+        <h1>Email Template Preview</h1>
+        <dl>
+            <dt>Subject</dt>
+            <dd><%= subject %></dd>
+            <dt>Type</dt>
+            <dd><%= type %></dd>
+            <% if (eventId) { %>
+            <dt>Event ID</dt>
+            <dd><%= eventId %></dd>
+            <% } %>
+            <dt>Template ID</dt>
+            <dd><%= templateId %></dd>
+        </dl>
+    </div>
+    <div class="preview-frame-wrap">
+        <div class="preview-frame email-template-html-content">
+            <% if (content && String(content).trim()) { %>
+                <%- content %>
+            <% } else { %>
+                <p class="text-muted">（此模板尚無 HTML 內容）</p>
+            <% } %>
+        </div>
+    </div>
+<% } %>
+</body>
+</html>

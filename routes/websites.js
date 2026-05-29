@@ -109,6 +109,10 @@ router.get('/:event_id/register/fail', async (req, res) => {
     res.render('exvent/fail', { event_id, transaction, errorMsg, lang: lang || null });
 });
 
+// 公開 Email Template HTML 預覽（與 /emailTemplate/preview/:id 相同，方便 iframe 嵌入）
+const emailTemplateController = require('../controllers/emailTemplateController');
+router.get('/email-template/:id', emailTemplateController.renderEmailTemplatePreview);
+
 // 公開免費報名（iframe / 前台，不需登入；勿用 /events/.../users）
 router.post('/:event_id/register', eventsController.publicRegister);
 

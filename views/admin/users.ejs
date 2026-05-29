@@ -882,6 +882,10 @@
                                                     <option value="company">Company</option>
                                                     <option value="phone">Phone</option>
                                                 <% } %>
+                                                <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
+                                                    <option value="agreementAgreed">協議同意 (agreementAgreed)</option>
+                                                    <option value="agreementRecordedAt">協議記錄時間 (agreementRecordedAt)</option>
+                                                <% } %>
                                             </select>
                                         </div>
                                         <div class="col-auto">
@@ -914,6 +918,10 @@
                                                     <option value="name">Name</option>
                                                     <option value="company">Company</option>
                                                     <option value="phone">Phone</option>
+                                                <% } %>
+                                                <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
+                                                    <option value="agreementAgreed">協議同意 (agreementAgreed)</option>
+                                                    <option value="agreementRecordedAt">協議記錄時間 (agreementRecordedAt)</option>
                                                 <% } %>
                                             </select>
                                         </div>
@@ -972,6 +980,10 @@
                                             <th>Company</th>
                                             <th>Phone</th>
                                         <% } %>
+                                        <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
+                                            <th>協議同意</th>
+                                            <th>協議記錄時間</th>
+                                        <% } %>
                                         <th>Created At</th>
                                         <th>Checked In</th>
                                         <th>Actions</th>
@@ -999,6 +1011,28 @@
                                             <td data-field-name="name"><%= user.name %></td>
                                             <td data-field-name="company"><%= user.company %></td>
                                             <td data-field-name="phone"><%= user.phone %></td>
+                                            <% } %>
+                                            <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
+                                            <td class="agreement-meta-cell" data-field-name="agreementAgreed" data-order="<%= user.agreementAgreed === true ? 1 : (user.agreementAgreed === false ? 0 : -1) %>">
+                                                <% if (user.agreementAgreed === true) { %>同意<% } else if (user.agreementAgreed === false) { %>未同意<% } else { %>-<% } %>
+                                            </td>
+                                            <td class="agreement-meta-cell" data-field-name="agreementRecordedAt" data-order="<%= user.agreementRecordedAt ? new Date(user.agreementRecordedAt).getTime() : 0 %>">
+                                                <% if (user.agreementRecordedAt) {
+                                                    const agreementDate = new Date(user.agreementRecordedAt);
+                                                    if (!isNaN(agreementDate.getTime())) { %>
+                                                    <%= agreementDate.toLocaleString('zh-TW', {
+                                                        timeZone: 'Asia/Hong_Kong',
+                                                        year: 'numeric',
+                                                        month: '2-digit',
+                                                        day: '2-digit',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit',
+                                                        second: '2-digit',
+                                                        hour12: false
+                                                    }) %>
+                                                <% } else { %>-<% }
+                                                } else { %>-<% } %>
+                                            </td>
                                             <% } %>
                                             <td data-order="<%= (user.create_at || user.created_at) ? new Date(user.create_at || user.created_at).getTime() : 0 %>">
                                                 <% 
@@ -1200,6 +1234,9 @@
             <% }); %>
         <% } else { %>
             searchableFieldNames.push('email', 'name', 'company', 'phone');
+        <% } %>
+        <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
+            searchableFieldNames.push('agreementAgreed', 'agreementRecordedAt');
         <% } %>
 
         // 條件陣列：{ field: 'name', term: 'john doe' }，須全部符合 (AND)
@@ -2020,7 +2057,7 @@
         });
 
         // Add inline editing functionality
-        $('#usersTable tbody').on('dblclick', 'td:not(:last-child):not(:nth-last-child(2)):not(:first-child)', function() {
+        $('#usersTable tbody').on('dblclick', 'td:not(:last-child):not(:nth-last-child(2)):not(:first-child):not(.agreement-meta-cell)', function() {
             const cell = $(this);
             const currentText = cell.text().trim();
             // Try multiple ways to get field-name (compatible with data-field-name and data-fieldName)
@@ -2597,6 +2634,10 @@
                         newRow.push(userData.name || '-');
                         newRow.push(userData.company || '-');
                         newRow.push(userData.phone || '-');
+                    <% } %>
+                    <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
+                        newRow.push('-');
+                        newRow.push('-');
                     <% } %>
                     
                     // 添加 Created At 列
