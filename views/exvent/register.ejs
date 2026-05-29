@@ -790,23 +790,19 @@
             return keys;
         }
 
-        function updateTicketHighlight() {
+        function updateTicketSectionHighlight() {
             const $hl = $('#ticketHighlightText');
-            const ticketId = $('#ticketId').val();
-            if (!$hl.length || !ticketId) {
+            const $row = $('#ticketSelectRow');
+            if (!$hl.length) return;
+            if (!$row.length || $row.is(':hidden')) {
                 $hl.hide().empty();
                 return;
             }
-            const ticket = paymentTicketsData.find(function(t) { return String(t._id) === String(ticketId); });
-            if (!ticket || !ticket.highlightText) {
-                $hl.hide().empty();
-                return;
-            }
-            const ht = ticket.highlightText;
+            const ht = paymentTicketUi.highlightText || {};
             const text = currentLanguage === 'en'
                 ? (ht.en || ht.zh || '')
                 : (ht.zh || ht.en || '');
-            if (!text.trim()) {
+            if (!String(text).trim()) {
                 $hl.hide().empty();
                 return;
             }
@@ -834,7 +830,7 @@
                     'data-en': optEn
                 }));
             });
-            updateTicketHighlight();
+            updateTicketSectionHighlight();
         }
 
         function renderCategoryButtons() {
@@ -865,17 +861,19 @@
                     $('#ticketSelectRow').show();
                     $('#ticketId').prop('required', true).val('');
                     rebuildTicketSelect();
+                    updateTicketSectionHighlight();
                 });
             } else {
                 rebuildTicketSelect();
             }
-            $('#ticketId').on('change', updateTicketHighlight);
+            updateTicketSectionHighlight();
         }
 
         function refreshPaymentTicketUi() {
             if (!paymentTicketsData.length) return;
             if (ticketsUseCategories) renderCategoryButtons();
             rebuildTicketSelect();
+            updateTicketSectionHighlight();
         }
 
         /** 是否為區塊級 HTML（p/div/ul 等），此類內容直接渲染 */

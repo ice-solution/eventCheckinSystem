@@ -74,7 +74,6 @@ function normalizePaymentTicketForSave(ticket) {
         title: normalizeTicketTitle(t.title),
         price: t.price,
         category: getTicketCategoryKey(t),
-        highlightText: normalizeBilingualField(t.highlightText),
         datetimeFrom: t.datetimeFrom || undefined,
         datetimeTo: t.datetimeTo || undefined
     };
@@ -87,8 +86,7 @@ function normalizeTicketsForView(tickets) {
         return {
             ...raw,
             title: normalizeTicketTitle(raw.title),
-            category: getTicketCategoryKey(raw),
-            highlightText: normalizeBilingualField(raw.highlightText)
+            category: getTicketCategoryKey(raw)
         };
     });
 }
@@ -145,6 +143,7 @@ function normalizePaymentTicketUi(ui) {
             back: { zh: '返回', en: 'Back' },
             next: { zh: '下一步', en: 'Next' }
         },
+        highlightText: { zh: '', en: '' },
         categoryButtons: []
     };
     const out = {
@@ -156,6 +155,7 @@ function normalizePaymentTicketUi(ui) {
             back: normalizeBilingualField((src.buttons && src.buttons.back) || def.buttons.back),
             next: normalizeBilingualField((src.buttons && src.buttons.next) || def.buttons.next)
         },
+        highlightText: normalizeBilingualField(src.highlightText || def.highlightText || { zh: '', en: '' }),
         categoryButtons: Array.isArray(src.categoryButtons)
             ? src.categoryButtons.map(b => ({
                 key: (b && b.key != null ? String(b.key) : '').trim(),

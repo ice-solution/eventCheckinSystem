@@ -145,6 +145,11 @@ const formConfigSchema = new mongoose.Schema({
             back: { zh: { type: String, default: '返回' }, en: { type: String, default: 'Back' } },
             next: { zh: { type: String, default: '下一步' }, en: { type: String, default: 'Next' } }
         },
+        /** 票券下拉框下方單一提示（全區塊共用，非每張票券） */
+        highlightText: {
+            zh: { type: String, default: '' },
+            en: { type: String, default: '' }
+        },
         categoryButtons: [{
             key: { type: String, default: '' },
             label: {

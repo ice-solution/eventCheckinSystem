@@ -313,6 +313,18 @@
                                                    value="<%= (ptUi.buttons && ptUi.buttons.next && ptUi.buttons.next.en) ? ptUi.buttons.next.en : 'Next' %>">
                                         </div>
                                     </div>
+                                    <div class="row mt-2">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Highlight 提示 (ZH)</label>
+                                            <small class="text-muted d-block mb-1">顯示於票券下拉框下方（全區塊共用，非每張票券）</small>
+                                            <textarea class="form-control" id="ptHighlightZh" rows="3"><%= (ptUi.highlightText && ptUi.highlightText.zh) ? ptUi.highlightText.zh : '' %></textarea>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Highlight (EN)</label>
+                                            <small class="text-muted d-block mb-1">Shown below the ticket dropdown (one for all tickets)</small>
+                                            <textarea class="form-control" id="ptHighlightEn" rows="3"><%= (ptUi.highlightText && ptUi.highlightText.en) ? ptUi.highlightText.en : '' %></textarea>
+                                        </div>
+                                    </div>
                                     <hr>
                                     <label class="form-label">分類按鈕（key 需與 Users → Payment 票券的 Category 一致）</label>
                                     <div id="ptCategoryButtonsList"></div>
@@ -652,6 +664,7 @@
             ticketLabel: { zh: '選擇票券', en: 'Select Ticket' },
             defaultCategoryLabel: { zh: '其他', en: 'Other' },
             buttons: { back: { zh: '返回', en: 'Back' }, next: { zh: '下一步', en: 'Next' } },
+            highlightText: { zh: '', en: '' },
             categoryButtons: []
         };
     }
@@ -1371,6 +1384,10 @@
                     zh: (document.getElementById('ptNextBtnZh').value || '').trim(),
                     en: (document.getElementById('ptNextBtnEn').value || '').trim()
                 }
+            },
+            highlightText: {
+                zh: (document.getElementById('ptHighlightZh').value || '').trim(),
+                en: (document.getElementById('ptHighlightEn').value || '').trim()
             },
             categoryButtons: formConfig.paymentTicketUi.categoryButtons || []
         };

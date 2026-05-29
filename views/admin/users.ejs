@@ -2408,7 +2408,6 @@
                 const range = getTicketRangeValues(ticket);
                 const titles = getTicketTitleParts(ticket);
                 const cat = (ticket.category || '').replace(/"/g, '&quot;');
-                const hl = ticket.highlightText || {};
                 html += `
                     <div class="ticket-item mb-3 p-2 border rounded" data-idx="${idx}">
                         <div class="mb-2">
@@ -2421,16 +2420,6 @@
                             <input type="datetime-local" class="form-control d-inline-block w-auto mr-2 ticket-datetime-to" value="${toDatetimeLocalValue(range.to)}" style="width:180px;" title="結束日期時間">
                             <button type="button" class="btn btn-danger btn-sm remove-ticket">Delete</button>
                         </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <label class="small text-muted mb-0">Highlight 提示（中文，顯示於票券下拉下方）</label>
-                                <textarea class="form-control form-control-sm ticket-highlight-zh" rows="2" placeholder="選中此票券後顯示的提示文字">${(hl.zh || '').replace(/</g, '&lt;')}</textarea>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="small text-muted mb-0">Highlight (EN)</label>
-                                <textarea class="form-control form-control-sm ticket-highlight-en" rows="2" placeholder="Text below ticket dropdown when selected">${(hl.en || '').replace(/</g, '&lt;')}</textarea>
-                            </div>
-                        </div>
                     </div>
                 `;
             });
@@ -2440,7 +2429,7 @@
         // 新增票券
         $(document).on('click', '#addTicketBtn', function(e) {
             e.preventDefault();
-            paymentTickets.push({ title: { zh: '', en: '' }, price: '', category: '', highlightText: { zh: '', en: '' }, datetimeFrom: '', datetimeTo: '' });
+            paymentTickets.push({ title: { zh: '', en: '' }, price: '', category: '', datetimeFrom: '', datetimeTo: '' });
             renderTickets();
         });
 
@@ -2452,7 +2441,7 @@
         });
 
         // 編輯票券
-        $(document).on('change', '.ticket-category, .ticket-title-zh, .ticket-title-en, .ticket-price, .ticket-datetime-from, .ticket-datetime-to, .ticket-highlight-zh, .ticket-highlight-en', function() {
+        $(document).on('change', '.ticket-category, .ticket-title-zh, .ticket-title-en, .ticket-price, .ticket-datetime-from, .ticket-datetime-to', function() {
             const idx = $(this).closest('.ticket-item').data('idx');
             const row = $(this).closest('.ticket-item');
             paymentTickets[idx].title = {
@@ -2460,10 +2449,6 @@
                 en: row.find('.ticket-title-en').val()
             };
             paymentTickets[idx].category = (row.find('.ticket-category').val() || '').trim();
-            paymentTickets[idx].highlightText = {
-                zh: row.find('.ticket-highlight-zh').val() || '',
-                en: row.find('.ticket-highlight-en').val() || ''
-            };
             paymentTickets[idx].price = Number(row.find('.ticket-price').val());
             paymentTickets[idx].datetimeFrom = row.find('.ticket-datetime-from').val();
             paymentTickets[idx].datetimeTo = row.find('.ticket-datetime-to').val();
@@ -2480,10 +2465,6 @@
                     en: (row.find('.ticket-title-en').val() || '').trim()
                 };
                 paymentTickets[idx].category = (row.find('.ticket-category').val() || '').trim();
-                paymentTickets[idx].highlightText = {
-                    zh: row.find('.ticket-highlight-zh').val() || '',
-                    en: row.find('.ticket-highlight-en').val() || ''
-                };
                 paymentTickets[idx].price = Number(row.find('.ticket-price').val()) || 0;
                 paymentTickets[idx].datetimeFrom = row.find('.ticket-datetime-from').val();
                 paymentTickets[idx].datetimeTo = row.find('.ticket-datetime-to').val();

@@ -53,11 +53,6 @@ const ticketSchema = new mongoose.Schema({
     price: { type: Number, required: true },
     /** 票券分類 key（與 FormConfig.paymentTicketUi.categoryButtons[].key 對應） */
     category: { type: String, default: '' },
-    /** 選中票券後顯示於下拉框下方的提示文字 */
-    highlightText: {
-        zh: { type: String, default: '' },
-        en: { type: String, default: '' }
-    },
     /** @deprecated 舊單一截止日，新資料請用 datetimeTo */
     datetime: { type: Date },
     datetimeFrom: { type: Date },
