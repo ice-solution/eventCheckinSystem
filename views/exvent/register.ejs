@@ -1135,10 +1135,10 @@
                     }
                 });
             } else {
-                // 無票券，直接註冊
+                // 無票券：公開免費報名（/web 路由，iframe 可用，不需 CORS）
                 $.ajax({
                     type: 'POST',
-                    url: '/events/<%= event_id %>/users',
+                    url: '/web/<%= event_id %>/register',
                     data: newUser,
                     success: function(response) {
                         const langParam = currentLanguage !== 'zh' ? '?lang=' + currentLanguage : '';

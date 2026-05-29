@@ -970,7 +970,7 @@
         
         $.ajax({
             type: 'POST',
-            url: '/events/<%= event_id %>/users',
+            url: '/web/<%= event_id %>/register',
             data: newUser,
             success: function(response) {
               $('#successMessage').html('登記成功！請等候電郵'); // 清除成功消息

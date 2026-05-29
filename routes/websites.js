@@ -109,6 +109,9 @@ router.get('/:event_id/register/fail', async (req, res) => {
     res.render('exvent/fail', { event_id, transaction, errorMsg, lang: lang || null });
 });
 
+// 公開免費報名（iframe / 前台，不需登入；勿用 /events/.../users）
+router.post('/:event_id/register', eventsController.publicRegister);
+
 // Wonder Payment Checkout（沿用舊路徑以相容前端）
 router.post('/:event_id/stripe-checkout', eventsController.stripeCheckout);
 

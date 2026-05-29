@@ -313,6 +313,40 @@ exports.fetchUsersByEvent = async (req, res) => {
 
 
 // 向事件中添加用戶
+/**
+ * 公開免費報名（iframe / 前台，不需登入）
+ * POST /web/:event_id/register
+ */
+exports.publicRegister = async (req, res) => {
+    const { event_id } = req.params;
+    const userData = req.body || {};
+
+    if (userData.ticketId) {
+        return res.status(400).json({ message: '此登記入口僅支援免費報名，請勿選擇付費票券。' });
+    }
+
+    try {
+        const event = await Event.findById(event_id);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        const FormConfig = require('../model/FormConfig');
+        const formConfig = await FormConfig.findOne({ eventId: event_id });
+        if (formConfig && formConfig.registerPageEnabled === false) {
+            const msg = (formConfig.registerClosedMessage && String(formConfig.registerClosedMessage).trim())
+                || 'Registration is currently closed.';
+            return res.status(403).json({ message: msg });
+        }
+
+        req.params.eventId = event_id;
+        return exports.addUserToEvent(req, res);
+    } catch (error) {
+        console.error('Error in publicRegister:', error);
+        return res.status(500).json({ message: '伺服器錯誤', error: error.message });
+    }
+};
+
 exports.addUserToEvent = async (req, res) => {
     const { eventId } = req.params; // 獲取事件 ID
     const userData = req.body; // 獲取用戶資料（包括所有動態字段）
