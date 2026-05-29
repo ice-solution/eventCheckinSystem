@@ -1,5 +1,6 @@
 const FormConfig = require('../model/FormConfig');
 const Event = require('../model/Event');
+const { normalizePaymentTicketUi } = require('../utils/paymentTicket');
 
 // 數據遷移函數：將舊格式轉換為新格式
 const migrateFormConfig = (formConfig) => {
@@ -162,6 +163,8 @@ const migrateFormConfig = (formConfig) => {
             migratedConfig.agreement.content.en = migratedConfig.agreement.content.en || '';
         }
     }
+
+    migratedConfig.paymentTicketUi = normalizePaymentTicketUi(migratedConfig.paymentTicketUi);
     
     return migratedConfig;
 };
@@ -188,6 +191,7 @@ exports.getDefaultFormConfig = () => ({
         },
         content: { zh: '', en: '' }
     },
+    paymentTicketUi: normalizePaymentTicketUi(),
     sections: [
         {
             sectionName: 'contact_info',
@@ -443,7 +447,7 @@ exports.getFormConfig = async (req, res) => {
 exports.updateFormConfig = async (req, res) => {
     try {
         const { eventId } = req.params;
-        const { sections, defaultLanguage, registerPageEnabled, registerClosedMessage, terms, agreement, eventDisplayName } = req.body;
+        const { sections, defaultLanguage, registerPageEnabled, registerClosedMessage, terms, agreement, eventDisplayName, paymentTicketUi } = req.body;
         
         // 驗證事件是否存在
         const event = await Event.findById(eventId);
@@ -481,6 +485,9 @@ exports.updateFormConfig = async (req, res) => {
                 const migrated = migrateFormConfig({ sections: formConfig.sections, agreement });
                 formConfig.agreement = migrated.agreement;
             }
+            if (paymentTicketUi && typeof paymentTicketUi === 'object') {
+                formConfig.paymentTicketUi = normalizePaymentTicketUi(paymentTicketUi);
+            }
             await formConfig.save();
         } else {
             // 創建新配置
@@ -499,7 +506,10 @@ exports.updateFormConfig = async (req, res) => {
                     : defaultConfig.terms,
                 agreement: agreement && typeof agreement === 'object'
                     ? migrateFormConfig({ sections: (sections || defaultConfig.sections), agreement }).agreement
-                    : defaultConfig.agreement
+                    : defaultConfig.agreement,
+                paymentTicketUi: paymentTicketUi && typeof paymentTicketUi === 'object'
+                    ? normalizePaymentTicketUi(paymentTicketUi)
+                    : defaultConfig.paymentTicketUi
             });
             await formConfig.save();
         }

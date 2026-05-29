@@ -236,6 +236,91 @@
                                 </div>
                             </div>
 
+                            <!-- 付費票券 Register UI -->
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6>付費票券（Register 頁文案與分類按鈕）</h6>
+                                </div>
+                                <div class="card-body">
+                                    <% const ptUi = (formConfig.paymentTicketUi) ? formConfig.paymentTicketUi : {}; %>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label">區塊標題 (ZH)</label>
+                                            <input type="text" class="form-control" id="ptSectionTitleZh"
+                                                   value="<%= (ptUi.sectionTitle && ptUi.sectionTitle.zh) ? ptUi.sectionTitle.zh : '票券選擇' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Section title (EN)</label>
+                                            <input type="text" class="form-control" id="ptSectionTitleEn"
+                                                   value="<%= (ptUi.sectionTitle && ptUi.sectionTitle.en) ? ptUi.sectionTitle.en : 'Ticket Selection' %>">
+                                        </div>
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col-md-6">
+                                            <label class="form-label">選擇類別標籤 (ZH)</label>
+                                            <input type="text" class="form-control" id="ptCategoryLabelZh"
+                                                   value="<%= (ptUi.categoryLabel && ptUi.categoryLabel.zh) ? ptUi.categoryLabel.zh : '選擇類別' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Category label (EN)</label>
+                                            <input type="text" class="form-control" id="ptCategoryLabelEn"
+                                                   value="<%= (ptUi.categoryLabel && ptUi.categoryLabel.en) ? ptUi.categoryLabel.en : 'Select Category' %>">
+                                        </div>
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col-md-6">
+                                            <label class="form-label">選擇票券標籤 (ZH)</label>
+                                            <input type="text" class="form-control" id="ptTicketLabelZh"
+                                                   value="<%= (ptUi.ticketLabel && ptUi.ticketLabel.zh) ? ptUi.ticketLabel.zh : '選擇票券' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Ticket label (EN)</label>
+                                            <input type="text" class="form-control" id="ptTicketLabelEn"
+                                                   value="<%= (ptUi.ticketLabel && ptUi.ticketLabel.en) ? ptUi.ticketLabel.en : 'Select Ticket' %>">
+                                        </div>
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col-md-6">
+                                            <label class="form-label">「其他」分類按鈕 (ZH)</label>
+                                            <input type="text" class="form-control" id="ptDefaultCategoryZh"
+                                                   value="<%= (ptUi.defaultCategoryLabel && ptUi.defaultCategoryLabel.zh) ? ptUi.defaultCategoryLabel.zh : '其他' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Default category (EN)</label>
+                                            <input type="text" class="form-control" id="ptDefaultCategoryEn"
+                                                   value="<%= (ptUi.defaultCategoryLabel && ptUi.defaultCategoryLabel.en) ? ptUi.defaultCategoryLabel.en : 'Other' %>">
+                                        </div>
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col-md-3">
+                                            <label class="form-label">返回 (ZH)</label>
+                                            <input type="text" class="form-control" id="ptBackBtnZh"
+                                                   value="<%= (ptUi.buttons && ptUi.buttons.back && ptUi.buttons.back.zh) ? ptUi.buttons.back.zh : '返回' %>">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">Back (EN)</label>
+                                            <input type="text" class="form-control" id="ptBackBtnEn"
+                                                   value="<%= (ptUi.buttons && ptUi.buttons.back && ptUi.buttons.back.en) ? ptUi.buttons.back.en : 'Back' %>">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">下一步 (ZH)</label>
+                                            <input type="text" class="form-control" id="ptNextBtnZh"
+                                                   value="<%= (ptUi.buttons && ptUi.buttons.next && ptUi.buttons.next.zh) ? ptUi.buttons.next.zh : '下一步' %>">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">Next (EN)</label>
+                                            <input type="text" class="form-control" id="ptNextBtnEn"
+                                                   value="<%= (ptUi.buttons && ptUi.buttons.next && ptUi.buttons.next.en) ? ptUi.buttons.next.en : 'Next' %>">
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <label class="form-label">分類按鈕（key 需與 Users → Payment 票券的 Category 一致）</label>
+                                    <div id="ptCategoryButtonsList"></div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="ptAddCategoryBtn">+ 新增分類按鈕</button>
+                                    <small class="text-muted d-block mt-2">當任一張票券填了 Category 時，Register 會先顯示分類按鈕，再顯示該類別下的票券。</small>
+                                </div>
+                            </div>
+
                             <!-- 語言設置 -->
                             <div class="card mb-3">
                                 <div class="card-header">
@@ -559,6 +644,16 @@
     }
     if (!formConfig.eventDisplayName) {
         formConfig.eventDisplayName = { zh: '', en: '' };
+    }
+    if (!formConfig.paymentTicketUi) {
+        formConfig.paymentTicketUi = {
+            sectionTitle: { zh: '票券選擇', en: 'Ticket Selection' },
+            categoryLabel: { zh: '選擇類別', en: 'Select Category' },
+            ticketLabel: { zh: '選擇票券', en: 'Select Ticket' },
+            defaultCategoryLabel: { zh: '其他', en: 'Other' },
+            buttons: { back: { zh: '返回', en: 'Back' }, next: { zh: '下一步', en: 'Next' } },
+            categoryButtons: []
+        };
     }
 
     // 切換語言
@@ -999,6 +1094,7 @@
                     en: document.getElementById('agreementContentEn').value || ''
                 }
             };
+            const paymentTicketUi = collectPaymentTicketUiFromForm();
             const response = await fetch('/formConfig/' + eventId + '/config', {
                 method: 'PUT',
                 headers: {
@@ -1011,7 +1107,8 @@
                     registerClosedMessage: registerClosedMessage,
                     eventDisplayName,
                     terms,
-                    agreement
+                    agreement,
+                    paymentTicketUi
                 })
             });
             
@@ -1211,6 +1308,89 @@
             if (contentEnEl) contentEnEl.value = (a.content && a.content.en) ? a.content.en : contentEnEl.value;
         } catch (_) {}
     })();
+
+    function renderPtCategoryButtonsList() {
+        const list = document.getElementById('ptCategoryButtonsList');
+        if (!list) return;
+        const rows = formConfig.paymentTicketUi.categoryButtons || [];
+        list.innerHTML = '';
+        rows.forEach((row, idx) => {
+            const div = document.createElement('div');
+            div.className = 'row mb-2 pt-cat-row';
+            div.dataset.idx = String(idx);
+            div.innerHTML =
+                '<div class="col-md-2"><input type="text" class="form-control form-control-sm pt-cat-key" placeholder="key" value="' + (row.key || '').replace(/"/g, '&quot;') + '"></div>' +
+                '<div class="col-md-4"><input type="text" class="form-control form-control-sm pt-cat-label-zh" placeholder="按鈕文字 ZH" value="' + ((row.label && row.label.zh) || '').replace(/"/g, '&quot;') + '"></div>' +
+                '<div class="col-md-4"><input type="text" class="form-control form-control-sm pt-cat-label-en" placeholder="Button EN" value="' + ((row.label && row.label.en) || '').replace(/"/g, '&quot;') + '"></div>' +
+                '<div class="col-md-2"><button type="button" class="btn btn-sm btn-outline-danger pt-cat-remove">刪除</button></div>';
+            list.appendChild(div);
+        });
+    }
+
+    function syncPtCategoryButtonsFromDom() {
+        const rows = [];
+        document.querySelectorAll('#ptCategoryButtonsList .pt-cat-row').forEach(el => {
+            const key = (el.querySelector('.pt-cat-key').value || '').trim();
+            if (!key) return;
+            rows.push({
+                key,
+                label: {
+                    zh: (el.querySelector('.pt-cat-label-zh').value || '').trim(),
+                    en: (el.querySelector('.pt-cat-label-en').value || '').trim()
+                }
+            });
+        });
+        formConfig.paymentTicketUi.categoryButtons = rows;
+    }
+
+    function collectPaymentTicketUiFromForm() {
+        syncPtCategoryButtonsFromDom();
+        return {
+            sectionTitle: {
+                zh: (document.getElementById('ptSectionTitleZh').value || '').trim(),
+                en: (document.getElementById('ptSectionTitleEn').value || '').trim()
+            },
+            categoryLabel: {
+                zh: (document.getElementById('ptCategoryLabelZh').value || '').trim(),
+                en: (document.getElementById('ptCategoryLabelEn').value || '').trim()
+            },
+            ticketLabel: {
+                zh: (document.getElementById('ptTicketLabelZh').value || '').trim(),
+                en: (document.getElementById('ptTicketLabelEn').value || '').trim()
+            },
+            defaultCategoryLabel: {
+                zh: (document.getElementById('ptDefaultCategoryZh').value || '').trim(),
+                en: (document.getElementById('ptDefaultCategoryEn').value || '').trim()
+            },
+            buttons: {
+                back: {
+                    zh: (document.getElementById('ptBackBtnZh').value || '').trim(),
+                    en: (document.getElementById('ptBackBtnEn').value || '').trim()
+                },
+                next: {
+                    zh: (document.getElementById('ptNextBtnZh').value || '').trim(),
+                    en: (document.getElementById('ptNextBtnEn').value || '').trim()
+                }
+            },
+            categoryButtons: formConfig.paymentTicketUi.categoryButtons || []
+        };
+    }
+
+    document.getElementById('ptAddCategoryBtn')?.addEventListener('click', function() {
+        syncPtCategoryButtonsFromDom();
+        formConfig.paymentTicketUi.categoryButtons.push({ key: '', label: { zh: '', en: '' } });
+        renderPtCategoryButtonsList();
+    });
+    document.getElementById('ptCategoryButtonsList')?.addEventListener('click', function(e) {
+        if (!e.target.classList.contains('pt-cat-remove')) return;
+        const row = e.target.closest('.pt-cat-row');
+        const idx = parseInt(row.dataset.idx, 10);
+        syncPtCategoryButtonsFromDom();
+        formConfig.paymentTicketUi.categoryButtons.splice(idx, 1);
+        renderPtCategoryButtonsList();
+    });
+
+    renderPtCategoryButtonsList();
 
     // 初始化 eventDisplayName UI
     (function initEventDisplayNameUi() {

@@ -123,6 +123,36 @@ const formConfigSchema = new mongoose.Schema({
             en: { type: String, default: '' }
         }
     },
+    // 付費票券區塊文案與分類按鈕（Register 頁）
+    paymentTicketUi: {
+        sectionTitle: {
+            zh: { type: String, default: '票券選擇' },
+            en: { type: String, default: 'Ticket Selection' }
+        },
+        categoryLabel: {
+            zh: { type: String, default: '選擇類別' },
+            en: { type: String, default: 'Select Category' }
+        },
+        ticketLabel: {
+            zh: { type: String, default: '選擇票券' },
+            en: { type: String, default: 'Select Ticket' }
+        },
+        defaultCategoryLabel: {
+            zh: { type: String, default: '其他' },
+            en: { type: String, default: 'Other' }
+        },
+        buttons: {
+            back: { zh: { type: String, default: '返回' }, en: { type: String, default: 'Back' } },
+            next: { zh: { type: String, default: '下一步' }, en: { type: String, default: 'Next' } }
+        },
+        categoryButtons: [{
+            key: { type: String, default: '' },
+            label: {
+                zh: { type: String, default: '' },
+                en: { type: String, default: '' }
+            }
+        }]
+    },
     sections: [formSectionSchema],
     createdAt: { 
         type: Date, 
