@@ -295,15 +295,32 @@
             border-color: #007bff;
             color: #fff;
         }
+        .ticket-select-block {
+            margin-bottom: 20px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f3f4;
+        }
+        .ticket-select-block .form-row {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .ticket-highlight-row {
+            display: none;
+            width: 100%;
+            margin-top: 8px;
+        }
+        .ticket-highlight-row.is-visible {
+            display: block;
+        }
         .ticket-highlight-text {
-            margin-top: 10px;
-            padding: 10px 12px;
-            background: #fff8e6;
-            border: 1px solid #f0e0b0;
-            border-radius: 6px;
+            width: 100%;
+            max-width: none;
+            margin: 0;
+            padding: 0;
             font-size: 14px;
             line-height: 1.5;
-            color: #664d03;
+            color: #5a6268;
             white-space: pre-wrap;
         }
     </style>
@@ -578,16 +595,20 @@
                     </div>
                     <% } %>
 
-                    <div class="form-row" id="ticketSelectRow" <%= ticketsUseCategories ? 'style="display:none;"' : '' %>>
-                        <label class="form-label field-label lang-text" for="ticketId" id="ticketSelectLabel"
-                               data-zh="<%= ptTicketLabelZh %>" data-en="<%= ptTicketLabelEn %>">
-                            <%= ptTicketLabelZh %> <span class="required">*</span>
-                        </label>
-                        <div class="form-input">
-                            <select class="form-control" id="ticketId" name="ticketId" <%= ticketsUseCategories ? '' : 'required' %>>
-                                <option value="" class="lang-text" data-zh="--- 請選擇票券 ---" data-en="--- Please select a ticket ---">--- 請選擇票券 ---</option>
-                            </select>
-                            <div id="ticketHighlightText" class="ticket-highlight-text" style="display:none;" aria-live="polite"></div>
+                    <div class="ticket-select-block" id="ticketSelectBlock" <%= ticketsUseCategories ? 'style="display:none;"' : '' %>>
+                        <div class="form-row" id="ticketSelectRow">
+                            <label class="form-label field-label lang-text" for="ticketId" id="ticketSelectLabel"
+                                   data-zh="<%= ptTicketLabelZh %>" data-en="<%= ptTicketLabelEn %>">
+                                <%= ptTicketLabelZh %> <span class="required">*</span>
+                            </label>
+                            <div class="form-input">
+                                <select class="form-control" id="ticketId" name="ticketId" <%= ticketsUseCategories ? '' : 'required' %>>
+                                    <option value="" class="lang-text" data-zh="--- 請選擇票券 ---" data-en="--- Please select a ticket ---">--- 請選擇票券 ---</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="ticketHighlightRow" class="ticket-highlight-row" aria-live="polite">
+                            <div id="ticketHighlightText" class="ticket-highlight-text"></div>
                         </div>
                     </div>
                 </div>
@@ -792,10 +813,12 @@
 
         function updateTicketSectionHighlight() {
             const $hl = $('#ticketHighlightText');
-            const $row = $('#ticketSelectRow');
-            if (!$hl.length) return;
-            if (!$row.length || $row.is(':hidden')) {
-                $hl.hide().empty();
+            const $hlRow = $('#ticketHighlightRow');
+            const $block = $('#ticketSelectBlock');
+            if (!$hl.length || !$hlRow.length) return;
+            if (!$block.length || $block.is(':hidden')) {
+                $hlRow.removeClass('is-visible');
+                $hl.empty();
                 return;
             }
             const ht = paymentTicketUi.highlightText || {};
@@ -803,10 +826,12 @@
                 ? (ht.en || ht.zh || '')
                 : (ht.zh || ht.en || '');
             if (!String(text).trim()) {
-                $hl.hide().empty();
+                $hlRow.removeClass('is-visible');
+                $hl.empty();
                 return;
             }
-            $hl.text(text).show();
+            $hl.text(text);
+            $hlRow.addClass('is-visible');
         }
 
         function rebuildTicketSelect() {
@@ -858,7 +883,7 @@
                     $('#ticketCategory').val(selectedTicketCategory);
                     $('.ticket-category-btn').removeClass('active');
                     $(this).addClass('active');
-                    $('#ticketSelectRow').show();
+                    $('#ticketSelectBlock').show();
                     $('#ticketId').prop('required', true).val('');
                     rebuildTicketSelect();
                     updateTicketSectionHighlight();
