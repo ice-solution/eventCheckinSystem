@@ -3794,6 +3794,17 @@ function getPaymentTicketTitle(ticket, lang = 'zh') {
     return t.zh || t.en || '票券';
 }
 
+/** FormConfig.eventDisplayName（留空則 fallback event.name），供 Wonder note 等對客顯示 */
+function getEventDisplayName(event, formConfig, lang = 'zh') {
+    const edn = formConfig && formConfig.eventDisplayName;
+    const zh = edn && edn.zh ? String(edn.zh).trim() : '';
+    const en = edn && edn.en ? String(edn.en).trim() : '';
+    const fallback = event && event.name ? String(event.name).trim() : '';
+    const isEn = lang && String(lang).toLowerCase().startsWith('en');
+    if (isEn) return en || zh || fallback || 'Event';
+    return zh || en || fallback || 'Event';
+}
+
 function isPaymentTicketInRange(ticket, now = new Date()) {
     if (!ticket) return false;
     const from = ticket.datetimeFrom ? new Date(ticket.datetimeFrom) : null;
@@ -3917,6 +3928,9 @@ exports.stripeCheckout = async (req, res) => {
         const ticketTitleDisplay = getPaymentTicketTitle(ticket, lang);
 
         if (gateway === 'wonder') {
+            const FormConfig = require('../model/FormConfig');
+            const formConfig = await FormConfig.findOne({ eventId: event_id });
+            const eventDisplayName = getEventDisplayName(event, formConfig, lang);
             const callbackUrl = `${baseUrl}/web/webhook/wonder`;
             const redirectUrl = `${baseUrl}/web/${event_id}/register/success?session_id=${transaction._id}${langQuery}`;
             const { paymentUrl, orderId } = await wonderPayment.createOrder({
@@ -3926,7 +3940,7 @@ exports.stripeCheckout = async (req, res) => {
                 amount: ticket.price,
                 callbackUrl,
                 redirectUrl,
-                note: `Event: ${event_id}, Ticket: ${ticketTitleDisplay}`
+                note: `Event: ${eventDisplayName}, Ticket: ${ticketTitleDisplay}`
             });
             transaction.stripeSessionId = orderId || transaction._id.toString();
             await transaction.save();
