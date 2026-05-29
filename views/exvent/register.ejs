@@ -586,7 +586,7 @@
                 }) %></script>
             <% } %>
 
-            <!-- Agreement（功能同 Terms & Conditions） -->
+            <!-- Agreement（非必填，但會記錄勾選狀態） -->
             <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
                 <div class="form-section agreement-section">
                     <div class="terms-header">
@@ -595,7 +595,7 @@
                            data-zh="(協議)" data-en="(agreement)">(agreement)</a>
                     </div>
                     <div class="form-check terms-agree-row">
-                        <input class="form-check-input" type="checkbox" id="agreementAgree" required>
+                        <input class="form-check-input" type="checkbox" id="agreementAgree" name="agreementAgreed" value="true">
                         <label class="form-check-label"
                                for="agreementAgree"
                                data-zh="<%= (formConfig.agreement.label && formConfig.agreement.label.zh ? formConfig.agreement.label.zh : '') %>"
@@ -987,7 +987,7 @@
                 }
             });
 
-            if (agreeEl) {
+            if (agreeEl && !opts.optionalAgree) {
                 agreeEl.addEventListener('change', function() {
                     this.setCustomValidity('');
                 });
@@ -1010,14 +1010,13 @@
             invalidMsgEn: 'Please agree to the terms before submitting.'
         });
 
-        // Agreement
+        // Agreement（非必填，僅彈層；勾選狀態於 submit 時寫入 agreementAgreed）
         initOverlayAndValidation({
             overlayId: 'agreementOverlay',
             openLinkId: 'agreementOpenLink',
             closeBtnId: 'agreementModalClose',
             agreeId: 'agreementAgree',
-            invalidMsgZh: '請先閱讀並勾選同意協議，才可提交。',
-            invalidMsgEn: 'Please agree to the agreement before submitting.'
+            optionalAgree: true
         });
 
         // stripe public key
@@ -1088,10 +1087,30 @@
             const newUser = {};
             $('#userForm').find('input, select, textarea').each(function() {
                 const fieldName = $(this).attr('name');
-                if (fieldName && fieldName !== 'ticketId') {
-                    newUser[fieldName] = $(this).val();
+                if (!fieldName || fieldName === 'ticketId' || fieldName === 'agreementAgreed') return;
+                const type = (this.type || '').toLowerCase();
+                if (type === 'checkbox') {
+                    if (!this.checked) return;
+                    if (fieldName.endsWith('[]')) {
+                        const key = fieldName.slice(0, -2);
+                        if (!Array.isArray(newUser[key])) newUser[key] = [];
+                        newUser[key].push($(this).val());
+                    } else {
+                        newUser[fieldName] = $(this).val();
+                    }
+                    return;
                 }
+                if (type === 'radio') {
+                    if (this.checked) newUser[fieldName] = $(this).val();
+                    return;
+                }
+                newUser[fieldName] = $(this).val();
             });
+            const agreementEl = document.getElementById('agreementAgree');
+            if (agreementEl) {
+                newUser.agreementAgreed = agreementEl.checked;
+                newUser.agreementRecordedAt = new Date().toISOString();
+            }
             newUser.ticketId = ticketId;
             if (ticketId) {
                 // Wonder Payment checkout（沿用舊 API 路徑）

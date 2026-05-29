@@ -205,7 +205,7 @@
                                         <input class="form-check-input" type="checkbox" id="agreementEnabled"
                                                <%= (formConfig.agreement && formConfig.agreement.enabled) ? 'checked' : '' %>>
                                         <label class="form-check-label" for="agreementEnabled">
-                                            啟用 Agreement（啟用後，訪客必須勾選同意才可提交）
+                                            啟用 Agreement（非必填；會記錄訪客是否勾選同意）
                                         </label>
                                     </div>
                                     <div class="row">
@@ -232,7 +232,7 @@
                                                       placeholder="Multi-line text supported"><%= (formConfig.agreement && formConfig.agreement.content && formConfig.agreement.content.en) ? formConfig.agreement.content.en : '' %></textarea>
                                         </div>
                                     </div>
-                                    <small class="text-muted d-block mt-2">提示：Register 頁點 (agreement) 以彈層顯示；純文字換行會保留；亦支援 HTML。</small>
+                                    <small class="text-muted d-block mt-2">提示：Register 頁點 (agreement) 以彈層顯示；純文字換行會保留；亦支援 HTML。勾選為選填，系統會將 <code>agreementAgreed</code>（true/false）與 <code>agreementRecordedAt</code> 存入用戶資料。</small>
                                 </div>
                             </div>
 
