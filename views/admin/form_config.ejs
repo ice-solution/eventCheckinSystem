@@ -151,6 +151,34 @@
                                         </div>
                                     </div>
                                     <small class="text-muted d-block mt-2">Register page header 會依語言顯示此名稱（留空則顯示 event.name）。</small>
+                                    <hr class="my-3">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Sub header (ZH)</label>
+                                            <input type="text" class="form-control" id="registerSubHeaderZh"
+                                                   value="<%= (formConfig.registerSubHeader && formConfig.registerSubHeader.zh) ? formConfig.registerSubHeader.zh : '' %>"
+                                                   placeholder="活動名稱下方副標題（留空不顯示）">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Sub header (EN)</label>
+                                            <input type="text" class="form-control" id="registerSubHeaderEn"
+                                                   value="<%= (formConfig.registerSubHeader && formConfig.registerSubHeader.en) ? formConfig.registerSubHeader.en : '' %>"
+                                                   placeholder="Optional line below event name">
+                                        </div>
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col-md-6">
+                                            <label class="form-label">灰色說明文字 (ZH)</label>
+                                            <input type="text" class="form-control" id="registerSubtitleZh"
+                                                   value="<%= (formConfig.registerSubtitle && formConfig.registerSubtitle.zh) ? formConfig.registerSubtitle.zh : '請填寫以下資料完成活動報名' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Subtitle / hint (EN)</label>
+                                            <input type="text" class="form-control" id="registerSubtitleEn"
+                                                   value="<%= (formConfig.registerSubtitle && formConfig.registerSubtitle.en) ? formConfig.registerSubtitle.en : 'Please fill in the following information to complete event registration' %>">
+                                        </div>
+                                    </div>
+                                    <small class="text-muted d-block mt-2">Sub header 顯示於活動名稱與灰色說明文字之間。</small>
                                 </div>
                             </div>
 
@@ -346,6 +374,7 @@
                                                 <button type="button" class="btn btn-outline-success <%= formConfig.defaultLanguage === 'zh' ? 'active' : '' %>" id="defaultZhBtn" onclick="console.log('Zh button clicked'); updateDefaultLanguage('zh')">中文</button>
                                                 <button type="button" class="btn btn-outline-success <%= formConfig.defaultLanguage === 'en' ? 'active' : '' %>" id="defaultEnBtn" onclick="console.log('En button clicked'); updateDefaultLanguage('en')">English</button>
                                             </div>
+                                            <small class="text-muted d-block mt-1">關閉語言切換時，Register 頁固定使用此語言。</small>
                                         </div>
                                         <div class="col-md-6">
                                             <label>當前語言 (Current Language)</label>
@@ -354,6 +383,14 @@
                                                 <button type="button" class="btn btn-outline-primary" id="langEnBtn" onclick="switchLanguage('en')">English</button>
                                             </div>
                                         </div>
+                                    </div>
+                                    <div class="form-check mt-3">
+                                        <input class="form-check-input" type="checkbox" id="languageSwitcherEnabled"
+                                               <%= (formConfig.languageSwitcherEnabled !== false) ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="languageSwitcherEnabled">
+                                            Register 頁顯示中英文切換按鈕
+                                        </label>
+                                        <small class="text-muted d-block">關閉後，報名頁不顯示「中文 / English」按鈕，僅顯示默認語言內容。</small>
                                     </div>
                                 </div>
                             </div>
@@ -656,6 +693,15 @@
     }
     if (!formConfig.eventDisplayName) {
         formConfig.eventDisplayName = { zh: '', en: '' };
+    }
+    if (!formConfig.registerSubHeader) {
+        formConfig.registerSubHeader = { zh: '', en: '' };
+    }
+    if (!formConfig.registerSubtitle) {
+        formConfig.registerSubtitle = {
+            zh: '請填寫以下資料完成活動報名',
+            en: 'Please fill in the following information to complete event registration'
+        };
     }
     if (!formConfig.paymentTicketUi) {
         formConfig.paymentTicketUi = {
@@ -1080,10 +1126,19 @@
     async function saveConfig() {
         try {
             const registerPageEnabled = document.getElementById('registerPageEnabled').checked;
+            const languageSwitcherEnabled = document.getElementById('languageSwitcherEnabled').checked;
             const registerClosedMessage = document.getElementById('registerClosedMessage').value || '';
             const eventDisplayName = {
                 zh: (document.getElementById('eventDisplayNameZh').value || '').trim(),
                 en: (document.getElementById('eventDisplayNameEn').value || '').trim()
+            };
+            const registerSubHeader = {
+                zh: (document.getElementById('registerSubHeaderZh').value || '').trim(),
+                en: (document.getElementById('registerSubHeaderEn').value || '').trim()
+            };
+            const registerSubtitle = {
+                zh: (document.getElementById('registerSubtitleZh').value || '').trim(),
+                en: (document.getElementById('registerSubtitleEn').value || '').trim()
             };
             const terms = {
                 enabled: !!document.getElementById('termsEnabled').checked,
@@ -1116,9 +1171,12 @@
                 body: JSON.stringify({ 
                     sections: formConfig.sections,
                     defaultLanguage: formConfig.defaultLanguage,
+                    languageSwitcherEnabled,
                     registerPageEnabled: registerPageEnabled,
                     registerClosedMessage: registerClosedMessage,
                     eventDisplayName,
+                    registerSubHeader,
+                    registerSubtitle,
                     terms,
                     agreement,
                     paymentTicketUi
@@ -1173,7 +1231,13 @@
             // 創建要導出的配置對象（移除 MongoDB 相關字段）
             const exportData = {
                 defaultLanguage: formConfig.defaultLanguage,
+                languageSwitcherEnabled: formConfig.languageSwitcherEnabled !== false,
                 eventDisplayName: formConfig.eventDisplayName || { zh: '', en: '' },
+                registerSubHeader: formConfig.registerSubHeader || { zh: '', en: '' },
+                registerSubtitle: formConfig.registerSubtitle || {
+                    zh: '請填寫以下資料完成活動報名',
+                    en: 'Please fill in the following information to complete event registration'
+                },
                 terms: formConfig.terms || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } },
                 agreement: formConfig.agreement || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } },
                 sections: formConfig.sections.map(section => ({
@@ -1238,9 +1302,17 @@
                 if (confirm('確定要導入此配置嗎？這將覆蓋現有的表單配置。')) {
                     // 更新 formConfig
                     formConfig.defaultLanguage = importedData.defaultLanguage || formConfig.defaultLanguage;
+                    if (typeof importedData.languageSwitcherEnabled === 'boolean') {
+                        formConfig.languageSwitcherEnabled = importedData.languageSwitcherEnabled;
+                    }
                     formConfig.terms = importedData.terms || formConfig.terms || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } };
                     formConfig.agreement = importedData.agreement || formConfig.agreement || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } };
                     formConfig.eventDisplayName = importedData.eventDisplayName || formConfig.eventDisplayName || { zh: '', en: '' };
+                    formConfig.registerSubHeader = importedData.registerSubHeader || formConfig.registerSubHeader || { zh: '', en: '' };
+                    formConfig.registerSubtitle = importedData.registerSubtitle || formConfig.registerSubtitle || {
+                        zh: '請填寫以下資料完成活動報名',
+                        en: 'Please fill in the following information to complete event registration'
+                    };
                     formConfig.sections = importedData.sections.map(section => ({
                         sectionName: section.sectionName || '新區塊',
                         sectionTitle: section.sectionTitle || { zh: '新區塊', en: 'New Section' },

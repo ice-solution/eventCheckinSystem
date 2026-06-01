@@ -34,6 +34,21 @@
             word-break: break-word;
             hyphens: auto;
         }
+        .form-header .form-subheader {
+            color: #34495e;
+            font-size: 1.15rem;
+            font-weight: 500;
+            line-height: 1.4;
+            margin: 0 0 10px;
+            text-align: center;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+        .form-header #formSubtitle {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 0;
+        }
         .form-section {
             margin-bottom: 30px;
         }
@@ -341,17 +356,35 @@
         </div>
         
         <!-- 語言切換 -->
+        <% const languageSwitcherEnabled = formConfig && formConfig.languageSwitcherEnabled !== false; %>
+        <% if (languageSwitcherEnabled) { %>
         <div class="language-switcher" style="text-align: right; margin-top: 40px; margin-bottom: 30px;">
             <div class="btn-group" role="group">
                 <button type="button" class="btn btn-outline-primary" id="langZhBtn" onclick="switchLanguage('zh')">中文</button>
                 <button type="button" class="btn btn-outline-primary" id="langEnBtn" onclick="switchLanguage('en')">English</button>
             </div>
         </div>
+        <% } %>
 
+        <%
+            const regSubHeader = (formConfig && formConfig.registerSubHeader) ? formConfig.registerSubHeader : { zh: '', en: '' };
+            const regSubtitle = (formConfig && formConfig.registerSubtitle) ? formConfig.registerSubtitle : {
+                zh: '請填寫以下資料完成活動報名',
+                en: 'Please fill in the following information to complete event registration'
+            };
+            const headerInitLang = (formConfig && formConfig.defaultLanguage) ? formConfig.defaultLanguage : 'zh';
+            const initSubHeader = headerInitLang === 'en'
+                ? ((regSubHeader.en || regSubHeader.zh || '').trim())
+                : ((regSubHeader.zh || regSubHeader.en || '').trim());
+            const initSubtitle = headerInitLang === 'en'
+                ? (regSubtitle.en || regSubtitle.zh || 'Please fill in the following information to complete event registration')
+                : (regSubtitle.zh || regSubtitle.en || '請填寫以下資料完成活動報名');
+        %>
         <div class="form-header">
             <br><br>
             <h1 id="formTitle"><%= event && event.name ? event.name : 'Event' %></h1>
-            <p class="text-muted" id="formSubtitle">請填寫以下資料完成活動報名</p>
+            <p id="formSubHeader" class="form-subheader"<%= initSubHeader ? '' : ' style="display:none;"' %>><%= initSubHeader %></p>
+            <p class="text-muted" id="formSubtitle"><%= initSubtitle %></p>
         </div>
 
         <form id="userForm" method="POST">
@@ -713,15 +746,42 @@
         }
         
         // 語言設置：優先使用 URL 參數，否則使用默認語言
-        const urlLanguage = getLanguageFromURL();
+        const languageSwitcherEnabled = <%= languageSwitcherEnabled ? 'true' : 'false' %>;
+        const urlLanguage = languageSwitcherEnabled ? getLanguageFromURL() : null;
         let currentLanguage = urlLanguage || '<%= formConfig.defaultLanguage || "zh" %>';
         const formConfigEventName = <%- JSON.stringify(formConfig && formConfig.eventDisplayName ? formConfig.eventDisplayName : { zh: '', en: '' }) %>;
+        const formConfigRegisterSubHeader = <%- JSON.stringify(formConfig && formConfig.registerSubHeader ? formConfig.registerSubHeader : { zh: '', en: '' }) %>;
+        const formConfigRegisterSubtitle = <%- JSON.stringify(formConfig && formConfig.registerSubtitle ? formConfig.registerSubtitle : { zh: '請填寫以下資料完成活動報名', en: 'Please fill in the following information to complete event registration' }) %>;
         const fallbackEventName = <%- JSON.stringify(event && event.name ? event.name : 'Event') %>;
+        function getBilingualFormText(obj, lang, fallbackZh, fallbackEn) {
+            const zh = (obj && obj.zh) ? String(obj.zh).trim() : '';
+            const en = (obj && obj.en) ? String(obj.en).trim() : '';
+            if (lang === 'en') return en || zh || fallbackEn || fallbackZh || '';
+            return zh || en || fallbackZh || fallbackEn || '';
+        }
         function getHeaderEventName(lang) {
-            const zh = (formConfigEventName && formConfigEventName.zh) ? String(formConfigEventName.zh).trim() : '';
-            const en = (formConfigEventName && formConfigEventName.en) ? String(formConfigEventName.en).trim() : '';
-            if (lang === 'en') return en || zh || fallbackEventName;
-            return zh || en || fallbackEventName;
+            return getBilingualFormText(formConfigEventName, lang, '', '') || fallbackEventName;
+        }
+        function getRegisterSubHeader(lang) {
+            return getBilingualFormText(formConfigRegisterSubHeader, lang, '', '');
+        }
+        function getRegisterSubtitle(lang) {
+            return getBilingualFormText(
+                formConfigRegisterSubtitle,
+                lang,
+                '請填寫以下資料完成活動報名',
+                'Please fill in the following information to complete event registration'
+            );
+        }
+        function updateRegisterHeaderText() {
+            $('#formTitle').text(getHeaderEventName(currentLanguage));
+            const sub = getRegisterSubHeader(currentLanguage);
+            if (sub) {
+                $('#formSubHeader').text(sub).show();
+            } else {
+                $('#formSubHeader').hide().empty();
+            }
+            $('#formSubtitle').text(getRegisterSubtitle(currentLanguage));
         }
         const termsContentByLang = (function() {
             const el = document.getElementById('termsContentJson');
@@ -978,19 +1038,14 @@
 
         // 更新語言按鈕狀態
         function updateLanguageButtons() {
+            if (!languageSwitcherEnabled) return;
             $('#langZhBtn').toggleClass('active', currentLanguage === 'zh');
             $('#langEnBtn').toggleClass('active', currentLanguage === 'en');
         }
 
         // 更新頁面語言
         function updatePageLanguage() {
-            // 標題使用 FormConfig eventDisplayName（留空則 fallback event.name）
-            $('#formTitle').text(getHeaderEventName(currentLanguage));
-            if (currentLanguage === 'zh') {
-                $('#formSubtitle').text('請填寫以下資料完成活動報名');
-            } else {
-                $('#formSubtitle').text('Please fill in the following information to complete event registration');
-            }
+            updateRegisterHeaderText();
 
             // 更新區塊標題
             $('.section-title').each(function() {

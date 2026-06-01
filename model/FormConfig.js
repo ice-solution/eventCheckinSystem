@@ -82,6 +82,11 @@ const formConfigSchema = new mongoose.Schema({
         enum: ['zh', 'en'],
         default: 'zh' // 默認語言為中文
     },
+    /** Register 頁是否顯示中英文切換按鈕 */
+    languageSwitcherEnabled: {
+        type: Boolean,
+        default: true
+    },
     // Register 版面開關：true=顯示註冊表單，false=顯示關閉頁（registerClosedMessage）
     registerPageEnabled: {
         type: Boolean,
@@ -96,6 +101,16 @@ const formConfigSchema = new mongoose.Schema({
     eventDisplayName: {
         zh: { type: String, default: '' },
         en: { type: String, default: '' }
+    },
+    // 註冊頁 Header：活動名稱下方副標題（留空不顯示）
+    registerSubHeader: {
+        zh: { type: String, default: '' },
+        en: { type: String, default: '' }
+    },
+    // 註冊頁 Header：灰色說明文字
+    registerSubtitle: {
+        zh: { type: String, default: '請填寫以下資料完成活動報名' },
+        en: { type: String, default: 'Please fill in the following information to complete event registration' }
     },
     // Terms & Conditions（需同意才可提交）
     terms: {

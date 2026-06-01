@@ -97,6 +97,9 @@ const migrateFormConfig = (formConfig) => {
     if (!migratedConfig.defaultLanguage) {
         migratedConfig.defaultLanguage = 'zh';
     }
+    if (typeof migratedConfig.languageSwitcherEnabled !== 'boolean') {
+        migratedConfig.languageSwitcherEnabled = true;
+    }
 
     // 確保有 eventDisplayName
     if (!migratedConfig.eventDisplayName || typeof migratedConfig.eventDisplayName !== 'object') {
@@ -104,6 +107,22 @@ const migrateFormConfig = (formConfig) => {
     } else {
         migratedConfig.eventDisplayName.zh = migratedConfig.eventDisplayName.zh || '';
         migratedConfig.eventDisplayName.en = migratedConfig.eventDisplayName.en || '';
+    }
+
+    if (!migratedConfig.registerSubHeader || typeof migratedConfig.registerSubHeader !== 'object') {
+        migratedConfig.registerSubHeader = { zh: '', en: '' };
+    } else {
+        migratedConfig.registerSubHeader.zh = migratedConfig.registerSubHeader.zh || '';
+        migratedConfig.registerSubHeader.en = migratedConfig.registerSubHeader.en || '';
+    }
+    if (!migratedConfig.registerSubtitle || typeof migratedConfig.registerSubtitle !== 'object') {
+        migratedConfig.registerSubtitle = {
+            zh: '請填寫以下資料完成活動報名',
+            en: 'Please fill in the following information to complete event registration'
+        };
+    } else {
+        migratedConfig.registerSubtitle.zh = migratedConfig.registerSubtitle.zh || '請填寫以下資料完成活動報名';
+        migratedConfig.registerSubtitle.en = migratedConfig.registerSubtitle.en || 'Please fill in the following information to complete event registration';
     }
 
     // 確保有 terms 設定
@@ -172,9 +191,15 @@ const migrateFormConfig = (formConfig) => {
 // 預設表單配置
 exports.getDefaultFormConfig = () => ({
     defaultLanguage: 'zh',
+    languageSwitcherEnabled: true,
     registerPageEnabled: true,
     registerClosedMessage: '',
     eventDisplayName: { zh: '', en: '' },
+    registerSubHeader: { zh: '', en: '' },
+    registerSubtitle: {
+        zh: '請填寫以下資料完成活動報名',
+        en: 'Please fill in the following information to complete event registration'
+    },
     terms: {
         enabled: false,
         label: {
@@ -447,7 +472,7 @@ exports.getFormConfig = async (req, res) => {
 exports.updateFormConfig = async (req, res) => {
     try {
         const { eventId } = req.params;
-        const { sections, defaultLanguage, registerPageEnabled, registerClosedMessage, terms, agreement, eventDisplayName, paymentTicketUi } = req.body;
+        const { sections, defaultLanguage, languageSwitcherEnabled, registerPageEnabled, registerClosedMessage, terms, agreement, eventDisplayName, registerSubHeader, registerSubtitle, paymentTicketUi } = req.body;
         
         // 驗證事件是否存在
         const event = await Event.findById(eventId);
@@ -467,6 +492,9 @@ exports.updateFormConfig = async (req, res) => {
             if (defaultLanguage) {
                 formConfig.defaultLanguage = defaultLanguage;
             }
+            if (typeof languageSwitcherEnabled === 'boolean') {
+                formConfig.languageSwitcherEnabled = languageSwitcherEnabled;
+            }
             if (typeof registerPageEnabled === 'boolean') {
                 formConfig.registerPageEnabled = registerPageEnabled;
             }
@@ -476,6 +504,14 @@ exports.updateFormConfig = async (req, res) => {
             if (eventDisplayName && typeof eventDisplayName === 'object') {
                 const migrated = migrateFormConfig({ sections: formConfig.sections, eventDisplayName });
                 formConfig.eventDisplayName = migrated.eventDisplayName;
+            }
+            if (registerSubHeader && typeof registerSubHeader === 'object') {
+                const migrated = migrateFormConfig({ sections: formConfig.sections, registerSubHeader });
+                formConfig.registerSubHeader = migrated.registerSubHeader;
+            }
+            if (registerSubtitle && typeof registerSubtitle === 'object') {
+                const migrated = migrateFormConfig({ sections: formConfig.sections, registerSubtitle });
+                formConfig.registerSubtitle = migrated.registerSubtitle;
             }
             if (terms && typeof terms === 'object') {
                 const migrated = migrateFormConfig({ sections: formConfig.sections, terms });
@@ -496,11 +532,18 @@ exports.updateFormConfig = async (req, res) => {
                 eventId: eventId,
                 sections: sections || defaultConfig.sections,
                 defaultLanguage: defaultLanguage || defaultConfig.defaultLanguage,
+                languageSwitcherEnabled: typeof languageSwitcherEnabled === 'boolean' ? languageSwitcherEnabled : defaultConfig.languageSwitcherEnabled,
                 registerPageEnabled: typeof registerPageEnabled === 'boolean' ? registerPageEnabled : defaultConfig.registerPageEnabled,
                 registerClosedMessage: typeof registerClosedMessage === 'string' ? registerClosedMessage : (defaultConfig.registerClosedMessage || ''),
                 eventDisplayName: eventDisplayName && typeof eventDisplayName === 'object'
                     ? migrateFormConfig({ sections: (sections || defaultConfig.sections), eventDisplayName }).eventDisplayName
                     : defaultConfig.eventDisplayName,
+                registerSubHeader: registerSubHeader && typeof registerSubHeader === 'object'
+                    ? migrateFormConfig({ sections: (sections || defaultConfig.sections), registerSubHeader }).registerSubHeader
+                    : defaultConfig.registerSubHeader,
+                registerSubtitle: registerSubtitle && typeof registerSubtitle === 'object'
+                    ? migrateFormConfig({ sections: (sections || defaultConfig.sections), registerSubtitle }).registerSubtitle
+                    : defaultConfig.registerSubtitle,
                 terms: terms && typeof terms === 'object'
                     ? migrateFormConfig({ sections: (sections || defaultConfig.sections), terms }).terms
                     : defaultConfig.terms,
