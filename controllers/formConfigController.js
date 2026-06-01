@@ -2,13 +2,30 @@ const FormConfig = require('../model/FormConfig');
 const Event = require('../model/Event');
 const { normalizePaymentTicketUi } = require('../utils/paymentTicket');
 
+/** Mongoose document → plain object（供 migrate / render 使用） */
+function toPlainFormConfig(formConfig) {
+    if (!formConfig) return formConfig;
+    if (typeof formConfig.toObject === 'function') {
+        return formConfig.toObject({ minimize: false });
+    }
+    if (typeof formConfig.toJSON === 'function') {
+        return formConfig.toJSON();
+    }
+    return { ...formConfig };
+}
+
 // 數據遷移函數：將舊格式轉換為新格式
 const migrateFormConfig = (formConfig) => {
-    if (!formConfig || !formConfig.sections) return formConfig;
+    if (!formConfig) return formConfig;
+
+    const src = toPlainFormConfig(formConfig);
+    if (!src.sections || !Array.isArray(src.sections)) {
+        return applyFormConfigMetaDefaults(src);
+    }
+
+    const migratedConfig = { ...src };
     
-    const migratedConfig = { ...formConfig };
-    
-    migratedConfig.sections = formConfig.sections.map(section => {
+    migratedConfig.sections = src.sections.map(section => {
         const migratedSection = { ...section };
         
         // 遷移 sectionTitle
@@ -93,6 +110,10 @@ const migrateFormConfig = (formConfig) => {
         return migratedSection;
     });
     
+    return applyFormConfigMetaDefaults(migratedConfig);
+};
+
+function applyFormConfigMetaDefaults(migratedConfig) {
     // 確保有 defaultLanguage
     if (!migratedConfig.defaultLanguage) {
         migratedConfig.defaultLanguage = 'zh';
@@ -186,6 +207,12 @@ const migrateFormConfig = (formConfig) => {
     migratedConfig.paymentTicketUi = normalizePaymentTicketUi(migratedConfig.paymentTicketUi);
     
     return migratedConfig;
+}
+
+/** 供 EJS / API 使用：plain object + 預設欄位 */
+exports.getFormConfigForRender = (formConfigDoc) => {
+    if (!formConfigDoc) return null;
+    return migrateFormConfig(formConfigDoc);
 };
 
 // 預設表單配置
@@ -487,13 +514,13 @@ exports.updateFormConfig = async (req, res) => {
         
         if (formConfig) {
             // 更新現有配置，先進行數據遷移
-            const migratedSections = migrateFormConfig({ sections }).sections;
+            const migratedSections = migrateFormConfig({ sections: sections || formConfig.sections }).sections;
             formConfig.sections = migratedSections;
             if (defaultLanguage) {
                 formConfig.defaultLanguage = defaultLanguage;
             }
-            if (typeof languageSwitcherEnabled === 'boolean') {
-                formConfig.languageSwitcherEnabled = languageSwitcherEnabled;
+            if ('languageSwitcherEnabled' in req.body) {
+                formConfig.languageSwitcherEnabled = languageSwitcherEnabled === true;
             }
             if (typeof registerPageEnabled === 'boolean') {
                 formConfig.registerPageEnabled = registerPageEnabled;
@@ -620,23 +647,16 @@ exports.renderFormConfigPage = async (req, res) => {
                 ...getDefaultFormConfig()
             });
             await formConfig.save();
-        } else {
-            const migratedConfig = migrateFormConfig(formConfig);
-            const needsDisplayMigration = formConfig.sections && formConfig.sections.some(sec =>
-                (sec.fields || []).some(f => f.display === undefined)
-            );
-            if (needsDisplayMigration) {
-                Object.assign(formConfig, migratedConfig);
-                await formConfig.save();
-            }
         }
+
+        const formConfigForView = exports.getFormConfigForRender(formConfig);
         
         const { getCurrentBannerPreviewUrl } = require('../utils/bannerCache');
         const currentBanner = getCurrentBannerPreviewUrl(eventId);
 
         res.render('admin/form_config', { 
             event: event, 
-            formConfig: formConfig,
+            formConfig: formConfigForView,
             currentBanner
         });
         
@@ -653,6 +673,7 @@ module.exports = {
     renderFormConfigPage: exports.renderFormConfigPage,
     resetToDefault: exports.resetToDefault,
     getDefaultFormConfig: exports.getDefaultFormConfig,
+    getFormConfigForRender: exports.getFormConfigForRender,
     migrateFormConfig
 };
 

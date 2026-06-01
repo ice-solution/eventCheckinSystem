@@ -356,7 +356,7 @@
         </div>
         
         <!-- 語言切換 -->
-        <% const languageSwitcherEnabled = formConfig && formConfig.languageSwitcherEnabled !== false; %>
+        <% const languageSwitcherEnabled = !formConfig || formConfig.languageSwitcherEnabled !== false; %>
         <% if (languageSwitcherEnabled) { %>
         <div class="language-switcher" style="text-align: right; margin-top: 40px; margin-bottom: 30px;">
             <div class="btn-group" role="group">
@@ -746,7 +746,7 @@
         }
         
         // 語言設置：優先使用 URL 參數，否則使用默認語言
-        const languageSwitcherEnabled = <%= languageSwitcherEnabled ? 'true' : 'false' %>;
+        const languageSwitcherEnabled = <%- JSON.stringify(!formConfig || formConfig.languageSwitcherEnabled !== false) %>;
         const urlLanguage = languageSwitcherEnabled ? getLanguageFromURL() : null;
         let currentLanguage = urlLanguage || '<%= formConfig.defaultLanguage || "zh" %>';
         const formConfigEventName = <%- JSON.stringify(formConfig && formConfig.eventDisplayName ? formConfig.eventDisplayName : { zh: '', en: '' }) %>;

@@ -1185,6 +1185,9 @@
             
             const result = await response.json();
             if (result.success) {
+                if (result.formConfig && typeof result.formConfig.languageSwitcherEnabled === 'boolean') {
+                    formConfig.languageSwitcherEnabled = result.formConfig.languageSwitcherEnabled;
+                }
                 console.log('表單配置已儲存！');
             } else {
                 console.error('儲存失敗：' + result.message);
