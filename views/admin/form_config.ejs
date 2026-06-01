@@ -398,6 +398,18 @@
                             <!-- 表單配置區域 -->
                             <div id="formConfigContainer">
                                 <% if (formConfig && formConfig.sections) { %>
+                                    <%
+                                    const fcHeaderLang = (formConfig && formConfig.defaultLanguage) ? formConfig.defaultLanguage : 'zh';
+                                    function fcLangText(val, lang) {
+                                        if (val == null || val === '') return '';
+                                        if (typeof val === 'string') return val;
+                                        if (typeof val === 'object') {
+                                            if (lang === 'en') return (val.en || val.zh || '').trim();
+                                            return (val.zh || val.en || '').trim();
+                                        }
+                                        return String(val);
+                                    }
+                                    %>
                                     <% 
                                     // 根據 order Order sections
                                     const sortedSections = formConfig.sections.slice().sort((a, b) => {
@@ -419,7 +431,7 @@
                                                            <%= section.visible ? 'checked' : '' %>
                                                            onchange="toggleSection(<%= actualSectionIndex %>)">
                                                     <label class="form-check-label">
-                                                        <strong><%= section.sectionTitle %></strong>
+                                                        <strong><%= fcLangText(section.sectionTitle, fcHeaderLang) || section.sectionName || '區塊' %></strong>
                                                     </label>
                                                 </div>
                                                 <div class="col-md-2">
@@ -456,7 +468,7 @@
                                                                        <%= fieldDisplayed ? 'checked' : '' %>
                                                                        onchange="toggleField(<%= actualSectionIndex %>, <%= actualFieldIndex %>)">
                                                                 <label class="form-check-label">
-                                                                    <strong><%= field.label %></strong>
+                                                                    <strong><%= fcLangText(field.label, fcHeaderLang) || field.fieldName || '欄位' %></strong>
                                                                     <% if (field.required) { %>
                                                                         <span class="text-danger">*</span>
                                                                     <% } %>
