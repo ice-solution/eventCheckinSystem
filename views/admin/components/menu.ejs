@@ -38,7 +38,8 @@
                     <a href="/events/<%=eventId%>/seating-arrangement" data-tooltip="排桌 Seating"> <i class="menu-icon fa fa-th"></i>排桌 Seating</a>
                 </li>
                 <% } %>
-                <% if (can('guestList')) { %>
+                <%# HIDDEN: guestList — menu entry removed, route/function intact %>
+                <% if (false && can('guestList')) { %>
                 <li>
                     <a href="/events/<%=eventId%>/guest-list" data-tooltip="<%= t('menu.guestList') %>"> <i class="menu-icon fa fa-users"></i><%= t('menu.guestList') %> </a>
                 </li>
@@ -48,7 +49,8 @@
                     <a href="/events/<%=eventId%>/emailTemplate" data-tooltip="<%= t('menu.emailTemplate') %>"> <i class="menu-icon fa fa-envelope"></i><%= t('menu.emailTemplate') %> </a>
                 </li>
                 <% } %>
-                <% if (can('smsTemplate')) { %>
+                <%# HIDDEN: smsTemplate — menu entry removed, route/function intact %>
+                <% if (false && can('smsTemplate')) { %>
                 <li>
                     <a href="/events/<%=eventId%>/smsTemplate" data-tooltip="<%= t('menu.smsTemplate') %>"> <i class="menu-icon fa fa-comment"></i><%= t('menu.smsTemplate') %> </a>
                 </li>
@@ -58,17 +60,20 @@
                     <a href="/events/<%=eventId%>/badges" data-tooltip="<%= t('menu.badgeDesign') %>"> <i class="menu-icon fa fa-id-card"></i><%= t('menu.badgeDesign') %> </a>
                 </li>
                 <% } %>
-                <% if (can('qrcodeLogin')) { %>
+                <%# HIDDEN: qrcodeLogin — menu entry removed, route/function intact %>
+                <% if (false && can('qrcodeLogin')) { %>
                 <li>
                     <a href="/events/<%=eventId%>/qrcodeLogin" target="_blank" data-tooltip="<%= t('menu.qrcodeLogin') %>"> <i class="menu-icon fa fa-qrcode"></i><%= t('menu.qrcodeLogin') %></a>
                 </li>
                 <% } %>
-                <% if (can('scanPointUsers')) { %>
+                <%# HIDDEN: scanPointUsers — menu entry removed, route/function intact %>
+                <% if (false && can('scanPointUsers')) { %>
                 <li>
                     <a href="/events/<%=eventId%>/scan-point-users" data-tooltip="<%= t('menu.scanPoint') %>"> <i class="menu-icon fa fa-barcode"></i><%= t('menu.scanPoint') %></a>
                 </li>
                 <% } %>
-                <% if (can('treasureHunt')) { %>
+                <%# HIDDEN: treasureHunt — menu entry removed, route/function intact %>
+                <% if (false && can('treasureHunt')) { %>
                 <li>
                     <a href="/events/<%=eventId%>/treasure-hunt" data-tooltip="<%= t('menu.treasureHunt') %>"> <i class="menu-icon fa fa-compass"></i><%= t('menu.treasureHunt') %></a>
                 </li>
