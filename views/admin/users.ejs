@@ -866,6 +866,10 @@
                                                     <option value="company">Company</option>
                                                     <option value="phone">Phone</option>
                                                 <% } %>
+                                                <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
+                                                    <option value="agreementAgreed">協議同意 (agreementAgreed)</option>
+                                                    <option value="agreementRecordedAt">協議記錄時間 (agreementRecordedAt)</option>
+                                                <% } %>
                                             </select>
                                         </div>
                                         <div class="col-auto">
@@ -898,6 +902,10 @@
                                                     <option value="name">Name</option>
                                                     <option value="company">Company</option>
                                                     <option value="phone">Phone</option>
+                                                <% } %>
+                                                <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
+                                                    <option value="agreementAgreed">協議同意 (agreementAgreed)</option>
+                                                    <option value="agreementRecordedAt">協議記錄時間 (agreementRecordedAt)</option>
                                                 <% } %>
                                             </select>
                                         </div>
@@ -956,6 +964,10 @@
                                             <th>Company</th>
                                             <th>Phone</th>
                                         <% } %>
+                                        <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
+                                            <th>協議同意</th>
+                                            <th>協議記錄時間</th>
+                                        <% } %>
                                         <th><%= t('users.colCreatedAt') %></th>
                                         <th><%= t('users.colCheckedIn') %></th>
                                         <th><%= t('users.colActions') %></th>
@@ -983,6 +995,28 @@
                                             <td data-field-name="name"><%= user.name %></td>
                                             <td data-field-name="company"><%= user.company %></td>
                                             <td data-field-name="phone"><%= user.phone %></td>
+                                            <% } %>
+                                            <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
+                                            <td class="agreement-meta-cell" data-field-name="agreementAgreed" data-order="<%= user.agreementAgreed === true ? 1 : (user.agreementAgreed === false ? 0 : -1) %>">
+                                                <% if (user.agreementAgreed === true) { %>同意<% } else if (user.agreementAgreed === false) { %>未同意<% } else { %>-<% } %>
+                                            </td>
+                                            <td class="agreement-meta-cell" data-field-name="agreementRecordedAt" data-order="<%= user.agreementRecordedAt ? new Date(user.agreementRecordedAt).getTime() : 0 %>">
+                                                <% if (user.agreementRecordedAt) {
+                                                    const agreementDate = new Date(user.agreementRecordedAt);
+                                                    if (!isNaN(agreementDate.getTime())) { %>
+                                                    <%= agreementDate.toLocaleString('zh-TW', {
+                                                        timeZone: 'Asia/Hong_Kong',
+                                                        year: 'numeric',
+                                                        month: '2-digit',
+                                                        day: '2-digit',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit',
+                                                        second: '2-digit',
+                                                        hour12: false
+                                                    }) %>
+                                                <% } else { %>-<% }
+                                                } else { %>-<% } %>
+                                            </td>
                                             <% } %>
                                             <td data-order="<%= (user.create_at || user.created_at) ? new Date(user.create_at || user.created_at).getTime() : 0 %>">
                                                 <% 
@@ -1271,6 +1305,9 @@ const _US = {
             <% }); %>
         <% } else { %>
             searchableFieldNames.push('email', 'name', 'company', 'phone');
+        <% } %>
+        <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
+            searchableFieldNames.push('agreementAgreed', 'agreementRecordedAt');
         <% } %>
 
         // 條件陣列：{ field: 'name', term: 'john doe' }，須全部符合 (AND)
@@ -2075,7 +2112,7 @@ const _US = {
         });
 
         // Add inline editing functionality
-        $('#usersTable tbody').on('dblclick', 'td:not(:last-child):not(:nth-last-child(2)):not(:first-child)', function() {
+        $('#usersTable tbody').on('dblclick', 'td:not(:last-child):not(:nth-last-child(2)):not(:first-child):not(.agreement-meta-cell)', function() {
             const cell = $(this);
             const currentText = cell.text().trim();
             // Try multiple ways to get field-name (compatible with data-field-name and data-fieldName)
@@ -2377,15 +2414,19 @@ const _US = {
             paymentTickets.forEach((ticket, idx) => {
                 const range = getTicketRangeValues(ticket);
                 const titles = getTicketTitleParts(ticket);
+                const cat = (ticket.category || '').replace(/"/g, '&quot;');
                 html += `
-                    <div class="ticket-item mb-2" data-idx="${idx}">
-                        <input type="text" class="form-control d-inline-block w-auto mr-1 ticket-title-zh" placeholder="票券名稱（中文）" value="${(titles.zh || '').replace(/"/g, '&quot;')}" style="width:130px;">
-                        <input type="text" class="form-control d-inline-block w-auto mr-2 ticket-title-en" placeholder="Ticket name (EN)" value="${(titles.en || '').replace(/"/g, '&quot;')}" style="width:130px;">
-                        <input type="number" class="form-control d-inline-block w-auto mr-2 ticket-price" placeholder="Price" value="${ticket.price || ''}" style="width:100px;">
-                        <input type="datetime-local" class="form-control d-inline-block w-auto mr-1 ticket-datetime-from" value="${toDatetimeLocalValue(range.from)}" style="width:180px;" title="開始日期時間">
-                        <span class="mr-1 text-muted">–</span>
-                        <input type="datetime-local" class="form-control d-inline-block w-auto mr-2 ticket-datetime-to" value="${toDatetimeLocalValue(range.to)}" style="width:180px;" title="結束日期時間">
-                        <button type="button" class="btn btn-danger btn-sm remove-ticket">Delete</button>
+                    <div class="ticket-item mb-3 p-2 border rounded" data-idx="${idx}">
+                        <div class="mb-2">
+                            <input type="text" class="form-control d-inline-block w-auto mr-1 ticket-category" placeholder="Category key（如 vip）" value="${cat}" style="width:120px;" title="與 Form Config 分類按鈕 key 對應；留空=其他">
+                            <input type="text" class="form-control d-inline-block w-auto mr-1 ticket-title-zh" placeholder="票券名稱（中文）" value="${(titles.zh || '').replace(/"/g, '&quot;')}" style="width:130px;">
+                            <input type="text" class="form-control d-inline-block w-auto mr-2 ticket-title-en" placeholder="Ticket name (EN)" value="${(titles.en || '').replace(/"/g, '&quot;')}" style="width:130px;">
+                            <input type="number" class="form-control d-inline-block w-auto mr-2 ticket-price" placeholder="Price" value="${ticket.price || ''}" style="width:100px;">
+                            <input type="datetime-local" class="form-control d-inline-block w-auto mr-1 ticket-datetime-from" value="${toDatetimeLocalValue(range.from)}" style="width:180px;" title="開始日期時間">
+                            <span class="mr-1 text-muted">–</span>
+                            <input type="datetime-local" class="form-control d-inline-block w-auto mr-2 ticket-datetime-to" value="${toDatetimeLocalValue(range.to)}" style="width:180px;" title="結束日期時間">
+                            <button type="button" class="btn btn-danger btn-sm remove-ticket">Delete</button>
+                        </div>
                     </div>
                 `;
             });
@@ -2395,7 +2436,7 @@ const _US = {
         // 新增票券
         $(document).on('click', '#addTicketBtn', function(e) {
             e.preventDefault();
-            paymentTickets.push({ title: { zh: '', en: '' }, price: '', datetimeFrom: '', datetimeTo: '' });
+            paymentTickets.push({ title: { zh: '', en: '' }, price: '', category: '', datetimeFrom: '', datetimeTo: '' });
             renderTickets();
         });
 
@@ -2407,13 +2448,14 @@ const _US = {
         });
 
         // 編輯票券
-        $(document).on('change', '.ticket-title-zh, .ticket-title-en, .ticket-price, .ticket-datetime-from, .ticket-datetime-to', function() {
+        $(document).on('change', '.ticket-category, .ticket-title-zh, .ticket-title-en, .ticket-price, .ticket-datetime-from, .ticket-datetime-to', function() {
             const idx = $(this).closest('.ticket-item').data('idx');
             const row = $(this).closest('.ticket-item');
             paymentTickets[idx].title = {
                 zh: row.find('.ticket-title-zh').val(),
                 en: row.find('.ticket-title-en').val()
             };
+            paymentTickets[idx].category = (row.find('.ticket-category').val() || '').trim();
             paymentTickets[idx].price = Number(row.find('.ticket-price').val());
             paymentTickets[idx].datetimeFrom = row.find('.ticket-datetime-from').val();
             paymentTickets[idx].datetimeTo = row.find('.ticket-datetime-to').val();
@@ -2429,6 +2471,7 @@ const _US = {
                     zh: (row.find('.ticket-title-zh').val() || '').trim(),
                     en: (row.find('.ticket-title-en').val() || '').trim()
                 };
+                paymentTickets[idx].category = (row.find('.ticket-category').val() || '').trim();
                 paymentTickets[idx].price = Number(row.find('.ticket-price').val()) || 0;
                 paymentTickets[idx].datetimeFrom = row.find('.ticket-datetime-from').val();
                 paymentTickets[idx].datetimeTo = row.find('.ticket-datetime-to').val();
@@ -2595,6 +2638,10 @@ const _US = {
                         newRow.push(userData.name || '-');
                         newRow.push(userData.company || '-');
                         newRow.push(userData.phone || '-');
+                    <% } %>
+                    <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
+                        newRow.push('-');
+                        newRow.push('-');
                     <% } %>
                     
                     // 添加 Created At 列

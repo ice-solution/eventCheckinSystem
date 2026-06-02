@@ -6,7 +6,7 @@ const Event = require('../model/Event');
 const eventsController = require('../controllers/eventsController');
 const Transaction = require('../model/Transaction');
 const { getBannerRenderData } = require('../utils/bannerCache');
-const { normalizeTicketsForView } = require('../utils/paymentTicket');
+const { normalizeTicketsForView, ticketsUseCategories } = require('../utils/paymentTicket');
 
 // 為活動頁面注入帶 ?t= 的 banner URL（依檔案修改時間，避免 CDN 快取舊圖）
 router.param('event_id', (req, res, next, eventId) => {
@@ -45,28 +45,10 @@ router.get('/:event_id/register', async (req, res) => {
             ...defaultConfig
         });
         await formConfig.save();
-    } else {
-        // 檢查是否需要數據遷移（只在第一次訪問時進行，避免覆蓋用戶設置）
-        const formConfigController = require('../controllers/formConfigController');
-        const migratedConfig = formConfigController.migrateFormConfig(formConfig);
-        
-        // 只有在數據結構真正需要遷移時才保存（避免覆蓋用戶的 defaultLanguage 設置）
-        const needsMigration = !formConfig.defaultLanguage || 
-                              (formConfig.sections && formConfig.sections.length > 0 && 
-                               formConfig.sections[0].fields && formConfig.sections[0].fields.length > 0 &&
-                               typeof formConfig.sections[0].fields[0].label === 'string');
-        
-        if (needsMigration && JSON.stringify(migratedConfig) !== JSON.stringify(formConfig)) {
-            // 保留用戶設置的 defaultLanguage
-            const userDefaultLanguage = formConfig.defaultLanguage;
-            Object.assign(formConfig, migratedConfig);
-            if (userDefaultLanguage) {
-                formConfig.defaultLanguage = userDefaultLanguage;
-            }
-            await formConfig.save();
-            console.log('FormConfig 數據已遷移，保留用戶設置的 defaultLanguage:', userDefaultLanguage);
-        }
     }
+
+    const formConfigController = require('../controllers/formConfigController');
+    formConfig = formConfigController.getFormConfigForRender(formConfig);
     
     // Register 版面關閉時顯示關閉頁，否則顯示註冊表單
     if (formConfig.registerPageEnabled === false) {
@@ -77,7 +59,14 @@ router.get('/:event_id/register', async (req, res) => {
         });
     }
     
-    res.render('exvent/register', { event_id, event, paymentTickets, formConfig: formConfig });
+    const ticketsForView = paymentTickets;
+    res.render('exvent/register', {
+        event_id,
+        event,
+        paymentTickets: ticketsForView,
+        ticketsUseCategories: ticketsUseCategories(ticketsForView),
+        formConfig: formConfig
+    });
 });
 // 路由到註冊成功頁面（session_id 可為 Stripe session_id、Wonder order_id 或 Transaction _id）
 router.get('/:event_id/register/success', async (req, res) => {
@@ -108,6 +97,13 @@ router.get('/:event_id/register/fail', async (req, res) => {
     }
     res.render('exvent/fail', { event_id, transaction, errorMsg, lang: lang || null });
 });
+
+// 公開 Email Template HTML 預覽（與 /emailTemplate/preview/:id 相同，方便 iframe 嵌入）
+const emailTemplateController = require('../controllers/emailTemplateController');
+router.get('/email-template/:id', emailTemplateController.renderEmailTemplatePreview);
+
+// 公開免費報名（iframe / 前台，不需登入；勿用 /events/.../users）
+router.post('/:event_id/register', eventsController.publicRegister);
 
 // Wonder Payment Checkout（沿用舊路徑以相容前端）
 router.post('/:event_id/stripe-checkout', eventsController.stripeCheckout);

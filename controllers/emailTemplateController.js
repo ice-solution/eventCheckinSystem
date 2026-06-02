@@ -1,4 +1,11 @@
 const EmailTemplate = require("../model/EmailTemplate")
+const Event = require("../model/Event")
+const Transaction = require("../model/Transaction")
+const {
+  replaceTemplateVariables,
+  buildEmailTemplateAdditionalVars,
+  resolveEventUser,
+} = require("../utils/replaceTemplateVariables")
 
 const sendGrid = require("../utils/sendGrid")
 const ses = require("../utils/ses")
@@ -77,6 +84,97 @@ exports.getEmailTemplatesByType = async (req, res) => {
   } catch (error) {
     console.error("Error fetching email templates by type:", error)
     res.status(500).json({ message: "Error fetching email templates" })
+  }
+}
+
+/**
+ * 公開預覽 Email Template HTML（不需登入）
+ * GET /emailTemplate/preview/:id
+ */
+exports.renderEmailTemplatePreview = async (req, res) => {
+  const { id } = req.params
+  const userId = (req.query.userId || req.query.user_id || "").trim()
+  const eventIdQuery = (req.query.eventId || req.query.event_id || "").trim()
+  const transactionId = (req.query.transactionId || req.query.transaction_id || "").trim()
+
+  try {
+    const template = await EmailTemplate.findById(id)
+    if (!template) {
+      return res.status(404).render("pages/email_template_preview", {
+        notFound: true,
+        subject: "",
+        content: "",
+        variablesResolved: false,
+        previewHint: "",
+      })
+    }
+
+    const eventId = eventIdQuery || (template.eventId ? String(template.eventId) : "")
+    let event = null
+    let user = null
+    let previewHint = ""
+
+    if (eventId) {
+      event = await Event.findById(eventId)
+    }
+
+    if (userId && event) {
+      if (event.users && event.users.id) {
+        user = event.users.id(userId)
+      }
+      if (!user && event.users) {
+        user = event.users.find((u) => String(u._id) === userId)
+      }
+      if (!user) {
+        previewHint = "找不到此 userId，顯示原始模板（含 {{}} 佔位符）"
+      }
+    } else if (userId && !event) {
+      previewHint = "請同時提供 eventId（或使用已綁定活動的模板）"
+    } else if (!userId) {
+      previewHint = "未提供 userId，顯示原始模板；加上 ?userId=用戶_id 可預覽替換後內容"
+    }
+
+    let content = template.content || ""
+    let subject = template.subject || ""
+    let variablesResolved = false
+
+    if (user && event) {
+      const userObj = resolveEventUser(event, user)
+      const baseUrl = getPublicBaseUrl(req)
+      let transaction = null
+      if (transactionId) {
+        transaction = await Transaction.findById(transactionId)
+      }
+      const additionalVars = buildEmailTemplateAdditionalVars({
+        baseUrl,
+        user: userObj,
+        event,
+        emailTemplateId: template._id,
+        transaction,
+      })
+
+      content = replaceTemplateVariables(content, userObj, event, additionalVars)
+      subject = replaceTemplateVariables(subject, userObj, event, additionalVars)
+      variablesResolved = true
+      previewHint = ""
+    }
+
+    try {
+      content = require("../utils/embedEmailFonts").embedKaitiFontInEmail(content)
+    } catch (fontErr) {
+      console.warn("embedKaitiFontInEmail skipped:", fontErr.message)
+    }
+
+    res.render("pages/email_template_preview", {
+      notFound: false,
+      subject,
+      content,
+      variablesResolved,
+      previewHint,
+    })
+  } catch (error) {
+    console.error("Error rendering email template preview:", error)
+    res.status(500).send("獲取郵件模板預覽時出現錯誤")
   }
 }
 

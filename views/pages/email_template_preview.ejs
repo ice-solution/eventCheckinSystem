@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title><%= notFound ? 'Template not found' : (subject || 'Email Preview') %></title>
+    <link rel="stylesheet" href="/admin/assets/css/tinymce-custom-fonts.css">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, "Microsoft JhengHei", sans-serif;
+            background: #f0f2f5;
+            color: #222;
+        }
+        .preview-hint {
+            background: #fff8e6;
+            border-bottom: 1px solid #f0e0b0;
+            padding: 8px 16px;
+            font-size: 13px;
+            color: #664d03;
+            text-align: center;
+        }
+        .preview-frame-wrap {
+            padding: 24px 16px 40px;
+            display: flex;
+            justify-content: center;
+        }
+        .preview-frame {
+            width: 100%;
+            max-width: 720px;
+            background: #fff;
+            box-shadow: 0 2px 12px rgba(0,0,0,.08);
+            padding: 24px;
+            min-height: 200px;
+        }
+        .preview-frame img {
+            max-width: 100%;
+            height: auto;
+        }
+        .preview-empty {
+            text-align: center;
+            padding: 48px 16px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+<% if (notFound) { %>
+    <div class="preview-empty">
+        <h1>找不到郵件模板</h1>
+    </div>
+<% } else { %>
+    <% if (previewHint) { %>
+    <div class="preview-hint"><%= previewHint %></div>
+    <% } %>
+    <div class="preview-frame-wrap">
+        <div class="preview-frame email-template-html-content">
+            <% if (content && String(content).trim()) { %>
+                <%- content %>
+            <% } else { %>
+                <p>（此模板尚無 HTML 內容）</p>
+            <% } %>
+        </div>
+    </div>
+<% } %>
+</body>
+</html>

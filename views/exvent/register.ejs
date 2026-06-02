@@ -34,6 +34,21 @@
             word-break: break-word;
             hyphens: auto;
         }
+        .form-header .form-subheader {
+            color: #34495e;
+            font-size: 1.15rem;
+            font-weight: 500;
+            line-height: 1.4;
+            margin: 0 0 10px;
+            text-align: center;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+        .form-header #formSubtitle {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 0;
+        }
         .form-section {
             margin-bottom: 30px;
         }
@@ -276,6 +291,53 @@
                 margin: 0 6px;
             }
         }
+        .ticket-category-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .ticket-category-btn {
+            border: 1px solid #ced4da;
+            background: #fff;
+            color: #333;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .ticket-category-btn.active {
+            background: #007bff;
+            border-color: #007bff;
+            color: #fff;
+        }
+        .ticket-select-block {
+            margin-bottom: 20px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f3f4;
+        }
+        .ticket-select-block .form-row {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .ticket-highlight-row {
+            display: none;
+            width: 100%;
+            margin-top: 8px;
+        }
+        .ticket-highlight-row.is-visible {
+            display: block;
+        }
+        .ticket-highlight-text {
+            width: 100%;
+            max-width: none;
+            margin: 0;
+            padding: 0;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #5a6268;
+            white-space: pre-wrap;
+        }
     </style>
 </head>
 <body>
@@ -294,17 +356,35 @@
         </div>
         
         <!-- 語言切換 -->
+        <% const languageSwitcherEnabled = !formConfig || formConfig.languageSwitcherEnabled !== false; %>
+        <% if (languageSwitcherEnabled) { %>
         <div class="language-switcher" style="text-align: right; margin-top: 40px; margin-bottom: 30px;">
             <div class="btn-group" role="group">
                 <button type="button" class="btn btn-outline-primary" id="langZhBtn" onclick="switchLanguage('zh')">中文</button>
                 <button type="button" class="btn btn-outline-primary" id="langEnBtn" onclick="switchLanguage('en')">English</button>
             </div>
         </div>
+        <% } %>
 
+        <%
+            const regSubHeader = (formConfig && formConfig.registerSubHeader) ? formConfig.registerSubHeader : { zh: '', en: '' };
+            const regSubtitle = (formConfig && formConfig.registerSubtitle) ? formConfig.registerSubtitle : {
+                zh: '請填寫以下資料完成活動報名',
+                en: 'Please fill in the following information to complete event registration'
+            };
+            const headerInitLang = (formConfig && formConfig.defaultLanguage) ? formConfig.defaultLanguage : 'zh';
+            const initSubHeader = headerInitLang === 'en'
+                ? ((regSubHeader.en || regSubHeader.zh || '').trim())
+                : ((regSubHeader.zh || regSubHeader.en || '').trim());
+            const initSubtitle = headerInitLang === 'en'
+                ? (regSubtitle.en || regSubtitle.zh || 'Please fill in the following information to complete event registration')
+                : (regSubtitle.zh || regSubtitle.en || '請填寫以下資料完成活動報名');
+        %>
         <div class="form-header">
             <br><br>
             <h1 id="formTitle"><%= event && event.name ? event.name : 'Event' %></h1>
-            <p class="text-muted" id="formSubtitle">請填寫以下資料完成活動報名</p>
+            <p id="formSubHeader" class="form-subheader"<%= initSubHeader ? '' : ' style="display:none;"' %>><%= initSubHeader %></p>
+            <p class="text-muted" id="formSubtitle"><%= initSubtitle %></p>
         </div>
 
         <form id="userForm" method="POST">
@@ -522,36 +602,52 @@
             <% } %>
 
             <!-- 票券選擇（如果適用） -->
-            <% if (paymentTickets && paymentTickets.length > 0) { %>
-                <div class="form-section">
-                    <h3 class="section-title" data-zh="票券選擇" data-en="Ticket Selection">票券選擇</h3>
-                    <div class="form-row">
-                        <label class="form-label field-label" for="ticketId"
-                               data-zh="選擇票券" data-en="Select Ticket">
-                            選擇票券 <span class="required">*</span>
+            <% if (paymentTickets && paymentTickets.length > 0) {
+                const ptUi = (formConfig && formConfig.paymentTicketUi) ? formConfig.paymentTicketUi : {};
+                const ptSectionZh = (ptUi.sectionTitle && ptUi.sectionTitle.zh) ? ptUi.sectionTitle.zh : '票券選擇';
+                const ptSectionEn = (ptUi.sectionTitle && ptUi.sectionTitle.en) ? ptUi.sectionTitle.en : 'Ticket Selection';
+                const ptCatLabelZh = (ptUi.categoryLabel && ptUi.categoryLabel.zh) ? ptUi.categoryLabel.zh : '選擇類別';
+                const ptCatLabelEn = (ptUi.categoryLabel && ptUi.categoryLabel.en) ? ptUi.categoryLabel.en : 'Select Category';
+                const ptTicketLabelZh = (ptUi.ticketLabel && ptUi.ticketLabel.zh) ? ptUi.ticketLabel.zh : '選擇票券';
+                const ptTicketLabelEn = (ptUi.ticketLabel && ptUi.ticketLabel.en) ? ptUi.ticketLabel.en : 'Select Ticket';
+            %>
+                <div class="form-section" id="paymentTicketSection">
+                    <h3 class="section-title lang-text" id="ticketSectionTitle"
+                        data-zh="<%= ptSectionZh %>" data-en="<%= ptSectionEn %>"><%= ptSectionZh %></h3>
+
+                    <% if (ticketsUseCategories) { %>
+                    <div class="form-row" id="ticketCategoryRow">
+                        <label class="form-label field-label lang-text" id="ticketCategoryLabel"
+                               data-zh="<%= ptCatLabelZh %>" data-en="<%= ptCatLabelEn %>">
+                            <%= ptCatLabelZh %> <span class="required">*</span>
                         </label>
                         <div class="form-input">
-                            <select class="form-control" id="ticketId" name="ticketId" required>
-                                <option value="" data-zh="--- 請選擇票券 ---" data-en="--- Please select a ticket ---">--- 請選擇票券 ---</option>
-                                <% paymentTickets.forEach(function(ticket) { 
-                                    const now = new Date();
-                                    const from = ticket.datetimeFrom ? new Date(ticket.datetimeFrom) : null;
-                                    const to = ticket.datetimeTo ? new Date(ticket.datetimeTo) : (ticket.datetime ? new Date(ticket.datetime) : null);
-                                    const inRange = (!from || now >= from) && (!to || now <= to);
-                                    const tZh = (ticket.title && ticket.title.zh) ? ticket.title.zh : '';
-                                    const tEn = (ticket.title && ticket.title.en) ? ticket.title.en : '';
-                                    const optZh = tZh ? (tZh + ' - $' + ticket.price) : ('票券 - $' + ticket.price);
-                                    const optEn = (tEn || tZh) ? ((tEn || tZh) + ' - $' + ticket.price) : ('Ticket - $' + ticket.price);
-                                    if (inRange) { %>
-                                        <option value="<%= ticket._id %>"
-                                                data-zh="<%= optZh %>"
-                                                data-en="<%= optEn %>"><%= optZh %></option>
-                                <%  } 
-                                }); %>
-                            </select>
+                            <div id="ticketCategoryButtons" class="ticket-category-buttons" role="group"></div>
+                            <input type="hidden" id="ticketCategory" name="ticketCategory" value="">
+                        </div>
+                    </div>
+                    <% } %>
+
+                    <div class="ticket-select-block" id="ticketSelectBlock" <%= ticketsUseCategories ? 'style="display:none;"' : '' %>>
+                        <div class="form-row" id="ticketSelectRow">
+                            <label class="form-label field-label lang-text" for="ticketId" id="ticketSelectLabel"
+                                   data-zh="<%= ptTicketLabelZh %>" data-en="<%= ptTicketLabelEn %>">
+                                <%= ptTicketLabelZh %> <span class="required">*</span>
+                            </label>
+                            <div class="form-input">
+                                <select class="form-control" id="ticketId" name="ticketId" <%= ticketsUseCategories ? '' : 'required' %>>
+                                    <option value="" class="lang-text" data-zh="--- 請選擇票券 ---" data-en="--- Please select a ticket ---">--- 請選擇票券 ---</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="ticketHighlightRow" class="ticket-highlight-row" aria-live="polite">
+                            <div id="ticketHighlightText" class="ticket-highlight-text"></div>
                         </div>
                     </div>
                 </div>
+                <script type="application/json" id="paymentTicketsDataJson"><%- JSON.stringify(paymentTickets) %></script>
+                <script type="application/json" id="paymentTicketUiJson"><%- JSON.stringify(ptUi) %></script>
+                <script type="application/json" id="ticketsUseCategoriesJson"><%- JSON.stringify(!!ticketsUseCategories) %></script>
             <% } %>
 
             <!-- Terms & Conditions（需同意才可提交） -->
@@ -586,7 +682,7 @@
                 }) %></script>
             <% } %>
 
-            <!-- Agreement（功能同 Terms & Conditions） -->
+            <!-- Agreement（非必填，但會記錄勾選狀態） -->
             <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
                 <div class="form-section agreement-section">
                     <div class="terms-header">
@@ -595,7 +691,7 @@
                            data-zh="(協議)" data-en="(agreement)">(agreement)</a>
                     </div>
                     <div class="form-check terms-agree-row">
-                        <input class="form-check-input" type="checkbox" id="agreementAgree" required>
+                        <input class="form-check-input" type="checkbox" id="agreementAgree" name="agreementAgreed" value="true">
                         <label class="form-check-label"
                                for="agreementAgree"
                                data-zh="<%= (formConfig.agreement.label && formConfig.agreement.label.zh ? formConfig.agreement.label.zh : '') %>"
@@ -619,8 +715,14 @@
             <% } %>
 
             <div class="btn-container">
-                <button type="button" class="btn btn-secondary lang-text" data-zh="返回" data-en="Back" onclick="history.back()">返回</button>
-                <button type="submit" class="btn btn-primary lang-text" data-zh="下一步" data-en="Next">下一步</button>
+                <% const regBtnUi = (formConfig && formConfig.paymentTicketUi && formConfig.paymentTicketUi.buttons) ? formConfig.paymentTicketUi.buttons : {}; %>
+                <button type="button" class="btn btn-secondary lang-text" id="registerBackBtn"
+                        data-zh="<%= (regBtnUi.back && regBtnUi.back.zh) ? regBtnUi.back.zh : '返回' %>"
+                        data-en="<%= (regBtnUi.back && regBtnUi.back.en) ? regBtnUi.back.en : 'Back' %>"
+                        onclick="history.back()"><%= (regBtnUi.back && regBtnUi.back.zh) ? regBtnUi.back.zh : '返回' %></button>
+                <button type="submit" class="btn btn-primary lang-text" id="registerNextBtn"
+                        data-zh="<%= (regBtnUi.next && regBtnUi.next.zh) ? regBtnUi.next.zh : '下一步' %>"
+                        data-en="<%= (regBtnUi.next && regBtnUi.next.en) ? regBtnUi.next.en : 'Next' %>"><%= (regBtnUi.next && regBtnUi.next.zh) ? regBtnUi.next.zh : '下一步' %></button>
             </div>
         </form>
         
@@ -644,15 +746,42 @@
         }
         
         // 語言設置：優先使用 URL 參數，否則使用默認語言
-        const urlLanguage = getLanguageFromURL();
+        const languageSwitcherEnabled = <%- JSON.stringify(!formConfig || formConfig.languageSwitcherEnabled !== false) %>;
+        const urlLanguage = languageSwitcherEnabled ? getLanguageFromURL() : null;
         let currentLanguage = urlLanguage || '<%= formConfig.defaultLanguage || "zh" %>';
         const formConfigEventName = <%- JSON.stringify(formConfig && formConfig.eventDisplayName ? formConfig.eventDisplayName : { zh: '', en: '' }) %>;
+        const formConfigRegisterSubHeader = <%- JSON.stringify(formConfig && formConfig.registerSubHeader ? formConfig.registerSubHeader : { zh: '', en: '' }) %>;
+        const formConfigRegisterSubtitle = <%- JSON.stringify(formConfig && formConfig.registerSubtitle ? formConfig.registerSubtitle : { zh: '請填寫以下資料完成活動報名', en: 'Please fill in the following information to complete event registration' }) %>;
         const fallbackEventName = <%- JSON.stringify(event && event.name ? event.name : 'Event') %>;
+        function getBilingualFormText(obj, lang, fallbackZh, fallbackEn) {
+            const zh = (obj && obj.zh) ? String(obj.zh).trim() : '';
+            const en = (obj && obj.en) ? String(obj.en).trim() : '';
+            if (lang === 'en') return en || zh || fallbackEn || fallbackZh || '';
+            return zh || en || fallbackZh || fallbackEn || '';
+        }
         function getHeaderEventName(lang) {
-            const zh = (formConfigEventName && formConfigEventName.zh) ? String(formConfigEventName.zh).trim() : '';
-            const en = (formConfigEventName && formConfigEventName.en) ? String(formConfigEventName.en).trim() : '';
-            if (lang === 'en') return en || zh || fallbackEventName;
-            return zh || en || fallbackEventName;
+            return getBilingualFormText(formConfigEventName, lang, '', '') || fallbackEventName;
+        }
+        function getRegisterSubHeader(lang) {
+            return getBilingualFormText(formConfigRegisterSubHeader, lang, '', '');
+        }
+        function getRegisterSubtitle(lang) {
+            return getBilingualFormText(
+                formConfigRegisterSubtitle,
+                lang,
+                '請填寫以下資料完成活動報名',
+                'Please fill in the following information to complete event registration'
+            );
+        }
+        function updateRegisterHeaderText() {
+            $('#formTitle').text(getHeaderEventName(currentLanguage));
+            const sub = getRegisterSubHeader(currentLanguage);
+            if (sub) {
+                $('#formSubHeader').text(sub).show();
+            } else {
+                $('#formSubHeader').hide().empty();
+            }
+            $('#formSubtitle').text(getRegisterSubtitle(currentLanguage));
         }
         const termsContentByLang = (function() {
             const el = document.getElementById('termsContentJson');
@@ -664,6 +793,173 @@
             if (!el) return { zh: '', en: '' };
             try { return JSON.parse(el.textContent); } catch (_) { return { zh: '', en: '' }; }
         })();
+
+        // --- 付費票券：分類按鈕、票券下拉、Highlight ---
+        const paymentTicketsData = (function() {
+            const el = document.getElementById('paymentTicketsDataJson');
+            if (!el) return [];
+            try { return JSON.parse(el.textContent); } catch (_) { return []; }
+        })();
+        const paymentTicketUi = (function() {
+            const el = document.getElementById('paymentTicketUiJson');
+            if (!el) return {};
+            try { return JSON.parse(el.textContent); } catch (_) { return {}; }
+        })();
+        const ticketsUseCategories = (function() {
+            const el = document.getElementById('ticketsUseCategoriesJson');
+            if (!el) return false;
+            try { return !!JSON.parse(el.textContent); } catch (_) { return false; }
+        })();
+        let selectedTicketCategory = '';
+
+        function isTicketInRange(ticket) {
+            const now = new Date();
+            const from = ticket.datetimeFrom ? new Date(ticket.datetimeFrom) : null;
+            const to = ticket.datetimeTo ? new Date(ticket.datetimeTo) : (ticket.datetime ? new Date(ticket.datetime) : null);
+            if (from && now < from) return false;
+            if (to && now > to) return false;
+            return true;
+        }
+
+        function getTicketCategoryKey(ticket) {
+            return ticket && ticket.category != null ? String(ticket.category).trim() : '';
+        }
+
+        function getCategoryButtonLabel(key) {
+            if (key === '') {
+                const def = paymentTicketUi.defaultCategoryLabel || {};
+                return currentLanguage === 'en'
+                    ? (def.en || def.zh || 'Other')
+                    : (def.zh || def.en || '其他');
+            }
+            const buttons = paymentTicketUi.categoryButtons || [];
+            const found = buttons.find(b => b && String(b.key).trim() === key);
+            if (found && found.label) {
+                return currentLanguage === 'en'
+                    ? (found.label.en || found.label.zh || key)
+                    : (found.label.zh || found.label.en || key);
+            }
+            return key;
+        }
+
+        function getTicketOptionLabel(ticket) {
+            const t = ticket.title || {};
+            const zh = t.zh || '';
+            const en = t.en || zh;
+            const name = currentLanguage === 'en' ? (en || zh) : (zh || en);
+            const price = ticket.price != null ? ticket.price : '';
+            if (name) return name + ' - $' + price;
+            return currentLanguage === 'en' ? ('Ticket - $' + price) : ('票券 - $' + price);
+        }
+
+        function getDistinctCategoryKeys() {
+            const keys = [];
+            const seen = new Set();
+            let hasEmpty = false;
+            paymentTicketsData.forEach(function(ticket) {
+                if (!isTicketInRange(ticket)) return;
+                const key = getTicketCategoryKey(ticket);
+                if (!key) {
+                    hasEmpty = true;
+                    return;
+                }
+                if (seen.has(key)) return;
+                seen.add(key);
+                keys.push(key);
+            });
+            if (hasEmpty) keys.push('');
+            return keys;
+        }
+
+        function updateTicketSectionHighlight() {
+            const $hl = $('#ticketHighlightText');
+            const $hlRow = $('#ticketHighlightRow');
+            const $block = $('#ticketSelectBlock');
+            if (!$hl.length || !$hlRow.length) return;
+            if (!$block.length || $block.is(':hidden')) {
+                $hlRow.removeClass('is-visible');
+                $hl.empty();
+                return;
+            }
+            const ht = paymentTicketUi.highlightText || {};
+            const text = currentLanguage === 'en'
+                ? (ht.en || ht.zh || '')
+                : (ht.zh || ht.en || '');
+            if (!String(text).trim()) {
+                $hlRow.removeClass('is-visible');
+                $hl.empty();
+                return;
+            }
+            $hl.text(text);
+            $hlRow.addClass('is-visible');
+        }
+
+        function rebuildTicketSelect() {
+            const $sel = $('#ticketId');
+            if (!$sel.length) return;
+            const placeholderZh = '--- 請選擇票券 ---';
+            const placeholderEn = '--- Please select a ticket ---';
+            const ph = currentLanguage === 'en' ? placeholderEn : placeholderZh;
+            $sel.empty().append($('<option>', { value: '', text: ph, 'data-zh': placeholderZh, 'data-en': placeholderEn }));
+
+            paymentTicketsData.forEach(function(ticket) {
+                if (!isTicketInRange(ticket)) return;
+                if (ticketsUseCategories && selectedTicketCategory !== getTicketCategoryKey(ticket)) return;
+                const t = ticket.title || {};
+                const optZh = (t.zh ? t.zh : '票券') + ' - $' + ticket.price;
+                const optEn = ((t.en || t.zh) ? (t.en || t.zh) : 'Ticket') + ' - $' + ticket.price;
+                $sel.append($('<option>', {
+                    value: ticket._id,
+                    text: getTicketOptionLabel(ticket),
+                    'data-zh': optZh,
+                    'data-en': optEn
+                }));
+            });
+            updateTicketSectionHighlight();
+        }
+
+        function renderCategoryButtons() {
+            const $wrap = $('#ticketCategoryButtons');
+            if (!$wrap.length) return;
+            $wrap.empty();
+            getDistinctCategoryKeys().forEach(function(key) {
+                const $btn = $('<button>', {
+                    type: 'button',
+                    class: 'ticket-category-btn',
+                    text: getCategoryButtonLabel(key),
+                    'data-category': key
+                });
+                if (key === selectedTicketCategory) $btn.addClass('active');
+                $wrap.append($btn);
+            });
+        }
+
+        function initPaymentTickets() {
+            if (!paymentTicketsData.length) return;
+            if (ticketsUseCategories) {
+                renderCategoryButtons();
+                $('#ticketCategoryButtons').on('click', '.ticket-category-btn', function() {
+                    selectedTicketCategory = $(this).data('category');
+                    $('#ticketCategory').val(selectedTicketCategory);
+                    $('.ticket-category-btn').removeClass('active');
+                    $(this).addClass('active');
+                    $('#ticketSelectBlock').show();
+                    $('#ticketId').prop('required', true).val('');
+                    rebuildTicketSelect();
+                    updateTicketSectionHighlight();
+                });
+            } else {
+                rebuildTicketSelect();
+            }
+            updateTicketSectionHighlight();
+        }
+
+        function refreshPaymentTicketUi() {
+            if (!paymentTicketsData.length) return;
+            if (ticketsUseCategories) renderCategoryButtons();
+            rebuildTicketSelect();
+            updateTicketSectionHighlight();
+        }
 
         /** 是否為區塊級 HTML（p/div/ul 等），此類內容直接渲染 */
         function termsLooksLikeBlockHtml(s) {
@@ -707,6 +1003,7 @@
         // 初始化語言按鈕狀態
         $(document).ready(function() {
             updateLanguageButtons();
+            initPaymentTickets();
             // 總是更新頁面語言（確保初始狀態正確）
             updatePageLanguage();
             
@@ -741,19 +1038,14 @@
 
         // 更新語言按鈕狀態
         function updateLanguageButtons() {
+            if (!languageSwitcherEnabled) return;
             $('#langZhBtn').toggleClass('active', currentLanguage === 'zh');
             $('#langEnBtn').toggleClass('active', currentLanguage === 'en');
         }
 
         // 更新頁面語言
         function updatePageLanguage() {
-            // 標題使用 FormConfig eventDisplayName（留空則 fallback event.name）
-            $('#formTitle').text(getHeaderEventName(currentLanguage));
-            if (currentLanguage === 'zh') {
-                $('#formSubtitle').text('請填寫以下資料完成活動報名');
-            } else {
-                $('#formSubtitle').text('Please fill in the following information to complete event registration');
-            }
+            updateRegisterHeaderText();
 
             // 更新區塊標題
             $('.section-title').each(function() {
@@ -838,6 +1130,7 @@
             // 更新 T&C 內容（支援 HTML）
             renderTermsContentHtml();
             renderAgreementContentHtml();
+            if (typeof refreshPaymentTicketUi === 'function') refreshPaymentTicketUi();
 
             // 更新按鈕文字（返回、下一步等）
             $('.lang-text').each(function() {
@@ -987,7 +1280,7 @@
                 }
             });
 
-            if (agreeEl) {
+            if (agreeEl && !opts.optionalAgree) {
                 agreeEl.addEventListener('change', function() {
                     this.setCustomValidity('');
                 });
@@ -1010,14 +1303,13 @@
             invalidMsgEn: 'Please agree to the terms before submitting.'
         });
 
-        // Agreement
+        // Agreement（非必填，僅彈層；勾選狀態於 submit 時寫入 agreementAgreed）
         initOverlayAndValidation({
             overlayId: 'agreementOverlay',
             openLinkId: 'agreementOpenLink',
             closeBtnId: 'agreementModalClose',
             agreeId: 'agreementAgree',
-            invalidMsgZh: '請先閱讀並勾選同意協議，才可提交。',
-            invalidMsgEn: 'Please agree to the agreement before submitting.'
+            optionalAgree: true
         });
 
         // stripe public key
@@ -1078,6 +1370,16 @@
                     this.setCustomValidity('');
                 }
             });
+            if (ticketsUseCategories && paymentTicketsData.length) {
+                if ($('#ticketCategoryButtons').length && !$('#ticketCategoryButtons .active').length) {
+                    alert(currentLanguage === 'zh' ? '請先選擇票券類別。' : 'Please select a ticket category first.');
+                    return;
+                }
+                if (!$('#ticketId').val()) {
+                    alert(currentLanguage === 'zh' ? '請選擇票券。' : 'Please select a ticket.');
+                    return;
+                }
+            }
             if (formEl && !formEl.checkValidity()) {
                 formEl.reportValidity();
                 return;
@@ -1088,10 +1390,30 @@
             const newUser = {};
             $('#userForm').find('input, select, textarea').each(function() {
                 const fieldName = $(this).attr('name');
-                if (fieldName && fieldName !== 'ticketId') {
-                    newUser[fieldName] = $(this).val();
+                if (!fieldName || fieldName === 'ticketId' || fieldName === 'agreementAgreed') return;
+                const type = (this.type || '').toLowerCase();
+                if (type === 'checkbox') {
+                    if (!this.checked) return;
+                    if (fieldName.endsWith('[]')) {
+                        const key = fieldName.slice(0, -2);
+                        if (!Array.isArray(newUser[key])) newUser[key] = [];
+                        newUser[key].push($(this).val());
+                    } else {
+                        newUser[fieldName] = $(this).val();
+                    }
+                    return;
                 }
+                if (type === 'radio') {
+                    if (this.checked) newUser[fieldName] = $(this).val();
+                    return;
+                }
+                newUser[fieldName] = $(this).val();
             });
+            const agreementEl = document.getElementById('agreementAgree');
+            if (agreementEl) {
+                newUser.agreementAgreed = agreementEl.checked;
+                newUser.agreementRecordedAt = new Date().toISOString();
+            }
             newUser.ticketId = ticketId;
             if (ticketId) {
                 // Wonder Payment checkout（沿用舊 API 路徑）
@@ -1116,10 +1438,10 @@
                     }
                 });
             } else {
-                // 無票券，直接註冊
+                // 無票券：公開免費報名（/web 路由，iframe 可用，不需 CORS）
                 $.ajax({
                     type: 'POST',
-                    url: '/events/<%= event_id %>/users',
+                    url: '/web/<%= event_id %>/register',
                     data: newUser,
                     success: function(response) {
                         const langParam = currentLanguage !== 'zh' ? '?lang=' + currentLanguage : '';

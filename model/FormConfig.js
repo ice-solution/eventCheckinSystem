@@ -82,6 +82,11 @@ const formConfigSchema = new mongoose.Schema({
         enum: ['zh', 'en'],
         default: 'zh' // 默認語言為中文
     },
+    /** Register 頁是否顯示中英文切換按鈕 */
+    languageSwitcherEnabled: {
+        type: Boolean,
+        default: true
+    },
     // Register 版面開關：true=顯示註冊表單，false=顯示關閉頁（registerClosedMessage）
     registerPageEnabled: {
         type: Boolean,
@@ -96,6 +101,16 @@ const formConfigSchema = new mongoose.Schema({
     eventDisplayName: {
         zh: { type: String, default: '' },
         en: { type: String, default: '' }
+    },
+    // 註冊頁 Header：活動名稱下方副標題（留空不顯示）
+    registerSubHeader: {
+        zh: { type: String, default: '' },
+        en: { type: String, default: '' }
+    },
+    // 註冊頁 Header：灰色說明文字
+    registerSubtitle: {
+        zh: { type: String, default: '請填寫以下資料完成活動報名' },
+        en: { type: String, default: 'Please fill in the following information to complete event registration' }
     },
     // Terms & Conditions（需同意才可提交）
     terms: {
@@ -122,6 +137,41 @@ const formConfigSchema = new mongoose.Schema({
             zh: { type: String, default: '' },
             en: { type: String, default: '' }
         }
+    },
+    // 付費票券區塊文案與分類按鈕（Register 頁）
+    paymentTicketUi: {
+        sectionTitle: {
+            zh: { type: String, default: '票券選擇' },
+            en: { type: String, default: 'Ticket Selection' }
+        },
+        categoryLabel: {
+            zh: { type: String, default: '選擇類別' },
+            en: { type: String, default: 'Select Category' }
+        },
+        ticketLabel: {
+            zh: { type: String, default: '選擇票券' },
+            en: { type: String, default: 'Select Ticket' }
+        },
+        defaultCategoryLabel: {
+            zh: { type: String, default: '其他' },
+            en: { type: String, default: 'Other' }
+        },
+        buttons: {
+            back: { zh: { type: String, default: '返回' }, en: { type: String, default: 'Back' } },
+            next: { zh: { type: String, default: '下一步' }, en: { type: String, default: 'Next' } }
+        },
+        /** 票券下拉框下方單一提示（全區塊共用，非每張票券） */
+        highlightText: {
+            zh: { type: String, default: '' },
+            en: { type: String, default: '' }
+        },
+        categoryButtons: [{
+            key: { type: String, default: '' },
+            label: {
+                zh: { type: String, default: '' },
+                en: { type: String, default: '' }
+            }
+        }]
     },
     sections: [formSectionSchema],
     createdAt: { 
