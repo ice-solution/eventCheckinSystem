@@ -3,7 +3,7 @@
 <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
 <link rel="stylesheet" href="/admin/assets/css/style.css">
 <div id="right-panel" class="right-panel">
-    <%- include ("components/rightpanel_header") %>
+    <%- include ("components/rightpanel_header", { backUrl: '/events/list' }) %>
     <div class="content">
         <div class="animated fadeIn">
             <div class="row">
@@ -41,7 +41,6 @@
                                     <% } %>
                                 </tbody>
                             </table>
-                            <a href="/events/list" class="btn btn-secondary"><%= t('common.backToEvents') %></a>
                         </div>
                     </div>
                 </div>

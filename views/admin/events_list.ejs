@@ -1,70 +1,74 @@
 <%- include ("components/header") %>
-<%- include ("components/menu", {eventId: ''})  %>
+<%- include ("components/menu", {eventId: ''}) %>
 <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
 <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
 <link rel="stylesheet" href="/admin/assets/css/style.css">
-    <div id="right-panel" class="right-panel">
-        <%- include ("components/rightpanel_header") %>
-        <div class="content">
-            <div class="animated fadeIn">
-                <div class="row">
-
-                    <div class="col-md-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <strong class="card-title"><%= t('events_list.title') %></strong>
+<div id="right-panel" class="right-panel">
+    <%- include ("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title"><%= t('events_list.title') %></strong>
+                            <div class="float-right" style="display:inline-flex; align-items:center; gap:12px;">
+                                <a href="/auth/users" title="Login Account Management" data-toggle="tooltip" data-placement="left" style="color:#90a4ae; font-size:1.2em; line-height:1; text-decoration:none;">
+                                    <i class="fa fa-users"></i>
+                                </a>
+                                <a href="/events/create" class="btn btn-sm btn-primary"><i class="fa fa-plus"></i> <%= t('events_list.createEvent') %></a>
                             </div>
-                            <div class="card-body">
-                                <table id="bootstrap-data-table" class="table table-bordered">
-                                    <thead>
-                                        <tr>
-                                            <th><%= t('events_list.eventName') %></th>
-                                            <th><%= t('events_list.startTime') %></th>
-                                            <th><%= t('events_list.endTime') %></th>
-                                            <th><%= t('events_list.createdAt') %></th>
-                                            <th><%= t('events_list.userCount') %></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <% if (events.length > 0) { %>
-                                            <% events.forEach(event => { %>
-                                                <tr>
-                                                    <td><a href="/events/<%= event._id %>"><%= event.name %></a></td>
-                                                    <td><%= new Date(event.from).toLocaleString() %></td>
-                                                    <td><%= new Date(event.to).toLocaleString() %></td>
-                                                    <td><%= new Date(event.created_at).toLocaleString() %></td>
-                                                    <td><%= event.users.length %></td>
-                                                </tr>
-                                            <% }); %>
-                                        <% } else { %>
+                        </div>
+                        <div class="card-body">
+                            <table id="bootstrap-data-table" class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th><%= t('events_list.eventName') %></th>
+                                        <th><%= t('events_list.startTime') %></th>
+                                        <th><%= t('events_list.endTime') %></th>
+                                        <th><%= t('events_list.createdAt') %></th>
+                                        <th><%= t('events_list.userCount') %></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (events.length > 0) { %>
+                                        <% events.forEach(event => { %>
                                             <tr>
-                                                <td colspan="5" class="text-center"><%= t('events_list.noEvents') %></td>
+                                                <td><a href="/events/<%= event._id %>"><%= event.name %></a></td>
+                                                <td><%= new Date(event.from).toLocaleString() %></td>
+                                                <td><%= new Date(event.to).toLocaleString() %></td>
+                                                <td><%= new Date(event.created_at).toLocaleString() %></td>
+                                                <td><%= event.users.length %></td>
                                             </tr>
-                                        <% } %>
-                                    </tbody>
-                                </table>
-                                <a href="/events/create" class="btn btn-primary"><%= t('events_list.createEvent') %></a>
-                                <a href="/admin" class="btn btn-secondary"><%= t('common.backToAdmin') %></a>
-                            </div>
+                                        <% }); %>
+                                    <% } else { %>
+                                        <tr>
+                                            <td colspan="5" class="text-center"><%= t('events_list.noEvents') %></td>
+                                        </tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <%- include ("components/footer") %>
-    <script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
-    <script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
-    <script src="/admin/assets/js/lib/data-table/dataTables.buttons.min.js"></script>
-    <script src="/admin/assets/js/lib/data-table/buttons.bootstrap.min.js"></script>
-    <script src="/admin/assets/js/lib/data-table/jszip.min.js"></script>
-    <script src="/admin/assets/js/lib/data-table/vfs_fonts.js"></script>
-    <script src="/admin/assets/js/lib/data-table/buttons.html5.min.js"></script>
-    <script src="/admin/assets/js/lib/data-table/buttons.print.min.js"></script>
-    <script src="/admin/assets/js/lib/data-table/buttons.colVis.min.js"></script>
-    <script src="/admin/assets/js/init/datatables-init.js"></script>
-    <script type="text/javascript">
-        $(document).ready(function() {
-          $('#bootstrap-data-table-export').DataTable();
-      } );
-  </script>
+</div>
+<%- include ("components/footer") %>
+<script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/dataTables.buttons.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/buttons.bootstrap.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/jszip.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/vfs_fonts.js"></script>
+<script src="/admin/assets/js/lib/data-table/buttons.html5.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/buttons.print.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/buttons.colVis.min.js"></script>
+<script src="/admin/assets/js/init/datatables-init.js"></script>
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#bootstrap-data-table-export').DataTable();
+        $('[data-toggle="tooltip"]').tooltip();
+    });
+</script>

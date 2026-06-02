@@ -4,91 +4,129 @@
 <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
 <link rel="stylesheet" href="/admin/assets/css/style.css">
 <div id="right-panel" class="right-panel">
-    <%- include ("components/rightpanel_header") %>
+    <%- include ("components/rightpanel_header", { backUrl: '/events/' + eventId }) %>
     <div class="content">
         <div class="animated fadeIn">
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <strong class="card-title"><%= t('email_template_list.title') %></strong>
-                        </div>
-                        <div class="card-body">
-                            <table id="bootstrap-data-table" class="table table-bordered">
-                                <thead>
-                                    <tr>
-                                        <th><%= t('common.subject') %></th>
-                                        <th><%= t('common.type') %></th>
-                                        <th><%= t('common.created_at') %></th>
-                                        <th><%= t('common.updated_at') %></th>
-                                        <th><%= t('common.actions') %></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <% emailTemplates.forEach(tmpl => { %>
+
+            <!-- List view -->
+            <div id="list-view">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <strong class="card-title"><%= t('email_template_list.title') %></strong>
+                                <% if (eventId != null) { %>
+                                    <a href="/events/<%= eventId %>/emailTemplate/create" class="btn btn-sm btn-primary float-right"><i class="fa fa-plus"></i> <%= t('email_template_list.createBtn') %></a>
+                                <% } else { %>
+                                    <a href="/emailTemplate/create" class="btn btn-sm btn-primary float-right"><i class="fa fa-plus"></i> <%= t('email_template_list.createBtn') %></a>
+                                <% } %>
+                            </div>
+                            <div class="card-body">
+                                <table id="bootstrap-data-table" class="table table-bordered">
+                                    <thead>
                                         <tr>
-                                            <td>
-                                                <% if (tmpl.eventId) { %>
-                                                    <a href="/events/<%= tmpl.eventId %>/emailTemplate/<%= tmpl._id %>"><%= tmpl.subject %></a>
-                                                <% } else { %>
-                                                    <a href="/emailTemplate/<%= tmpl._id %>"><%= tmpl.subject %></a>
-                                                <% } %>
-                                            </td>
-                                            <td><%= tmpl.type || 'welcome' %></td>
-                                            <td><%= tmpl.created_at %></td>
-                                            <td><%= tmpl.modified_at %></td>
-                                            <td>
-                                                <button class="btn btn-danger btn-sm" onclick="deleteTemplate('<%= tmpl._id %>', '<%= (tmpl.subject || '').replace(/'/g, "\\'") %>')">
-                                                    <%= t('common.delete') %>
-                                                </button>
-                                            </td>
+                                            <th><%= t('common.subject') %></th>
+                                            <th><%= t('common.type') %></th>
+                                            <th><%= t('common.created_at') %></th>
+                                            <th><%= t('common.updated_at') %></th>
+                                            <th><%= t('common.actions') %></th>
                                         </tr>
-                                    <% }); %>
-                                </tbody>
-                            </table>
-                            <% if (eventId != null) { %>
-                                <a href="/events/<%= eventId %>/emailTemplate/create" class="btn btn-primary"><%= t('email_template_list.createBtn') %></a>
-                            <% } else { %>
-                                <a href="/emailTemplate/create" class="btn btn-primary"><%= t('email_template_list.createBtn') %></a>
-                            <% } %>
-                            <a href="/admin" class="btn btn-secondary"><%= t('common.backToAdmin') %></a>
+                                    </thead>
+                                    <tbody>
+                                        <% emailTemplates.forEach(tmpl => { %>
+                                            <tr>
+                                                <td>
+                                                    <% if (tmpl.eventId) { %>
+                                                        <a href="#" class="tmpl-open-link" data-url="/events/<%= tmpl.eventId %>/emailTemplate/<%= tmpl._id %>"><%= tmpl.subject %></a>
+                                                    <% } else { %>
+                                                        <a href="#" class="tmpl-open-link" data-url="/emailTemplate/<%= tmpl._id %>"><%= tmpl.subject %></a>
+                                                    <% } %>
+                                                </td>
+                                                <td><%= tmpl.type || 'welcome' %></td>
+                                                <td><%= tmpl.created_at %></td>
+                                                <td><%= tmpl.modified_at %></td>
+                                                <td>
+                                                    <button class="btn btn-danger btn-sm" onclick="deleteTemplate('<%= tmpl._id %>', '<%= (tmpl.subject || '').replace(/'/g, "\\'") %>')">
+                                                        <%= t('common.delete') %>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        <% }); %>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Iframe panel (hidden by default) -->
+            <div id="iframe-view" style="display:none;">
+                <div class="mb-2">
+                    <button id="backToListBtn" class="btn btn-light btn-sm" style="display:inline-flex; align-items:center; gap:6px;">
+                        <i class="fa fa-arrow-left"></i> <%= lang === 'zh' ? '返回列表' : 'Back to List' %>
+                    </button>
+                </div>
+                <iframe id="contentFrame" src="" style="width:100%; height:calc(100vh - 180px); border:none; border-radius:6px; background:#fff;"></iframe>
+            </div>
+
         </div>
     </div>
 </div>
 
 <%- include ("./components/footer") %>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
+(function($) {
     function deleteTemplate(templateId, templateSubject) {
         const msg = t('email_template_list.confirmDelete').replace('{subject}', templateSubject);
         if (confirm(msg)) {
             $.ajax({
                 url: '/emailTemplate/' + templateId,
                 type: 'DELETE',
-                success: function() {
-                    const alertHtml = `
-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            <%= t("email_template_list.deleteSuccess") %>
-                            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
-                        </div>`;
-                    $('body').prepend(alertHtml);
-                    setTimeout(() => location.reload(), 1500);
-                },
-                error: function() {
-                    const alertHtml = `
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <%= t("email_template_list.deleteFailed") %>
-                            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
-                        </div>`;
-                    $('body').prepend(alertHtml);
-                }
+                success: function() { location.reload(); },
+                error: function() { alert(t('email_template_list.deleteFailed')); }
             });
         }
     }
+    window.deleteTemplate = deleteTemplate;
+
+    function showIframe(url) {
+        $('#list-view').hide();
+        $('#iframe-view').show();
+        const frame = document.getElementById('contentFrame');
+        frame.src = url;
+        frame.onload = function() {
+            try {
+                const iDoc = frame.contentDocument || frame.contentWindow.document;
+                const style = iDoc.createElement('style');
+                style.textContent = '#left-panel, .sidebar-brand, .sidebar-collapsed-logo { display:none !important; } #right-panel, .right-panel { margin-left:0 !important; } #header.header { left:0 !important; }';
+                iDoc.head.appendChild(style);
+            } catch(e) {}
+        };
+    }
+
+    function showList() {
+        document.getElementById('contentFrame').src = '';
+        $('#iframe-view').hide();
+        $('#list-view').show();
+    }
+
+    $(document).ready(function() {
+        $('#createBtn').on('click', function(e) {
+            e.preventDefault();
+            showIframe($(this).data('create-url'));
+        });
+
+        $(document).on('click', '.tmpl-open-link', function(e) {
+            e.preventDefault();
+            showIframe($(this).data('url'));
+        });
+
+        $('#backToListBtn').on('click', function() {
+            showList();
+        });
+    });
+})(jQuery);
 </script>
 <script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
 <script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>

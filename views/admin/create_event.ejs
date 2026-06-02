@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
 <link rel="stylesheet" href="/admin/assets/css/style.css">
 <div id="right-panel" class="right-panel">
-    <%- include ("components/rightpanel_header") %>
+    <%- include ("components/rightpanel_header", { backUrl: '/events/list' }) %>
     <div class="content">
         <div class="animated fadeIn">
             <div class="row">
@@ -28,7 +28,6 @@
                                     <input type="datetime-local" class="form-control" id="to" required>
                                 </div>
                                 <button type="submit" class="btn btn-primary"><%= t('create_event.submit') %></button>
-                                <a href="/admin" class="btn btn-secondary"><%= t('common.backToAdmin') %></a>
                             </form>
                             <div id="alertContainer" class="mt-3"></div>
                         </div>

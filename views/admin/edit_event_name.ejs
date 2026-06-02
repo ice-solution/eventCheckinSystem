@@ -2,7 +2,7 @@
 <%- include("components/menu", { eventId: eventId }) %>
 
 <div id="right-panel" class="right-panel">
-    <%- include("components/rightpanel_header") %>
+    <%- include("components/rightpanel_header", { backUrl: '/events/' + eventId }) %>
     <div class="content">
         <div class="animated fadeIn">
             <div class="row">
@@ -12,13 +12,16 @@
                             <strong class="card-title"><%= t('edit_event_name.title') %></strong>
                         </div>
                         <div class="card-body">
+                            <p class="text-muted mb-3">
+                                <%= lang === 'zh' ? '目前活動名稱：' : 'Current Event Name: ' %>
+                                <strong><%= typeof eventName !== 'undefined' ? eventName : '' %></strong>
+                            </p>
                             <form id="editEventNameForm">
                                 <div class="form-group">
                                     <label for="name"><%= t('edit_event_name.label') %></label>
                                     <input type="text" class="form-control" id="name" required>
                                 </div>
                                 <button type="submit" class="btn btn-primary"><%= t('common.save') %></button>
-                                <a href="/events/list" class="btn btn-secondary"><%= t('common.backToEvents') %></a>
                             </form>
                             <div id="alertContainer" class="mt-3"></div>
                         </div>

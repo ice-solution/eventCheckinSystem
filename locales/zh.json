@@ -22,23 +22,23 @@
     "type": "類型", "content": "內容", "subject": "主題", "role": "角色"
   },
   "menu": {
-    "adminTitle": "後台管理", "events": "活動列表", "userManagement": "用戶登入管理",
+    "adminTitle": "後台管理", "events": "活動列表", "userManagement": "登入帳號管理",
     "eventItems": "活動功能", "editEventName": "修改活動名稱", "rsvp": "報名管理",
     "guestList": "賓客名單", "emailTemplate": "活動郵件模板", "smsTemplate": "SMS 模板",
     "badgeDesign": "徽章設計", "qrcodeLogin": "QR Code 登入頁",
     "scanPoint": "積分掃描管理", "treasureHunt": "尋寶遊戲", "luckyDraw": "抽獎",
-    "luckydrawList": "抽獎名單", "luckydrawPanel": "抽獎控制台 (iPad)",
-    "awardList": "中獎名單", "openLuckydraw": "開啟抽獎頁", "luckydrawSetting": "抽獎設定",
+    "luckydrawList": "得獎名單", "luckydrawPanel": "抽獎控制台 (iPad)",
+    "awardList": "得獎名單頁面", "openLuckydraw": "抽獎頁面", "luckydrawSetting": "頁面設定",
     "gameConfig": "遊戲設定", "prizeManagement": "獎品管理", "voteManagement": "投票管理",
-    "websiteContent": "網站內容", "websiteLink": "網站連結", "registrationPage": "報名頁面",
-    "eventUserLogin": "活動用戶登入", "registrationConfig": "報名頁設定",
+    "websiteContent": "網站", "websiteLink": "網站頁面", "registrationPage": "報名頁面",
+    "eventUserLogin": "訪客登入頁面", "registrationConfig": "報名頁設定",
     "transactionRecord": "交易記錄", "attachments": "附件", "report": "報告",
     "emailRecords": "郵件記錄", "banner": "橫幅管理", "importUsers": "批量匯入",
     "scan": "簽到掃描"
   },
   "home": { "welcome": "歡迎使用活動管理系統", "eventList": "活動列表" },
   "events_list": {
-    "title": "活動列表", "createEvent": "建立活動", "eventName": "活動名稱",
+    "title": "活動清單", "createEvent": "建立活動", "eventName": "活動名稱",
     "startTime": "開始時間", "endTime": "結束時間", "createdAt": "建立時間",
     "userCount": "報名人數", "noEvents": "沒有活動", "backToAdmin": "返回後台"
   },
@@ -52,7 +52,7 @@
     "saving": "儲存中...", "saved": "已更新活動名稱。", "error": "更新失敗"
   },
   "auth_users": {
-    "title": "用戶登入管理", "addUser": "新增用戶",
+    "title": "登入帳號管理", "addUser": "新增用戶",
     "adminNote": "Admin 為系統唯一最高權限帳號，僅能透過 server 建立。以下為一般用戶，可設定可存取的活動與功能。",
     "username": "帳號", "role": "角色", "allowedEventsCount": "可存取活動數",
     "actions": "操作", "setPermissions": "設定權限", "noUsers": "尚無其他用戶"
@@ -233,7 +233,7 @@
     "title": "活動郵件模板", "subjectLabel": "郵件主題", "typeLabel": "郵件類型",
     "typeInvitation": "邀請郵件", "typeWelcome": "歡迎郵件", "typeKnowledge": "知識郵件",
     "typeReminder": "提醒郵件", "typeInvoice": "發票", "typePaymentReceipt": "付款憑證",
-    "contentLabel": "郵件內容", "saveBtn": "儲存模板", "backBtn": "返回管理頁面",
+    "contentLabel": "郵件內容", "saveBtn": "建立郵件", "backBtn": "返回管理頁面",
     "backToEventList": "返回活動郵件模板列表",
     "deleteTemplateBtn": "刪除模板",
     "deleteTemplateConfirm": "確定要刪除此郵件模板？此操作不可復原！",

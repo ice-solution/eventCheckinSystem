@@ -24,8 +24,8 @@ function getDict(lang) {
 }
 
 function resolveLang(req) {
-    if (req.session && req.session.lang === 'en') return 'en';
-    return 'zh';
+    if (req.session && req.session.lang === 'zh') return 'zh';
+    return 'en';
 }
 
 module.exports = { translate, getDict, resolveLang };
