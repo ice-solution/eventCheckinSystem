@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<%= typeof lang !== 'undefined' ? lang : 'zh-Hant' %>">
 <head>
     <meta charset="UTF-8">
-    <title>QR Code Login</title>
+    <title><%= t('qrcode_login.pageTitle') %></title>
     <style>
         body {
             display: flex;
@@ -14,7 +14,7 @@
             font-family: Arial, sans-serif;
         }
         img {
-            width: 500px; /* Limit the maximum width of QR code */
+            width: 500px;
             height: auto;
         }
     </style>
@@ -22,9 +22,9 @@
 <body>
 
     <div>
-        <h1>Scan QR Code to Login</h1>
+        <h1><%= t('qrcode_login.heading') %></h1>
         <img src="<%= qrCodeImage %>" alt="QR Code for Event ID: <%= eventId %>">
-        <p>Event ID: <%= eventId %></p>
+        <p><%= t('qrcode_login.eventIdLabel') %><%= eventId %></p>
     </div>
 
 </body>

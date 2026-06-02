@@ -1,0 +1,758 @@
+/* Brand Activation — Theme Override
+   Matches the dark-navy sidebar + teal accent design from reference */
+
+/* ── Prevent sidebar flash on page load ────────────────────── */
+body.sidebar-no-transition aside#left-panel,
+body.sidebar-no-transition aside#left-panel *,
+body.sidebar-no-transition .right-panel,
+body.sidebar-no-transition #header { transition: none !important; }
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ── CSS Variables ─────────────────────────────────────────── */
+:root {
+  --sidebar-bg:       #0d1b2a;
+  --sidebar-bg2:      #132338;
+  --sidebar-text:     #b0bec5;
+  --sidebar-active:   #00c4b4;
+  --sidebar-hover:    rgba(0, 196, 180, 0.12);
+  --header-bg:        #ffffff;
+  --header-shadow:    0 2px 8px rgba(0,0,0,0.08);
+  --accent:           #00c4b4;
+  --accent-dark:      #00a89a;
+  --accent-light:     rgba(0, 196, 180, 0.12);
+  --body-bg:          #f0f4f8;
+  --card-bg:          #ffffff;
+  --card-shadow:      0 2px 12px rgba(0,0,0,0.07);
+  --card-radius:      12px;
+  --text-main:        #1a2332;
+  --text-muted:       #6b7a8d;
+  --border-color:     #e4e9f0;
+  --danger:           #ef4444;
+  --warning:          #f59e0b;
+  --success:          #10b981;
+}
+
+/* ── Global Font & Base ────────────────────────────────────── */
+body,
+p, span, a, button, input, select, textarea, th, td, label {
+  font-family: 'Inter', 'Open Sans', sans-serif !important;
+}
+
+body {
+  background: var(--body-bg) !important;
+  color: var(--text-main) !important;
+}
+
+/* ── Sidebar Brand (Logo in sidebar top) ───────────────────── */
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  padding: 0 16px 0 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  flex-shrink: 0;
+}
+
+.sidebar-brand-link {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  text-decoration: none !important;
+  color: #fff !important;
+}
+
+.sidebar-brand-icon {
+  display: inline-block;
+  width: 30px;
+  height: 30px;
+  background: linear-gradient(135deg, #1976d2 0%, var(--accent) 100%);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.sidebar-brand-text {
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  color: #fff !important;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+  flex: 1;
+}
+
+/* Sidebar collapse toggle button */
+a.sidebar-toggle {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 45px !important;
+  height: 45px !important;
+  border-radius: 7px !important;
+  color: rgba(176, 190, 197, 0.7) !important;
+  font-size: 22px !important;
+  transition: all 0.18s ease !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+}
+
+a.sidebar-toggle:hover {
+  background: rgba(255,255,255,0.1) !important;
+  color: #fff !important;
+}
+
+/* ── Top Header — right panel only ────────────────────────── */
+#header.header {
+  background: var(--header-bg) !important;
+  box-shadow: var(--header-shadow) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  height: 58px !important;
+  left: 280px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  padding: 0 24px !important;
+}
+
+/* Language switcher in header — pill style matching reference */
+.lang-switcher a.btn {
+  border-radius: 20px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  padding: 3px 12px !important;
+  letter-spacing: 0.3px;
+  border: 1.5px solid var(--border-color) !important;
+  color: var(--text-muted) !important;
+  background: transparent !important;
+  transition: all 0.2s ease !important;
+}
+
+.lang-switcher a.btn-primary {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #fff !important;
+}
+
+.lang-switcher a.btn:hover {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+.lang-switcher a.btn-primary:hover {
+  background: var(--accent-dark) !important;
+  color: #fff !important;
+}
+
+/* ── Sidebar (Left Panel) ──────────────────────────────────── */
+aside#left-panel.left-panel {
+  background: var(--sidebar-bg) !important;
+  box-shadow: none !important;
+  border-right: none !important;
+  top: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+aside#left-panel .navbar {
+  background: transparent !important;
+}
+
+aside#left-panel .nav.navbar-nav {
+  width: 100%;
+}
+
+/* ── Collapsed-only logo block (outside nav/ul) ─────────────── */
+.sidebar-collapsed-logo {
+  display: none;
+}
+
+body.open .sidebar-collapsed-logo {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 14px 0;
+}
+
+body.open .sidebar-collapsed-logo img {
+  max-height: 42px;
+  max-width: 52px;
+  object-fit: contain;
+}
+
+/* Hide logo from sidebar-brand when collapsed */
+body.open .sidebar-brand-logo {
+  display: none !important;
+}
+
+aside#left-panel .menu-divider {
+  border-top: 1px solid rgba(255,255,255,0.1);
+  margin: 8px 16px;
+  list-style: none;
+}
+
+aside#left-panel .menu-title {
+  color: rgba(176, 190, 197, 0.45) !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 1.2px !important;
+  text-transform: uppercase !important;
+  padding: 18px 20px 6px !important;
+}
+
+aside#left-panel .nav.navbar-nav > li > a,
+aside#left-panel .nav.navbar-nav > li > a:visited {
+  color: var(--sidebar-text) !important;
+  font-size: 13.5px !important;
+  font-weight: 400 !important;
+  transition: all 0.18s ease !important;
+}
+
+aside#left-panel .nav.navbar-nav > li > a:hover {
+  background: var(--sidebar-hover) !important;
+  color: #fff !important;
+}
+
+aside#left-panel .nav.navbar-nav > li > a:hover .menu-icon {
+  color: #fff !important;
+}
+
+aside#left-panel .nav.navbar-nav > li.active > a,
+aside#left-panel .nav.navbar-nav > li > a.active {
+  background: var(--accent-light) !important;
+  color: var(--accent) !important;
+  font-weight: 600 !important;
+}
+
+aside#left-panel .menu-icon {
+  color: var(--sidebar-text) !important;
+  opacity: 0.85;
+}
+
+/* Sub-menu (dropdown) — let Bootstrap/original JS handle show/hide,
+   only override colors & padding */
+aside#left-panel .sub-menu.dropdown-menu {
+  background: rgba(255,255,255,0.04) !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+aside#left-panel .sub-menu li a,
+aside#left-panel .sub-menu li a:visited {
+  color: rgba(176, 190, 197, 0.8) !important;
+  font-size: 13px !important;
+}
+
+aside#left-panel .sub-menu li a:hover {
+  background: var(--sidebar-hover) !important;
+  color: #fff !important;
+}
+
+/* ── Right Panel / Main Content ────────────────────────────── */
+.right-panel {
+  background: var(--body-bg) !important;
+  margin-top: 58px !important;
+}
+
+/* Header menu items float right */
+#header .header-menu {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  width: 100% !important;
+}
+
+/* Hide old top-left / menutoggle since brand moved to sidebar */
+#header .top-left {
+  display: none !important;
+}
+
+/* Logout link in header */
+#header .user-area {
+  margin-left: 12px;
+}
+
+#header .user-area .nav-link {
+  color: var(--text-muted) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  padding: 6px 14px !important;
+  border-radius: 8px !important;
+  border: 1.5px solid var(--border-color) !important;
+  transition: all 0.2s ease !important;
+}
+
+#header .user-area .nav-link:hover {
+  color: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+
+/* ── Cards ─────────────────────────────────────────────────── */
+.card,
+.panel,
+.widget {
+  background: var(--card-bg) !important;
+  border: none !important;
+  border-radius: var(--card-radius) !important;
+  box-shadow: var(--card-shadow) !important;
+}
+
+.card-header,
+.panel-heading {
+  background: transparent !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  font-weight: 600 !important;
+  color: var(--text-main) !important;
+  padding: 16px 20px !important;
+  border-radius: var(--card-radius) var(--card-radius) 0 0 !important;
+}
+
+/* Stat cards (top summary row — matching reference teal cards) */
+.panel.widget-panel,
+.panel.bg-flat-color-1,
+.panel.bg-flat-color-2,
+.panel.bg-flat-color-3 {
+  background: linear-gradient(135deg, rgba(0,196,180,0.08) 0%, rgba(0,196,180,0.03) 100%) !important;
+  border: 1.5px solid rgba(0,196,180,0.2) !important;
+  border-radius: var(--card-radius) !important;
+}
+
+.panel.bg-flat-color-1 .panel-heading,
+.panel.bg-flat-color-2 .panel-heading,
+.panel.bg-flat-color-3 .panel-heading {
+  border-bottom: none !important;
+}
+
+/* Override flat-color backgrounds to use teal theme */
+.bg-flat-color-1 { background: var(--accent) !important; }
+.bg-flat-color-3 { background: #1976d2 !important; }
+.bg-flat-color-4 { background: var(--warning) !important; }
+
+/* ── Buttons ────────────────────────────────────────────────── */
+.btn-primary,
+.btn-success {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #fff !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  font-size: 13px !important;
+  padding: 7px 16px !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-primary:hover,
+.btn-success:hover {
+  background: var(--accent-dark) !important;
+  border-color: var(--accent-dark) !important;
+  box-shadow: 0 4px 12px rgba(0,196,180,0.3) !important;
+}
+
+.btn-secondary,
+.btn-default {
+  background: #f1f5f9 !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-muted) !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  font-size: 13px !important;
+  padding: 7px 16px !important;
+}
+
+.btn-secondary:hover,
+.btn-default:hover {
+  background: #e2e8f0 !important;
+  color: var(--text-main) !important;
+}
+
+.btn-danger {
+  background: var(--danger) !important;
+  border-color: var(--danger) !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+}
+
+.btn-info {
+  background: #1976d2 !important;
+  border-color: #1976d2 !important;
+  color: #fff !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+}
+
+.btn-warning {
+  background: var(--warning) !important;
+  border-color: var(--warning) !important;
+  color: #fff !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+}
+
+/* Small icon-only action buttons (edit/folder/delete in tables) */
+.btn-xs,
+.btn-sm {
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  padding: 4px 10px !important;
+}
+
+/* ── Tables ─────────────────────────────────────────────────── */
+.table {
+  color: var(--text-main) !important;
+  font-size: 13.5px !important;
+}
+
+.table thead th {
+  background: #f8fafc !important;
+  color: var(--text-muted) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase !important;
+  border-bottom: 2px solid var(--border-color) !important;
+  border-top: none !important;
+  padding: 12px 14px !important;
+}
+
+.table tbody tr {
+  border-bottom: 1px solid var(--border-color) !important;
+  transition: background 0.12s ease !important;
+}
+
+.table tbody tr:hover {
+  background: rgba(0, 196, 180, 0.04) !important;
+}
+
+.table td {
+  vertical-align: middle !important;
+  padding: 12px 14px !important;
+  border-top: none !important;
+}
+
+/* Checked-in row highlight */
+.checkin-true {
+  background-color: rgba(0, 196, 180, 0.06) !important;
+}
+
+/* Status badge */
+.badge,
+span.badge {
+  border-radius: 20px !important;
+  padding: 4px 12px !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.2px !important;
+}
+
+.badge-success,
+.badge-checked {
+  background: rgba(16, 185, 129, 0.12) !important;
+  color: #059669 !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+}
+
+/* ── Forms & Inputs ─────────────────────────────────────────── */
+.form-control {
+  border: 1.5px solid var(--border-color) !important;
+  border-radius: 8px !important;
+  font-size: 13.5px !important;
+  color: var(--text-main) !important;
+  background: #fff !important;
+  padding: 8px 12px !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.form-control:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(0, 196, 180, 0.15) !important;
+  outline: none !important;
+}
+
+/* ── Page Title / Breadcrumb ────────────────────────────────── */
+.page-header {
+  border-bottom: none !important;
+  padding-bottom: 4px !important;
+  margin-bottom: 20px !important;
+}
+
+.page-header h2,
+.page-header h3 {
+  font-size: 1.35rem !important;
+  font-weight: 700 !important;
+  color: var(--text-main) !important;
+}
+
+/* ── Section headers inside pages ──────────────────────────── */
+h3, h4 {
+  font-weight: 600 !important;
+  color: var(--text-main) !important;
+}
+
+/* ── Collapsed sidebar (body.open = 83px wide) ─────────────── */
+body.open #header.header {
+  left: 83px !important;
+}
+
+body.open .sidebar-brand {
+  padding: 0 8px !important;
+  justify-content: space-between !important;
+}
+
+body.open .sidebar-brand-text {
+  display: none !important;
+}
+
+body.open .sidebar-brand-icon {
+  margin: 0 !important;
+}
+
+body.open a.sidebar-toggle {
+  display: flex !important;
+}
+
+/* Fix collapsed toggle button: remove red bg, center it */
+body.open aside#left-panel .menutoggle,
+.open aside.left-panel .menutoggle {
+  background-color: transparent !important;
+  color: rgba(176,190,197,0.7) !important;
+  right: auto !important;
+  text-align: center !important;
+}
+
+body.open .sidebar-brand {
+  justify-content: center !important;
+  padding: 0 !important;
+}
+
+body.open a.sidebar-toggle {
+  width: 45px !important;
+  height: 45px !important;
+  font-size: 22px !important;
+}
+
+/* Hide menu item text in collapsed state */
+body.open aside#left-panel .nav.navbar-nav > li > a,
+body.open aside#left-panel .nav.navbar-nav > li > a:visited {
+  font-size: 0 !important;
+}
+
+body.open aside#left-panel .nav.navbar-nav > li > a .menu-icon {
+  font-size: 18px !important;
+}
+
+/* ── Collapsed sidebar submenu background ───────────────────── */
+body.open aside#left-panel .sub-menu.dropdown-menu {
+  background: var(--sidebar-bg2) !important;
+  box-shadow: 4px 4px 16px rgba(0,0,0,0.4) !important;
+  border-radius: 0 6px 6px 0 !important;
+  border-left: 2px solid var(--accent) !important;
+  min-width: 200px !important;
+}
+
+body.open aside#left-panel .sub-menu.dropdown-menu li a {
+  white-space: nowrap !important;
+}
+
+/* ── Collapsed sidebar tooltips ─────────────────────────────── */
+body.open aside#left-panel .nav.navbar-nav > li {
+  position: relative;
+}
+
+body.open aside#left-panel .nav.navbar-nav > li > a[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: #1e293b;
+  color: #f1f5f9;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12.5px !important;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 9999;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+
+body.open aside#left-panel .nav.navbar-nav > li:hover > a[data-tooltip]::after {
+  opacity: 1;
+}
+
+body.open aside#left-panel .nav.navbar-nav > li.show > a[data-tooltip]::after,
+body.open aside#left-panel .nav.navbar-nav > li.open > a[data-tooltip]::after {
+  opacity: 0 !important;
+}
+
+/* Fixed tooltip for dropdown items (JS-controlled) */
+#sidebar-fixed-tooltip {
+  position: fixed;
+  background: #1e293b;
+  color: #f1f5f9;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 99999;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  display: none;
+  transform: translateY(-50%);
+}
+
+
+body.open aside#left-panel .nav.navbar-nav > li.menu-title {
+  display: none !important;
+}
+
+/* ── Scrollbar (sidebar) ────────────────────────────────────── */
+aside#left-panel::-webkit-scrollbar {
+  width: 4px;
+}
+aside#left-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+aside#left-panel::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 4px;
+}
+
+/* ── DataTables overrides ───────────────────────────────────── */
+.dataTables_wrapper {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+.dataTables_wrapper .dataTables_filter input {
+  border: 1.5px solid var(--border-color) !important;
+  border-radius: 8px !important;
+  padding: 6px 12px !important;
+  font-size: 13px !important;
+}
+
+.dataTables_wrapper .dataTables_length select {
+  border: 1.5px solid var(--border-color) !important;
+  border-radius: 8px !important;
+  padding: 4px 8px !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #fff !important;
+  border-radius: 6px !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+  background: var(--accent-light) !important;
+  border-color: transparent !important;
+  color: var(--accent) !important;
+  border-radius: 6px !important;
+}
+
+/* ── Modal ──────────────────────────────────────────────────── */
+.modal-header {
+  border-bottom: 1px solid var(--border-color) !important;
+  border-radius: var(--card-radius) var(--card-radius) 0 0 !important;
+}
+
+.modal-content {
+  border: none !important;
+  border-radius: var(--card-radius) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15) !important;
+}
+
+.modal-footer {
+  border-top: 1px solid var(--border-color) !important;
+}
+
+/* ── Alert / Flash ──────────────────────────────────────────── */
+.alert-success {
+  background: rgba(16, 185, 129, 0.1) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  color: #065f46 !important;
+  border-radius: 8px !important;
+}
+
+.alert-danger,
+.alert-error {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  color: #991b1b !important;
+  border-radius: 8px !important;
+}
+
+/* ── Navigation tabs ────────────────────────────────────────── */
+.nav-tabs .nav-link.active,
+.nav-tabs .nav-item.show .nav-link {
+  color: var(--accent) !important;
+  border-bottom-color: var(--accent) !important;
+  font-weight: 600 !important;
+}
+
+.nav-tabs .nav-link:hover {
+  color: var(--accent) !important;
+}
+
+/* ── Dropdown menu (header/card dropdowns only, not sidebar) ── */
+.right-panel .dropdown-menu,
+.header .dropdown-menu {
+  border: 1px solid var(--border-color) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1) !important;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background: var(--accent-light) !important;
+  color: var(--accent) !important;
+}
+
+/* ── Menutoggle (hamburger) ─────────────────────────────────── */
+#menuToggle {
+  color: var(--text-muted) !important;
+}
+
+#menuToggle:hover {
+  color: var(--accent) !important;
+}
+
+/* ── Link colors ────────────────────────────────────────────── */
+a:not(.btn):not(.nav-link):not(.navbar-brand):not(.dropdown-item) {
+  color: var(--accent) !important;
+}
+
+a:not(.btn):not(.nav-link):not(.navbar-brand):not(.dropdown-item):hover {
+  color: var(--accent-dark) !important;
+}
+
+/* Sidebar links should keep sidebar text color */
+aside#left-panel a,
+aside#left-panel a:hover {
+  text-decoration: none !important;
+}
+
+/* ── Misc utility ───────────────────────────────────────────── */
+.text-muted {
+  color: var(--text-muted) !important;
+}
+
+hr {
+  border-color: var(--border-color) !important;
+}
+
+/* Keep menutoggle icon visible on white header */
+.top-left .navbar-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}

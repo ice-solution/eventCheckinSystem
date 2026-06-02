@@ -10,30 +10,30 @@
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <strong class="card-title">Add Prize - <%= event.name %></strong>
+                            <strong class="card-title"><%= t('create_prize.title') %> - <%= event.name %></strong>
                         </div>
                         <div class="card-body">
                             <form id="createPrizeForm">
                                 <div class="form-group">
-                                    <label for="name">Prize Name</label>
+                                    <label for="name"><%= t('create_prize.prizeName') %></label>
                                     <input type="text" class="form-control" id="name" name="name" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="prizeImage">Prize Image</label>
+                                    <label for="prizeImage"><%= t('create_prize.prizeImage') %></label>
                                     <input type="file" class="form-control-file" id="prizeImage" name="prizeImage" accept="image/*">
-                                    <small class="form-text text-muted">JPG, PNG, GIF supported, max 5MB</small>
+                                    <small class="form-text text-muted"><%= t('create_prize.imageSupport') %></small>
                                 </div>
                                 <div class="form-group">
-                                    <label for="picture">Prize Image URL (optional)</label>
-                                    <input type="text" class="form-control" id="picture" name="picture" placeholder="https://example.com/image.jpg or leave empty to use uploaded image">
-                                    <small class="form-text text-muted">If you upload an image file, this URL will be ignored</small>
+                                    <label for="picture"><%= t('create_prize.imageUrl') %></label>
+                                    <input type="text" class="form-control" id="picture" name="picture" placeholder="https://example.com/image.jpg">
+                                    <small class="form-text text-muted"><%= t('create_prize.imageUrlNote') %></small>
                                 </div>
                                 <div class="form-group">
-                                    <label for="unit">Quantity</label>
+                                    <label for="unit"><%= t('create_prize.quantity') %></label>
                                     <input type="number" class="form-control" id="unit" name="unit" value="1" min="1" required>
                                 </div>
-                                <button type="submit" class="btn btn-primary">Add Prize</button>
-                                <a href="/prizes/<%= eventId %>/prizes/list" class="btn btn-secondary">Back to List</a>
+                                <button type="submit" class="btn btn-primary"><%= t('create_prize.addBtn') %></button>
+                                <a href="/prizes/<%= eventId %>/prizes/list" class="btn btn-secondary"><%= t('create_prize.backToList') %></a>
                             </form>
                         </div>
                     </div>
@@ -44,41 +44,23 @@
 </div>
 
 <%- include ("./components/footer") %>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
     $(document).ready(function() {
         $('#createPrizeForm').on('submit', function(e) {
             e.preventDefault();
-            
             const formData = new FormData();
             formData.append('name', $('#name').val());
             formData.append('unit', $('#unit').val());
-            
-            // If image file uploaded use file; otherwise use URL
             const imageFile = $('#prizeImage')[0].files[0];
-            if (imageFile) {
-                formData.append('prizeImage', imageFile);
-            } else {
-                formData.append('picture', $('#picture').val());
-            }
-            
-            fetch(`/prizes/<%= eventId %>/prizes`, {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
+            if (imageFile) formData.append('prizeImage', imageFile);
+            else formData.append('picture', $('#picture').val());
+            fetch(`/prizes/<%= eventId %>/prizes`, { method: 'POST', body: formData })
+            .then(r => r.json())
             .then(data => {
-                if (data._id) {
-                    alert('Prize added successfully!');
-                    window.location.href = `/prizes/<%= eventId %>/prizes/list`;
-                } else {
-                    alert('Failed to add: ' + (data.message || 'Unknown error'));
-                }
+                if (data._id) { alert(t('create_prize.addSuccess')); window.location.href = `/prizes/<%= eventId %>/prizes/list`; }
+                else alert(t('create_prize.addFailed') + (data.message || ''));
             })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Failed to add');
-            });
+            .catch(() => alert(t('create_prize.addFailed')));
         });
     });
-</script> 
+</script>

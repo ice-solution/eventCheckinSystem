@@ -10,42 +10,42 @@
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <strong class="card-title">編輯 SMS 模板 (Edit SMS Template)</strong>
+                            <strong class="card-title"><%= t('sms_template_form.editTitle') %></strong>
                         </div>
                         <div class="card-body">
                             <form id="smsTemplateForm">
                                 <div class="form-group">
-                                    <label for="type">SMS 類型 (SMS Type)</label>
+                                    <label for="type"><%= t('sms_template_form.typeLabel') %></label>
                                     <select class="form-control" id="type" required>
-                                        <option value="welcome" <%= template.type === 'welcome' ? 'selected' : '' %>>歡迎 (Welcome)</option>
-                                        <option value="confirmation" <%= template.type === 'confirmation' ? 'selected' : '' %>>確認 (Confirmation)</option>
-                                        <option value="reminder" <%= template.type === 'reminder' ? 'selected' : '' %>>提醒 (Reminder)</option>
-                                        <option value="thankYou" <%= template.type === 'thankYou' ? 'selected' : '' %>>感謝 (Thank You)</option>
-                                        <option value="invitation" <%= template.type === 'invitation' ? 'selected' : '' %>>邀請 (Invitation)</option>
+                                        <option value="welcome" <%= template.type === 'welcome' ? 'selected' : '' %>><%= t('sms_template_form.typeWelcome') %></option>
+                                        <option value="confirmation" <%= template.type === 'confirmation' ? 'selected' : '' %>><%= t('sms_template_form.typeConfirmation') %></option>
+                                        <option value="reminder" <%= template.type === 'reminder' ? 'selected' : '' %>><%= t('sms_template_form.typeReminder') %></option>
+                                        <option value="thankYou" <%= template.type === 'thankYou' ? 'selected' : '' %>><%= t('sms_template_form.typeThankYou') %></option>
+                                        <option value="invitation" <%= template.type === 'invitation' ? 'selected' : '' %>><%= t('sms_template_form.typeInvitation') %></option>
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label for="content">SMS 內容 (SMS Content)</label>
+                                    <label for="content"><%= t('sms_template_form.contentLabel') %></label>
                                     <textarea class="form-control" id="content" rows="10" required><%= template.content || '' %></textarea>
                                     <small class="form-text text-muted">
-                                        <strong>可用變數 (Available variables):</strong><br>
-                                        基本：{{user.name}}, {{user.email}}, {{user.company}}, {{user.phone}}, {{user.phone_code}}, {{user.table}}, {{user.role}}<br>
-                                        <% if (formConfig && formConfig.sections) { 
+                                        <strong><%= t('sms_template_form.variablesLabel') %>:</strong><br>
+                                        {{user.name}}, {{user.email}}, {{user.company}}, {{user.phone}}, {{user.phone_code}}, {{user.table}}, {{user.role}}<br>
+                                        <% if (formConfig && formConfig.sections) {
                                             const formFields = [];
                                             formConfig.sections.forEach(s => { if (s.visible && s.fields) s.fields.forEach(f => { if (f.visible) formFields.push('{{user.' + f.fieldName + '}}'); }); });
-                                            if (formFields.length) { %><br>表單欄位（FormConfig）：<%= formFields.join(', ') %><% } %>
+                                            if (formFields.length) { %><br><%= formFields.join(', ') %><% } %>
                                         <% } %>
-                                        <br>活動/連結：{{event.name}}, {{loginUrl}}, {{confirmUrl}}, {{qrCodeUrl}}
+                                        <br>{{event.name}}, {{loginUrl}}, {{confirmUrl}}, {{qrCodeUrl}}
                                     </small>
                                 </div>
                                 <div class="form-group">
                                     <div class="alert alert-info">
-                                        <strong>範例 (Example):</strong><br>
-                                        歡迎 {{user.name}} 參加 {{event.name}}！您的登入連結：{{loginUrl}}
+                                        <strong><%= t('sms_template_form.exampleLabel') %>:</strong><br>
+                                        <%= t('sms_template_form.typeWelcome') %> {{user.name}} — {{event.name}} {{loginUrl}}
                                     </div>
                                 </div>
-                                <button type="submit" class="btn btn-primary">更新 (Update)</button>
-                                <a href="/events/<%= eventId %>/smsTemplate" class="btn btn-secondary">返回 (Back)</a>
+                                <button type="submit" class="btn btn-primary"><%= t('sms_template_form.updateBtn') %></button>
+                                <a href="/events/<%= eventId %>/smsTemplate" class="btn btn-secondary"><%= t('sms_template_form.backBtn') %></a>
                             </form>
                             <div id="alertContainer" class="mt-3"></div>
                         </div>
@@ -62,46 +62,31 @@
     $(document).ready(function() {
         $('#smsTemplateForm').on('submit', function(e) {
             e.preventDefault();
-            
-            const formData = {
-                type: $('#type').val(),
-                content: $('#content').val()
-            };
-            
+            const formData = { type: $('#type').val(), content: $('#content').val() };
             $.ajax({
                 url: '/events/<%= eventId %>/smsTemplate/<%= template._id %>',
                 type: 'PUT',
                 contentType: 'application/json',
                 data: JSON.stringify(formData),
-                success: function(response) {
+                success: function() {
                     const alertHtml = `
                         <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            SMS 模板更新成功！(SMS template updated successfully!)
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                    `;
+                            <%= t("sms_template_form.updateSuccess") %>
+                            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+                        </div>`;
                     $('#alertContainer').html(alertHtml);
-                    setTimeout(() => {
-                        window.location.href = '/events/<%= eventId %>/smsTemplate';
-                    }, 1500);
+                    setTimeout(() => { window.location.href = '/events/<%= eventId %>/smsTemplate'; }, 1500);
                 },
                 error: function(error) {
-                    console.error('Error updating SMS template:', error);
-                    const errorMsg = error.responseJSON && error.responseJSON.message ? error.responseJSON.message : '更新失敗 (Failed to update SMS template)';
+                    const errorMsg = error.responseJSON?.message || '<%= t("sms_template_form.updateFailed") %>';
                     const alertHtml = `
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
                             ${errorMsg}
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                    `;
+                            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+                        </div>`;
                     $('#alertContainer').html(alertHtml);
                 }
             });
         });
     });
 </script>
-

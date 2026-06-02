@@ -55,54 +55,54 @@
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <strong class="card-title">投票管理 - <%= event.name %></strong>
+                            <strong class="card-title"><%= t('vote_admin.title') %> - <%= event.name %></strong>
                         </div>
                         <div class="card-body">
                             <!-- 投票設置 -->
                             <div class="option-form">
-                                <h5>投票設置</h5>
+                                <h5><%= t('vote_admin.settingsTitle') %></h5>
                                 <form id="voteSettingsForm">
                                     <div class="form-group">
-                                        <label for="title">投票標題</label>
+                                        <label for="title"><%= t('vote_admin.voteTitle') %></label>
                                         <input type="text" class="form-control" id="title" value="<%= vote.title %>" required>
                                     </div>
                                     <div class="form-group">
-                                        <label for="description">投票描述</label>
+                                        <label for="description"><%= t('vote_admin.voteDescription') %></label>
                                         <textarea class="form-control" id="description" rows="3"><%= vote.description %></textarea>
                                     </div>
                                     <div class="form-group">
                                         <div class="custom-control custom-switch">
                                             <input type="checkbox" class="custom-control-input" id="isActive" <%= vote.isActive ? 'checked' : '' %>>
-                                            <label class="custom-control-label" for="isActive">啟用投票</label>
+                                            <label class="custom-control-label" for="isActive"><%= t('vote_admin.enableVote') %></label>
                                         </div>
                                     </div>
-                                    <button type="submit" class="btn btn-primary">更新設置</button>
+                                    <button type="submit" class="btn btn-primary"><%= t('vote_admin.updateSettings') %></button>
                                 </form>
                             </div>
 
                             <!-- 添加選項 -->
                             <div class="option-form">
-                                <h5>添加投票選項</h5>
+                                <h5><%= t('vote_admin.addOptionTitle') %></h5>
                                 <form id="addOptionForm">
                                     <div class="form-group">
-                                        <label for="optionName">選項名稱</label>
+                                        <label for="optionName"><%= t('vote_admin.optionName') %></label>
                                         <input type="text" class="form-control" id="optionName" required>
                                     </div>
                                     <div class="form-group">
-                                        <label for="optionDescription">選項描述</label>
+                                        <label for="optionDescription"><%= t('vote_admin.optionDescription') %></label>
                                         <textarea class="form-control" id="optionDescription" rows="2"></textarea>
                                     </div>
                                     <div class="form-group">
-                                        <label for="optionImage">選項圖片</label>
+                                        <label for="optionImage"><%= t('vote_admin.optionImage') %></label>
                                         <input type="file" class="form-control-file" id="optionImage" accept="image/*">
-                                        <small class="form-text text-muted">支持 JPG, PNG, GIF 格式，最大 5MB</small>
+                                        <small class="form-text text-muted"><%= t('vote_admin.imageHint') %></small>
                                     </div>
-                                    <button type="submit" class="btn btn-success">添加選項</button>
+                                    <button type="submit" class="btn btn-success"><%= t('vote_admin.addOption') %></button>
                                 </form>
                             </div>
 
                             <!-- 投票選項列表 -->
-                            <h5>投票選項 (<span id="optionCount"><%= vote.options.length %></span>/5)</h5>
+                            <h5><%= t('vote_admin.optionListTitle') %> (<span id="optionCount"><%= vote.options.length %></span>/5)</h5>
                             <div id="optionsList">
                                 <% vote.options.forEach((option, index) => { %>
                                     <div class="vote-option" data-id="<%= option._id %>">
@@ -118,12 +118,12 @@
                                             </div>
                                             <div class="col-md-6">
                                                 <h6><%= option.name %></h6>
-                                                <p class="text-muted"><%= option.description || '無描述' %></p>
-                                                <small class="text-muted">得票數: <%= option.votes %></small>
+                                                <p class="text-muted"><%= option.description || t('vote_admin.noDescription') %></p>
+                                                <small class="text-muted"><%= t('vote_admin.votesCount') %>: <%= option.votes %></small>
                                             </div>
                                             <div class="col-md-3 text-right">
                                                 <button class="btn btn-danger btn-sm" onclick="deleteOption('<%= option._id %>')">
-                                                    <i class="fa fa-trash"></i> 刪除
+                                                    <i class="fa fa-trash"></i> <%= t('common.delete') %>
                                                 </button>
                                             </div>
                                         </div>
@@ -133,9 +133,9 @@
 
                             <!-- 投票結果 -->
                             <div class="results-section">
-                                <h5>即時投票結果</h5>
+                                <h5><%= t('vote_admin.resultsTitle') %></h5>
                                 <div id="voteResults">
-                                    <% 
+                                    <%
                                     const totalVotes = vote.records.length;
                                     vote.options.forEach(option => {
                                         const percentage = totalVotes > 0 ? Math.round((option.votes / totalVotes) * 100) : 0;
@@ -143,7 +143,7 @@
                                         <div class="mb-3">
                                             <div class="d-flex justify-content-between">
                                                 <span><%= option.name %></span>
-                                                <span><%= option.votes %> 票 (<%= percentage %>%)</span>
+                                                <span><%= option.votes %> <%= t('vote_admin.voteUnit') %> (<%= percentage %>%)</span>
                                             </div>
                                             <div class="progress-bar">
                                                 <div class="progress-fill" style="width: <%= percentage %>%">
@@ -153,12 +153,12 @@
                                         </div>
                                     <% }); %>
                                 </div>
-                                <p class="text-muted">總投票數: <span id="totalVotes"><%= totalVotes %></span></p>
+                                <p class="text-muted"><%= t('vote_admin.totalVotes') %>: <span id="totalVotes"><%= totalVotes %></span></p>
                             </div>
 
                             <div class="mt-3">
-                                <a href="/events/<%= eventId %>" class="btn btn-secondary">返回事件</a>
-                                <a href="/votes/<%= eventId %>" target="_blank" class="btn btn-info">查看投票頁面</a>
+                                <a href="/events/<%= eventId %>" class="btn btn-secondary"><%= t('vote_admin.backToEvent') %></a>
+                                <a href="/votes/<%= eventId %>" target="_blank" class="btn btn-info"><%= t('vote_admin.viewVotePage') %></a>
                             </div>
                         </div>
                     </div>
@@ -172,17 +172,25 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.js"></script>
 <script>
+    const _VA = {
+        updateFailed: '<%= t("vote_admin.updateFailed") %>',
+        addFailed: '<%= t("vote_admin.addFailed") %>',
+        deleteFailed: '<%= t("vote_admin.deleteFailed") %>',
+        deleteConfirm: '<%= t("vote_admin.deleteConfirm") %>',
+        voteUnit: '<%= t("vote_admin.voteUnit") %>'
+    };
+
     $(document).ready(function() {
         // 更新投票設置
         $('#voteSettingsForm').on('submit', function(e) {
             e.preventDefault();
-            
+
             const formData = {
                 title: $('#title').val(),
                 description: $('#description').val(),
                 isActive: $('#isActive').is(':checked')
             };
-            
+
             fetch(`/votes/<%= eventId %>/settings`, {
                 method: 'PUT',
                 headers: {
@@ -198,23 +206,23 @@
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('更新失敗');
+                alert(_VA.updateFailed);
             });
         });
 
         // 添加投票選項
         $('#addOptionForm').on('submit', function(e) {
             e.preventDefault();
-            
+
             const formData = new FormData();
             formData.append('name', $('#optionName').val());
             formData.append('description', $('#optionDescription').val());
-            
+
             const imageFile = $('#optionImage')[0].files[0];
             if (imageFile) {
                 formData.append('image', imageFile);
             }
-            
+
             fetch(`/votes/<%= eventId %>/options`, {
                 method: 'POST',
                 body: formData
@@ -228,13 +236,13 @@
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('添加失敗');
+                alert(_VA.addFailed);
             });
         });
     });
 
     function deleteOption(optionId) {
-        if (confirm('確定要刪除這個選項嗎？')) {
+        if (confirm(_VA.deleteConfirm)) {
             fetch(`/votes/<%= eventId %>/options/${optionId}`, {
                 method: 'DELETE',
                 headers: {
@@ -250,14 +258,14 @@
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('刪除失敗');
+                alert(_VA.deleteFailed);
             });
         }
     }
 
     // Socket.IO 實時更新
     const socket = io();
-    
+
     socket.on('vote_update', function(data) {
         if (data.eventId === '<%= eventId %>') {
             updateResults(data.results, data.totalVotes);
@@ -267,14 +275,14 @@
     function updateResults(results, totalVotes) {
         const resultsDiv = $('#voteResults');
         resultsDiv.empty();
-        
+
         results.forEach(option => {
             const percentage = option.percentage;
             const optionHtml = `
                 <div class="mb-3">
                     <div class="d-flex justify-content-between">
                         <span>${option.name}</span>
-                        <span>${option.votes} 票 (${percentage}%)</span>
+                        <span>${option.votes} ${_VA.voteUnit} (${percentage}%)</span>
                     </div>
                     <div class="progress-bar">
                         <div class="progress-fill" style="width: ${percentage}%">
@@ -285,7 +293,7 @@
             `;
             resultsDiv.append(optionHtml);
         });
-        
+
         $('#totalVotes').text(totalVotes);
     }
-</script> 
+</script>

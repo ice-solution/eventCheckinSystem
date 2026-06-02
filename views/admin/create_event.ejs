@@ -4,31 +4,30 @@
 <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
 <link rel="stylesheet" href="/admin/assets/css/style.css">
 <div id="right-panel" class="right-panel">
-    <%- include ("components/rightpanel_header") %>
+    <%- include ("components/rightpanel_header", { backUrl: '/events/list' }) %>
     <div class="content">
         <div class="animated fadeIn">
             <div class="row">
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <strong class="card-title">Create New Event</strong>
+                            <strong class="card-title"><%= t('create_event.title') %></strong>
                         </div>
                         <div class="card-body">
                             <form id="createEventForm">
                                 <div class="form-group">
-                                    <label for="name">Event Name</label>
+                                    <label for="name"><%= t('create_event.eventName') %></label>
                                     <input type="text" class="form-control" id="name" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="from">Event Start Time</label>
+                                    <label for="from"><%= t('create_event.startTime') %></label>
                                     <input type="datetime-local" class="form-control" id="from" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="to">Event End Time</label>
+                                    <label for="to"><%= t('create_event.endTime') %></label>
                                     <input type="datetime-local" class="form-control" id="to" required>
                                 </div>
-                                <button type="submit" class="btn btn-primary">Create Event</button>
-                                <a href="/admin" class="btn btn-secondary">Back to Admin</a>
+                                <button type="submit" class="btn btn-primary"><%= t('create_event.submit') %></button>
                             </form>
                             <div id="alertContainer" class="mt-3"></div>
                         </div>
@@ -40,11 +39,10 @@
 </div>
 
 <%- include ("components/footer") %>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
     $(document).ready(function() {
         $('#createEventForm').on('submit', function(e) {
-            e.preventDefault(); // 防止表單默認提交
+            e.preventDefault();
 
             const newEvent = {
                 name: $('#name').val(),
@@ -52,33 +50,29 @@
                 to: $('#to').val()
             };
 
-            // 發送 AJAX 請求創建事件
             $.ajax({
-                url: '/events/create', // 假設您有一個事件創建的路由
+                url: '/events/create',
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify(newEvent),
                 success: function(response) {
-                    // 顯示成功的 alert
                     const alertHtml = `
                         <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            Event created successfully! Redirecting...
+                            <%= t('create_event.successMsg') %>
                             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>
                         </div>
                     `;
                     $('#alertContainer').append(alertHtml);
-                    // 自動跳轉到事件列表頁面
                     setTimeout(() => {
                         window.location.href = '/events/list';
                     }, 1500);
                 },
                 error: function(xhr, status, error) {
-                    console.error('Error creating event:', error);
                     const alertHtml = `
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            Failed to create event. Please try again later.
+                            <%= t('create_event.errorMsg') %>
                             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
                             </button>

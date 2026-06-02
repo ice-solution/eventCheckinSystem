@@ -1,21 +1,17 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="<%= typeof lang !== 'undefined' ? lang : 'zh-Hant' %>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>登記成功</title>
+    <title><%= t('success_page.title') %></title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
 <body>
     <div class="container mt-5">
-        <h1 class="text-center">登記成功！</h1>
+        <h1 class="text-center"><%= t('success_page.heading') %></h1>
         <div class="alert alert-success text-center" role="alert">
-            您的用戶登記已成功完成！感謝您的註冊。
+            <%= t('success_page.message') %>
         </div>
-        <!-- <div class="text-center">
-            <a href="/login" class="btn btn-primary">返回登入頁面</a>
-            <a href="/register" class="btn btn-secondary">返回主頁</a>
-        </div> -->
     </div>
 
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>

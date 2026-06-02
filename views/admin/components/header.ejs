@@ -2,7 +2,7 @@
 <!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7" lang=""> <![endif]-->
 <!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8" lang=""> <![endif]-->
 <!--[if IE 8]>         <html class="no-js lt-ie9" lang=""> <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang=""> <!--<![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="<%= lang %>"> <!--<![endif]-->
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.2.0/css/flag-icon.min.css">
     <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
     <link rel="stylesheet" href="/admin/assets/css/style.css">
+    <link rel="stylesheet" href="/admin/assets/css/theme-brand.css">
     <!-- <script type="text/javascript" src="https://cdn.jsdelivr.net/html5shiv/3.7.3/html5shiv.min.js"></script> -->
     <link href="https://cdn.jsdelivr.net/npm/chartist@0.11.0/dist/chartist.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/jqvmap@1.5.1/dist/jqvmap.min.css" rel="stylesheet">
@@ -64,5 +65,23 @@
         }
 
     </style>
+    <script>
+        window.I18N = <%- JSON.stringify(i18nDict) %>;
+        window.LANG = '<%= lang %>';
+        window.t = function(key) {
+            var result = key.split('.').reduce(function(o, k) { return (o && o[k] != null) ? o[k] : null; }, window.I18N);
+            return result != null ? result : key;
+        };
+    </script>
 </head>
 <body>
+<script>
+(function() {
+    try {
+        var m = document.cookie.match(/(^|;)\s*sidebarCollapsed=([^;]+)/);
+        if (m && m[2] === '1' && window.innerWidth >= 1010) {
+            document.body.classList.add('open', 'sidebar-no-transition');
+        }
+    } catch(e) {}
+})();
+</script>

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="<%= typeof lang !== 'undefined' ? lang : 'zh-Hant' %>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <title>User List and Details</title>
+    <title><%= t('staff_list.title') %></title>
     <style>
         body {
             background-color: #f8f9fa;
@@ -18,13 +18,13 @@
         .user-list {
             width: 30%;
             border-right: 1px solid #dee2e6;
-            padding: 20px; /* 增加內邊距 */
+            padding: 20px;
             background-color: #ffffff;
             border-radius: 10px 0 0 10px;
         }
         .user-details {
             width: 70%;
-            padding: 20px; /* 增加內邊距 */
+            padding: 20px;
             background-color: #ffffff;
             border-radius: 0 10px 10px 0;
         }
@@ -44,18 +44,18 @@
 
 <div class="container">
     <div class="user-list">
-        <h4>用戶列表</h4>
+        <h4><%= t('staff_list.listHeading') %></h4>
         <ul class="list-group" id="userList">
-            <li class="list-group-item" onclick="showDetails('用戶 1', '用戶 1 的詳細信息')">用戶 1</li>
-            <li class="list-group-item" onclick="showDetails('用戶 2', '用戶 2 的詳細信息')">用戶 2</li>
-            <li class="list-group-item" onclick="showDetails('用戶 3', '用戶 3 的詳細信息')">用戶 3</li>
-            <li class="list-group-item" onclick="showDetails('用戶 4', '用戶 4 的詳細信息')">用戶 4</li>
-            <li class="list-group-item" onclick="showDetails('用戶 5', '用戶 5 的詳細信息')">用戶 5</li>
+            <li class="list-group-item" onclick="showDetails('<%= t('staff_list.user1') %>', '<%= t('staff_list.user1Detail') %>')"><%= t('staff_list.user1') %></li>
+            <li class="list-group-item" onclick="showDetails('<%= t('staff_list.user2') %>', '<%= t('staff_list.user2Detail') %>')"><%= t('staff_list.user2') %></li>
+            <li class="list-group-item" onclick="showDetails('<%= t('staff_list.user3') %>', '<%= t('staff_list.user3Detail') %>')"><%= t('staff_list.user3') %></li>
+            <li class="list-group-item" onclick="showDetails('<%= t('staff_list.user4') %>', '<%= t('staff_list.user4Detail') %>')"><%= t('staff_list.user4') %></li>
+            <li class="list-group-item" onclick="showDetails('<%= t('staff_list.user5') %>', '<%= t('staff_list.user5Detail') %>')"><%= t('staff_list.user5') %></li>
         </ul>
     </div>
     <div class="user-details" id="userDetails">
-        <h4>用戶詳細信息</h4>
-        <p>選擇一個用戶以查看詳細信息。</p>
+        <h4><%= t('staff_list.detailHeading') %></h4>
+        <p><%= t('staff_list.selectHint') %></p>
     </div>
 </div>
 

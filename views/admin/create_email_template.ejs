@@ -1,200 +1,126 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
+<%- include ("components/header") %>
+<%- include ("components/menu", { eventId: typeof eventId !== 'undefined' ? eventId : '' }) %>
+<% const tinyMceApiKey = typeof TINYMCE_API_KEY !== 'undefined' ? TINYMCE_API_KEY : '0o0ixrpieipnq3fsu3kbsdu9e627qg468y6lpup3gmhx8lz7'; %>
+<script src="https://cdn.tiny.cloud/1/<%= tinyMceApiKey %>/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
+<script>
+    tinymce.init({
+        selector: '#content',
+        plugins: 'image code link',
+        toolbar: 'undo redo | fontselect | styleselect | bold italic | alignleft aligncenter alignright | image link | code',
+        font_formats: '標楷體=DFKai-SB,BiauKai,標楷體,AR PL UKai TW,STKaiti;微軟正黑體=Microsoft JhengHei,微軟正黑體;新細明體=PMingLiU,新細明體;細明體=MingLiU,細明體;Arial=arial,helvetica,sans-serif;Comic Sans MS=comic sans ms,sans-serif;Courier New=courier new,courier;Georgia=georgia,palatino;Helvetica=helvetica;Impact=impact,chicago;Symbol=symbol;Tahoma=tahoma,arial,helvetica,sans-serif;Terminal=terminal,monaco;Times New Roman=times new roman,times;Trebuchet MS=trebuchet ms,geneva;Verdana=verdana,geneva;Webdings=webdings;Wingdings=wingdings,zapf dingbats',
+        font_family_formats: '標楷體=DFKai-SB,BiauKai,標楷體,AR PL UKai TW,STKaiti;微軟正黑體=Microsoft JhengHei,微軟正黑體;新細明體=PMingLiU,新細明體;細明體=MingLiU,細明體;Arial=arial,helvetica,sans-serif;Comic Sans MS=comic sans ms,sans-serif;Courier New=courier new,courier;Georgia=georgia,palatino;Helvetica=helvetica;Impact=impact,chicago;Symbol=symbol;Tahoma=tahoma,arial,helvetica,sans-serif;Terminal=terminal,monaco;Times New Roman=times new roman,times;Trebuchet MS=trebuchet ms,geneva;Verdana=verdana,geneva;Webdings=webdings;Wingdings=wingdings,zapf dingbats',
+        content_css: '/admin/assets/css/tinymce-custom-fonts.css',
+        content_style: 'body { font-family: Arial, sans-serif; }',
+        images_upload_url: '/emailTemplate/upload',
+        automatic_uploads: true,
+        convert_urls: true,
+        relative_urls: false,
+        remove_script_host: false,
+        document_base_url: window.location.origin,
+        file_picker_types: 'image',
+        file_picker_callback: function (callback, value, meta) {
+            if (meta.filetype === 'image') {
+                var input = document.createElement('input');
+                input.setAttribute('type', 'file');
+                input.setAttribute('accept', 'image/*');
+                input.onchange = function () {
+                    var file = this.files[0];
+                    var reader = new FileReader();
+                    reader.onload = function () { callback(reader.result, { alt: file.name }); };
+                    reader.readAsDataURL(file);
+                };
+                input.click();
+            }
+        },
+        image_advtab: true,
+        image_dimensions: true,
+        image_class_list: [{ title: 'Responsive', value: 'img-fluid' }],
+        urlconverter_callback: function(url, node, on_save, name) {
+            if (url && (url.includes('banner') || url.includes('exvent'))) {
+                if (url.indexOf('http') !== 0 && url.indexOf('//') !== 0) {
+                    if (url.indexOf('/') === 0) return window.location.origin + url;
+                    else return window.location.origin + '/' + url;
+                }
+            }
+            return url;
+        }
+    });
+</script>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+<div id="right-panel" class="right-panel">
+    <%- include ("components/rightpanel_header", { backUrl: eventId ? '/events/' + eventId + '/emailTemplate' : '/emailTemplate' }) %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title"><%= t('create_email_template.title') %></strong>
+                        </div>
+                        <div class="card-body">
+                            <form id="emailTemplateForm">
+                                <div class="form-group">
+                                    <label for="subject"><%= t('create_email_template.subjectLabel') %></label>
+                                    <input type="text" class="form-control" id="subject" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="type"><%= t('create_email_template.typeLabel') %></label>
+                                    <select class="form-control" id="type" required>
+                                        <option value="invitation"><%= t('create_email_template.typeInvitation') %></option>
+                                        <option value="welcome"><%= t('create_email_template.typeWelcome') %></option>
+                                        <option value="knowledge"><%= t('create_email_template.typeKnowledge') %></option>
+                                        <option value="reminder"><%= t('create_email_template.typeReminder') %></option>
+                                        <option value="invoice"><%= t('create_email_template.typeInvoice') %></option>
+                                        <option value="payment_receipt"><%= t('create_email_template.typePaymentReceipt') %></option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="body"><%= t('create_email_template.contentLabel') %></label>
+                                    <textarea class="form-control" name="content" id="content" rows="10">
+                                        <%= sampleEmailTemplate %>
+                                    </textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary"><%= t('create_email_template.saveBtn') %></button>
+                            </form>
+                            <div id="alertContainer" class="mt-3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>事件電子郵件模板</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <% const tinyMceApiKey = typeof TINYMCE_API_KEY !== 'undefined' ? TINYMCE_API_KEY : '0o0ixrpieipnq3fsu3kbsdu9e627qg468y6lpup3gmhx8lz7'; %>
-    <script src="https://cdn.tiny.cloud/1/<%= tinyMceApiKey %>/tinymce/7/tinymce.min.js"
-        referrerpolicy="origin"></script>
-    <script>
-        tinymce.init({
-            selector: '#content', // WYSIWYG 編輯器的選擇器
-            plugins: 'image code link',
-            toolbar: 'undo redo | fontselect | styleselect | bold italic | alignleft aligncenter alignright | image link | code',
-            font_formats: '標楷體=DFKai-SB,BiauKai,標楷體,AR PL UKai TW,STKaiti;微軟正黑體=Microsoft JhengHei,微軟正黑體;新細明體=PMingLiU,新細明體;細明體=MingLiU,細明體;Arial=arial,helvetica,sans-serif;Comic Sans MS=comic sans ms,sans-serif;Courier New=courier new,courier;Georgia=georgia,palatino;Helvetica=helvetica;Impact=impact,chicago;Symbol=symbol;Tahoma=tahoma,arial,helvetica,sans-serif;Terminal=terminal,monaco;Times New Roman=times new roman,times;Trebuchet MS=trebuchet ms,geneva;Verdana=verdana,geneva;Webdings=webdings;Wingdings=wingdings,zapf dingbats',
-            font_family_formats: '標楷體=DFKai-SB,BiauKai,標楷體,AR PL UKai TW,STKaiti;微軟正黑體=Microsoft JhengHei,微軟正黑體;新細明體=PMingLiU,新細明體;細明體=MingLiU,細明體;Arial=arial,helvetica,sans-serif;Comic Sans MS=comic sans ms,sans-serif;Courier New=courier new,courier;Georgia=georgia,palatino;Helvetica=helvetica;Impact=impact,chicago;Symbol=symbol;Tahoma=tahoma,arial,helvetica,sans-serif;Terminal=terminal,monaco;Times New Roman=times new roman,times;Trebuchet MS=trebuchet ms,geneva;Verdana=verdana,geneva;Webdings=webdings;Wingdings=wingdings,zapf dingbats',
-            content_css: '/admin/assets/css/tinymce-custom-fonts.css',
-            content_style: 'body { font-family: Arial, sans-serif; }',
-            images_upload_url: '/emailTemplate/upload', // 圖片上傳的路由
-            automatic_uploads: true,
-            convert_urls: true, // 啟用 URL 轉換
-            relative_urls: false, // 使用絕對 URL
-            remove_script_host: false, // 保留主機名
-            document_base_url: window.location.origin, // 設置基礎 URL
-            file_picker_types: 'image',
-            file_picker_callback: function (callback, value, meta) {
-                if (meta.filetype === 'image') {
-                    var input = document.createElement('input');
-                    input.setAttribute('type', 'file');
-                    input.setAttribute('accept', 'image/*');
-                    input.onchange = function () {
-                        var file = this.files[0];
-                        var reader = new FileReader();
-                        reader.onload = function () {
-                            callback(reader.result, { alt: file.name });
-                        };
-                        reader.readAsDataURL(file);
-                    };
-                    input.click();
-                }
+<%- include ("components/footer") %>
+<script>
+(function($) {
+    $('#emailTemplateForm').on('submit', function (e) {
+        e.preventDefault();
+        const emailTemplate = {
+            subject: $('#subject').val(),
+            type: $('#type').val(),
+            content: tinymce.get('content').getContent(),
+        };
+        if ('<%= eventId %>') emailTemplate.eventId = '<%= eventId %>';
+        $.ajax({
+            url: '/emailTemplate/create',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(emailTemplate),
+            success: function () {
+                const alertHtml = `<div class="alert alert-success alert-dismissible fade show" role="alert"><%= t("create_email_template.saveSuccess") %><button type="button" class="close" data-dismiss="alert"><span>&times;</span></button></div>`;
+                $('#alertContainer').html(alertHtml);
+                setTimeout(() => {
+                    if ('<%= eventId %>') window.location.href = '/events/<%= eventId %>/emailTemplate';
+                    else window.location.href = '/emailTemplate';
+                }, 1500);
             },
-            // 圖片處理配置
-            image_advtab: true,
-            image_dimensions: true,
-            image_class_list: [
-                {title: 'Responsive', value: 'img-fluid'}
-            ],
-            // 只對 banner 圖片使用絕對 URL，其他圖片保持相對路徑
-            urlconverter_callback: function(url, node, on_save, name) {
-                // 檢查是否為 banner 相關的圖片
-                if (url && (url.includes('banner') || url.includes('exvent'))) {
-                    // 對 banner 圖片使用絕對 URL
-                    if (url.indexOf('http') !== 0 && url.indexOf('//') !== 0) {
-                        if (url.indexOf('/') === 0) {
-                            return window.location.origin + url;
-                        } else {
-                            return window.location.origin + '/' + url;
-                        }
-                    }
-                }
-                // 其他圖片（如 QR code）保持相對路徑
-                return url;
-            },
-            setup: function(editor) {
-                // 字型檢測腳本
-                editor.on('init', function() {
-                    // 檢測系統上可用的標楷體字型
-                    var fontsToCheck = ['AR PL UKai TW', 'STKaiti', 'ST Kaiti', 'BiauKai', 'DFKai-SB', '標楷體', 'Kaiti SC', 'Kaiti TC'];
-                    var availableFonts = [];
-                    
-                    var canvas = document.createElement('canvas');
-                    var context = canvas.getContext('2d');
-                    var baseString = '標楷體測試';
-                    var baseWidth = context.measureText(baseString).width;
-                    
-                    fontsToCheck.forEach(function(font) {
-                        context.font = '12px "' + font + '"';
-                        var width = context.measureText(baseString).width;
-                        if (width !== baseWidth) {
-                            availableFonts.push(font);
-                        }
-                    });
-                    
-                    if (availableFonts.length > 0) {
-                        console.log('系統上可用的標楷體字型:', availableFonts);
-                    } else {
-                        console.warn('警告：系統上未檢測到標楷體字型。文字將使用 serif 作為後備字型。');
-                        console.log('建議：在 Mac 上，標楷體通常稱為 "STKaiti" 或 "ST Kaiti"。');
-                        console.log('建議：在 Linux 上，您可能需要安裝中文字型包。');
-                    }
-                });
+            error: function () {
+                const alertHtml = `<div class="alert alert-danger alert-dismissible fade show" role="alert"><%= t("create_email_template.saveFailed") %><button type="button" class="close" data-dismiss="alert"><span>&times;</span></button></div>`;
+                $('#alertContainer').html(alertHtml);
             }
         });
-    </script>
-</head>
-
-<body>
-    <div class="container mt-5">
-        <h1>事件電子郵件模板</h1>
-        <form id="emailTemplateForm">
-            <div class="form-group">
-                <label for="subject">電子郵件主題</label>
-                <input type="text" class="form-control" id="subject" required>
-            </div>
-            <div class="form-group">
-                <label for="type">電子郵件類型</label>
-                <select class="form-control" id="type" required>
-                    <option value="invitation">邀請郵件 (Invitation)</option>
-                    <option value="welcome">歡迎郵件 (Welcome)</option>
-                    <option value="knowledge">知識郵件 (Knowledge)</option>
-                    <option value="reminder">提醒郵件 (Reminder)</option>
-                    <option value="invoice">發票 email (Invoice)</option>
-                    <option value="payment_receipt">付款憑證 email (Payment Receipt)</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="body">電子郵件內容</label>
-                <textarea class="form-control" name="content" id="content" rows="10">
-                    <%= sampleEmailTemplate %>
-                </textarea>
-            </div>
-            <button type="submit" class="btn btn-primary">保存模板</button>
-            <a href="/emailTemplate" class="btn btn-secondary">返回管理頁面</a>
-        </form>
-        <div id="alertContainer" class="mt-3"></div>
-    </div>
-
-    <!-- 引入 jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-        $(document).ready(function () {
-            $('#emailTemplateForm').on('submit', function (e) {
-                e.preventDefault(); // 防止表單默認提交
-
-                const emailTemplate = {
-                    subject: $('#subject').val(),
-                    type: $('#type').val(),
-                    content: tinymce.get('content').getContent(), // 獲取 WYSIWYG 編輯器的內容
-                };
-
-                
-                if (`<%= eventId %>`) {
-                    emailTemplate.eventId = '<%= eventId %>'
-                }
-
-                // 發送 AJAX 請求保存電子郵件模板
-                $.ajax({
-                    url: '/emailTemplate/create',
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify(emailTemplate),
-                    success: function (response) {
-                        // 顯示成功的 alert
-                        const alertHtml = `
-                            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                                電子郵件模板保存成功！
-                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
-                            </div>
-                        `;
-                        $('#alertContainer').append(alertHtml);
-                        // 自動隱藏 alert
-                        setTimeout(() => {
-                            $('.alert').alert('close');
-                        }, 1500);
-                        // 清空表單
-                        $('#emailTemplateForm')[0].reset();
-
-                        // route to the email template list page
-                        if (`<%= eventId %>`) {
-                            window.location.href = `/events/<%= eventId %>/emailTemplate`;
-                        } else {
-                            window.location.href = '/emailTemplate';
-                        }
-                    },
-                    error: function (xhr, status, error) {
-                        console.error('Error saving email template:', error);
-                        const alertHtml = `
-                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                保存電子郵件模板失敗，請稍後再試。
-                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
-                            </div>
-                        `;
-                        $('#alertContainer').append(alertHtml);
-                    }
-                });
-            });
-        });
-    </script>
-
-    <!-- 引入 Bootstrap JS -->
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
-</body>
-
-</html>
+    });
+})(jQuery);
+</script>

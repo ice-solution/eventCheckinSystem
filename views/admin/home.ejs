@@ -1,13 +1,13 @@
-<!-- views/home.ejs -->
 <%- include ("components/header") %>
-<body>
-    <%- include ("components/menu") %>
-    <div id="right-panel" class="right-panel">
-        <%- include ("components/rightpanel_header") %>
-        <h2>Welcome to Event Management System</h2>
-        <a href="/events/list" class="btn btn-primary">Event List</a>
-        <a href="/logout" class="btn btn-danger">Logout</a>
+<%- include ("components/menu", {eventId: ''}) %>
+<div id="right-panel" class="right-panel">
+    <%- include ("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <h2><%= t('home.welcome') %></h2>
+            <a href="/events/list" class="btn btn-primary"><%= t('home.eventList') %></a>
+            <a href="/logout" class="btn btn-danger"><%= t('common.logout') %></a>
+        </div>
     </div>
-
-    <!-- Include Bootstrap JS -->
-    <%- include ("components/footer") %>
+</div>
+<%- include ("components/footer") %>
