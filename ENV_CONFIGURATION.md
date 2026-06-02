@@ -145,6 +145,21 @@ TWILIO_PHONE_NUMBER=+1234567890
 
 ---
 
+## 🔑 外部系統讀取用戶資料（網站 API Key）
+
+提供給外部系統用（透過 `eventId + userId` 讀取 Event 內嵌的 RSVP user 資料）。
+
+```env
+WEB_API_KEYS=key1,key2
+```
+
+- **使用方式**：呼叫 `GET /web/:event_id/users/:userId` 時，帶上 header `X-WEB-API-KEY: <key>`
+- **注意**：
+  - 這不是瀏覽器端安全機制；請把 key 放在你的後端，不要直接寫在前端 JS。
+  - 可搭配 CORS 白名單（`CORS_ENABLED=true` + `CORS_ORIGIN=...`）限制哪些網站可在瀏覽器讀取回應。
+
+---
+
 ## 🔌 Socket.IO（選填，LuckyDraw 防靜默斷線）
 
 ### SOCKET_PING_INTERVAL

@@ -8,6 +8,30 @@ const Transaction = require('../model/Transaction');
 const { getBannerRenderData } = require('../utils/bannerCache');
 const { normalizeTicketsForView, ticketsUseCategories } = require('../utils/paymentTicket');
 
+function getWebApiKeys() {
+    const raw = (process.env.WEB_SITE_API_KEYS || process.env.WEB_API_KEYS || '').toString().trim();
+    if (!raw) return [];
+    return raw.split(',').map(s => s.trim()).filter(Boolean);
+}
+
+function getApiKeyFromRequest(req) {
+    const headerKey = req.get('X-WEB-API-KEY') || req.get('X-Api-Key') || req.get('X-API-KEY');
+    const queryKey = req.query && (req.query.apiKey || req.query.api_key);
+    return (headerKey || queryKey || '').toString().trim();
+}
+
+function requireWebApiKey(req, res, next) {
+    const keys = getWebApiKeys();
+    if (!keys.length) {
+        return res.status(500).json({ message: 'WEB_API_KEYS is not configured' });
+    }
+    const key = getApiKeyFromRequest(req);
+    if (!key || !keys.includes(key)) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+    return next();
+}
+
 // 為活動頁面注入帶 ?t= 的 banner URL（依檔案修改時間，避免 CDN 快取舊圖）
 router.param('event_id', (req, res, next, eventId) => {
     if (/^[0-9a-fA-F]{24}$/.test(eventId)) {
@@ -20,6 +44,28 @@ router.param('event_id', (req, res, next, eventId) => {
 router.get('/:event_id', (req, res) => {
     const { event_id } = req.params; // 獲取 event_id
     res.render('exvent/index', { event_id }); // 渲染 index.ejs，並傳遞 event_id
+});
+
+/**
+ * 外部系統（網站）用：透過 eventId + userId 取得用戶資料
+ * 需提供 X-WEB-API-KEY（或 query apiKey），並在 .env 設定 WEB_API_KEYS
+ */
+router.get('/:event_id/users/:userId', requireWebApiKey, async (req, res) => {
+    const { event_id, userId } = req.params;
+    if (!/^[0-9a-fA-F]{24}$/.test(event_id) || !/^[0-9a-fA-F]{24}$/.test(userId)) {
+        return res.status(400).json({ message: 'Invalid event_id or userId' });
+    }
+    try {
+        const event = await Event.findById(event_id).select({ users: 1 });
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+        const user = event.users && event.users.id ? event.users.id(userId) : null;
+        if (!user) return res.status(404).json({ message: 'User not found' });
+        const userObject = user.toObject ? user.toObject({ minimize: false }) : user;
+        return res.json(userObject);
+    } catch (err) {
+        console.error('web api get user by id error:', err);
+        return res.status(500).json({ message: 'Server error' });
+    }
 });
 
 // 路由到 event_website/register.ejs
