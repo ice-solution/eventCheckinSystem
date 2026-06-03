@@ -254,15 +254,82 @@
         #usersTable td:last-child {
             min-width: 270px; /* Actions */
         }
+        #usersTable_wrapper {
+            padding: 0 24px !important;
+        }
         .dataTables_wrapper .dataTables_scrollBody {
             overflow-x: auto !important;
         }
+        .dataTables_wrapper .dataTables_info {
+            padding-left: 24px !important;
+            margin-top: 16px;
+            margin-bottom: 12px;
+        }
+        .dataTables_wrapper .dataTables_paginate {
+            padding-right: 24px !important;
+            margin-top: 16px;
+        }
+        #usersTable {
+            margin-left: 24px;
+        }
+        .card-header-with-action {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .column-toggle-gear-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            border: 1px solid var(--border-color, #e4e9f0);
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            color: #666;
+            transition: all 0.2s ease;
+            margin: 0;
+        }
+        .column-toggle-gear-btn:hover {
+            background: #f5f5f5;
+            color: #333;
+            border-color: #999;
+        }
+        .column-toggle-gear-btn:active {
+            transform: scale(0.95);
+        }
         .column-toggle-panel {
-            margin: 12px 0 16px;
-            padding: 10px 12px;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 500px;
+            background: white;
             border: 1px solid var(--border-color, #e4e9f0);
             border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            z-index: 9999;
+            overflow: hidden;
+        }
+        .column-toggle-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color, #e4e9f0);
             background: var(--body-bg, #f0f4f8);
+        }
+        .column-toggle-header h6 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-color, #333);
+        }
+        .column-toggle-content {
+            padding: 16px;
+            max-height: 500px;
+            overflow-y: auto;
         }
         .column-toggle-list {
             display: flex;
@@ -287,23 +354,92 @@
             margin-bottom: 16px;
             cursor: grab;
             user-select: none;
-            scrollbar-width: auto;
+            scrollbar-width: thin;
+            scrollbar-color: transparent transparent;
+        }
+        .btn-scroll-row:hover {
             scrollbar-color: var(--accent, #00c4b4) var(--border-color, #e4e9f0);
         }
         .btn-scroll-row::-webkit-scrollbar { height: 6px; }
         .btn-scroll-row::-webkit-scrollbar-track {
-            background: var(--border-color, #e4e9f0);
+            background: transparent;
             border-radius: 3px;
         }
         .btn-scroll-row::-webkit-scrollbar-thumb {
-            background: var(--accent, #00c4b4);
+            background: transparent;
             border-radius: 3px;
+        }
+        .btn-scroll-row:hover::-webkit-scrollbar-track {
+            background: var(--border-color, #e4e9f0);
+        }
+        .btn-scroll-row:hover::-webkit-scrollbar-thumb {
+            background: var(--accent, #00c4b4);
         }
         .btn-scroll-row::-webkit-scrollbar-thumb:hover {
             background: var(--accent-dark, #00a89a);
         }
         .btn-scroll-row.is-dragging { cursor: grabbing; }
         .btn-scroll-row .btn { flex-shrink: 0; }
+        /* Filter Modal */
+        #filterModalBackdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 10650;
+            display: none;
+        }
+        #filterModal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 700px;
+            max-height: 80vh;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            z-index: 10700;
+            display: none;
+            flex-direction: column;
+        }
+        #filterModal > div:first-child {
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        #filterModal > div:first-child h5 {
+            margin: 0;
+        }
+        #filterModal > div:first-child button {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+        #filterModalContent {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .advanced-search-panel {
+            margin-bottom: 20px;
+            display: none; /* Hide initially, only show in modal */
+        }
+        /* Fix select field text display */
+        .advancedSearchField {
+            line-height: 1.5 !important;
+            padding: 6px 8px !important;
+            min-height: 36px !important;
+            vertical-align: middle !important;
+        }
         .btn-scroll-separator {
             width: 1px;
             min-height: 28px;
@@ -392,8 +528,11 @@
 
             <div class="main-content-row">
                     <div class="card">
-                        <div class="card-header">
+                        <div class="card-header card-header-with-action">
                             <strong class="card-title"><%= t('users.cardTitle') %> - <%= event.name %></strong>
+                            <button id="columnToggleBtn" class="column-toggle-gear-btn" type="button" title="<%= t('users.columnVisibility') %>">
+                                <i class="fa fa-cog"></i>
+                            </button>
                         </div>
                         <div class="card-body">
                             <!-- 單行橫向可 drag 滾動按鈕列 -->
@@ -443,6 +582,11 @@
                                 <a href="/events/<%= event._id %>/payment-settings" class="btn btn-secondary">
                                     <i class="fas fa-credit-card"></i> Payment Settings
                                 </a>
+                                <div class="btn-scroll-separator"></div>
+                                <!-- Group 6: Filter -->
+                                <button id="filterBtn" class="btn btn-secondary">
+                                    <i class="fas fa-filter"></i> <%= t('users.filterBtn') %>
+                                </button>
                             </div>
                             
                             <div class="clearfix" style="margin-top:20px"></div>
@@ -597,13 +741,13 @@
                             </div>
 
                             <!-- Email Settings Modal (Custom Implementation) -->
-                            <div id="emailSettingsModalBackdrop" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10550;"></div>
-                            <div id="emailSettingsModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 500px; background: white; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 10600;">
-                                <div style="padding: 20px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center;">
+                            <div id="emailSettingsModalBackdrop" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10550; display: none;"></div>
+                            <div id="emailSettingsModal" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 500px; max-height: 80vh; background: white; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 10600; display: none;">
+                                <div style="padding: 20px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; min-height: 50px;">
                                     <h5 style="margin: 0;"><%= t('users.emailSettingsTitle') %></h5>
                                     <button type="button" id="emailSettingsModalClose" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
                                 </div>
-                                <div style="padding: 20px; max-height: 500px; overflow-y: auto;">
+                                <div style="padding: 20px; overflow-y: auto; flex: 1; min-height: 200px;">
                                     <form id="emailSettingsFormContent">
                                         <div class="form-group">
                                             <label for="welcomeMessageMethod"><%= t('users.welcomeMethodLabel') %>:</label>
@@ -637,15 +781,11 @@
                                                 <label class="form-check-label" for="sendThankYouEmail"><%= t('users.sendThankYouEmailLabel') %></label>
                                             </div>
                                         </div>
-                                        <div class="form-group">
-                                            <a href="/events/<%= event._id %>/smsTemplate" class="btn btn-info btn-sm"><%= t('users.manageSmsTemplates') %></a>
+                                        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0; display: flex; justify-content: flex-end;">
+                                            <button type="button" class="btn btn-warning" id="sendEmailNowBtn"><i class="fas fa-envelope"></i> Send Email</button>
                                         </div>
                                     </form>
                                         </div>
-                                </div>
-                                <div style="padding: 20px; border-top: 1px solid #e0e0e0; display: flex; justify-content: flex-end; gap: 10px;">
-                                    <button type="button" class="btn btn-secondary" id="emailSettingsModalCloseBtn"><%= t('common.close') %></button>
-                                    <button type="button" class="btn btn-success" id="saveEmailSettingsBtn"><%= t('users.saveEmailSettings') %></button>
                                 </div>
                             </div>
 
@@ -855,6 +995,21 @@
                                 </form>
                             </div>
 
+                            <!-- Filter Modal (Backdrop and Dialog) -->
+                            <div id="filterModalBackdrop"></div>
+                            <div id="filterModal">
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid #e0e0e0; flex-shrink: 0;">
+                                    <h5 style="margin: 0;"><%= t('users.advancedSearchTitle') || 'Filter' %></h5>
+                                    <button type="button" id="filterModalClose" style="display: none; background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
+                                </div>
+                                <div id="filterModalContent" style="padding: 20px; overflow-y: auto; flex: 1;">
+                                    <!-- Advanced Search content will be dynamically placed here -->
+                                </div>
+                                <div style="padding: 20px; border-top: 1px solid #e0e0e0; display: flex; justify-content: flex-end; gap: 10px; flex-shrink: 0;">
+                                    <button type="button" id="filterDoneBtn" class="btn btn-primary" style="min-width: 80px;">Done</button>
+                                </div>
+                            </div>
+
                             <!-- 進階搜尋 Advanced Search（可同時符合多個條件 AND）-->
                             <div class="card mb-3 advanced-search-panel">
                                 <div class="card-body py-2">
@@ -865,7 +1020,7 @@
                                             <label class="col-form-label col-form-label-sm mb-0"><%= t('users.condition') %> 1</label>
                                         </div>
                                         <div class="col-auto">
-                                            <select class="form-control form-control-sm advancedSearchField" style="min-width: 140px;">
+                                            <select class="form-control form-control-sm advancedSearchField" style="min-width: 200px;">
                                                 <option value=""><%= t('users.selectFieldPlaceholder') %></option>
                                                 <% if (formConfig && formConfig.sections) { %>
                                                     <% const cond1Sections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
@@ -902,7 +1057,7 @@
                                             <label class="col-form-label col-form-label-sm mb-0"><%= t('users.condition') %> 2</label>
                                         </div>
                                         <div class="col-auto">
-                                            <select class="form-control form-control-sm advancedSearchField" style="min-width: 140px;">
+                                            <select class="form-control form-control-sm advancedSearchField" style="min-width: 200px;">
                                                 <option value=""><%= t('users.selectFieldPlaceholder') %></option>
                                                 <% if (formConfig && formConfig.sections) { %>
                                                     <% const cond2Sections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
@@ -938,14 +1093,19 @@
                                     <div class="form-row align-items-center flex-wrap">
                                         <div class="col-auto">
                                             <button type="button" id="advancedSearchAddCondition" class="btn btn-sm btn-primary mr-2"><i class="fas fa-plus"></i> <%= t('users.addCondition') %></button>
-                                            <button type="button" id="advancedSearchClear" class="btn btn-sm btn-secondary"><%= t('users.clearCondition') %></button>
+                                            <button type="button" id="advancedSearchClear" class="btn btn-sm btn-danger"><%= t('users.clearCondition') %></button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="column-toggle-panel">
-                                <p class="mb-2 small text-muted"><%= t('users.columnToggleHint') %></p>
-                                <div id="columnToggleList" class="column-toggle-list"></div>
+                            <div id="columnTogglePanel" class="column-toggle-panel" style="display: none;">
+                                <div class="column-toggle-header">
+                                    <h6 class="mb-3"><%= t('users.columnVisibilitySetting') %></h6>
+                                </div>
+                                <div id="columnToggleContent" class="column-toggle-content">
+                                    <p class="mb-2 small text-muted"><%= t('users.columnToggleHint') %></p>
+                                    <div id="columnToggleList" class="column-toggle-list"></div>
+                                </div>
                             </div>
                             <table id="usersTable" class="display nowrap">
                                 <thead>
@@ -1299,6 +1459,26 @@ const _US = {
             }
         });
 
+        // Column toggle gear button - show modal panel
+        $('#columnToggleBtn').off('click').on('click', function(e) {
+            e.stopPropagation();
+            const $panel = $('#columnTogglePanel');
+            if ($panel.css('display') === 'none') {
+                $panel.css('display', 'flex').css('flex-direction', 'column');
+            } else {
+                $panel.css('display', 'none');
+            }
+        });
+
+        // Close panel when clicking outside
+        $(document).off('click.columnToggle').on('click.columnToggle', function(e) {
+            const $panel = $('#columnTogglePanel');
+            const $btn = $('#columnToggleBtn');
+            if (!$panel.is(e.target) && !$panel.has(e.target).length && !$btn.is(e.target) && !$btn.has(e.target).length) {
+                $panel.css('display', 'none');
+            }
+        });
+
         initColumnToggles();
 
         // --- 進階搜尋：多條件 AND（例如 姓名=John doe 且 公司=government）---
@@ -1364,39 +1544,112 @@ const _US = {
             });
         }
 
-        $('#advancedSearchAddCondition').on('click', function() {
-            const $firstRow = $('#advancedSearchConditionsContainer .advanced-search-condition-row').first();
-            const $newRow = $firstRow.clone().removeAttr('data-index').addClass('advanced-search-condition-row').attr('data-index', $('#advancedSearchConditionsContainer .advanced-search-condition-row').length + 1);
-            $newRow.find('.advancedSearchField').val('');
-            $newRow.find('.advancedSearchInput').val('');
-            $newRow.find('label.col-form-label').text(_US.conditionLabel + ' ' + ($('#advancedSearchConditionsContainer .advanced-search-condition-row').length + 1));
-            $('#advancedSearchConditionsContainer').append($newRow);
-            $newRow.find('.advancedSearchInput').on('keyup', function() { applyAdvancedSearch(); });
-            $newRow.find('.advancedSearchField').on('change', function() { applyAdvancedSearch(); });
-            updateRemoveButtons();
-            renumberConditionLabels();
-        });
+        // Bind add condition button with direct handler (event delegation doesn't work reliably with this element)
+        function bindAddConditionButton() {
+            $('#advancedSearchAddCondition').off('click').on('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
 
-        $(document).on('click', '.advanced-search-remove', function() {
+                // Limit to maximum 8 filters
+                const currentRows = $('#advancedSearchConditionsContainer .advanced-search-condition-row').length;
+                if (currentRows >= 8) {
+                    showAlert('warning', 'Maximum 8 filters allowed');
+                    return;
+                }
+
+                const $firstRow = $('#advancedSearchConditionsContainer .advanced-search-condition-row').first();
+                const $newRow = $firstRow.clone().removeAttr('data-index').addClass('advanced-search-condition-row').attr('data-index', currentRows + 1);
+                $newRow.find('.advancedSearchField').val('');
+                $newRow.find('.advancedSearchInput').val('');
+                $newRow.find('label.col-form-label').text(_US.conditionLabel + ' ' + (currentRows + 1));
+                $('#advancedSearchConditionsContainer').append($newRow);
+                $newRow.find('.advancedSearchInput').on('keyup', function() { applyAdvancedSearch(); });
+                $newRow.find('.advancedSearchField').on('change', function() { applyAdvancedSearch(); });
+                updateRemoveButtons();
+                renumberConditionLabels();
+            });
+        }
+        bindAddConditionButton();
+
+        // Use document delegation for remove button since it may be in modal
+        $(document).on('click', '.advanced-search-remove', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
             const $row = $(this).closest('.advanced-search-condition-row');
             if ($('#advancedSearchConditionsContainer .advanced-search-condition-row').length <= 2) return;
             $row.remove();
             renumberConditionLabels();
             updateRemoveButtons();
             applyAdvancedSearch();
+            return false;
         });
 
         $('#advancedSearchConditionsContainer').on('keyup', '.advancedSearchInput', function() { applyAdvancedSearch(); });
         $('#advancedSearchConditionsContainer').on('change', '.advancedSearchField', function() { applyAdvancedSearch(); });
-        $('#advancedSearchClear').on('click', function() {
-            $('#advancedSearchConditionsContainer .advanced-search-condition-row').each(function(i) {
-                $(this).find('.advancedSearchField').val('');
-                $(this).find('.advancedSearchInput').val('');
+        // Bind clear button with direct handler
+        function bindClearButton() {
+            $('#advancedSearchClear').off('click').on('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $('#advancedSearchConditionsContainer .advanced-search-condition-row').each(function(i) {
+                    $(this).find('.advancedSearchField').val('');
+                    $(this).find('.advancedSearchInput').val('');
+                });
+                $('#advancedSearchConditionsContainer .advanced-search-condition-row').slice(2).remove();
+                renumberConditionLabels();
+                updateRemoveButtons();
+                applyAdvancedSearch();
             });
-            $('#advancedSearchConditionsContainer .advanced-search-condition-row').slice(2).remove();
-            renumberConditionLabels();
-            updateRemoveButtons();
-            applyAdvancedSearch();
+        }
+        bindClearButton();
+
+        // Filter Modal Control
+        let filterModalInitialized = false;
+
+        function showFilterModal() {
+            const $advancedSearchPanel = $('.advanced-search-panel');
+            const $filterModalContent = $('#filterModalContent');
+
+            // Move advanced search panel to modal on first open
+            if (!filterModalInitialized && $advancedSearchPanel.length) {
+                const $panel = $advancedSearchPanel.detach();
+                $panel.css('display', 'block'); // Ensure it displays in modal
+                $filterModalContent.append($panel);
+                filterModalInitialized = true;
+            }
+
+            $('#filterModalBackdrop').show();
+            $('#filterModal').show();
+        }
+
+        function hideFilterModal() {
+            $('#filterModalBackdrop').hide();
+            $('#filterModal').hide();
+        }
+
+        $('#filterBtn').on('click', function() {
+            showFilterModal();
+        });
+
+        $('#filterModalClose').on('click', function() {
+            hideFilterModal();
+        });
+
+        $('#filterDoneBtn').on('click', function() {
+            hideFilterModal();
+        });
+
+        $('#filterModalBackdrop').on('click', function() {
+            hideFilterModal();
+        });
+
+        // Only prevent closing when clicking on modal header/body, not preventing internal events
+        $('#filterModal').on('click', function(e) {
+            // Only stop propagation if click is on modal itself, not on internal buttons
+            if (e.target === this) {
+                e.stopPropagation();
+            }
         });
 
         // Select All Users button - selects all users across all pages
@@ -2214,18 +2467,17 @@ const _US = {
         
         // Function to show alerts
         function showAlert(type, message) {
-            const alertHtml = `
-                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                    ${message}
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-            `;
-            $('#alertContainer').append(alertHtml);
-            setTimeout(() => {
-                $('.alert').alert('close');
-            }, 1500);
+            const id = 'toast-' + Date.now();
+            const $toast = $(`<div id="${id}" style="
+                position:fixed; top:20px; left:50%; transform:translateX(-50%);
+                z-index:99999; min-width:300px; max-width:520px;
+                box-shadow:0 4px 16px rgba(0,0,0,0.15); border-radius:8px;
+            " class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+            </div>`);
+            $('body').append($toast);
+            setTimeout(() => $toast.fadeOut(300, function() { $(this).remove(); }), 3500);
         }
 
         // Delete user functionality
@@ -2293,15 +2545,57 @@ const _US = {
             $('#sendConfirmationEmail').prop('checked', emailSettings.sendConfirmationEmail);
             $('#sendReminderEmail').prop('checked', emailSettings.sendReminderEmail);
             $('#sendThankYouEmail').prop('checked', emailSettings.sendThankYouEmail);
-            // Open modal
-            $('#emailSettingsModalBackdrop').show();
-            $('#emailSettingsModal').show();
+            // Open modal with backdrop
+            $('#emailSettingsModalBackdrop').css('display', 'block');
+            $('#emailSettingsModal').css({ 'display': 'flex', 'flex-direction': 'column', 'height': 'auto' });
         });
 
         // Close modal handlers
-        $('#emailSettingsModalClose, #emailSettingsModalCloseBtn, #emailSettingsModalBackdrop').on('click', function() {
+        $('#emailSettingsModalClose, #emailSettingsModalCloseBtn, #emailSettingsModalBackdrop').on('click', function(e) {
+            if ($(e.target).is('#emailSettingsModalBackdrop') || $(e.target).is('#emailSettingsModalClose') || $(e.target).is('#emailSettingsModalCloseBtn')) {
+                $('#emailSettingsModalBackdrop').css('display', 'none');
+                $('#emailSettingsModal').css('display', 'none');
+            }
+        });
+
+        // Send Email Now button (from email settings modal)
+        $('#sendEmailNowBtn').on('click', function() {
+            const selectedIds = Array.from(selectedUserIds);
+
+            if (selectedIds.length === 0) {
+                showAlert('warning', _US.batchEmailNoUsers);
+                return;
+            }
+
+            // Close email settings modal
             $('#emailSettingsModalBackdrop').hide();
             $('#emailSettingsModal').hide();
+
+            // Trigger batch send email modal
+            setTimeout(function() {
+                $('#selectedUsersCount').text(selectedIds.length);
+                $('#batchEmailType').val('invitation');
+                loadBatchEmailTemplates('invitation');
+
+                const $modal = $('#batchSendEmailModal');
+                if ($modal.length === 0) {
+                    showAlert('danger', _US.modalNotFound);
+                    return;
+                }
+
+                $modal.removeClass('show').attr('aria-hidden', 'false');
+                $modal.modal('show');
+
+                setTimeout(function() {
+                    if (!$modal.hasClass('show') || $modal.css('display') === 'none') {
+                        $modal.addClass('show').css('display', 'block');
+                        $('body').addClass('modal-open');
+                        if ($('.modal-backdrop').length === 0) {
+                            $('<div class="modal-backdrop fade show"></div>').appendTo('body').css('z-index', '10550');
+                        }
+                    }
+                }, 200);
+            }, 200);
         });
 
         // Save Email Settings from Modal
