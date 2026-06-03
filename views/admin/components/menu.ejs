@@ -110,7 +110,10 @@
                 <% } %>
                 <% if (can('transactions')) { %>
                 <li>
-                    <a href="/events/<%=eventId%>/transactions" data-tooltip="<%= t('menu.transactionRecord') %>"> <i class="menu-icon fa fa-credit-card"></i><%= t('menu.transactionRecord') %></a>
+                    <a href="/events/<%=eventId%>/payment-settings" data-tooltip="<%= t('menu.paymentSettings') %>"> <i class="menu-icon fa fa-credit-card"></i><%= t('menu.paymentSettings') %></a>
+                </li>
+                <li>
+                    <a href="/events/<%=eventId%>/transactions" data-tooltip="<%= t('menu.transactionRecord') %>"> <i class="menu-icon fa fa-list-alt"></i><%= t('menu.transactionRecord') %></a>
                 </li>
                 <% } %>
                 <% if (can('attachments')) { %>

@@ -32,7 +32,7 @@
     "gameConfig": "遊戲設定", "prizeManagement": "獎品管理", "voteManagement": "投票管理",
     "websiteContent": "網站", "websiteLink": "網站頁面", "registrationPage": "報名頁面",
     "eventUserLogin": "訪客登入頁面", "registrationConfig": "報名頁設定",
-    "transactionRecord": "交易記錄", "attachments": "附件", "report": "報告",
+    "paymentSettings": "付費設定", "transactionRecord": "交易記錄", "attachments": "附件", "report": "報告",
     "emailRecords": "郵件記錄", "banner": "橫幅管理", "importUsers": "批量匯入",
     "scan": "簽到掃描"
   },

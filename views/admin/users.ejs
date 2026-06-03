@@ -27,6 +27,16 @@
             gap: 6px;
             align-items: center;
         }
+        /* Email Settings Modal */
+        #emailSettingsModal {
+            z-index: 10600 !important;
+        }
+        #emailSettingsModal .modal-dialog {
+            z-index: 10601 !important;
+        }
+        body.modal-open {
+            overflow: hidden;
+        }
         .qrcode-container {
             position: relative;
             display: inline-block;
@@ -106,23 +116,11 @@
             gap: 10px;
             align-items: center;
             margin-bottom: 20px;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            border: 1px solid #dee2e6;
+            padding: 12px 0;
         }
         .action-buttons-container .btn {
             margin: 0;
-            padding: 8px 16px;
-            font-size: 14px;
-            font-weight: 500;
-            border-radius: 4px;
-            transition: all 0.2s ease;
             white-space: nowrap;
-        }
-        .action-buttons-container .btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .action-buttons-group {
             display: flex;
@@ -132,60 +130,6 @@
         }
         .action-buttons-group .btn {
             margin: 0;
-        }
-        /* Payment Event 單獨容器 */
-        .payment-event-container {
-            margin-top: 15px;
-            padding: 12px 15px;
-            background-color: #fff;
-            border: 1px solid #dee2e6;
-            border-radius: 6px;
-            border-left: 4px solid #007bff;
-        }
-        .payment-event-container .form-check.form-switch {
-            display: flex;
-            align-items: flex-start;
-            margin: 0;
-            padding: 0;
-        }
-        .payment-event-container .form-check-input {
-            margin: 0 !important;
-            margin-right: 25px !important;
-            margin-top: 3px !important;
-            width: 2.25rem !important;
-            min-width: 2.25rem !important;
-            max-width: 2.25rem !important;
-            height: 1.375rem !important;
-            flex-shrink: 0 !important;
-            cursor: pointer;
-            position: relative;
-            z-index: 1;
-            float: none !important;
-        }
-        .payment-event-container .form-check-label {
-            margin: 0 !important;
-            margin-left: 0 !important;
-            padding: 0 !important;
-            padding-left: 0 !important;
-            cursor: default;
-            flex: 1;
-            line-height: 1.5;
-            min-width: 0;
-            display: block;
-            overflow: visible;
-        }
-        .payment-event-container .form-check-label strong {
-            display: block;
-            font-size: 15px;
-            color: #212529;
-            margin-bottom: 4px;
-            font-weight: 600;
-        }
-        .payment-event-container .form-check-label small {
-            display: block;
-            font-size: 12px;
-            color: #6c757d;
-            line-height: 1.4;
         }
         /* Modal 樣式修復 - 確保 modal 顯示在最上層（高於 admin 模板 z-index: 9999） */
         #batchSendEmailModal,
@@ -316,9 +260,9 @@
         .column-toggle-panel {
             margin: 12px 0 16px;
             padding: 10px 12px;
-            border: 1px solid #dee2e6;
-            border-radius: 6px;
-            background: #f8f9fa;
+            border: 1px solid var(--border-color, #e4e9f0);
+            border-radius: 8px;
+            background: var(--body-bg, #f0f4f8);
         }
         .column-toggle-list {
             display: flex;
@@ -332,6 +276,58 @@
             gap: 6px;
             white-space: nowrap;
         }
+        /* Horizontal scrollable button toolbar */
+        .btn-scroll-row {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 8px;
+            overflow-x: auto;
+            max-width: calc(100vw - 360px);
+            padding-bottom: 10px;
+            margin-bottom: 16px;
+            cursor: grab;
+            user-select: none;
+            scrollbar-width: auto;
+            scrollbar-color: var(--accent, #00c4b4) var(--border-color, #e4e9f0);
+        }
+        .btn-scroll-row::-webkit-scrollbar { height: 6px; }
+        .btn-scroll-row::-webkit-scrollbar-track {
+            background: var(--border-color, #e4e9f0);
+            border-radius: 3px;
+        }
+        .btn-scroll-row::-webkit-scrollbar-thumb {
+            background: var(--accent, #00c4b4);
+            border-radius: 3px;
+        }
+        .btn-scroll-row::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-dark, #00a89a);
+        }
+        .btn-scroll-row.is-dragging { cursor: grabbing; }
+        .btn-scroll-row .btn { flex-shrink: 0; }
+        .btn-scroll-separator {
+            width: 1px;
+            min-height: 28px;
+            background: var(--border-color, #e4e9f0);
+            flex-shrink: 0;
+            align-self: center;
+            margin: 0 4px;
+        }
+        /* Main content card — same visible width as stat cards */
+        .main-content-row {
+            max-width: calc(100vw - 360px);
+            margin-bottom: 20px;
+        }
+        /* Stat cards row — fill visible viewport width */
+        .stat-cards-row {
+            gap: 15px;
+            max-width: calc(100vw - 360px);
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            flex: 1 1 0;
+            min-width: 0;
+            margin: 0 !important;
+        }
     </style>
 
 <div id="right-panel" class="right-panel">
@@ -339,60 +335,54 @@
     <div class="content">
         <div class="animated fadeIn">
             <div id="alertContainer"></div>
-            <div class="row">
-                <div class="col-lg-4 col-md-6">
-                    <div class="card">
-                        <% 
-                            const totalUsers = event.users.length; 
-                            const checkedInUsers = event.users.filter(user => user.isCheckIn).length; 
-                            const checkInRate = totalUsers > 0 ? ((checkedInUsers / totalUsers) * 100).toFixed(2) : 0; 
-                        %>
-                        <div class="card-body">
-                            <div class="stat-widget-five">
-                                <div class="stat-icon dib flat-color-1">
-                                    <i class="pe-7s-user"></i>
-                                </div>
-                                <div class="stat-content">
-                                    <div class="text-left dib">
-                                        <div class="stat-text"><span class="count"><%= checkedInUsers %></span></div>
-                                        <div class="stat-heading"><%= t('users.checkedInStat') %></div>
-                                    </div>
+            <%
+                const totalUsers = event.users.length;
+                const checkedInUsers = event.users.filter(user => user.isCheckIn).length;
+                const checkInRate = totalUsers > 0 ? ((checkedInUsers / totalUsers) * 100).toFixed(2) : 0;
+            %>
+            <div class="d-flex stat-cards-row">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <div class="stat-widget-five">
+                            <div class="stat-icon dib flat-color-1">
+                                <i class="pe-7s-user"></i>
+                            </div>
+                            <div class="stat-content">
+                                <div class="text-left dib">
+                                    <div class="stat-text"><span class="count"><%= checkedInUsers %></span></div>
+                                    <div class="stat-heading"><%= t('users.checkedInStat') %></div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-lg-4 col-md-6">
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="stat-widget-five">
-                                <div class="stat-icon dib flat-color-2">
-                                    <i class="pe-7s-users"></i>
-                                </div>
-                                <div class="stat-content">
-                                    <div class="text-left dib">
-                                        <div class="stat-text"><span class="count"><%= totalUsers %></span></div>
-                                        <div class="stat-heading"><%= t('users.totalStat') %></div>
-                                    </div>
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <div class="stat-widget-five">
+                            <div class="stat-icon dib flat-color-2">
+                                <i class="pe-7s-users"></i>
+                            </div>
+                            <div class="stat-content">
+                                <div class="text-left dib">
+                                    <div class="stat-text"><span class="count"><%= totalUsers %></span></div>
+                                    <div class="stat-heading"><%= t('users.totalStat') %></div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-lg-4 col-md-6">
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="stat-widget-five">
-                                <div class="stat-icon dib flat-color-3">
-                                    <i class="pe-7s-calculator"></i>
-                                </div>
-                                <div class="stat-content">
-                                    <div class="text-left dib">
-                                        <div class="stat-text"><span class="count"><%= checkInRate %></span>%</div>
-                                        <div class="stat-heading"><%= t('users.checkInRateStat') %></div>
-                                    </div>
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <div class="stat-widget-five">
+                            <div class="stat-icon dib flat-color-3">
+                                <i class="pe-7s-calculator"></i>
+                            </div>
+                            <div class="stat-content">
+                                <div class="text-left dib">
+                                    <div class="stat-text"><span class="count"><%= checkInRate %></span>%</div>
+                                    <div class="stat-heading"><%= t('users.checkInRateStat') %></div>
                                 </div>
                             </div>
                         </div>
@@ -400,82 +390,59 @@
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-lg-12 col-md-12">
+            <div class="main-content-row">
                     <div class="card">
                         <div class="card-header">
-                            <strong class="card-title"><%= event.name %> <%= t('users.cardTitle') %></strong>
+                            <strong class="card-title"><%= t('users.cardTitle') %> - <%= event.name %></strong>
                         </div>
                         <div class="card-body">
-                            <!-- 主要操作按鈕區域 -->
-                            <div class="action-buttons-container">
-                                <!-- 主要操作按鈕組 -->
-                                <div class="action-buttons-group">
-                                    <a href="/events/<%= event._id %>" class="btn btn-outline-secondary">
-                                        <i class="fas fa-list"></i> <%= t('users.userListBtn') %>
-                                    </a>
-                                    <a href="/events/<%= event._id%>/scan" class="btn btn-outline-secondary">
-                                        <i class="fas fa-qrcode"></i> <%= t('users.scanBtn') %>
-                                    </a>
-                                    <a href="/events/<%= event._id%>/import" class="btn btn-outline-secondary">
-                                        <i class="fas fa-file-upload"></i> <%= t('users.importBtn') %>
-                                    </a>
-                                    <a href="/events/<%= event._id%>/banner" class="btn btn-outline-info">
-                                        <i class="fas fa-image"></i> <%= t('users.bannerBtn') %>
-                                    </a>
-                                    <a href="/events/<%= event._id %>/report" class="btn btn-outline-success">
-                                        <i class="fas fa-download"></i> <%= t('users.reportBtn') %>
-                                    </a>
-                                    <a href="/events/<%= event._id %>/transactions" class="btn btn-outline-warning">
-                                        <i class="fa fa-credit-card"></i> <%= t('users.transactionBtn') %>
-                                    </a>
-                                    <a href="/events/<%= event._id %>/email-records" class="btn btn-outline-info">
-                                        <i class="fas fa-envelope-open"></i> <%= t('users.emailRecordsBtn') %>
-                                    </a>
-                                </div>
-                                
-                                <!-- 批量操作按鈕組 -->
-                                <div class="action-buttons-group">
-                                    <button id="selectAllUsersBtn" class="btn btn-info">
-                                        <i class="fas fa-check-square"></i> <%= t('users.selectAllBtn') %>
-                                    </button>
-                                    <button id="deselectAllUsersBtn" class="btn btn-secondary">
-                                        <i class="fas fa-square"></i> <%= t('users.deselectAllBtn') %>
-                                    </button>
-                                    <button id="batchDeleteBtn" class="btn btn-danger" style="display: none;">
-                                        <i class="fas fa-trash-alt"></i> <%= t('users.batchDeleteBtn') %>
-                                    </button>
-                                    <button id="batchCheckInBtn" class="btn btn-success">
-                                        <i class="fas fa-check-circle"></i> <%= t('users.batchCheckInBtn') %>
-                                    </button>
-                                    <button id="batchSendEmailBtn" class="btn btn-warning" style="display: none;">
-                                        <i class="fas fa-envelope"></i> <%= t('users.batchSendEmailBtn') %>
-                                    </button>
-                                    <button id="batchSendSmsBtn" class="btn btn-info" style="display: none;">
-                                        <i class="fas fa-sms"></i> <%= t('users.batchSendSmsBtn') %>
-                                    </button>
-                                    <button id="addUserBtn" class="btn btn-primary">
-                                        <i class="fas fa-user-plus"></i> <%= t('users.addUserBtn') %>
-                                    </button>
-                                </div>
-                                
-                                <!-- 設置按鈕組 -->
-                                <div class="action-buttons-group">
-                                    <button id="emailSettingsBtn" class="btn btn-info">
-                                        <i class="fas fa-envelope"></i> <%= t('users.emailSettingsBtn') %>
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <!-- Payment Event Settings (Separated)：只有點擊 switch 才會切換，文字區不觸發 -->
-                            <div class="payment-event-container">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="paymentEvent" aria-label="Payment Event">
-                                    <label class="form-check-label" id="paymentEventLabel">
-                                        <strong><%= t('users.paymentEventLabel') %></strong>
-                                        <small class="text-muted d-block"><%= t('users.paymentEventHint') %></small>
-                                    </label>
-                                </div>
+                            <!-- 單行橫向可 drag 滾動按鈕列 -->
+                            <div class="btn-scroll-row" id="btnScrollRow">
+                                <!-- Group 1: Guest selection & add -->
+                                <button id="selectAllUsersBtn" class="btn btn-primary">
+                                    <i class="fas fa-check-square"></i> <%= t('users.selectAllBtn') %>
+                                </button>
+                                <button id="deselectAllUsersBtn" class="btn btn-secondary">
+                                    <i class="fas fa-square"></i> <%= t('users.deselectAllBtn') %>
+                                </button>
+                                <button id="addUserBtn" class="btn btn-primary">
+                                    <i class="fas fa-user-plus"></i> <%= t('users.addUserBtn') %>
+                                </button>
+                                <button id="batchDeleteBtn" class="btn btn-danger" style="display: none;">
+                                    <i class="fas fa-trash-alt"></i> <%= t('users.batchDeleteBtn') %>
+                                </button>
+                                <div class="btn-scroll-separator"></div>
+                                <!-- Group 2: Email -->
+                                <button id="emailSettingsBtn" class="btn btn-secondary">
+                                    <i class="fas fa-paper-plane"></i> Send Email
+                                </button>
+                                <a href="/events/<%= event._id %>/email-records" class="btn btn-secondary">
+                                    <i class="fas fa-envelope-open"></i> <%= t('users.emailRecordsBtn') %>
+                                </a>
+                                <button id="batchSendEmailBtn" class="btn btn-warning" style="display: none;">
+                                    <i class="fas fa-envelope"></i> <%= t('users.batchSendEmailBtn') %>
+                                </button>
+                                <button id="batchSendSmsBtn" class="btn btn-primary" style="display: none;">
+                                    <i class="fas fa-sms"></i> <%= t('users.batchSendSmsBtn') %>
+                                </button>
+                                <div class="btn-scroll-separator"></div>
+                                <!-- Group 3: Import & Report -->
+                                <a href="/events/<%= event._id%>/import" class="btn btn-secondary">
+                                    <i class="fas fa-file-upload"></i> <%= t('users.importBtn') %>
+                                </a>
+                                <a href="/events/<%= event._id %>/report" class="btn btn-success">
+                                    <i class="fas fa-download"></i> <%= t('users.reportBtn') %>
+                                </a>
+                                <div class="btn-scroll-separator"></div>
+                                <!-- Group 4: Scan -->
+                                <a href="/events/<%= event._id%>/scan" class="btn btn-secondary">
+                                    <i class="fas fa-qrcode"></i> <%= t('users.scanBtn') %>
+                                </a>
+                                <div class="btn-scroll-separator"></div>
+                                <!-- Group 5: Payment Settings -->
+                                <a href="/events/<%= event._id %>/payment-settings" class="btn btn-secondary">
+                                    <i class="fas fa-credit-card"></i> Payment Settings
+                                </a>
                             </div>
                             
                             <div class="clearfix" style="margin-top:20px"></div>
@@ -626,6 +593,59 @@
                                             <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('common.close') %></button>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+
+                            <!-- Email Settings Modal (Custom Implementation) -->
+                            <div id="emailSettingsModalBackdrop" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10550;"></div>
+                            <div id="emailSettingsModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 500px; background: white; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 10600;">
+                                <div style="padding: 20px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center;">
+                                    <h5 style="margin: 0;"><%= t('users.emailSettingsTitle') %></h5>
+                                    <button type="button" id="emailSettingsModalClose" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
+                                </div>
+                                <div style="padding: 20px; max-height: 500px; overflow-y: auto;">
+                                    <form id="emailSettingsFormContent">
+                                        <div class="form-group">
+                                            <label for="welcomeMessageMethod"><%= t('users.welcomeMethodLabel') %>:</label>
+                                            <select class="form-control" id="welcomeMessageMethod">
+                                                <option value="email"><%= t('users.methodEmail') %></option>
+                                                <option value="sms"><%= t('users.methodSms') %></option>
+                                                <option value="both"><%= t('users.methodBoth') %></option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="sendWelcomeEmail">
+                                                <label class="form-check-label" for="sendWelcomeEmail"><%= t('users.sendWelcomeEmailLabel') %></label>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="sendConfirmationEmail">
+                                                <label class="form-check-label" for="sendConfirmationEmail"><%= t('users.sendConfirmationEmailLabel') %></label>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="sendReminderEmail">
+                                                <label class="form-check-label" for="sendReminderEmail"><%= t('users.sendReminderEmailLabel') %></label>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="sendThankYouEmail">
+                                                <label class="form-check-label" for="sendThankYouEmail"><%= t('users.sendThankYouEmailLabel') %></label>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <a href="/events/<%= event._id %>/smsTemplate" class="btn btn-info btn-sm"><%= t('users.manageSmsTemplates') %></a>
+                                        </div>
+                                    </form>
+                                        </div>
+                                </div>
+                                <div style="padding: 20px; border-top: 1px solid #e0e0e0; display: flex; justify-content: flex-end; gap: 10px;">
+                                    <button type="button" class="btn btn-secondary" id="emailSettingsModalCloseBtn"><%= t('common.close') %></button>
+                                    <button type="button" class="btn btn-success" id="saveEmailSettingsBtn"><%= t('users.saveEmailSettings') %></button>
                                 </div>
                             </div>
 
@@ -917,8 +937,8 @@
                                     </div>
                                     <div class="form-row align-items-center flex-wrap">
                                         <div class="col-auto">
-                                            <button type="button" id="advancedSearchAddCondition" class="btn btn-sm btn-outline-primary mr-2"><i class="fas fa-plus"></i> <%= t('users.addCondition') %></button>
-                                            <button type="button" id="advancedSearchClear" class="btn btn-sm btn-outline-secondary"><%= t('users.clearCondition') %></button>
+                                            <button type="button" id="advancedSearchAddCondition" class="btn btn-sm btn-primary mr-2"><i class="fas fa-plus"></i> <%= t('users.addCondition') %></button>
+                                            <button type="button" id="advancedSearchClear" class="btn btn-sm btn-secondary"><%= t('users.clearCondition') %></button>
                                         </div>
                                     </div>
                                 </div>
@@ -1075,7 +1095,6 @@
                             </table>
                         </div>
                     </div>
-                </div>
             </div>
         </div>
     </div>
@@ -1120,9 +1139,6 @@ const _US = {
     checkInUpdateFailed: '<%= t("users.checkInUpdateFailed") %>',
     emailSettingsSaved: '<%= t("users.emailSettingsSaved") %>',
     emailSettingsFailed: '<%= t("users.emailSettingsFailed") %>',
-    paymentCancelledSuccess: '<%= t("users.paymentCancelledSuccess") %>',
-    paymentCancelledFailed: '<%= t("users.paymentCancelledFailed") %>',
-    paymentSavedSuccess: '<%= t("users.paymentSavedSuccess") %>',
     downloadQrCodeBtn: '<%= t("users.downloadQrCodeBtn") %>',
     resendDropdown: '<%= t("users.resendDropdown") %>',
     emailTypeInvitation: '<%= t("users.emailTypeInvitation") %>',
@@ -1146,10 +1162,6 @@ const _US = {
     batchEmailFailed: '<%= t("users.batchEmailFailed") %>',
     emailSettingsTitle: '<%= t("users.emailSettingsTitle") %>',
     saveEmailSettings: '<%= t("users.saveEmailSettings") %>',
-    ticketSettingsTitle: '<%= t("users.ticketSettingsTitle") %>',
-    ticketTimeSlotNote: '<%= t("users.ticketTimeSlotNote") %>',
-    addTicketBtn: '<%= t("users.addTicketBtn") %>',
-    savePaymentSettings: '<%= t("users.savePaymentSettings") %>',
     viewQrCode: '<%= t("users.viewQrCode") %>',
     deleteBtn: '<%= t("users.deleteBtn") %>',
     smsSentSuccess: '<%= t("users.smsSentSuccess") %>',
@@ -2270,79 +2282,30 @@ const _US = {
 
         // Get eventId
         const eventId = '<%= event._id %>';
-        // Initialize ticket data
-        let paymentTickets = <%- JSON.stringify(event.PaymentTickets || []) %>;
-        let isPaymentEvent = <%- event.isPaymentEvent ? 'true' : 'false' %>;
         // Initialize email settings
         const emailSettings = <%- JSON.stringify(event.emailSettings || { sendWelcomeEmail: false, sendConfirmationEmail: false, sendReminderEmail: false, sendThankYouEmail: false, welcomeMessageMethod: 'email' }) %>;
 
-        // Payment Event checkbox status initialization
-        $('#paymentEvent').prop('checked', isPaymentEvent);
-        if(isPaymentEvent) showTicketFields();
-
-        // Email Settings functionality
+        // Email Settings functionality (Modal)
         $('#emailSettingsBtn').on('click', function() {
-            showEmailSettings();
+            // Load current settings into modal
+            $('#welcomeMessageMethod').val(emailSettings.welcomeMessageMethod);
+            $('#sendWelcomeEmail').prop('checked', emailSettings.sendWelcomeEmail);
+            $('#sendConfirmationEmail').prop('checked', emailSettings.sendConfirmationEmail);
+            $('#sendReminderEmail').prop('checked', emailSettings.sendReminderEmail);
+            $('#sendThankYouEmail').prop('checked', emailSettings.sendThankYouEmail);
+            // Open modal
+            $('#emailSettingsModalBackdrop').show();
+            $('#emailSettingsModal').show();
         });
 
-        function showEmailSettings() {
-            if($('#emailSettingsForm').length) {
-                $('#emailSettingsForm').toggle();
-                return;
-            }
-            const html = `
-                <div id="emailSettingsForm" class="card mt-3">
-                    <div class="card-header">
-                        <h5>${_US.emailSettingsTitle}</h5>
-                    </div>
-                    <div class="card-body">
-                        <form id="emailSettingsFormContent">
-                            <div class="form-group">
-                                <label for="welcomeMessageMethod">${_US.welcomeMethodLabel}:</label>
-                                <select class="form-control" id="welcomeMessageMethod">
-                                    <option value="email" ${emailSettings.welcomeMessageMethod === 'email' ? 'selected' : ''}>${_US.methodEmail}</option>
-                                    <option value="sms" ${emailSettings.welcomeMessageMethod === 'sms' ? 'selected' : ''}>${_US.methodSms}</option>
-                                    <option value="both" ${emailSettings.welcomeMessageMethod === 'both' ? 'selected' : ''}>${_US.methodBoth}</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="sendWelcomeEmail" ${emailSettings.sendWelcomeEmail ? 'checked' : ''}>
-                                    <label class="form-check-label" for="sendWelcomeEmail">${_US.sendWelcomeEmailLabel}</label>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="sendConfirmationEmail" ${emailSettings.sendConfirmationEmail ? 'checked' : ''}>
-                                    <label class="form-check-label" for="sendConfirmationEmail">${_US.sendConfirmationEmailLabel}</label>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="sendReminderEmail" ${emailSettings.sendReminderEmail ? 'checked' : ''}>
-                                    <label class="form-check-label" for="sendReminderEmail">${_US.sendReminderEmailLabel}</label>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="sendThankYouEmail" ${emailSettings.sendThankYouEmail ? 'checked' : ''}>
-                                    <label class="form-check-label" for="sendThankYouEmail">${_US.sendThankYouEmailLabel}</label>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <a href="/events/${eventId}/smsTemplate" class="btn btn-info btn-sm">${_US.manageSmsTemplates}</a>
-                            </div>
-                            <button type="submit" class="btn btn-success btn-sm">${_US.saveEmailSettings}</button>
-                            <button type="button" class="btn btn-secondary btn-sm ml-2" id="closeEmailSettings">${_US.closeBtn}</button>
-                        </form>
-                    </div>
-                </div>
-            `;
-            $('#emailSettingsBtn').after(html);
-        }
+        // Close modal handlers
+        $('#emailSettingsModalClose, #emailSettingsModalCloseBtn, #emailSettingsModalBackdrop').on('click', function() {
+            $('#emailSettingsModalBackdrop').hide();
+            $('#emailSettingsModal').hide();
+        });
 
-        $(document).on('submit', '#emailSettingsFormContent', function(e) {
-            e.preventDefault();
+        // Save Email Settings from Modal
+        $('#saveEmailSettingsBtn').on('click', function() {
             const emailSettingsData = {
                 sendWelcomeEmail: $('#sendWelcomeEmail').is(':checked'),
                 sendConfirmationEmail: $('#sendConfirmationEmail').is(':checked'),
@@ -2354,151 +2317,15 @@ const _US = {
                 url: `/events/${eventId}/emailSettings`,
                 type: 'PATCH',
                 contentType: 'application/json',
-                data: JSON.stringify({ 
-                    emailSettings: emailSettingsData
-                }),
+                data: JSON.stringify({ emailSettings: emailSettingsData }),
                 success: function(res) {
                     showAlert('success', _US.emailSettingsSaved);
                     Object.assign(emailSettings, emailSettingsData);
+                    $('#emailSettingsModalBackdrop').hide();
+                    $('#emailSettingsModal').hide();
                 },
                 error: function(error) {
                     showAlert('danger', _US.emailSettingsFailed);
-                }
-            });
-        });
-
-        $(document).on('click', '#closeEmailSettings', function() {
-            $('#emailSettingsForm').hide();
-        });
-
-        // Dynamically display ticket fields
-        function showTicketFields() {
-            if($('#ticketFields').length) return;
-            const html = `
-                <form id="paymentEventForm" class="mt-3">
-                    <h5>${_US.ticketSettingsTitle}</h5>
-                    <p class="text-muted small mb-2">${_US.ticketTimeSlotNote}</p>
-                    <div id="ticketsList"></div>
-                    <button type="button" class="btn btn-primary btn-sm" id="addTicketBtn">${_US.addTicketBtn}</button>
-                    <button type="submit" class="btn btn-success btn-sm ml-2">${_US.savePaymentSettings}</button>
-                </form>
-            `;
-            $('#paymentEvent').closest('.form-check').after(html);
-            renderTickets();
-        }
-
-        function toDatetimeLocalValue(val) {
-            if (!val) return '';
-            const d = new Date(val);
-            if (isNaN(d.getTime())) return '';
-            return d.toISOString().slice(0, 16);
-        }
-
-        function getTicketRangeValues(ticket) {
-            const from = ticket.datetimeFrom || '';
-            const to = ticket.datetimeTo || ticket.datetime || '';
-            return { from, to };
-        }
-
-        function getTicketTitleParts(ticket) {
-            if (ticket.title && typeof ticket.title === 'object') {
-                return { zh: ticket.title.zh || '', en: ticket.title.en || '' };
-            }
-            const s = ticket.title || '';
-            return { zh: s, en: s };
-        }
-
-        // 渲染票券列表
-        function renderTickets() {
-            let html = '';
-            paymentTickets.forEach((ticket, idx) => {
-                const range = getTicketRangeValues(ticket);
-                const titles = getTicketTitleParts(ticket);
-                const cat = (ticket.category || '').replace(/"/g, '&quot;');
-                html += `
-                    <div class="ticket-item mb-3 p-2 border rounded" data-idx="${idx}">
-                        <div class="mb-2">
-                            <input type="text" class="form-control d-inline-block w-auto mr-1 ticket-category" placeholder="Category key（如 vip）" value="${cat}" style="width:120px;" title="與 Form Config 分類按鈕 key 對應；留空=其他">
-                            <input type="text" class="form-control d-inline-block w-auto mr-1 ticket-title-zh" placeholder="票券名稱（中文）" value="${(titles.zh || '').replace(/"/g, '&quot;')}" style="width:130px;">
-                            <input type="text" class="form-control d-inline-block w-auto mr-2 ticket-title-en" placeholder="Ticket name (EN)" value="${(titles.en || '').replace(/"/g, '&quot;')}" style="width:130px;">
-                            <input type="number" class="form-control d-inline-block w-auto mr-2 ticket-price" placeholder="Price" value="${ticket.price || ''}" style="width:100px;">
-                            <input type="datetime-local" class="form-control d-inline-block w-auto mr-1 ticket-datetime-from" value="${toDatetimeLocalValue(range.from)}" style="width:180px;" title="開始日期時間">
-                            <span class="mr-1 text-muted">–</span>
-                            <input type="datetime-local" class="form-control d-inline-block w-auto mr-2 ticket-datetime-to" value="${toDatetimeLocalValue(range.to)}" style="width:180px;" title="結束日期時間">
-                            <button type="button" class="btn btn-danger btn-sm remove-ticket">Delete</button>
-                        </div>
-                    </div>
-                `;
-            });
-            $('#ticketsList').html(html);
-        }
-
-        // 新增票券
-        $(document).on('click', '#addTicketBtn', function(e) {
-            e.preventDefault();
-            paymentTickets.push({ title: { zh: '', en: '' }, price: '', category: '', datetimeFrom: '', datetimeTo: '' });
-            renderTickets();
-        });
-
-        // 刪除票券
-        $(document).on('click', '.remove-ticket', function() {
-            const idx = $(this).closest('.ticket-item').data('idx');
-            paymentTickets.splice(idx, 1);
-            renderTickets();
-        });
-
-        // 編輯票券
-        $(document).on('change', '.ticket-category, .ticket-title-zh, .ticket-title-en, .ticket-price, .ticket-datetime-from, .ticket-datetime-to', function() {
-            const idx = $(this).closest('.ticket-item').data('idx');
-            const row = $(this).closest('.ticket-item');
-            paymentTickets[idx].title = {
-                zh: row.find('.ticket-title-zh').val(),
-                en: row.find('.ticket-title-en').val()
-            };
-            paymentTickets[idx].category = (row.find('.ticket-category').val() || '').trim();
-            paymentTickets[idx].price = Number(row.find('.ticket-price').val());
-            paymentTickets[idx].datetimeFrom = row.find('.ticket-datetime-from').val();
-            paymentTickets[idx].datetimeTo = row.find('.ticket-datetime-to').val();
-            delete paymentTickets[idx].datetime;
-        });
-
-        function syncPaymentTicketsFromDom() {
-            $('.ticket-item').each(function() {
-                const idx = $(this).data('idx');
-                if (idx === undefined || !paymentTickets[idx]) return;
-                const row = $(this);
-                paymentTickets[idx].title = {
-                    zh: (row.find('.ticket-title-zh').val() || '').trim(),
-                    en: (row.find('.ticket-title-en').val() || '').trim()
-                };
-                paymentTickets[idx].category = (row.find('.ticket-category').val() || '').trim();
-                paymentTickets[idx].price = Number(row.find('.ticket-price').val()) || 0;
-                paymentTickets[idx].datetimeFrom = row.find('.ticket-datetime-from').val();
-                paymentTickets[idx].datetimeTo = row.find('.ticket-datetime-to').val();
-                delete paymentTickets[idx].datetime;
-            });
-        }
-
-        // 提交 payment event form
-        $(document).on('submit', '#paymentEventForm', function(e) {
-            e.preventDefault();
-            syncPaymentTicketsFromDom();
-            const missingTitle = paymentTickets.some(t => {
-                const title = t.title || {};
-                return !(title.zh && title.zh.trim()) && !(title.en && title.en.trim());
-            });
-            if (missingTitle) {
-                alert('請為每張票券填寫中文或英文名稱（至少填一種語言）');
-                return;
-            }
-            const checked = $('#paymentEvent').is(':checked');
-            $.ajax({
-                url: `/events/${eventId}/paymentEvent`,
-                type: 'PATCH',
-                contentType: 'application/json',
-                data: JSON.stringify({ isPaymentEvent: checked, PaymentTickets: paymentTickets }),
-                success: function(res) {
-                    showAlert('success', _US.paymentSavedSuccess);
                 }
             });
         });
@@ -2886,30 +2713,30 @@ const _US = {
             img.src = qrcodeUrl;
         });
 
-        // 監聽 Payment Event checkbox，顯示/隱藏票券欄位
-        $('#paymentEvent').on('change', function() {
-            const checked = $(this).is(':checked');
-            if(checked) {
-                showTicketFields();
-            } else {
-                $('#paymentEventForm').remove();
-                // 立即保存取消支付的設定
-                $.ajax({
-                    url: `/events/${eventId}/paymentEvent`,
-                    type: 'PATCH',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ isPaymentEvent: false, PaymentTickets: [] }),
-                    success: function(res) {
-                        showAlert('success', _US.paymentCancelledSuccess);
-                    },
-                    error: function(error) {
-                        $('#paymentEvent').prop('checked', true);
-                        showTicketFields();
-                        showAlert('danger', _US.paymentCancelledFailed);
-                    }
-                });
-            }
-        });
     });
+</script>
+<script>
+(function () {
+    const row = document.getElementById('btnScrollRow');
+    if (!row) return;
+    let drag = { active: false, x: 0, scroll: 0, moved: false };
+    row.addEventListener('mousedown', function (e) {
+        drag = { active: true, x: e.clientX, scroll: row.scrollLeft, moved: false };
+        row.classList.add('is-dragging');
+    });
+    window.addEventListener('mouseup', function () {
+        drag.active = false;
+        row.classList.remove('is-dragging');
+    });
+    row.addEventListener('mousemove', function (e) {
+        if (!drag.active) return;
+        const dx = drag.x - e.clientX;
+        if (Math.abs(dx) > 5) drag.moved = true;
+        row.scrollLeft = drag.scroll + dx;
+    });
+    row.addEventListener('click', function (e) {
+        if (drag.moved) { e.preventDefault(); e.stopPropagation(); drag.moved = false; }
+    }, true);
+})();
 </script>
 

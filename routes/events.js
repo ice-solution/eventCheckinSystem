@@ -292,6 +292,7 @@ router.put('/:eventId/luckydraw-config', luckydrawGameConfigController.saveConfi
 // 新增的路由
 router.get('/:eventId/email/:userId', eventsController.renderEmailHtml);
 
+router.get('/:eventId/payment-settings', eventsController.renderPaymentSettings);
 router.patch('/:eventId/paymentEvent', eventsController.updatePaymentEvent);
 router.patch('/:eventId/emailSettings', eventsController.updateEmailSettings);
 

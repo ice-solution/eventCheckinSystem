@@ -32,7 +32,7 @@
     "gameConfig": "Game Config", "prizeManagement": "Prize Management", "voteManagement": "Vote Management",
     "websiteContent": "Website", "websiteLink": "Website Page", "registrationPage": "Registration Page",
     "eventUserLogin": "Guest Login Page", "registrationConfig": "Reg Page Config",
-    "transactionRecord": "Transaction Records", "attachments": "Attachments", "report": "Report",
+    "paymentSettings": "Payment Settings", "transactionRecord": "Transaction Records", "attachments": "Attachments", "report": "Report",
     "emailRecords": "Email Records", "banner": "Banner Management", "importUsers": "Bulk Import",
     "scan": "Check-in Scan"
   },

@@ -1408,9 +1408,10 @@ exports.renderGuestConfirmPage = async (req, res) => {
     const { eventId, guestId } = req.params; // 獲取事件 ID 和來賓 ID
     
     // 檢查是否為特殊路由（不應該被當作 guestId 處理）
-    const reservedRoutes = ['email-records', 'transactions', 'report', 'emailTemplate', 'smsTemplate', 
+    const reservedRoutes = ['email-records', 'transactions', 'report', 'emailTemplate', 'smsTemplate',
                           'banner', 'scan-point-users', 'attendee', 'treasure-hunt', 'guest-list',
-                          'scan', 'import', 'luckydraw', 'points', 'attachments', 'profile', 'login'];
+                          'scan', 'import', 'luckydraw', 'points', 'attachments', 'profile', 'login',
+                          'payment-settings'];
     
     if (reservedRoutes.includes(guestId)) {
         // 這是一個保留路由，不應該被當作 guestId 處理
@@ -3836,6 +3837,24 @@ exports.updatePaymentEvent = async (req, res) => {
     } catch (error) {
         console.error('Error updating payment event:', error);
         res.status(500).json({ message: 'Error updating payment event' });
+    }
+};
+
+// 渲染 Payment Settings 獨立頁面
+exports.renderPaymentSettings = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.redirect('/login');
+        }
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found');
+        }
+        res.render('admin/payment_settings', { event, eventId });
+    } catch (error) {
+        console.error('Error rendering payment settings page:', error);
+        res.status(500).send('Error rendering payment settings page.');
     }
 };
 

@@ -1,0 +1,248 @@
+<%- include ("components/header") %>
+<%- include ("components/menu", { eventId: event._id }) %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+<style>
+    .payment-event-container {
+        padding: 16px 20px;
+        background-color: #fff;
+        border: 1px solid var(--border-color, #e4e9f0);
+        border-radius: 10px;
+        border-left: 4px solid var(--accent, #00c4b4);
+        margin-bottom: 20px;
+    }
+    .payment-event-container .form-check.form-switch {
+        display: flex;
+        align-items: flex-start;
+        margin: 0;
+        padding: 0;
+    }
+    .payment-event-container .form-check-input {
+        margin: 0 !important;
+        margin-right: 25px !important;
+        margin-top: 3px !important;
+        width: 2.25rem !important;
+        min-width: 2.25rem !important;
+        height: 1.375rem !important;
+        flex-shrink: 0 !important;
+        cursor: pointer;
+        position: relative;
+        z-index: 1;
+        float: none !important;
+    }
+    .payment-event-container .form-check-label {
+        cursor: default;
+        flex: 1;
+        line-height: 1.5;
+    }
+    .ticket-item {
+        background: var(--body-bg, #f0f4f8);
+        border-radius: 8px;
+    }
+    .content-native-width {
+        max-width: calc(100vw - 360px);
+    }
+</style>
+
+<div id="right-panel" class="right-panel">
+    <%- include ("components/rightpanel_header", { backUrl: '/events/' + event._id }) %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div id="alertContainer"></div>
+
+            <div class="content-native-width">
+                <div class="card">
+                    <div class="card-header">
+                        <strong class="card-title">Payment Settings - <%= event.name %></strong>
+                    </div>
+                    <div class="card-body">
+
+                        <!-- Payment Event Toggle -->
+                        <div class="payment-event-container">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="paymentEvent" aria-label="Payment Event">
+                                <label class="form-check-label" id="paymentEventLabel">
+                                    <strong><%= t('users.paymentEventLabel') %></strong>
+                                    <small class="text-muted d-block"><%= t('users.paymentEventHint') %></small>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Ticket Settings Form (shown when Payment Event is enabled) -->
+                        <form id="paymentEventForm" style="display: none;">
+                            <h5 id="ticketSettingsHeading" class="mb-1"></h5>
+                            <p class="text-muted small mb-3" id="ticketTimeSlotNote"></p>
+                            <div id="ticketsList"></div>
+                            <div class="mt-2">
+                                <button type="button" class="btn btn-primary btn-sm" id="addTicketBtn"></button>
+                                <button type="submit" class="btn btn-success btn-sm ml-2" id="savePaymentBtn"></button>
+                            </div>
+                        </form>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<%- include ("components/footer") %>
+<script>
+(function($) {
+    const _PS = {
+        paymentCancelledSuccess: '<%= t("users.paymentCancelledSuccess") %>',
+        paymentCancelledFailed:  '<%= t("users.paymentCancelledFailed") %>',
+        paymentSavedSuccess:     '<%= t("users.paymentSavedSuccess") %>',
+        ticketSettingsTitle:     '<%= t("users.ticketSettingsTitle") %>',
+        ticketTimeSlotNote:      '<%= t("users.ticketTimeSlotNote") %>',
+        addTicketBtn:            '<%= t("users.addTicketBtn") %>',
+        savePaymentSettings:     '<%= t("users.savePaymentSettings") %>'
+    };
+
+    const eventId      = '<%= event._id %>';
+    let paymentTickets = <%- JSON.stringify(event.PaymentTickets || []) %>;
+    let isPaymentEvent = <%- event.isPaymentEvent ? 'true' : 'false' %>;
+
+    function showAlert(type, message) {
+        const id = 'toast-' + Date.now();
+        const $toast = $(`<div id="${id}" style="
+            position:fixed; top:20px; left:50%; transform:translateX(-50%);
+            z-index:99999; min-width:300px; max-width:520px;
+            box-shadow:0 4px 16px rgba(0,0,0,0.15); border-radius:8px;
+        " class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+        </div>`);
+        $('body').append($toast);
+        setTimeout(() => $toast.fadeOut(300, function() { $(this).remove(); }), 3500);
+    }
+
+    function toDatetimeLocalValue(val) {
+        if (!val) return '';
+        const d = new Date(val);
+        return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 16);
+    }
+
+    function getTicketRangeValues(t) {
+        return { from: t.datetimeFrom || '', to: t.datetimeTo || t.datetime || '' };
+    }
+
+    function getTicketTitleParts(t) {
+        if (t.title && typeof t.title === 'object') return { zh: t.title.zh || '', en: t.title.en || '' };
+        return { zh: t.title || '', en: t.title || '' };
+    }
+
+    function renderTickets() {
+        let html = '';
+        paymentTickets.forEach((ticket, idx) => {
+            const range  = getTicketRangeValues(ticket);
+            const titles = getTicketTitleParts(ticket);
+            const cat    = (ticket.category || '').replace(/"/g, '&quot;');
+            html += `<div class="ticket-item mb-3 p-3 border rounded" data-idx="${idx}">
+                <div class="d-flex flex-wrap align-items-center" style="gap:8px;">
+                    <input type="text" class="form-control ticket-category" placeholder="Category key" value="${cat}" style="width:120px;" title="與 Form Config 分類按鈕 key 對應；留空=其他">
+                    <input type="text" class="form-control ticket-title-zh" placeholder="票券名稱（中文）" value="${(titles.zh||'').replace(/"/g,'&quot;')}" style="width:140px;">
+                    <input type="text" class="form-control ticket-title-en" placeholder="Ticket name (EN)" value="${(titles.en||'').replace(/"/g,'&quot;')}" style="width:140px;">
+                    <input type="number" class="form-control ticket-price" placeholder="Price" value="${ticket.price||''}" style="width:110px;">
+                    <input type="datetime-local" class="form-control ticket-datetime-from" value="${toDatetimeLocalValue(range.from)}" style="width:190px;" title="開始">
+                    <span class="text-muted">–</span>
+                    <input type="datetime-local" class="form-control ticket-datetime-to" value="${toDatetimeLocalValue(range.to)}" style="width:190px;" title="結束">
+                    <button type="button" class="btn btn-danger btn-sm remove-ticket">Delete</button>
+                </div>
+            </div>`;
+        });
+        $('#ticketsList').html(html);
+    }
+
+    function showTicketForm() {
+        if ($('#paymentEventForm').is(':visible')) return;
+        $('#ticketSettingsHeading').text(_PS.ticketSettingsTitle);
+        $('#ticketTimeSlotNote').text(_PS.ticketTimeSlotNote);
+        $('#addTicketBtn').text(_PS.addTicketBtn);
+        $('#savePaymentBtn').text(_PS.savePaymentSettings);
+        $('#paymentEventForm').show();
+        renderTickets();
+    }
+
+    function syncPaymentTicketsFromDom() {
+        $('.ticket-item').each(function() {
+            const idx = $(this).data('idx');
+            if (idx === undefined || !paymentTickets[idx]) return;
+            const row = $(this);
+            paymentTickets[idx].title        = { zh: (row.find('.ticket-title-zh').val()||'').trim(), en: (row.find('.ticket-title-en').val()||'').trim() };
+            paymentTickets[idx].category     = (row.find('.ticket-category').val()||'').trim();
+            paymentTickets[idx].price        = Number(row.find('.ticket-price').val()) || 0;
+            paymentTickets[idx].datetimeFrom = row.find('.ticket-datetime-from').val();
+            paymentTickets[idx].datetimeTo   = row.find('.ticket-datetime-to').val();
+            delete paymentTickets[idx].datetime;
+        });
+    }
+
+    // ── Init (DOM already ready since script is at bottom) ──────────────────
+    $('#paymentEvent').prop('checked', isPaymentEvent);
+    if (isPaymentEvent) showTicketForm();
+
+    $('#paymentEvent').on('change', function() {
+        const checked = $(this).is(':checked');
+        if (checked) {
+            showTicketForm();
+        } else {
+            $('#paymentEventForm').hide();
+            $.ajax({
+                url: `/events/${eventId}/paymentEvent`,
+                type: 'PATCH',
+                contentType: 'application/json',
+                data: JSON.stringify({ isPaymentEvent: false, PaymentTickets: [] }),
+                success: () => showAlert('success', _PS.paymentCancelledSuccess),
+                error: () => {
+                    $('#paymentEvent').prop('checked', true);
+                    showTicketForm();
+                    showAlert('danger', _PS.paymentCancelledFailed);
+                }
+            });
+        }
+    });
+
+    $(document).on('click', '#addTicketBtn', function(e) {
+        e.preventDefault();
+        paymentTickets.push({ title: { zh: '', en: '' }, price: '', category: '', datetimeFrom: '', datetimeTo: '' });
+        renderTickets();
+    });
+
+    $(document).on('click', '.remove-ticket', function() {
+        const idx = $(this).closest('.ticket-item').data('idx');
+        paymentTickets.splice(idx, 1);
+        renderTickets();
+    });
+
+    $(document).on('change', '.ticket-category, .ticket-title-zh, .ticket-title-en, .ticket-price, .ticket-datetime-from, .ticket-datetime-to', function() {
+        const idx = $(this).closest('.ticket-item').data('idx');
+        const row = $(this).closest('.ticket-item');
+        paymentTickets[idx].title        = { zh: row.find('.ticket-title-zh').val(), en: row.find('.ticket-title-en').val() };
+        paymentTickets[idx].category     = (row.find('.ticket-category').val()||'').trim();
+        paymentTickets[idx].price        = Number(row.find('.ticket-price').val());
+        paymentTickets[idx].datetimeFrom = row.find('.ticket-datetime-from').val();
+        paymentTickets[idx].datetimeTo   = row.find('.ticket-datetime-to').val();
+        delete paymentTickets[idx].datetime;
+    });
+
+    $(document).on('submit', '#paymentEventForm', function(e) {
+        e.preventDefault();
+        syncPaymentTicketsFromDom();
+        const missingTitle = paymentTickets.some(t => {
+            const title = t.title || {};
+            return !(title.zh && title.zh.trim()) && !(title.en && title.en.trim());
+        });
+        if (missingTitle) { alert('請為每張票券填寫中文或英文名稱'); return; }
+        $.ajax({
+            url: `/events/${eventId}/paymentEvent`,
+            type: 'PATCH',
+            contentType: 'application/json',
+            data: JSON.stringify({ isPaymentEvent: $('#paymentEvent').is(':checked'), PaymentTickets: paymentTickets }),
+            success: () => showAlert('success', _PS.paymentSavedSuccess)
+        });
+    });
+
+})(jQuery);
+</script>
