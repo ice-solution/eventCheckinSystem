@@ -55,7 +55,7 @@
             background-color: #E9F0FE !important; /* Green background */
         }
         .checkin-false {
-            background-color: #FFF !important; /* Yellow background */
+            background-color: #F7F7F7 !important;
         }
         .add-user-form {
             display: none; /* Initially hidden */
@@ -765,7 +765,7 @@
             <div class="main-content-row">
                     <div class="card">
                         <div class="card-header card-header-with-action">
-                            <strong class="card-title"><%= t('users.cardTitle') %> - <%= event.name %></strong>
+                            <strong class="card-title"><a href="/events/<%= event._id %>/edit-name" class="btn btn-link p-0 mr-1" style="color:#6c757d; vertical-align:middle;" title="<%= t('menu.editEventName') %>"><i class="fa fa-edit"></i></a><%= t('users.cardTitle') %> - <%= event.name %></strong>
                             <button id="columnToggleBtn" class="column-toggle-gear-btn" type="button" title="<%= t('users.columnVisibility') %>">
                                 <i class="fa fa-cog"></i>
                             </button>
@@ -809,10 +809,12 @@
                                     <i class="fas fa-download"></i> <%= t('users.reportBtn') %>
                                 </a>
                                 <div class="btn-scroll-separator"></div>
-                                <!-- Group 4: Scan -->
+                                <%# HIDDEN: Scan QR Code — reserved for future use %>
+                                <% if (false) { %>
                                 <a href="/events/<%= event._id%>/scan" class="btn btn-secondary">
                                     <i class="fas fa-qrcode"></i> <%= t('users.scanBtn') %>
                                 </a>
+                                <% } %>
                             </div>
                             
                             <div class="clearfix" style="margin-top:4px"></div>

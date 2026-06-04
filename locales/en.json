@@ -115,15 +115,15 @@
     "updateSuccess": "Prize updated successfully!", "updateFailed": "Update failed: "
   },
   "import_users": {
-    "title": "Import Users",
+    "title": "Import Guests",
     "desc": "You can only import columns that exist in the current registration form. Use the column names below as the first row (headers) in your Excel file.",
-    "importRule": "Import rule: if a row has <code>_id</code> and matches an existing user, that user will be updated; if <code>_id</code> is empty, a new user will be created.",
+    "importRule": "Import rule: if a row has <code>_id</code> and matches an existing guest, that guest will be updated; if <code>_id</code> is empty, a new guest will be created.",
     "requiredColumns": "Required columns",
-    "noFields": "This event does not have any visible form fields. Please configure the registration form before importing users.",
+    "noFields": "This event does not have any visible form fields. Please configure the registration form before importing guests.",
     "fileInput": "Select xlsx File:", "importBtn": "Import",
-    "backToUsers": "Return to User List",
-    "downloadCurrent": "Download Current User List (xlsx)",
-    "downloadSample": "Download Sample File"
+    "backToUsers": "Return to Guest List",
+    "downloadCurrent": "Download Current Guest List for Modify",
+    "downloadSample": "Download Empty Sample File"
   },
   "luckydraw_setting": {
     "title": "Lucky Draw Settings", "uploadLabel": "Upload background image (.jpg only):",

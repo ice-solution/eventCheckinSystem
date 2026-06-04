@@ -114,15 +114,15 @@
     "updateSuccess": "獎品更新成功！", "updateFailed": "更新失敗："
   },
   "import_users": {
-    "title": "批量匯入用戶",
+    "title": "批量匯入賓客",
     "desc": "只能匯入當前報名表中存在的欄位。請以下列欄位名稱作為 Excel 檔案的首行（標題行）。",
-    "importRule": "匯入規則：若行內有 <code>_id</code> 且符合現有用戶，則更新；若 <code>_id</code> 為空，則新增用戶。",
+    "importRule": "匯入規則：若行內有 <code>_id</code> 且符合現有賓客，則更新；若 <code>_id</code> 為空，則新增賓客。",
     "requiredColumns": "必填欄位",
-    "noFields": "此活動未設定可見表單欄位，請先設定報名表再匯入用戶。",
+    "noFields": "此活動未設定可見表單欄位，請先設定報名表再匯入賓客。",
     "fileInput": "選擇 xlsx 檔案：", "importBtn": "匯入",
-    "backToUsers": "返回用戶列表",
-    "downloadCurrent": "下載目前用戶列表 (xlsx)",
-    "downloadSample": "下載範例檔案"
+    "backToUsers": "返回賓客列表",
+    "downloadCurrent": "下載目前賓客列表（供修改）",
+    "downloadSample": "下載空白範例檔案"
   },
   "luckydraw_setting": {
     "title": "抽獎設定", "uploadLabel": "上傳背景圖片（只限 .jpg）：",

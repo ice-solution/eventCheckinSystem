@@ -77,7 +77,7 @@
 </style>
 
 <div id="right-panel" class="right-panel">
-    <%- include ("components/rightpanel_header") %>
+    <%- include ("components/rightpanel_header", { backUrl: '/events/' + eventId }) %>
     <div class="content">
         <div class="animated fadeIn">
             <div id="alertContainer"></div>
@@ -89,9 +89,6 @@
                             <div class="float-right">
                                 <a href="/events/<%= eventId %>/email-records/export" class="btn btn-success btn-sm mr-2">
                                     <i class="fas fa-file-excel"></i> <%= t('email_records.exportExcel') %>
-                                </a>
-                                <a href="/events/<%= eventId %>" class="btn btn-outline-secondary btn-sm">
-                                    <i class="fas fa-arrow-left"></i> <%= t('email_records.backToUserList') %>
                                 </a>
                             </div>
                         </div>

@@ -27,12 +27,15 @@
                 <% if (eventId && canAccessThisEvent) { %>
                 <% if (can('rsvp')) { %>
                 <li>
-                    <a href="/events/<%=eventId%>" data-tooltip="<%= t('menu.rsvp') %>"> <i class="menu-icon fa fa-check-square-o"></i><%= t('menu.rsvp') %> </a>
+                    <a href="/events/<%=eventId%>" data-tooltip="<%= t('menu.rsvp') %>"> <i class="menu-icon far fa-square-check"></i><%= t('menu.rsvp') %> </a>
                 </li>
                 <% } %>
+                <%# HIDDEN: editEventName — moved to inline icon in users page card-title %>
+                <% if (false) { %>
                 <li>
                     <a href="/events/<%=eventId%>/edit-name" data-tooltip="<%= t('menu.editEventName') %>"> <i class="menu-icon fa fa-edit"></i><%= t('menu.editEventName') %></a>
                 </li>
+                <% } %>
                 <% if (can('seating')) { %>
                 <li>
                     <a href="/events/<%=eventId%>/seating-arrangement" data-tooltip="排桌 Seating"> <i class="menu-icon fa fa-th"></i>排桌 Seating</a>
@@ -94,7 +97,7 @@
                 <% } %>
                 <% if (can('votes')) { %>
                 <li>
-                    <a href="/votes/<%=eventId%>/admin" data-tooltip="<%= t('menu.voteManagement') %>"> <i class="menu-icon fa fa-check-square-o"></i><%= t('menu.voteManagement') %></a>
+                    <a href="/votes/<%=eventId%>/admin" data-tooltip="<%= t('menu.voteManagement') %>"> <i class="menu-icon far fa-square-check"></i><%= t('menu.voteManagement') %></a>
                 </li>
                 <% } %>
                 <% if (can('website') || can('formConfig')) { %>

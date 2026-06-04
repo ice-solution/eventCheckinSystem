@@ -286,7 +286,7 @@ exports.importUsers = async (req, res) => {
                         row: excelRowNo,
                         action: 'created',
                         userId: '',
-                        reason: 'No _id provided; created as new user.',
+                        reason: 'No _id provided; created as new guest.',
                         changedFields: ['_id(empty)']
                     });
                 }
@@ -317,7 +317,7 @@ exports.importUsers = async (req, res) => {
                                 <tr>
                                     <th>Excel Row</th>
                                     <th>Action</th>
-                                    <th>User _id</th>
+                                    <th>Guest _id</th>
                                     <th>Reason</th>
                                 </tr>
                             </thead>
