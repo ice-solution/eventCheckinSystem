@@ -795,48 +795,48 @@
                             <div class="btn-scroll-row" id="btnScrollRow">
                                 <!-- Group 1: Guest selection & add -->
                                 <button id="selectAllUsersBtn" class="btn btn-primary">
-                                    ☑ <%= t('users.selectAllBtn') %>
+                                    <i class="fas fa-check-square"></i> <%= t('users.selectAllBtn') %>
                                 </button>
                                 <button id="deselectAllUsersBtn" class="btn btn-secondary">
-                                    ☐ <%= t('users.deselectAllBtn') %>
+                                    <i class="fas fa-square"></i> <%= t('users.deselectAllBtn') %>
                                 </button>
                                 <button id="addUserBtn" class="btn btn-primary">
-                                    ➕ <%= t('users.addUserBtn') %>
+                                    <i class="fas fa-user-plus"></i> <%= t('users.addUserBtn') %>
                                 </button>
                                 <button id="batchDeleteBtn" class="btn btn-danger" style="display: none;">
-                                    🗑 <%= t('users.batchDeleteBtn') %>
+                                    <i class="fas fa-trash"></i> <%= t('users.batchDeleteBtn') %>
                                 </button>
                                 <div class="btn-scroll-separator"></div>
                                 <!-- Group 2: Email -->
                                 <button id="emailSettingsBtn" class="btn btn-secondary">
-                                    ✉ Send Email
+                                    <i class="fas fa-paper-plane"></i> Send Email
                                 </button>
                                 <a href="/events/<%= event._id %>/email-records" class="btn btn-secondary">
-                                    📬 <%= t('users.emailRecordsBtn') %>
+                                    <i class="fas fa-inbox"></i> <%= t('users.emailRecordsBtn') %>
                                 </a>
                                 <button id="batchSendEmailBtn" class="btn btn-warning" style="display: none;">
-                                    📧 <%= t('users.batchSendEmailBtn') %>
+                                    <i class="fas fa-envelope"></i> <%= t('users.batchSendEmailBtn') %>
                                 </button>
                                 <button id="batchSendSmsBtn" class="btn btn-primary" style="display: none;">
-                                    💬 <%= t('users.batchSendSmsBtn') %>
+                                    <i class="fas fa-comments"></i> <%= t('users.batchSendSmsBtn') %>
                                 </button>
                                 <div class="btn-scroll-separator"></div>
                                 <!-- Group 3: Import & Report -->
                                 <a href="/events/<%= event._id%>/import" class="btn btn-secondary">
-                                    📥 <%= t('users.importBtn') %>
+                                    <i class="fas fa-upload"></i> <%= t('users.importBtn') %>
                                 </a>
                                 <a href="/events/<%= event._id %>/report" class="btn btn-success">
-                                    📥 <%= t('users.reportBtn') %>
+                                    <i class="fas fa-download"></i> <%= t('users.reportBtn') %>
                                 </a>
                                 <div class="btn-scroll-separator"></div>
                                 <!-- Group 4: Scan -->
                                 <a href="/events/<%= event._id%>/scan" class="btn btn-secondary">
-                                    🔍 <%= t('users.scanBtn') %>
+                                    <i class="fas fa-qrcode"></i> <%= t('users.scanBtn') %>
                                 </a>
                                 <div class="btn-scroll-separator"></div>
                                 <!-- Group 5: Payment Settings -->
                                 <a href="/events/<%= event._id %>/payment-settings" class="btn btn-secondary">
-                                    💳 Payment Settings
+                                    <i class="fas fa-credit-card"></i> Payment Settings
                                 </a>
                                 <div class="btn-scroll-separator"></div>
                             </div>
