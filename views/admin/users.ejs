@@ -309,7 +309,7 @@
         #usersTable_wrapper .dataTables_scrollBody {
             overflow-x: auto !important;
             scrollbar-width: thin;
-            scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+            scrollbar-color: transparent transparent;
         }
         #usersTable_wrapper .dataTables_scrollBody:hover {
             scrollbar-color: rgba(0, 0, 0, 0.28) transparent;
@@ -318,8 +318,12 @@
             height: 8px;
         }
         #usersTable_wrapper .dataTables_scrollBody::-webkit-scrollbar-thumb {
-            background: rgba(0, 0, 0, 0.18);
+            background: transparent;
             border-radius: 4px;
+            transition: background 0.3s;
+        }
+        #usersTable_wrapper .dataTables_scrollBody:hover::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.28);
         }
         #usersTable {
             width: 100% !important;
@@ -341,11 +345,18 @@
             max-width: 42px !important;
             text-align: center !important;
             vertical-align: middle !important;
-            padding: 8px !important;
+            padding: 0 !important;
+            height: 44px;
+            line-height: 44px;
+        }
+        #usersTable_wrapper .dataTables_scrollBody td:first-child {
+            display: table-cell;
+            vertical-align: middle;
         }
         #usersTable_wrapper .dataTables_scrollBody td:first-child input[type="checkbox"] {
             vertical-align: middle;
             margin: 0;
+            line-height: 1;
         }
         #usersTable_wrapper .dataTables_scrollBody td[data-field-name] {
             min-width: 140px;
