@@ -24,12 +24,11 @@
                 </a>
             </div>
 
-            <div class="user-area dropdown float-right">
-
-                <div class="user-menu dropdown-menu">
-                    <a class="nav-link" href="/logout"><i class="fa fa-power-off"></i> <%= t('common.logout') %></a>
-                </div>
-            </div>
+            <a href="/logout" title="<%= t('common.logout') %>" style="display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:50%; color:#90a4ae; text-decoration:none; transition:color 0.2s, background 0.2s; margin-right:4px;"
+               onmouseover="this.style.color='#e74a3b'; this.style.background='#fef2f2';"
+               onmouseout="this.style.color='#90a4ae'; this.style.background='transparent';">
+                <i class="fa fa-power-off" style="font-size:16px;"></i>
+            </a>
         </div>
     </div>
 </header>
