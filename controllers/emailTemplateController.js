@@ -255,7 +255,11 @@ exports.updateEmailTemplate = async (req, res) => {
 }
 
 exports.createEmailTemplate = async (req, res) => {
-  const { eventId, subject, type, content } = req.body
+  const { eventId: paramEventId } = req.params
+  const { eventId: bodyEventId, subject, type, content } = req.body
+  const eventId = paramEventId || bodyEventId
+
+  console.log('[EmailTemplate Create] paramEventId:', paramEventId, 'bodyEventId:', bodyEventId, 'final eventId:', eventId)
 
   const insertBody = {
     subject,
@@ -265,13 +269,18 @@ exports.createEmailTemplate = async (req, res) => {
 
   if (eventId) {
     insertBody.eventId = eventId
+    console.log('[EmailTemplate Create] eventId added to insertBody:', insertBody.eventId)
+  } else {
+    console.log('[EmailTemplate Create] WARNING: No eventId provided!')
   }
 
   try {
     // 創建新的電子郵件模板
     const newTemplate = new EmailTemplate(insertBody)
+    console.log('[EmailTemplate Create] Saving template:', newTemplate._id, 'with eventId:', newTemplate.eventId)
 
     await newTemplate.save()
+    console.log('[EmailTemplate Create] Template saved successfully with eventId:', newTemplate.eventId)
     res.status(201).send("電子郵件模板創建成功！")
   } catch (error) {
     console.error("Error creating email template:", error)

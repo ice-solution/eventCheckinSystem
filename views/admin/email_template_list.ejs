@@ -8,66 +8,54 @@
     <div class="content">
         <div class="animated fadeIn">
 
-            <!-- List view -->
-            <div id="list-view">
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <strong class="card-title"><%= t('email_template_list.title') %></strong>
-                                <% if (eventId != null) { %>
-                                    <a href="/events/<%= eventId %>/emailTemplate/create" class="btn btn-sm btn-primary float-right"><i class="fa fa-plus"></i> <%= t('email_template_list.createBtn') %></a>
-                                <% } else { %>
-                                    <a href="/emailTemplate/create" class="btn btn-sm btn-primary float-right"><i class="fa fa-plus"></i> <%= t('email_template_list.createBtn') %></a>
-                                <% } %>
-                            </div>
-                            <div class="card-body">
-                                <table id="bootstrap-data-table" class="table table-bordered">
-                                    <thead>
+            <!-- Email Template List -->
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title"><%= t('email_template_list.title') %></strong>
+                            <% if (eventId != null) { %>
+                                <a href="/events/<%= eventId %>/emailTemplate/create" class="btn btn-sm btn-primary float-right"><i class="fa fa-plus"></i> <%= t('email_template_list.createBtn') %></a>
+                            <% } else { %>
+                                <a href="/emailTemplate/create" class="btn btn-sm btn-primary float-right"><i class="fa fa-plus"></i> <%= t('email_template_list.createBtn') %></a>
+                            <% } %>
+                        </div>
+                        <div class="card-body">
+                            <table id="bootstrap-data-table" class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th><%= t('common.subject') %></th>
+                                        <th><%= t('common.type') %></th>
+                                        <th><%= t('common.created_at') %></th>
+                                        <th><%= t('common.updated_at') %></th>
+                                        <th><%= t('common.actions') %></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% emailTemplates.forEach(tmpl => { %>
                                         <tr>
-                                            <th><%= t('common.subject') %></th>
-                                            <th><%= t('common.type') %></th>
-                                            <th><%= t('common.created_at') %></th>
-                                            <th><%= t('common.updated_at') %></th>
-                                            <th><%= t('common.actions') %></th>
+                                            <td>
+                                                <% if (tmpl.eventId) { %>
+                                                    <a href="/events/<%= tmpl.eventId %>/emailTemplate/<%= tmpl._id %>" class="tmpl-open-link"><%= tmpl.subject %></a>
+                                                <% } else { %>
+                                                    <a href="/emailTemplate/<%= tmpl._id %>" class="tmpl-open-link"><%= tmpl.subject %></a>
+                                                <% } %>
+                                            </td>
+                                            <td><%= tmpl.type || 'welcome' %></td>
+                                            <td><%= tmpl.created_at %></td>
+                                            <td><%= tmpl.modified_at %></td>
+                                            <td>
+                                                <button class="btn btn-danger btn-sm" onclick="deleteTemplate('<%= tmpl._id %>', '<%= (tmpl.subject || '').replace(/'/g, "\\'") %>', '<%= tmpl.eventId || '' %>')">
+                                                    <%= t('common.delete') %>
+                                                </button>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        <% emailTemplates.forEach(tmpl => { %>
-                                            <tr>
-                                                <td>
-                                                    <% if (tmpl.eventId) { %>
-                                                        <a href="#" class="tmpl-open-link" data-url="/events/<%= tmpl.eventId %>/emailTemplate/<%= tmpl._id %>"><%= tmpl.subject %></a>
-                                                    <% } else { %>
-                                                        <a href="#" class="tmpl-open-link" data-url="/emailTemplate/<%= tmpl._id %>"><%= tmpl.subject %></a>
-                                                    <% } %>
-                                                </td>
-                                                <td><%= tmpl.type || 'welcome' %></td>
-                                                <td><%= tmpl.created_at %></td>
-                                                <td><%= tmpl.modified_at %></td>
-                                                <td>
-                                                    <button class="btn btn-danger btn-sm" onclick="deleteTemplate('<%= tmpl._id %>', '<%= (tmpl.subject || '').replace(/'/g, "\\'") %>')">
-                                                        <%= t('common.delete') %>
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        <% }); %>
-                                    </tbody>
-                                </table>
-                            </div>
+                                    <% }); %>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Iframe panel (hidden by default) -->
-            <div id="iframe-view" style="display:none;">
-                <div class="mb-2">
-                    <button id="backToListBtn" class="btn btn-light btn-sm" style="display:inline-flex; align-items:center; gap:6px;">
-                        <i class="fa fa-arrow-left"></i> <%= lang === 'zh' ? '返回列表' : 'Back to List' %>
-                    </button>
-                </div>
-                <iframe id="contentFrame" src="" style="width:100%; height:calc(100vh - 180px); border:none; border-radius:6px; background:#fff;"></iframe>
             </div>
 
         </div>
@@ -77,11 +65,15 @@
 <%- include ("./components/footer") %>
 <script>
 (function($) {
-    function deleteTemplate(templateId, templateSubject) {
+    function deleteTemplate(templateId, templateSubject, eventId) {
         const msg = t('email_template_list.confirmDelete').replace('{subject}', templateSubject);
         if (confirm(msg)) {
+            const deleteUrl = eventId
+                ? '/events/' + eventId + '/emailTemplate/' + templateId
+                : '/emailTemplate/' + templateId;
+
             $.ajax({
-                url: '/emailTemplate/' + templateId,
+                url: deleteUrl,
                 type: 'DELETE',
                 success: function() { location.reload(); },
                 error: function() { alert(t('email_template_list.deleteFailed')); }
@@ -90,41 +82,9 @@
     }
     window.deleteTemplate = deleteTemplate;
 
-    function showIframe(url) {
-        $('#list-view').hide();
-        $('#iframe-view').show();
-        const frame = document.getElementById('contentFrame');
-        frame.src = url;
-        frame.onload = function() {
-            try {
-                const iDoc = frame.contentDocument || frame.contentWindow.document;
-                const style = iDoc.createElement('style');
-                style.textContent = '#left-panel, .sidebar-brand, .sidebar-collapsed-logo { display:none !important; } #right-panel, .right-panel { margin-left:0 !important; } #header.header { left:0 !important; }';
-                iDoc.head.appendChild(style);
-            } catch(e) {}
-        };
-    }
-
-    function showList() {
-        document.getElementById('contentFrame').src = '';
-        $('#iframe-view').hide();
-        $('#list-view').show();
-    }
-
     $(document).ready(function() {
-        $('#createBtn').on('click', function(e) {
-            e.preventDefault();
-            showIframe($(this).data('create-url'));
-        });
-
-        $(document).on('click', '.tmpl-open-link', function(e) {
-            e.preventDefault();
-            showIframe($(this).data('url'));
-        });
-
-        $('#backToListBtn').on('click', function() {
-            showList();
-        });
+        // 郵件鏈接使用默認行為（href 直接導向）
+        // 無需額外 JavaScript 處理
     });
 })(jQuery);
 </script>

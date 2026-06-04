@@ -102,9 +102,15 @@
             type: $('#type').val(),
             content: tinymce.get('content').getContent(),
         };
-        if ('<%= eventId %>') emailTemplate.eventId = '<%= eventId %>';
+
+        <% if (eventId) { %>
+        const submitUrl = '/events/<%= eventId %>/emailTemplate';
+        emailTemplate.eventId = '<%= eventId %>';
+        <% } else { %>
+        const submitUrl = '/emailTemplate/create';
+        <% } %>
         $.ajax({
-            url: '/emailTemplate/create',
+            url: submitUrl,
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify(emailTemplate),
@@ -112,8 +118,11 @@
                 const alertHtml = `<div class="alert alert-success alert-dismissible fade show" role="alert"><%= t("create_email_template.saveSuccess") %><button type="button" class="close" data-dismiss="alert"><span>&times;</span></button></div>`;
                 $('#alertContainer').html(alertHtml);
                 setTimeout(() => {
-                    if ('<%= eventId %>') window.location.href = '/events/<%= eventId %>/emailTemplate';
-                    else window.location.href = '/emailTemplate';
+                    <% if (eventId) { %>
+                    window.location.href = '/events/<%= eventId %>/emailTemplate';
+                    <% } else { %>
+                    window.location.href = '/emailTemplate';
+                    <% } %>
                 }, 1500);
             },
             error: function () {

@@ -310,10 +310,15 @@ router.get('/:eventId/email-records/export', eventsController.exportEmailRecords
 router.get('/:eventId/email-records', eventsController.renderEmailRecords);
 router.get('/:eventId/email-records/:trackingId', eventsController.getEmailRecordDetails);
 // Email Template
-router.get('/:eventId/emailTemplate', emailTemplateController.renderEmailTemplateList); // 渲染電子郵件模板列表頁面
-router.get('/:eventId/emailTemplate/create', emailTemplateController.renderCreateEmailTemplatePage); // 渲染創建電子郵件模板頁面
-router.get('/:eventId/emailTemplate/:id', emailTemplateController.renderEmailTemplateDetail); // 渲染創建電子郵件模板頁面
-router.get('/api/:eventId/emailTemplates', emailTemplateController.getEmailTemplatesByType); // 獲取指定類型的郵件模板列表 (API)
+// Email Template 路由（更具體的路由優先）
+router.get('/:eventId/emailTemplate/create', emailTemplateController.renderCreateEmailTemplatePage); // 創建頁面（必須在 /:id 之前）
+router.post('/:eventId/emailTemplate/:id/send', emailTemplateController.sendEmailById); // 發送電子郵件
+router.get('/:eventId/emailTemplate', emailTemplateController.renderEmailTemplateList); // 列表頁面
+router.post('/:eventId/emailTemplate', emailTemplateController.createEmailTemplate); // 創建郵件
+router.get('/:eventId/emailTemplate/:id', emailTemplateController.renderEmailTemplateDetail); // 詳情頁面（必須在通用路由之後）
+router.put('/:eventId/emailTemplate/:id', emailTemplateController.updateEmailTemplate); // 更新郵件
+router.delete('/:eventId/emailTemplate/:id', emailTemplateController.deleteEmailTemplate); // 刪除郵件
+router.get('/api/:eventId/emailTemplates', emailTemplateController.getEmailTemplatesByType); // 獲取郵件列表 API
 
 // SMS Template
 router.get('/:eventId/smsTemplate', smsTemplateController.renderSmsTemplateList); // 渲染 SMS 模板列表頁面

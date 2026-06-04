@@ -44,7 +44,14 @@
       "Bash(netstat -ano)",
       "Bash(findstr :3377)",
       "Bash(Get-Process -Id 47108)",
-      "Bash(Select-Object ProcessName, Id)"
+      "Bash(Select-Object ProcessName, Id)",
+      "Bash(grep -v \"//\")",
+      "Bash(Start-Sleep -Seconds 5)",
+      "Bash(chromium-cli screenshot *)",
+      "Bash(powershell -Command \"Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait\\('%{F4}'\\)\")",
+      "Bash(cat)",
+      "Bash(chmod +x /tmp/test_email_routes.sh)",
+      "Bash(bash /tmp/test_email_routes.sh)"
     ]
   }
 }

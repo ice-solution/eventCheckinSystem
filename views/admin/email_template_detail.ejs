@@ -278,8 +278,12 @@ const _ETD = {
 
     function deleteTemplate() {
         if (confirm(_ETD.deleteConfirm)) {
+            const deleteUrl = '<%= eventId %>'
+                ? '/events/<%= eventId %>/emailTemplate/<%= template._id %>'
+                : '/emailTemplate/<%= template._id %>';
+
             $.ajax({
-                url: '/emailTemplate/<%= template._id %>',
+                url: deleteUrl,
                 type: 'DELETE',
                 success: function(response) {
                     const alertHtml = `
@@ -324,8 +328,12 @@ const _ETD = {
                     content: tinymce.get('content').getContent(),
                 };
 
-                $.ajax({
-                    url: '/emailTemplate/<%= template._id %>',
+                const updateUrl = '<%= eventId %>'
+                ? '/events/<%= eventId %>/emailTemplate/<%= template._id %>'
+                : '/emailTemplate/<%= template._id %>';
+
+            $.ajax({
+                    url: updateUrl,
                     type: 'PUT',
                     contentType: 'application/json',
                     data: JSON.stringify(emailTemplate),
@@ -370,8 +378,12 @@ const _ETD = {
                 content: tinymce.get('content').getContent(),
             };
 
+            const sendUrl = '<%= eventId %>'
+                ? '/events/<%= eventId %>/emailTemplate/<%= template._id %>/send'
+                : '/emailTemplate/<%= template._id %>/send';
+
             $.ajax({
-                url: '/emailTemplate/<%= template._id %>/send',
+                url: sendUrl,
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify(emailData),

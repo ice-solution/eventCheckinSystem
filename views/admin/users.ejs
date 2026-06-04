@@ -4,9 +4,36 @@
 <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
 <link rel="stylesheet" href="/admin/assets/css/style.css">
 <style>
+        /* 響應式容器設置 */
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        #right-panel {
+            width: calc(100% - 280px); /* 100% 減去左邊欄寬度 */
+            margin-left: 280px;
+            box-sizing: border-box;
+            transition: width 0.3s ease, margin-left 0.3s ease;
+        }
+
+        /* 當左邊欄隱藏時 */
+        #left-panel.sidebar-collapsed ~ #right-panel,
+        .sidebar-collapsed #right-panel {
+            width: calc(100% - 83px); /* 100% 減去折疊後的左邊欄寬度 */
+            margin-left: 83px;
+        }
+
+        .content {
+            width: 100%;
+            padding: 1.875em;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
         }
         .checkin-true {
             background-color: #E9F0FE !important; /* Green background */
@@ -231,51 +258,229 @@
             white-space: nowrap;
             word-break: keep-all;
             vertical-align: middle;
+            padding-top: 8px !important;
+            padding-bottom: 8px !important;
         }
-        #usersTable th:first-child,
+        #usersTable th {
+            padding-top: 8px !important;
+            padding-bottom: 8px !important;
+        }
+        /* First column (checkbox) — must target BOTH cloned scrollHead and original body */
+        .dataTables_scrollHead th:first-child,
+        #usersTable_wrapper th:first-child,
         #usersTable td:first-child {
-            min-width: 42px;
-            width: 42px;
-            text-align: center;
+            min-width: 42px !important;
+            width: 42px !important;
+            max-width: 42px !important;
+            text-align: center !important;
+            padding: 8px 0 !important;
+            box-sizing: border-box !important;
         }
         #usersTable td[data-field-name] {
             min-width: 140px;
         }
+        /* Header alignment — all left, Checked In centered */
+        .dataTables_scrollHead th {
+            text-align: left !important;
+        }
+        .dataTables_scrollHead th:nth-last-child(2) {
+            text-align: center !important;
+        }
         #usersTable th:nth-last-child(3),
         #usersTable td:nth-last-child(3) {
-            min-width: 170px; /* Created At */
+            min-width: 140px; /* Created At */
         }
         #usersTable th:nth-last-child(2),
         #usersTable td:nth-last-child(2) {
-            min-width: 88px; /* Checked In */
+            min-width: 110px; /* Checked In */
             text-align: center;
         }
         #usersTable th:last-child,
         #usersTable td:last-child {
-            min-width: 270px; /* Actions */
+            min-width: 180px; /* Actions */
         }
         #usersTable_wrapper {
             padding: 0 24px !important;
         }
         .dataTables_wrapper .dataTables_scrollBody {
             overflow-x: auto !important;
+            scrollbar-color: transparent transparent;
+            scrollbar-width: thin;
+            transition: scrollbar-color 0.3s;
+        }
+        .dataTables_wrapper .dataTables_scrollBody:hover {
+            scrollbar-color: rgba(0,0,0,0.25) transparent;
+        }
+        .dataTables_wrapper .dataTables_scrollBody::-webkit-scrollbar {
+            height: 6px;
+        }
+        .dataTables_wrapper .dataTables_scrollBody::-webkit-scrollbar-thumb {
+            background: transparent;
+            border-radius: 3px;
+            transition: background 0.3s;
+        }
+        .dataTables_wrapper .dataTables_scrollBody:hover::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.25);
+        }
+        /* Red square X delete button */
+        .btn-delete-x {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 1;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .btn-delete-x:hover {
+            background: #b02a37;
+            color: white;
         }
         .dataTables_wrapper .dataTables_info {
             padding-left: 24px !important;
-            margin-top: 16px;
-            margin-bottom: 12px;
+            margin-top: 8px;
+            margin-bottom: 0;
+            font-size: 13px;
+        }
+        /* Pagination — centered at card bottom */
+        .dataTables_wrapper .dataTables_paginate {
+            padding: 8px 0 8px !important;
+            margin: 0 !important;
+        }
+        .dataTables_wrapper .dataTables_paginate .pagination {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            gap: 2px;
+            margin: 0 !important;
+        }
+        /* page-link — the actual clickable element */
+        .dataTables_wrapper .dataTables_paginate .page-link {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            height: 32px !important;
+            min-width: 32px !important;
+            padding: 0 6px !important;
+            border: none !important;
+            border-radius: 50% !important;
+            font-size: 14px !important;
+            font-weight: 500 !important;
+            color: #b0b8c1 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            transition: color 0.15s;
+            text-decoration: none !important;
+        }
+        .dataTables_wrapper .dataTables_paginate .page-link:hover {
+            color: #555 !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+        /* Active (current) page — powder blue text only */
+        .dataTables_wrapper .dataTables_paginate .page-item.active .page-link {
+            color: #4DD0CA !important;
+            background: transparent !important;
+            border: none !important;
+            font-weight: 700 !important;
+            box-shadow: none !important;
+        }
+        /* Prev/Next arrows — bigger hit area, strictly no background */
+        #usersTable_wrapper .dataTables_paginate .page-item.previous .page-link,
+        #usersTable_wrapper .dataTables_paginate .page-item.next .page-link {
+            font-size: 26px !important;
+            color: #b0b8c1 !important;
+            padding: 0 !important;
+            width: 44px !important;
+            height: 30px !important;
+            min-width: 44px !important;
+            background-color: transparent !important;
+            background-image: none !important;
+            border-color: transparent !important;
+        }
+        #usersTable_wrapper .dataTables_paginate .page-item.previous .page-link:hover,
+        #usersTable_wrapper .dataTables_paginate .page-item.previous .page-link:focus,
+        #usersTable_wrapper .dataTables_paginate .page-item.next .page-link:hover,
+        #usersTable_wrapper .dataTables_paginate .page-item.next .page-link:focus {
+            color: #555 !important;
+            background-color: transparent !important;
+            background-image: none !important;
+            border-color: transparent !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }
+        /* Disabled */
+        .dataTables_wrapper .dataTables_paginate .page-item.disabled .page-link {
+            color: #d5d9dd !important;
+            background: transparent !important;
+            border: none !important;
+            cursor: default !important;
+            box-shadow: none !important;
+        }
+        /* Override DataTables sorting — scrollX moves thead into .dataTables_scrollHead */
+        .dataTables_scrollHead th.sorting,
+        .dataTables_scrollHead th.sorting_asc,
+        .dataTables_scrollHead th.sorting_desc {
+            background-image: none !important;
+        }
+        /* Hide DataTables ::before pseudo-element */
+        .dataTables_scrollHead th.sorting::before,
+        .dataTables_scrollHead th.sorting_asc::before,
+        .dataTables_scrollHead th.sorting_desc::before {
+            display: none !important;
+            content: '' !important;
+        }
+        .dataTables_scrollHead th.sorting::after,
+        .dataTables_scrollHead th.sorting_asc::after,
+        .dataTables_scrollHead th.sorting_desc::after {
+            display: inline-block !important;
+            margin-left: 4px !important;
+            font-size: 9px !important;
+            vertical-align: middle !important;
+            content: '▲▼' !important;
+            color: #ccc !important;
+            line-height: 1 !important;
+            opacity: 1 !important;
+        }
+        .dataTables_scrollHead th.sorting_asc::after {
+            content: '▲' !important;
+            color: #444 !important;
+        }
+        .dataTables_scrollHead th.sorting_desc::after {
+            content: '▼' !important;
+            color: #444 !important;
         }
         .dataTables_wrapper .dataTables_paginate {
             padding-right: 24px !important;
             margin-top: 16px;
         }
-        #usersTable {
-            margin-left: 24px;
+        .table-search-btn-container {
+            position: relative;
+            margin-bottom: 4px;
+            margin-right: 24px;
+            text-align: right;
+        }
+        .table-search-btn-container .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
         }
         .card-header-with-action {
             display: flex;
             align-items: center;
             justify-content: space-between;
+            padding: 10px 16px !important;
+        }
+        /* Tighten card-body padding */
+        .main-content-row .card > .card-body {
+            padding: 12px 16px !important;
         }
         .column-toggle-gear-btn {
             display: inline-flex;
@@ -349,7 +554,6 @@
             flex-wrap: nowrap;
             gap: 8px;
             overflow-x: auto;
-            max-width: calc(100vw - 360px);
             padding-bottom: 10px;
             margin-bottom: 16px;
             cursor: grab;
@@ -448,21 +652,39 @@
             align-self: center;
             margin: 0 4px;
         }
-        /* Main content card — same visible width as stat cards */
+        /* Main content card */
         .main-content-row {
-            max-width: calc(100vw - 360px);
             margin-bottom: 20px;
+            width: 100%;
+            box-sizing: border-box;
         }
+
         /* Stat cards row — fill visible viewport width */
         .stat-cards-row {
             gap: 15px;
-            max-width: calc(100vw - 360px);
             margin-bottom: 20px;
+            flex-wrap: wrap;
+            width: 100%;
+            box-sizing: border-box;
         }
         .stat-card {
-            flex: 1 1 0;
-            min-width: 0;
+            flex: 1 1 calc(33.333% - 10px);
+            min-width: 280px;
             margin: 0 !important;
+        }
+        /* Responsive: tablet (2 columns) */
+        @media (max-width: 992px) {
+            .stat-card {
+                flex: 1 1 calc(50% - 8px);
+                min-width: 250px;
+            }
+        }
+        /* Responsive: mobile (1 column) */
+        @media (max-width: 576px) {
+            .stat-card {
+                flex: 1 1 100%;
+                min-width: 0;
+            }
         }
     </style>
 
@@ -583,13 +805,9 @@
                                     <i class="fas fa-credit-card"></i> Payment Settings
                                 </a>
                                 <div class="btn-scroll-separator"></div>
-                                <!-- Group 6: Filter -->
-                                <button id="filterBtn" class="btn btn-secondary">
-                                    <i class="fas fa-filter"></i> <%= t('users.filterBtn') %>
-                                </button>
                             </div>
                             
-                            <div class="clearfix" style="margin-top:20px"></div>
+                            <div class="clearfix" style="margin-top:4px"></div>
 
                             <!-- Batch Send Email Modal -->
                             <div class="modal fade" id="batchSendEmailModal" tabindex="-1" role="dialog" aria-labelledby="batchSendEmailModalLabel" aria-hidden="true">
@@ -1107,6 +1325,14 @@
                                     <div id="columnToggleList" class="column-toggle-list"></div>
                                 </div>
                             </div>
+
+                            <!-- Search Button (positioned above table) -->
+                            <div class="table-search-btn-container">
+                                <button id="filterBtn" class="btn btn-secondary btn-sm" type="button">
+                                    <i class="fa fa-search"></i> <%= t('users.searchBtn') %>
+                                </button>
+                            </div>
+
                             <table id="usersTable" class="display nowrap">
                                 <thead>
                                     <tr>
@@ -1150,7 +1376,7 @@
                                         <% } %>
                                         <th><%= t('users.colCreatedAt') %></th>
                                         <th><%= t('users.colCheckedIn') %></th>
-                                        <th><%= t('users.colActions') %></th>
+                                        <th></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1246,7 +1472,7 @@
                                                             <a class="dropdown-item resend-email-option" href="#" data-type="reminder"><%= t('users.emailTypeReminder') %></a>
                                                         </div>
                                                     </div>
-                                                    <button class="btn btn-danger delete-user" data-_id="<%= user._id %>"><%= t('common.delete') %></button>
+                                                    <button class="btn btn-delete-x delete-user" data-_id="<%= user._id %>" title="<%= t('common.delete') %>">✕</button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -1385,6 +1611,7 @@ const _US = {
             columnDefs: [
                 {
                     targets: 0, // Select checkbox column
+                    width: '42px',
                     orderable: false,
                     searchable: false
                 },
@@ -1416,6 +1643,10 @@ const _US = {
                 }
             ],
             order: [[createdAtColumnIndex, 'desc']], // Default sort by Created At descending (newest first)
+            initComplete: function() {
+                this.api().columns.adjust();
+                fixPaginationArrows();
+            },
             drawCallback: function() {
                 // Restore checkbox states after table redraw
                 $('.user-select').each(function() {
@@ -1428,8 +1659,25 @@ const _US = {
                 updateBatchDeleteButton();
                 updateBatchSendEmailButton();
                 updateBatchSendSmsButton();
+                // Restore arrow icons after each draw
+                fixPaginationArrows();
             }
         });
+
+        function fixPaginationArrows() {
+            $('#usersTable_wrapper .paginate_button.previous a').html('&#8249;');
+            $('#usersTable_wrapper .paginate_button.next a').html('&#8250;');
+            // Force no background on prev/next via inline style (overrides Bootstrap)
+            $('#usersTable_wrapper .page-item.previous .page-link, #usersTable_wrapper .page-item.next .page-link')
+                .css({ 'background-color': 'transparent', 'background': 'transparent', 'border-color': 'transparent' })
+                .off('mouseenter.pgNav mouseleave.pgNav')
+                .on('mouseenter.pgNav', function() {
+                    $(this).css({ 'background-color': 'transparent', 'background': 'transparent' });
+                })
+                .on('mouseleave.pgNav', function() {
+                    $(this).css({ 'background-color': 'transparent', 'background': 'transparent' });
+                });
+        }
 
         // 欄位顯示切換（暫時生效，重新整理後回復）
         function initColumnToggles() {
@@ -2801,7 +3049,7 @@ const _US = {
                         '<a class="dropdown-item resend-email-option" href="#" data-type="reminder">' + _US.emailTypeReminder + '</a>' +
                         '</div>' +
                         '</div>' +
-                        '<button class="btn btn-danger delete-user" data-_id="' + response._id + '">' + _US.deleteBtn + '</button>' +
+                        '<button class="btn btn-delete-x delete-user" data-_id="' + response._id + '" title="' + _US.deleteBtn + '">✕</button>' +
                         '</div>';
                     newRow.push(actionsHtml);
                     

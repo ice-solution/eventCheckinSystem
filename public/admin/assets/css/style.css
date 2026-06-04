@@ -1200,7 +1200,8 @@ header .form-inline {
 .content {
   float: left;
   padding: 1.875em;
-  width: 100%; }
+  width: 100%;
+  box-sizing: border-box; }
 
 .card {
   margin-bottom: 1.875em;
