@@ -19,9 +19,8 @@
             transition: width 0.3s ease, margin-left 0.3s ease;
         }
 
-        /* 當左邊欄隱藏時 */
-        #left-panel.sidebar-collapsed ~ #right-panel,
-        .sidebar-collapsed #right-panel {
+        /* 當左邊欄折疊時（body.open 時） */
+        body.open #right-panel {
             width: calc(100% - 83px); /* 100% 減去折疊後的左邊欄寬度 */
             margin-left: 83px;
         }
