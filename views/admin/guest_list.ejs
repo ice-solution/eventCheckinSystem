@@ -15,13 +15,13 @@
                         <div class="card-header">
                             <strong class="card-title"><%= t('guest_list.title') %></strong>
                             <div class="float-right">
-                                <button id="addGuestBtn" class="btn btn-primary btn-sm" type="button" onclick="if(window.showAddGuestModal){window.showAddGuestModal();} return false;"><%= t('guest_list.addGuest') %></button>
-                                <button id="importExcelBtn" class="btn btn-success btn-sm ml-2" type="button" onclick="if(window.showImportExcelModal){window.showImportExcelModal();} return false;"><%= t('guest_list.importExcel') %></button>
+                                <button id="addGuestBtn" class="btn btn-primary btn-sm" type="button" onclick="if(window.showAddGuestModal){window.showAddGuestModal();} return false;">➕ <%= t('guest_list.addGuest') %></button>
+                                <button id="importExcelBtn" class="btn btn-success btn-sm ml-2" type="button" onclick="if(window.showImportExcelModal){window.showImportExcelModal();} return false;">📥 <%= t('guest_list.importExcel') %></button>
                                 <a href="/events/<%= eventId %>/guest-list/export" class="btn btn-info btn-sm ml-2" type="button">
-                                    <i class="fa fa-download"></i> <%= t('guest_list.exportExcel') %>
+                                    📥 <%= t('guest_list.exportExcel') %>
                                 </a>
                                 <button id="sendSmsBtn" class="btn btn-warning btn-sm ml-2" type="button" onclick="if(window.showSendSmsModal){window.showSendSmsModal();} return false;">
-                                    <i class="fa fa-sms"></i> <%= t('guest_list.sendSms') %>
+                                    💬 <%= t('guest_list.sendSms') %>
                                 </button>
                             </div>
                         </div>
