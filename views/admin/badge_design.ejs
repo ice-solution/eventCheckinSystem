@@ -198,9 +198,9 @@
     </div>
 </div>
 
-<%- include("components/footer") %>
-
-    <script>
+<%- include("components/footer_minimal") %>
+<script>
+    jQuery(function($) {
         const eventId = '<%= eventId %>';
         const badgeConfig = <%- JSON.stringify(badgeConfig) %>;
 
@@ -752,23 +752,20 @@
                 const html = `
                     <div class="form-group">
                         <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="elementFullWidth" ${element.fullWidth ? 'checked' : ''}
-                                   onchange="updateElementProperty('fullWidth', this.checked)">
+                            <input type="checkbox" class="form-check-input js-badge-prop" id="elementFullWidth" data-prop="fullWidth" data-value-type="bool" ${element.fullWidth ? 'checked' : ''}>
                             <label class="form-check-label" for="elementFullWidth">${_BD.fullWidth}</label>
                         </div>
                         <small class="form-text text-muted">${_BD.fullWidthHint}</small>
                     </div>
                     <div class="form-group">
                         <label>${_BD.size}</label>
-                        <input type="number" id="elementSize" class="form-control"
-                               value="${element.size || 100}" min="10" max="500" step="5"
-                               onchange="updateElementProperty('size', parseFloat(this.value))">
+                        <input type="number" id="elementSize" class="form-control js-badge-prop" data-prop="size" data-value-type="float"
+                               value="${element.size || 100}" min="10" max="500" step="5">
                         <small class="form-text text-muted">${_BD.sizeHint}</small>
                     </div>
                     <div class="form-group">
                         <label>${_BD.textAlign}</label>
-                        <select id="elementTextAlign" class="form-control"
-                                onchange="updateElementProperty('textAlign', this.value)" ${element.fullWidth ? 'disabled' : ''}>
+                        <select id="elementTextAlign" class="form-control js-badge-prop" data-prop="textAlign" data-value-type="string" ${element.fullWidth ? 'disabled' : ''}>
                             <option value="left" ${element.textAlign === 'left' ? 'selected' : ''}>${_BD.alignLeft}</option>
                             <option value="center" ${element.textAlign === 'center' ? 'selected' : ''}>${_BD.alignCenter}</option>
                             <option value="right" ${element.textAlign === 'right' ? 'selected' : ''}>${_BD.alignRight}</option>
@@ -777,19 +774,26 @@
                     </div>
                     <div class="form-group">
                         <label>${_BD.baseFontSize}</label>
-                        <input type="number" id="elementFontSize" class="form-control"
-                               value="${element.fontSize || 16}" min="8" max="200"
-                               onchange="updateElementProperty('fontSize', parseInt(this.value))">
+                        <input type="number" id="elementFontSize" class="form-control js-badge-prop" data-prop="fontSize" data-value-type="int"
+                               value="${element.fontSize || 16}" min="8" max="200">
                         <small class="form-text text-muted">${_BD.baseFontSizeHint}</small>
                     </div>
                     <div class="form-group">
                         <label>${_BD.color}</label>
-                        <input type="color" id="elementColor" class="form-control"
-                               value="${element.color || '#000000'}"
-                               onchange="updateElementProperty('color', this.value)">
+                        <input type="color" id="elementColor" class="form-control js-badge-prop" data-prop="color" data-value-type="string"
+                               value="${element.color || '#000000'}">
                     </div>
                 `;
                 controls.html(html);
+                controls.find('.js-badge-prop').on('change input', function() {
+                    const prop = $(this).data('prop');
+                    const type = $(this).data('value-type');
+                    let val = $(this).val();
+                    if (type === 'bool') val = $(this).is(':checked');
+                    else if (type === 'float') val = parseFloat(val);
+                    else if (type === 'int') val = parseInt(val, 10);
+                    updateElementProperty(prop, val);
+                });
             }
         }
 
@@ -978,4 +982,16 @@
 
         // 初始化
         initCanvas();
-    </script>
+
+        /* inline onclick 須掛在 window（函式在 jQuery.ready 閉包內） */
+        window.saveConfig = saveConfig;
+        window.generateTestImage = generateTestImage;
+        window.deleteSelectedElement = deleteSelectedElement;
+        window.clearCanvas = clearCanvas;
+        window.toggleCenterGuides = toggleCenterGuides;
+        window.addCustomText = addCustomText;
+        window.updateElementProperty = updateElementProperty;
+    });
+</script>
+</body>
+</html>
