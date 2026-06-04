@@ -4,12 +4,14 @@
 <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
 <link rel="stylesheet" href="/admin/assets/css/style.css">
 <style>
-        /* 響應式容器設置 */
+        /* 響應式容器：禁止整頁橫向捲動，表格／按鈕列各自捲動 */
         html, body {
             width: 100%;
             height: 100%;
             margin: 0;
             padding: 0;
+            overflow-x: hidden;
+            max-width: 100vw;
         }
 
         #right-panel {
@@ -17,16 +19,30 @@
             margin-left: 280px;
             box-sizing: border-box;
             transition: width 0.3s ease, margin-left 0.3s ease;
+            overflow-x: hidden;
+            max-width: calc(100vw - 280px);
         }
 
         /* 當左邊欄折疊時（body.open 時） */
         body.open #right-panel {
             width: calc(100% - 83px); /* 100% 減去折疊後的左邊欄寬度 */
             margin-left: 83px;
+            max-width: calc(100vw - 83px);
+        }
+
+        #right-panel .content,
+        #right-panel .animated,
+        #right-panel .stat-cards-row,
+        #right-panel .main-content-row {
+            overflow-x: hidden;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
         }
 
         .content {
             width: 100%;
+            max-width: 100%;
             padding: 1.875em;
             box-sizing: border-box;
             overflow-x: hidden;
@@ -249,80 +265,195 @@
             }
         }
 
-        /* User table: 保持欄位整齊，寬度不足時允許橫向捲動 */
+        /* ── Guest list table（與 card 內距對齊，區塊內橫向捲動）── */
+        .users-table-area {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        .users-table-area .table-search-btn-container {
+            margin-bottom: 10px;
+            margin-right: 0;
+            text-align: right;
+        }
+        .users-table-area .table-search-btn-container .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+        #usersTable_wrapper.dataTables_wrapper {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-sizing: border-box;
+        }
+        #usersTable_wrapper .dataTables_scroll {
+            width: 100% !important;
+            max-width: 100%;
+            overflow: hidden !important;
+            border-radius: 8px;
+            border: 1px solid var(--border-color, #e4e9f0);
+        }
+        #usersTable_wrapper .dataTables_scrollHead,
+        #usersTable_wrapper .dataTables_scrollBody {
+            width: 100% !important;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        #usersTable_wrapper .dataTables_scrollHead {
+            overflow: hidden !important;
+            background: #f8fafc;
+        }
+        #usersTable_wrapper .dataTables_scrollBody {
+            overflow-x: auto !important;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+        }
+        #usersTable_wrapper .dataTables_scrollBody:hover {
+            scrollbar-color: rgba(0, 0, 0, 0.28) transparent;
+        }
+        #usersTable_wrapper .dataTables_scrollBody::-webkit-scrollbar {
+            height: 8px;
+        }
+        #usersTable_wrapper .dataTables_scrollBody::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.18);
+            border-radius: 4px;
+        }
         #usersTable {
             width: 100% !important;
+            margin: 0 !important;
+            border-collapse: collapse;
         }
-        #usersTable th,
-        #usersTable td {
+        #usersTable_wrapper .dataTables_scrollHead th,
+        #usersTable_wrapper .dataTables_scrollBody td {
             white-space: nowrap;
-            word-break: keep-all;
             vertical-align: middle;
-            padding-top: 8px !important;
-            padding-bottom: 8px !important;
+            padding: 10px 14px !important;
+            font-size: 13px;
+            border-bottom: 1px solid #eef1f5;
         }
-        #usersTable th {
-            padding-top: 8px !important;
-            padding-bottom: 8px !important;
-        }
-        /* First column (checkbox) — must target BOTH cloned scrollHead and original body */
         .dataTables_scrollHead th:first-child,
-        #usersTable_wrapper th:first-child,
-        #usersTable td:first-child {
+        #usersTable_wrapper .dataTables_scrollBody td:first-child {
             min-width: 42px !important;
             width: 42px !important;
             max-width: 42px !important;
             text-align: center !important;
-            padding: 8px 0 !important;
-            box-sizing: border-box !important;
+            padding: 10px 8px !important;
         }
-        #usersTable td[data-field-name] {
+        #usersTable_wrapper .dataTables_scrollBody td[data-field-name] {
             min-width: 140px;
         }
-        /* Header alignment — all left, Checked In centered */
         .dataTables_scrollHead th {
             text-align: left !important;
+            font-weight: 600;
+            color: #334155;
+            border-bottom: 1px solid #e4e9f0;
         }
         .dataTables_scrollHead th:nth-last-child(2) {
             text-align: center !important;
         }
-        #usersTable th:nth-last-child(3),
-        #usersTable td:nth-last-child(3) {
-            min-width: 140px; /* Created At */
+        #usersTable_wrapper .dataTables_scrollHead th:nth-last-child(3),
+        #usersTable_wrapper .dataTables_scrollBody td:nth-last-child(3) {
+            min-width: 140px;
         }
-        #usersTable th:nth-last-child(2),
-        #usersTable td:nth-last-child(2) {
-            min-width: 110px; /* Checked In */
+        #usersTable_wrapper .dataTables_scrollHead th:nth-last-child(2),
+        #usersTable_wrapper .dataTables_scrollBody td:nth-last-child(2) {
+            min-width: 110px;
             text-align: center;
         }
-        #usersTable th:last-child,
-        #usersTable td:last-child {
-            min-width: 180px; /* Actions */
+        #usersTable_wrapper .dataTables_scrollHead th:last-child,
+        #usersTable_wrapper .dataTables_scrollBody td:last-child {
+            min-width: 180px;
+            padding-right: 18px !important;
         }
-        #usersTable_wrapper {
+        /* Footer：Showing … 與分頁 */
+        #usersTable_wrapper .dataTables_info {
+            padding: 14px 12px 6px !important;
+            margin: 0 !important;
+            font-size: 13px;
+            color: #64748b;
+            line-height: 1.5;
+        }
+        #usersTable_wrapper .dataTables_paginate {
+            padding: 4px 12px 10px !important;
+            margin: 0 !important;
+            text-align: center;
+        }
+        #usersTable_wrapper .dataTables_paginate .pagination {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            gap: 2px;
+            margin: 0 !important;
+        }
+        #usersTable_wrapper .dataTables_paginate .page-link {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            height: 32px !important;
+            min-width: 32px !important;
+            padding: 0 6px !important;
+            border: none !important;
+            border-radius: 50% !important;
+            font-size: 14px !important;
+            font-weight: 500 !important;
+            color: #b0b8c1 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            text-decoration: none !important;
+        }
+        #usersTable_wrapper .dataTables_paginate .page-link:hover {
+            color: #555 !important;
+            background: transparent !important;
+        }
+        #usersTable_wrapper .dataTables_paginate .page-item.active .page-link {
+            color: #4DD0CA !important;
+            font-weight: 700 !important;
+            background: transparent !important;
+        }
+        #usersTable_wrapper .dataTables_paginate .page-item.previous .page-link,
+        #usersTable_wrapper .dataTables_paginate .page-item.next .page-link {
+            font-size: 26px !important;
+            width: 44px !important;
+            min-width: 44px !important;
+            height: 30px !important;
             padding: 0 !important;
-            box-sizing: border-box;
-            width: 100%;
+            background: transparent !important;
         }
-        .dataTables_wrapper .dataTables_scrollBody {
-            overflow-x: auto !important;
-            scrollbar-color: transparent transparent;
-            scrollbar-width: thin;
-            transition: scrollbar-color 0.3s;
+        #usersTable_wrapper .dataTables_paginate .page-item.disabled .page-link {
+            color: #d5d9dd !important;
+            cursor: default !important;
         }
-        .dataTables_wrapper .dataTables_scrollBody:hover {
-            scrollbar-color: rgba(0,0,0,0.25) transparent;
+        /* 排序箭頭 */
+        .dataTables_scrollHead th.sorting,
+        .dataTables_scrollHead th.sorting_asc,
+        .dataTables_scrollHead th.sorting_desc {
+            background-image: none !important;
         }
-        .dataTables_wrapper .dataTables_scrollBody::-webkit-scrollbar {
-            height: 6px;
+        .dataTables_scrollHead th.sorting::before,
+        .dataTables_scrollHead th.sorting_asc::before,
+        .dataTables_scrollHead th.sorting_desc::before {
+            display: none !important;
         }
-        .dataTables_wrapper .dataTables_scrollBody::-webkit-scrollbar-thumb {
-            background: transparent;
-            border-radius: 3px;
-            transition: background 0.3s;
+        .dataTables_scrollHead th.sorting::after,
+        .dataTables_scrollHead th.sorting_asc::after,
+        .dataTables_scrollHead th.sorting_desc::after {
+            display: inline-block !important;
+            margin-left: 4px !important;
+            font-size: 9px !important;
+            vertical-align: middle !important;
+            content: '▲▼' !important;
+            color: #ccc !important;
         }
-        .dataTables_wrapper .dataTables_scrollBody:hover::-webkit-scrollbar-thumb {
-            background: rgba(0,0,0,0.25);
+        .dataTables_scrollHead th.sorting_asc::after {
+            content: '▲' !important;
+            color: #444 !important;
+        }
+        .dataTables_scrollHead th.sorting_desc::after {
+            content: '▼' !important;
+            color: #444 !important;
         }
         /* Red square X delete button */
         .btn-delete-x {
@@ -345,135 +476,6 @@
             background: #b02a37;
             color: white;
         }
-        .dataTables_wrapper .dataTables_info {
-            padding-left: 24px !important;
-            margin-top: 8px;
-            margin-bottom: 0;
-            font-size: 13px;
-        }
-        /* Pagination — centered at card bottom */
-        .dataTables_wrapper .dataTables_paginate {
-            padding: 8px 0 8px !important;
-            margin: 0 !important;
-        }
-        .dataTables_wrapper .dataTables_paginate .pagination {
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-            gap: 2px;
-            margin: 0 !important;
-        }
-        /* page-link — the actual clickable element */
-        .dataTables_wrapper .dataTables_paginate .page-link {
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            height: 32px !important;
-            min-width: 32px !important;
-            padding: 0 6px !important;
-            border: none !important;
-            border-radius: 50% !important;
-            font-size: 14px !important;
-            font-weight: 500 !important;
-            color: #b0b8c1 !important;
-            background: transparent !important;
-            box-shadow: none !important;
-            transition: color 0.15s;
-            text-decoration: none !important;
-        }
-        .dataTables_wrapper .dataTables_paginate .page-link:hover {
-            color: #555 !important;
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-        }
-        /* Active (current) page — powder blue text only */
-        .dataTables_wrapper .dataTables_paginate .page-item.active .page-link {
-            color: #4DD0CA !important;
-            background: transparent !important;
-            border: none !important;
-            font-weight: 700 !important;
-            box-shadow: none !important;
-        }
-        /* Prev/Next arrows — bigger hit area, strictly no background */
-        #usersTable_wrapper .dataTables_paginate .page-item.previous .page-link,
-        #usersTable_wrapper .dataTables_paginate .page-item.next .page-link {
-            font-size: 26px !important;
-            color: #b0b8c1 !important;
-            padding: 0 !important;
-            width: 44px !important;
-            height: 30px !important;
-            min-width: 44px !important;
-            background-color: transparent !important;
-            background-image: none !important;
-            border-color: transparent !important;
-        }
-        #usersTable_wrapper .dataTables_paginate .page-item.previous .page-link:hover,
-        #usersTable_wrapper .dataTables_paginate .page-item.previous .page-link:focus,
-        #usersTable_wrapper .dataTables_paginate .page-item.next .page-link:hover,
-        #usersTable_wrapper .dataTables_paginate .page-item.next .page-link:focus {
-            color: #555 !important;
-            background-color: transparent !important;
-            background-image: none !important;
-            border-color: transparent !important;
-            box-shadow: none !important;
-            outline: none !important;
-        }
-        /* Disabled */
-        .dataTables_wrapper .dataTables_paginate .page-item.disabled .page-link {
-            color: #d5d9dd !important;
-            background: transparent !important;
-            border: none !important;
-            cursor: default !important;
-            box-shadow: none !important;
-        }
-        /* Override DataTables sorting — scrollX moves thead into .dataTables_scrollHead */
-        .dataTables_scrollHead th.sorting,
-        .dataTables_scrollHead th.sorting_asc,
-        .dataTables_scrollHead th.sorting_desc {
-            background-image: none !important;
-        }
-        /* Hide DataTables ::before pseudo-element */
-        .dataTables_scrollHead th.sorting::before,
-        .dataTables_scrollHead th.sorting_asc::before,
-        .dataTables_scrollHead th.sorting_desc::before {
-            display: none !important;
-            content: '' !important;
-        }
-        .dataTables_scrollHead th.sorting::after,
-        .dataTables_scrollHead th.sorting_asc::after,
-        .dataTables_scrollHead th.sorting_desc::after {
-            display: inline-block !important;
-            margin-left: 4px !important;
-            font-size: 9px !important;
-            vertical-align: middle !important;
-            content: '▲▼' !important;
-            color: #ccc !important;
-            line-height: 1 !important;
-            opacity: 1 !important;
-        }
-        .dataTables_scrollHead th.sorting_asc::after {
-            content: '▲' !important;
-            color: #444 !important;
-        }
-        .dataTables_scrollHead th.sorting_desc::after {
-            content: '▼' !important;
-            color: #444 !important;
-        }
-        .dataTables_wrapper .dataTables_paginate {
-            padding-right: 24px !important;
-            margin-top: 16px;
-        }
-        .table-search-btn-container {
-            position: relative;
-            margin-bottom: 4px;
-            margin-right: 24px;
-            text-align: right;
-        }
-        .table-search-btn-container .btn-sm {
-            padding: 6px 12px;
-            font-size: 13px;
-        }
         .card-header-with-action {
             display: flex;
             align-items: center;
@@ -483,6 +485,7 @@
         /* Tighten card-body padding */
         .main-content-row .card > .card-body {
             padding: 12px 16px !important;
+            min-width: 0;
         }
         .column-toggle-gear-btn {
             display: inline-flex;
@@ -555,13 +558,18 @@
             display: flex;
             flex-wrap: nowrap;
             gap: 8px;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
             overflow-x: auto;
+            overflow-y: hidden;
             padding-bottom: 10px;
             margin-bottom: 16px;
             cursor: grab;
             user-select: none;
             scrollbar-width: thin;
             scrollbar-color: transparent transparent;
+            -webkit-overflow-scrolling: touch;
         }
         .btn-scroll-row:hover {
             scrollbar-color: var(--accent, #00c4b4) var(--border-color, #e4e9f0);
@@ -658,7 +666,15 @@
         .main-content-row {
             margin-bottom: 20px;
             width: 100%;
+            max-width: 100%;
+            min-width: 0;
             box-sizing: border-box;
+        }
+        .main-content-row .card {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            overflow: hidden;
         }
 
         /* Stat cards row — fill visible viewport width */
@@ -1226,7 +1242,7 @@
                                     <!-- Advanced Search content will be dynamically placed here -->
                                 </div>
                                 <div style="padding: 20px; border-top: 1px solid #e0e0e0; display: flex; justify-content: flex-end; gap: 10px; flex-shrink: 0;">
-                                    <button type="button" id="filterDoneBtn" class="btn btn-primary" style="min-width: 80px;">Done</button>
+                                    <button type="button" id="filterDoneBtn" class="btn btn-primary" style="min-width: 80px;"><%= t('users.filterDoneBtn') %></button>
                                 </div>
                             </div>
 
@@ -1328,6 +1344,7 @@
                                 </div>
                             </div>
 
+                            <div class="users-table-area">
                             <!-- Search Button (positioned above table) -->
                             <div class="table-search-btn-container">
                                 <button id="filterBtn" class="btn btn-secondary btn-sm" type="button">
@@ -1481,6 +1498,7 @@
                                     <% }) %>
                                 </tbody>
                             </table>
+                            </div><!-- /.users-table-area -->
                         </div>
                     </div>
             </div>
@@ -1646,7 +1664,7 @@ const _US = {
             ],
             order: [[createdAtColumnIndex, 'desc']], // Default sort by Created At descending (newest first)
             initComplete: function() {
-                this.api().columns.adjust();
+                this.api().columns.adjust().draw(false);
                 fixPaginationArrows();
             },
             drawCallback: function() {
@@ -1664,6 +1682,16 @@ const _US = {
                 // Restore arrow icons after each draw
                 fixPaginationArrows();
             }
+        });
+
+        let resizeAdjustTimer = null;
+        $(window).on('resize.usersTable', function() {
+            clearTimeout(resizeAdjustTimer);
+            resizeAdjustTimer = setTimeout(function() {
+                if (table && table.columns) {
+                    table.columns.adjust();
+                }
+            }, 150);
         });
 
         function fixPaginationArrows() {
@@ -1769,13 +1797,37 @@ const _US = {
             return true;
         });
 
-        function applyAdvancedSearch() {
-            advancedSearchConditions = [];
+        function readConditionsFromForm() {
+            const conditions = [];
             $('#advancedSearchConditionsContainer .advanced-search-condition-row').each(function() {
                 const field = $(this).find('.advancedSearchField').val();
                 const term = ($(this).find('.advancedSearchInput').val() || '').trim();
-                if (field && term) advancedSearchConditions.push({ field: field, term: term });
+                if (field && term) conditions.push({ field: field, term: term });
             });
+            return conditions;
+        }
+
+        function populateFormFromConditions(conditions) {
+            const $container = $('#advancedSearchConditionsContainer');
+            const $templateRow = $container.find('.advanced-search-condition-row').first();
+            if (!$templateRow.length) return;
+            const rowCount = Math.max((conditions && conditions.length) || 0, 2);
+            $container.empty();
+            for (let i = 0; i < rowCount; i++) {
+                const $row = $templateRow.clone();
+                const c = conditions && conditions[i];
+                $row.find('.advancedSearchField').val(c ? c.field : '');
+                $row.find('.advancedSearchInput').val(c ? c.term : '');
+                $row.attr('data-index', i + 1);
+                $row.find('label.col-form-label').text(_US.conditionLabel + ' ' + (i + 1));
+                $container.append($row);
+            }
+            updateRemoveButtons();
+            renumberConditionLabels();
+        }
+
+        function applyAdvancedSearch() {
+            advancedSearchConditions = readConditionsFromForm();
             table.draw();
         }
 
@@ -1813,8 +1865,6 @@ const _US = {
                 $newRow.find('.advancedSearchInput').val('');
                 $newRow.find('label.col-form-label').text(_US.conditionLabel + ' ' + (currentRows + 1));
                 $('#advancedSearchConditionsContainer').append($newRow);
-                $newRow.find('.advancedSearchInput').on('keyup', function() { applyAdvancedSearch(); });
-                $newRow.find('.advancedSearchField').on('change', function() { applyAdvancedSearch(); });
                 updateRemoveButtons();
                 renumberConditionLabels();
             });
@@ -1831,12 +1881,9 @@ const _US = {
             $row.remove();
             renumberConditionLabels();
             updateRemoveButtons();
-            applyAdvancedSearch();
             return false;
         });
 
-        $('#advancedSearchConditionsContainer').on('keyup', '.advancedSearchInput', function() { applyAdvancedSearch(); });
-        $('#advancedSearchConditionsContainer').on('change', '.advancedSearchField', function() { applyAdvancedSearch(); });
         // Bind clear button with direct handler
         function bindClearButton() {
             $('#advancedSearchClear').off('click').on('click', function(e) {
@@ -1849,7 +1896,6 @@ const _US = {
                 $('#advancedSearchConditionsContainer .advanced-search-condition-row').slice(2).remove();
                 renumberConditionLabels();
                 updateRemoveButtons();
-                applyAdvancedSearch();
             });
         }
         bindClearButton();
@@ -1869,11 +1915,15 @@ const _US = {
                 filterModalInitialized = true;
             }
 
+            populateFormFromConditions(advancedSearchConditions);
             $('#filterModalBackdrop').show();
             $('#filterModal').show();
         }
 
-        function hideFilterModal() {
+        function hideFilterModal(discardDraft) {
+            if (discardDraft !== false) {
+                populateFormFromConditions(advancedSearchConditions);
+            }
             $('#filterModalBackdrop').hide();
             $('#filterModal').hide();
         }
@@ -1883,15 +1933,16 @@ const _US = {
         });
 
         $('#filterModalClose').on('click', function() {
-            hideFilterModal();
+            hideFilterModal(true);
         });
 
         $('#filterDoneBtn').on('click', function() {
-            hideFilterModal();
+            applyAdvancedSearch();
+            hideFilterModal(false);
         });
 
         $('#filterModalBackdrop').on('click', function() {
-            hideFilterModal();
+            hideFilterModal(true);
         });
 
         // Only prevent closing when clicking on modal header/body, not preventing internal events
