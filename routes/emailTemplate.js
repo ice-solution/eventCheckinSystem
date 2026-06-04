@@ -9,6 +9,8 @@ router.route("/upload").post(emailTemplateController.uploadEmailTemplateImage)
 // 公開預覽（須在 /:id 之前註冊，避免被當成 id）
 router.get("/preview/:id", emailTemplateController.renderEmailTemplatePreview)
 
+router.get("/seed", emailTemplateController.getEmailTemplateSeed)
+
 router
   .route("/create")
   .get(emailTemplateController.renderCreateEmailTemplatePage)

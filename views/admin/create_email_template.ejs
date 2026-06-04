@@ -74,6 +74,8 @@
                                         <option value="invoice"><%= t('create_email_template.typeInvoice') %></option>
                                         <option value="payment_receipt"><%= t('create_email_template.typePaymentReceipt') %></option>
                                     </select>
+                                    <small class="form-text text-muted" id="typeSeedHint"></small>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary mt-1" id="loadTypeSeedBtn"><%= t('create_email_template.loadTypeSeedBtn') %></button>
                                 </div>
                                 <div class="form-group">
                                     <label for="body"><%= t('create_email_template.contentLabel') %></label>
@@ -95,6 +97,51 @@
 <%- include ("components/footer") %>
 <script>
 (function($) {
+    const seedUrl = <% if (eventId) { %>'/events/<%= eventId %>/emailTemplate/seed'<% } else { %>'/emailTemplate/seed'<% } %>;
+    let contentDirty = false;
+
+    function applySeedToForm(seed, silent) {
+        if (!seed) return;
+        if (!silent && contentDirty) {
+            if (!confirm('<%= t("create_email_template.loadTypeSeedConfirm") %>')) return;
+        }
+        if (seed.subject) $('#subject').val(seed.subject);
+        if (seed.content && tinymce.get('content')) {
+            tinymce.get('content').setContent(seed.content);
+        }
+        const sourceLabel = {
+            event: '<%= t("create_email_template.seedSourceEvent") %>',
+            global: '<%= t("create_email_template.seedSourceGlobal") %>',
+            builtin: '<%= t("create_email_template.seedSourceBuiltin") %>',
+            sample: '<%= t("create_email_template.seedSourceSample") %>'
+        }[seed.source] || '';
+        $('#typeSeedHint').text(sourceLabel ? ('<%= t("create_email_template.seedLoadedFrom") %>'.replace('{source}', sourceLabel)) : '');
+        contentDirty = false;
+    }
+
+    function loadSeedForType(type, silent) {
+        if (!type) return;
+        $.get(seedUrl, { type: type }, function(seed) {
+            applySeedToForm(seed, silent);
+        }).fail(function() {
+            $('#typeSeedHint').text('');
+        });
+    }
+
+    $('#loadTypeSeedBtn').on('click', function() {
+        loadSeedForType($('#type').val(), false);
+    });
+
+    $('#type').on('change', function() {
+        loadSeedForType($(this).val(), true);
+    });
+
+    setTimeout(function() {
+        const ed = tinymce.get('content');
+        if (ed) ed.on('change keyup', function() { contentDirty = true; });
+        loadSeedForType($('#type').val(), true);
+    }, 800);
+
     $('#emailTemplateForm').on('submit', function (e) {
         e.preventDefault();
         const emailTemplate = {

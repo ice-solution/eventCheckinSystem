@@ -13,6 +13,7 @@ const EmailRecord = require("../model/EmailRecord")
 const emailTracking = require("../utils/emailTracking")
 
 const {sampleHtmlTemplate} = require("../template/sample");
+const { getBuiltinEmailTemplateSeed } = require("../utils/emailTemplateDefaults");
 
 // 刪除電子郵件模板
 exports.deleteEmailTemplate = async (req, res) => {
@@ -230,6 +231,46 @@ exports.renderCreateEmailTemplatePage = async (req, res) => {
   } catch (error) {
     console.error("Error fetching events:", error)
     res.status(500).json({ message: "Error fetching emailTemplates" })
+  }
+}
+
+/**
+ * 建立模板時載入種子內容：優先活動模板 → 全域模板 → 內建預設
+ * GET /events/:eventId/emailTemplate/seed?type=payment_receipt
+ * GET /emailTemplate/seed?type=payment_receipt
+ */
+exports.getEmailTemplateSeed = async (req, res) => {
+  try {
+    const eventId = req.params.eventId || null
+    const type = (req.query.type || "").trim()
+    if (!type) {
+      return res.status(400).json({ message: "type is required" })
+    }
+
+    let tpl = null
+    if (eventId) {
+      tpl = await EmailTemplate.findOne({ eventId, type }).sort({ modified_at: -1 })
+    }
+    if (!tpl) {
+      tpl = await EmailTemplate.findOne({ eventId: null, type }).sort({ modified_at: -1 })
+    }
+    if (tpl) {
+      return res.json({
+        subject: tpl.subject,
+        content: tpl.content,
+        source: tpl.eventId && eventId && String(tpl.eventId) === String(eventId) ? "event" : "global",
+      })
+    }
+
+    const builtin = getBuiltinEmailTemplateSeed(type)
+    if (builtin) {
+      return res.json({ subject: builtin.subject, content: builtin.content, source: "builtin" })
+    }
+
+    return res.json({ subject: "", content: sampleHtmlTemplate, source: "sample" })
+  } catch (error) {
+    console.error("Error getEmailTemplateSeed:", error)
+    res.status(500).json({ message: "Error loading template seed" })
   }
 }
 
