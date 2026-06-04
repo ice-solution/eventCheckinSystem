@@ -456,7 +456,7 @@
     "filterBtn": "Filter",
     "searchBtn": "Search",
     "advancedSearchTitle": "Search Guests",
-    "advancedSearchHint": "Search guests by entering keywords below", "condition": "Keyword", "addCondition": "+ Add Keyword",
+    "advancedSearchHint": "Enter keywords below, then press Done to search", "filterDoneBtn": "Done", "condition": "Keyword", "addCondition": "+ Add Keyword",
     "clearCondition": "Clear All", "columnVisibility": "Column Visibility", "columnVisibilitySetting": "Column Visibility Setting", "columnToggleHint": "Select columns to show or hide",
     "selectAllSelected": "Selected all {count} guest(s)", "deselectAllDone": "All selections cleared",
     "batchDeleteConfirm": "Are you sure you want to delete {count} selected guest(s)?",
