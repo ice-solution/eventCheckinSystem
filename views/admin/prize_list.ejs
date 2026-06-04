@@ -3,6 +3,7 @@
 <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
 <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
 <link rel="stylesheet" href="/admin/assets/css/style.css">
+<%- include("components/responsive_layout_style") %>
 <div id="right-panel" class="right-panel">
     <%- include ("components/rightpanel_header") %>
     <div class="content">
@@ -38,19 +39,18 @@
                                             <td><%= prize.unit %></td>
                                             <td class="prize-date"><%= prize.created_at %></td>
                                             <td>
-                                                <a href="/prizes/<%= eventId %>/prizes/<%= prize._id %>/edit" class="btn btn-sm btn-primary"><%= t('common.edit') %></a>
-                                                <button class="btn btn-sm btn-danger" onclick="deletePrize('<%= prize._id %>')"><%= t('common.delete') %></button>
+                                                <a href="/prizes/<%= eventId %>/prizes/<%= prize._id %>/edit" class="btn btn-sm btn-primary"><i class="fa fa-edit"></i> <%= t('common.edit') %></a>
+                                                <button class="btn btn-sm btn-danger" onclick="deletePrize('<%= prize._id %>')"><i class="fa fa-trash"></i> <%= t('common.delete') %></button>
                                             </td>
                                         </tr>
                                     <% }); %>
                                 </tbody>
                             </table>
                             <div class="mb-3">
-                                <a href="/prizes/<%= eventId %>/prizes/create" class="btn btn-primary"><%= t('prize_list.addPrize') %></a>
-                                <button type="button" class="btn btn-success" data-toggle="modal" data-target="#batchUploadModal"><%= t('prize_list.batchUpload') %></button>
-                                <a href="/prizes/<%= eventId %>/prizes/download-sample" class="btn btn-info"><%= t('prize_list.downloadTemplate') %></a>
-                                <button type="button" class="btn btn-danger" onclick="deleteAllPrizes()"><%= t('prize_list.deleteAll') %></button>
-                                <a href="/events/<%= eventId %>" class="btn btn-secondary"><%= t('prize_list.backToEvent') %></a>
+                                <a href="/prizes/<%= eventId %>/prizes/create" class="btn btn-primary"><i class="fa fa-plus"></i> <%= t('prize_list.addPrize') %></a>
+                                <button type="button" class="btn btn-success" data-toggle="modal" data-target="#batchUploadModal"><i class="fa fa-upload"></i> <%= t('prize_list.batchUpload') %></button>
+                                <a href="/prizes/<%= eventId %>/prizes/download-sample" class="btn btn-info"><i class="fa fa-download"></i> <%= t('prize_list.downloadTemplate') %></a>
+                                <button type="button" class="btn btn-danger" onclick="deleteAllPrizes()"><i class="fa fa-trash"></i> <%= t('prize_list.deleteAll') %></button>
                             </div>
 
                             <div class="modal fade" id="batchUploadModal" tabindex="-1" role="dialog" aria-hidden="true">

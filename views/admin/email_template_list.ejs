@@ -3,6 +3,7 @@
 <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
 <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
 <link rel="stylesheet" href="/admin/assets/css/style.css">
+<%- include("components/responsive_layout_style") %>
 <div id="right-panel" class="right-panel">
     <%- include ("components/rightpanel_header") %>
     <div class="content">
@@ -12,12 +13,12 @@
             <div class="row">
                 <div class="col-md-12">
                     <div class="card">
-                        <div class="card-header">
+                        <div class="card-header card-header-with-action">
                             <strong class="card-title"><%= t('email_template_list.title') %></strong>
                             <% if (eventId != null) { %>
-                                <a href="/events/<%= eventId %>/emailTemplate/create" class="btn btn-sm btn-primary float-right"><i class="fa fa-plus"></i> <%= t('email_template_list.createBtn') %></a>
+                                <a href="/events/<%= eventId %>/emailTemplate/create" class="btn btn-sm btn-primary"><i class="fa fa-plus"></i> <%= t('email_template_list.createBtn') %></a>
                             <% } else { %>
-                                <a href="/emailTemplate/create" class="btn btn-sm btn-primary float-right"><i class="fa fa-plus"></i> <%= t('email_template_list.createBtn') %></a>
+                                <a href="/emailTemplate/create" class="btn btn-sm btn-primary"><i class="fa fa-plus"></i> <%= t('email_template_list.createBtn') %></a>
                             <% } %>
                         </div>
                         <div class="card-body">

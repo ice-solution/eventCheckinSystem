@@ -3,6 +3,7 @@
 <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
 <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
 <link rel="stylesheet" href="/admin/assets/css/style.css">
+<%- include("components/responsive_layout_style") %>
 <style>
     .status-sent, .status-delivered {
         color: #28a745;
@@ -74,6 +75,17 @@
         border-top: 1px solid #dee2e6 !important;
         padding: 1rem !important;
     }
+    /* 統計卡牌：強制背景色與白色文字 */
+    .card.bg-primary { background-color: #4e73df !important; }
+    .card.bg-success { background-color: #1cc88a !important; }
+    .card.bg-danger  { background-color: #e74a3b !important; }
+    .card.bg-info    { background-color: #36b9cc !important; }
+    .card.bg-primary .card-title, .card.bg-primary h3,
+    .card.bg-success .card-title, .card.bg-success h3,
+    .card.bg-danger  .card-title, .card.bg-danger  h3,
+    .card.bg-info    .card-title, .card.bg-info    h3 {
+        color: #fff !important;
+    }
 </style>
 
 <div id="right-panel" class="right-panel">
@@ -84,13 +96,11 @@
             <div class="row">
                 <div class="col-lg-12">
                     <div class="card">
-                        <div class="card-header">
+                        <div class="card-header card-header-with-action">
                             <strong class="card-title"><%= t('email_records.title') %> - <%= event.name %></strong>
-                            <div class="float-right">
-                                <a href="/events/<%= eventId %>/email-records/export" class="btn btn-success btn-sm mr-2">
-                                    <i class="fas fa-file-excel"></i> <%= t('email_records.exportExcel') %>
-                                </a>
-                            </div>
+                            <a href="/events/<%= eventId %>/email-records/export" class="btn btn-success btn-sm">
+                                <i class="fas fa-file-excel"></i> <%= t('email_records.exportExcel') %>
+                            </a>
                         </div>
                         <div class="card-body">
                             <!-- Summary Statistics -->
