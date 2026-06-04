@@ -302,6 +302,11 @@
             max-width: 100%;
             box-sizing: border-box;
         }
+        #usersTable_wrapper .dataTables_scrollHeadInner,
+        #usersTable_wrapper .dataTables_scrollHeadInner table,
+        #usersTable_wrapper .dataTables_scrollBody table {
+            box-sizing: border-box;
+        }
         #usersTable_wrapper .dataTables_scrollHead {
             overflow: hidden !important;
             background: #f8fafc;
@@ -325,20 +330,24 @@
         #usersTable_wrapper .dataTables_scrollBody:hover::-webkit-scrollbar-thumb {
             background: rgba(0, 0, 0, 0.28);
         }
-        #usersTable {
+        #usersTable_wrapper .dataTables_scrollHead table,
+        #usersTable_wrapper .dataTables_scrollBody table {
             width: 100% !important;
             margin: 0 !important;
             border-collapse: collapse;
         }
+        /* th / td 共用：padding、box-sizing 必須一致，scrollX 才對齊 */
         #usersTable_wrapper .dataTables_scrollHead th,
         #usersTable_wrapper .dataTables_scrollBody td {
+            box-sizing: border-box !important;
             white-space: nowrap;
             vertical-align: middle;
             padding: 10px 14px !important;
             font-size: 13px;
             border-bottom: 1px solid #eef1f5;
+            text-align: left;
         }
-        .dataTables_scrollHead th:first-child,
+        #usersTable_wrapper .dataTables_scrollHead th:first-child,
         #usersTable_wrapper .dataTables_scrollBody td:first-child {
             min-width: 42px !important;
             width: 42px !important;
@@ -358,17 +367,15 @@
             margin: 0;
             line-height: 1;
         }
+        #usersTable_wrapper .dataTables_scrollHead th[data-field-name],
         #usersTable_wrapper .dataTables_scrollBody td[data-field-name] {
             min-width: 140px;
         }
-        .dataTables_scrollHead th {
-            text-align: left !important;
+        #usersTable_wrapper .dataTables_scrollHead th {
             font-weight: 600;
             color: #334155;
             border-bottom: 1px solid #e4e9f0;
-        }
-        .dataTables_scrollHead th:nth-last-child(2) {
-            text-align: center !important;
+            background: #f8fafc;
         }
         #usersTable_wrapper .dataTables_scrollHead th:nth-last-child(3),
         #usersTable_wrapper .dataTables_scrollBody td:nth-last-child(3) {
@@ -377,12 +384,47 @@
         #usersTable_wrapper .dataTables_scrollHead th:nth-last-child(2),
         #usersTable_wrapper .dataTables_scrollBody td:nth-last-child(2) {
             min-width: 110px;
-            text-align: center;
+            text-align: center !important;
         }
         #usersTable_wrapper .dataTables_scrollHead th:last-child,
         #usersTable_wrapper .dataTables_scrollBody td:last-child {
             min-width: 180px;
             padding-right: 18px !important;
+        }
+        /* 覆寫 DataTables 預設 sorting padding，排序箭頭改 absolute 不推擠標題 */
+        #usersTable_wrapper table.dataTable thead > tr > th.sorting,
+        #usersTable_wrapper table.dataTable thead > tr > th.sorting_asc,
+        #usersTable_wrapper table.dataTable thead > tr > th.sorting_desc {
+            background-image: none !important;
+            padding-right: 22px !important;
+            position: relative;
+        }
+        #usersTable_wrapper .dataTables_scrollHead th.sorting::before,
+        #usersTable_wrapper .dataTables_scrollHead th.sorting_asc::before,
+        #usersTable_wrapper .dataTables_scrollHead th.sorting_desc::before {
+            display: none !important;
+        }
+        #usersTable_wrapper .dataTables_scrollHead th.sorting::after,
+        #usersTable_wrapper .dataTables_scrollHead th.sorting_asc::after,
+        #usersTable_wrapper .dataTables_scrollHead th.sorting_desc::after {
+            position: absolute !important;
+            right: 6px !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            display: block !important;
+            margin: 0 !important;
+            font-size: 9px !important;
+            line-height: 1 !important;
+            content: '▲▼' !important;
+            color: #ccc !important;
+        }
+        #usersTable_wrapper .dataTables_scrollHead th.sorting_asc::after {
+            content: '▲' !important;
+            color: #444 !important;
+        }
+        #usersTable_wrapper .dataTables_scrollHead th.sorting_desc::after {
+            content: '▼' !important;
+            color: #444 !important;
         }
         /* Footer：Showing … 與分頁 */
         #usersTable_wrapper .dataTables_info {
@@ -441,35 +483,6 @@
         #usersTable_wrapper .dataTables_paginate .page-item.disabled .page-link {
             color: #d5d9dd !important;
             cursor: default !important;
-        }
-        /* 排序箭頭 */
-        .dataTables_scrollHead th.sorting,
-        .dataTables_scrollHead th.sorting_asc,
-        .dataTables_scrollHead th.sorting_desc {
-            background-image: none !important;
-        }
-        .dataTables_scrollHead th.sorting::before,
-        .dataTables_scrollHead th.sorting_asc::before,
-        .dataTables_scrollHead th.sorting_desc::before {
-            display: none !important;
-        }
-        .dataTables_scrollHead th.sorting::after,
-        .dataTables_scrollHead th.sorting_asc::after,
-        .dataTables_scrollHead th.sorting_desc::after {
-            display: inline-block !important;
-            margin-left: 4px !important;
-            font-size: 9px !important;
-            vertical-align: middle !important;
-            content: '▲▼' !important;
-            color: #ccc !important;
-        }
-        .dataTables_scrollHead th.sorting_asc::after {
-            content: '▲' !important;
-            color: #444 !important;
-        }
-        .dataTables_scrollHead th.sorting_desc::after {
-            content: '▼' !important;
-            color: #444 !important;
         }
         /* Red square X delete button */
         .btn-delete-x {
@@ -1373,7 +1386,7 @@
                                                     <% const sortedFields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
                                                     <% sortedFields.forEach(field => { %>
                                                         <% if (field.visible) { %>
-                                                            <th>
+                                                            <th data-field-name="<%= field.fieldName %>">
                                                                 <% 
                                                                 let displayLabel = '';
                                                                 if (typeof field.label === 'string') {
@@ -1394,14 +1407,14 @@
                                             <% }); %>
                                         <% } else { %>
                                             <!-- 預設列（如果沒有formConfig） -->
-                                            <th>Email</th>
-                                            <th>Name</th>
-                                            <th>Company</th>
-                                            <th>Phone</th>
+                                            <th data-field-name="email">Email</th>
+                                            <th data-field-name="name">Name</th>
+                                            <th data-field-name="company">Company</th>
+                                            <th data-field-name="phone">Phone</th>
                                         <% } %>
                                         <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
-                                            <th>協議同意</th>
-                                            <th>協議記錄時間</th>
+                                            <th data-field-name="agreementAgreed">協議同意</th>
+                                            <th data-field-name="agreementRecordedAt">協議記錄時間</th>
                                         <% } %>
                                         <th><%= t('users.colCreatedAt') %></th>
                                         <th><%= t('users.colCheckedIn') %></th>
@@ -1674,7 +1687,7 @@ const _US = {
             ],
             order: [[createdAtColumnIndex, 'desc']], // Default sort by Created At descending (newest first)
             initComplete: function() {
-                this.api().columns.adjust().draw(false);
+                this.api().columns.adjust();
                 fixPaginationArrows();
             },
             drawCallback: function() {
