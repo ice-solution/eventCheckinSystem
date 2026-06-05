@@ -132,20 +132,44 @@ exports.renderEmailTemplatePreview = async (req, res) => {
     } else if (userId && !event) {
       previewHint = "請同時提供 eventId（或使用已綁定活動的模板）"
     } else if (!userId) {
-      previewHint = "未提供 userId，顯示原始模板；加上 ?userId=用戶_id 可預覽替換後內容"
+      previewHint = "未提供 userId；發票／付款憑證信將嘗試用最新訂單資料預覽"
     }
 
     let content = template.content || ""
     let subject = template.subject || ""
     let variablesResolved = false
 
+    const needsTransaction = template.type === "invoice" || template.type === "payment_receipt"
+    let transaction = null
+    if (transactionId) {
+      transaction = await Transaction.findById(transactionId)
+      if (!transaction) previewHint = "找不到 transactionId，無法替換訂單欄位"
+    } else if (needsTransaction && eventId) {
+      const txQuery = { eventId }
+      if (user && user.email) txQuery.userEmail = user.email
+      transaction = await Transaction.findOne(txQuery).sort({ createdAt: -1 })
+      if (transaction) {
+        previewHint = `預覽使用最新訂單 ${transaction._id}（可加 ?transactionId= 指定其他訂單）`
+      }
+    }
+
+    if (!user && transaction && transaction.userEmail) {
+      if (event && event.users) {
+        user = event.users.find((u) => u.email && u.email === transaction.userEmail)
+      }
+      if (!user) {
+        user = { name: transaction.userName || "Guest", email: transaction.userEmail }
+      }
+    }
+
+    if (!user && event && event.users && event.users.length && !needsTransaction) {
+      user = event.users.find((u) => u.email) || event.users[0]
+      if (!userId) previewHint = "未指定 userId，使用活動內第一位賓客作預覽範例"
+    }
+
     if (user && event) {
       const userObj = resolveEventUser(event, user)
       const baseUrl = getPublicBaseUrl(req)
-      let transaction = null
-      if (transactionId) {
-        transaction = await Transaction.findById(transactionId)
-      }
       const additionalVars = buildEmailTemplateAdditionalVars({
         baseUrl,
         user: userObj,
@@ -157,7 +181,29 @@ exports.renderEmailTemplatePreview = async (req, res) => {
       content = replaceTemplateVariables(content, userObj, event, additionalVars)
       subject = replaceTemplateVariables(subject, userObj, event, additionalVars)
       variablesResolved = true
-      previewHint = ""
+      if (!transaction && needsTransaction) {
+        previewHint = (previewHint ? previewHint + "；" : "") + "此活動尚無訂單，{{transaction.*}} / {{invoice.*}} 無法替換"
+        variablesResolved = false
+      }
+    } else if (needsTransaction && event && transaction) {
+      const userObj = {
+        name: transaction.userName || "Preview Guest",
+        email: transaction.userEmail || "guest@example.com",
+      }
+      const baseUrl = getPublicBaseUrl(req)
+      const additionalVars = buildEmailTemplateAdditionalVars({
+        baseUrl,
+        user: userObj,
+        event,
+        emailTemplateId: template._id,
+        transaction,
+      })
+      content = replaceTemplateVariables(content, userObj, event, additionalVars)
+      subject = replaceTemplateVariables(subject, userObj, event, additionalVars)
+      variablesResolved = true
+      previewHint = `依訂單 ${transaction._id} 預覽；請加 ?userId= 以對應真實賓客欄位`
+    } else if (!event) {
+      previewHint = "請加 ?eventId=活動_id（全域模板必填）才能替換變數"
     }
 
     try {
