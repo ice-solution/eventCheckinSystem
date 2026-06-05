@@ -261,7 +261,7 @@ exports.renderEmailTemplateDetail = async (req, res) => {
     if (!template) {
       return res.status(404).send("電子郵件模板未找到！")
     }
-    res.render("admin/email_template_detail", { template, emailRecords, eventId, stats })
+    res.render("admin/email_template_detail", { template, emailRecords, eventId, stats, invoiceEmailEnabled: isInvoiceEmailEnabled() })
   } catch (error) {
     console.error("Error fetching email template:", error)
     res.status(500).send("獲取電子郵件模板時出現錯誤！")
