@@ -3,6 +3,7 @@
 <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
 <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
 <link rel="stylesheet" href="/admin/assets/css/style.css">
+<%- include("components/responsive_layout_style") %>
 <style>
     .card.bg-primary { background-color: #4e73df !important; }
     .card.bg-success { background-color: #1cc88a !important; }
@@ -447,7 +448,7 @@ const _ETD = {
                 { "type": "date", "targets": 0 }
             ],
             "pageLength": 10,
-            "lengthMenu": [5, 10, 25, 50],
+            "lengthMenu": [[10, 20, 50, -1], [10, 20, 50, "All"]],
         });
 
     });
