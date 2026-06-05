@@ -71,7 +71,9 @@
                                         <option value="welcome"><%= t('create_email_template.typeWelcome') %></option>
                                         <option value="knowledge"><%= t('create_email_template.typeKnowledge') %></option>
                                         <option value="reminder"><%= t('create_email_template.typeReminder') %></option>
+                                        <% if (invoiceEmailEnabled) { %>
                                         <option value="invoice"><%= t('create_email_template.typeInvoice') %></option>
+                                        <% } %>
                                         <option value="payment_receipt"><%= t('create_email_template.typePaymentReceipt') %></option>
                                     </select>
                                     <small class="form-text text-muted" id="typeSeedHint"></small>

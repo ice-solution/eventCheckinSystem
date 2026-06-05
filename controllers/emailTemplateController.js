@@ -14,6 +14,7 @@ const emailTracking = require("../utils/emailTracking")
 
 const {sampleHtmlTemplate} = require("../template/sample");
 const { getBuiltinEmailTemplateSeed } = require("../utils/emailTemplateDefaults");
+const { isInvoiceEmailEnabled } = require("../utils/featureFlags");
 
 // 刪除電子郵件模板
 exports.deleteEmailTemplate = async (req, res) => {
@@ -292,6 +293,9 @@ exports.getEmailTemplateSeed = async (req, res) => {
     if (!type) {
       return res.status(400).json({ message: "type is required" })
     }
+    if (type === "invoice" && !isInvoiceEmailEnabled()) {
+      return res.status(400).json({ message: "發票郵件功能已停用" })
+    }
 
     let tpl = null
     if (eventId) {
@@ -323,6 +327,9 @@ exports.getEmailTemplateSeed = async (req, res) => {
 exports.updateEmailTemplate = async (req, res) => {
   const { id } = req.params
   const { subject, type, content } = req.body
+  if (type === "invoice" && !isInvoiceEmailEnabled()) {
+    return res.status(400).send("發票郵件功能已停用")
+  }
   try {
     const updatedTemplate = await EmailTemplate.findByIdAndUpdate(
       id,
@@ -348,9 +355,14 @@ exports.createEmailTemplate = async (req, res) => {
 
   console.log('[EmailTemplate Create] paramEventId:', paramEventId, 'bodyEventId:', bodyEventId, 'final eventId:', eventId)
 
+  const templateType = type || 'welcome'
+  if (templateType === 'invoice' && !isInvoiceEmailEnabled()) {
+    return res.status(400).send('發票郵件功能已停用')
+  }
+
   const insertBody = {
     subject,
-    type: type || 'welcome',
+    type: templateType,
     content,
   }
 

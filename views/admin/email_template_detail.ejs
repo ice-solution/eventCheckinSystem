@@ -80,7 +80,9 @@
                     <option value="welcome" <%= template.type === 'welcome' ? 'selected' : '' %>><%= t('create_email_template.typeWelcome') %></option>
                     <option value="knowledge" <%= template.type === 'knowledge' ? 'selected' : '' %>><%= t('create_email_template.typeKnowledge') %></option>
                     <option value="reminder" <%= template.type === 'reminder' ? 'selected' : '' %>><%= t('create_email_template.typeReminder') %></option>
+                    <% if (invoiceEmailEnabled || template.type === 'invoice') { %>
                     <option value="invoice" <%= template.type === 'invoice' ? 'selected' : '' %>><%= t('create_email_template.typeInvoice') %></option>
+                    <% } %>
                     <option value="payment_receipt" <%= template.type === 'payment_receipt' ? 'selected' : '' %>><%= t('create_email_template.typePaymentReceipt') %></option>
                 </select>
             </div>
@@ -101,7 +103,7 @@ If you cannot read this message, please &lt;a href="{{emailPreviewUrl}}" target=
 &lt;/center&gt;</pre>
                                 發信時會自動換成：<code>{DOMAIN}/emailTemplate/preview/本模板ID?userId=該用戶_id</code>
                                 <br>                                後台預覽（建議）：<code>/emailTemplate/preview/<%= template._id %><%= eventId ? ('?eventId=' + eventId) : '?eventId=活動_id' %>&amp;userId=用戶_id</code>
-                                <br>發票／付款憑證（<code>invoice</code> / <code>payment_receipt</code>）：可加 <code>&amp;transactionId=訂單_id</code>；未加時會用該活動<strong>最新一筆訂單</strong>作範例
+                                <br>付款憑證（<code>payment_receipt</code><% if (invoiceEmailEnabled) { %>／發票 <code>invoice</code><% } %>）：可加 <code>&amp;transactionId=訂單_id</code>；未加時會用該活動<strong>最新一筆訂單</strong>作範例
                                 <br>變數名稱正確：<code>{{transaction._id}}</code>、<code>{{transaction.ticketTitle}}</code>、<code>{{invoice.currency}}</code> 等
                             </small>
                             <button type="button" class="btn btn-danger" onclick="deleteTemplate()"><%= t('create_email_template.deleteTemplateBtn') %></button>

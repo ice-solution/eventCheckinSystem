@@ -23,7 +23,8 @@ const multer = require('multer');
 const fs = require('fs');
 const { getSocket } = require('../socket'); // 引入 socket 以發送實時更新
 const { embedKaitiFontInEmail } = require('../utils/embedEmailFonts'); // 引入字型嵌入功能
-const { replaceTemplateVariables, buildEmailTemplateAdditionalVars } = require('../utils/replaceTemplateVariables');
+const { replaceTemplateVariables, buildEmailTemplateAdditionalVars, flattenForTemplate } = require('../utils/replaceTemplateVariables');
+const { isInvoiceEmailEnabled } = require('../utils/featureFlags');
 
 /** 取得對外 base URL（依 DOMAIN/domain，缺協議時自動補 https://） */
 function getPublicBaseUrl() {
@@ -40,18 +41,11 @@ function getPrizePictureUrl(picture) {
     return p.startsWith('/') ? base + p : base + '/' + p;
 }
 
-/** 將物件壓平為 {{prefix.key}} 用的變數表（一層，巢狀用 prefix.key） */
-function flattenForTemplate(obj, prefix) {
-    if (!obj || typeof obj !== 'object') return {};
-    const out = {};
-    const toStr = (v) => (v === undefined || v === null ? '' : String(v));
-    Object.keys(obj).forEach(key => {
-        if (key.startsWith('_') && key !== '_id') return;
-        const val = obj[key];
-        if (val !== null && typeof val === 'object' && !(val instanceof Date) && !Array.isArray(val)) return; // 略過巢狀物件
-        out[`${prefix}.${key}`] = Array.isArray(val) ? JSON.stringify(val) : toStr(val);
-    });
-    return out;
+/** 查詢活動或全域郵件模板（eventId 優先，其次 eventId: null） */
+async function findEmailTemplateForEvent(eventId, type) {
+    const eventTemplate = await EmailTemplate.findOne({ eventId, type });
+    if (eventTemplate) return eventTemplate;
+    return EmailTemplate.findOne({ eventId: null, type });
 }
 
 /** 發票 email 預設內容（建立訂單後發送） */
@@ -736,6 +730,9 @@ exports.resendEmail = async (req, res) => {
             }
             await sendPaymentReceiptEmail(transaction, event, userData, emailTemplateId);
         } else if (type === 'invoice') {
+            if (!isInvoiceEmailEnabled()) {
+                return res.status(400).json({ message: '發票郵件功能已停用' });
+            }
             const transaction = await Transaction.findOne({
                 eventId,
                 userEmail: user.email,
@@ -4032,7 +4029,12 @@ exports.stripeCheckout = async (req, res) => {
             });
             transaction.stripeSessionId = orderId || transaction._id.toString();
             await transaction.save();
-            try { await sendInvoiceEmail(transaction, event); } catch (e) { console.error('Invoice email error:', e); }
+            if (isInvoiceEmailEnabled()) {
+                const invoiceTemplate = await findEmailTemplateForEvent(event._id, 'invoice');
+                if (invoiceTemplate) {
+                    try { await sendInvoiceEmail(transaction, event, invoiceTemplate._id); } catch (e) { console.error('Invoice email error:', e); }
+                }
+            }
             return res.json({ url: paymentUrl });
         }
 
@@ -4064,7 +4066,12 @@ exports.stripeCheckout = async (req, res) => {
         });
         transaction.stripeSessionId = session.id;
         await transaction.save();
-        try { await sendInvoiceEmail(transaction, event); } catch (e) { console.error('Invoice email error:', e); }
+        if (isInvoiceEmailEnabled()) {
+            const invoiceTemplate = await findEmailTemplateForEvent(event._id, 'invoice');
+            if (invoiceTemplate) {
+                try { await sendInvoiceEmail(transaction, event, invoiceTemplate._id); } catch (e) { console.error('Invoice email error:', e); }
+            }
+        }
         res.json({ url: session.url });
     } catch (error) {
         console.error(`${gateway} checkout error:`, error);

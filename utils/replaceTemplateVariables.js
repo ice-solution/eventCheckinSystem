@@ -15,6 +15,11 @@ function flattenForTemplate(obj, prefix) {
     Object.keys(obj).forEach((key) => {
         if (key.startsWith('_') && key !== '_id') return;
         const val = obj[key];
+        // _id 為 Mongoose ObjectId（typeof object），需明確輸出供 {{transaction._id}} 等變數
+        if (key === '_id') {
+            out[`${prefix}._id`] = toStr(val);
+            return;
+        }
         if (val !== null && typeof val === 'object' && !(val instanceof Date) && !Array.isArray(val)) return;
         out[`${prefix}.${key}`] = Array.isArray(val) ? JSON.stringify(val) : toStr(val);
     });
