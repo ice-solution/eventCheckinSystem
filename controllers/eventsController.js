@@ -89,6 +89,40 @@ function getDefaultPaymentReceiptEmailContent(transaction, event) {
 </body></html>`;
 }
 
+/** 從 event.users 以 email 找 userId（供郵件記錄） */
+function findEventUserIdByEmail(eventDoc, email) {
+    if (!eventDoc || !email || !Array.isArray(eventDoc.users)) return null;
+    const normalized = String(email).trim().toLowerCase();
+    const user = eventDoc.users.find(u => u.email && String(u.email).trim().toLowerCase() === normalized);
+    return user && user._id ? String(user._id) : null;
+}
+
+/** 發送郵件並寫入 EmailRecord（invoice / payment_receipt 等） */
+async function sendEmailWithRecord({ recipient, subject, messageBody, emailTemplate, eventId, userId }) {
+    let body = embedKaitiFontInEmail(messageBody);
+    const trackingId = await emailTracking.createEmailRecord({
+        recipient,
+        subject,
+        emailTemplateId: emailTemplate ? emailTemplate._id : null,
+        eventId,
+        userId: userId || null,
+    });
+    if (trackingId) {
+        body = emailTracking.addTrackingToEmail(body, trackingId);
+    }
+    const result = await ses.sendEmail(recipient, subject, body);
+    if (trackingId) {
+        if (result && result.MessageId) {
+            await emailTracking.updateEmailRecordStatus(trackingId, 'sent', result.MessageId);
+        } else if (result instanceof Error) {
+            await emailTracking.updateEmailRecordStatus(trackingId, 'failed');
+        } else {
+            await emailTracking.updateEmailRecordStatus(trackingId, 'sent');
+        }
+    }
+    return result;
+}
+
 /** 發送發票 email（建立訂單後，寄給登記者） */
 async function sendInvoiceEmail(transaction, event, emailTemplateId = null) {
     const email = transaction.userEmail;
@@ -118,11 +152,19 @@ async function sendInvoiceEmail(transaction, event, emailTemplateId = null) {
             ? replaceTemplateVariables(emailTemplate.content, userLike, eventDoc, additionalVars)
             : getDefaultInvoiceEmailContent(transaction, eventDoc);
         messageBody = replaceTemplateVariables(messageBody, userLike, eventDoc, additionalVars);
-        messageBody = embedKaitiFontInEmail(messageBody);
-        await ses.sendEmail(email, subject, messageBody);
+        const userId = findEventUserIdByEmail(eventDoc, email);
+        await sendEmailWithRecord({
+            recipient: email,
+            subject,
+            messageBody,
+            emailTemplate,
+            eventId: eventDoc._id,
+            userId,
+        });
         console.log('[Invoice Email] Sent to:', email);
     } catch (err) {
         console.error('[Invoice Email] Error:', err);
+        throw err;
     }
 }
 
@@ -155,11 +197,19 @@ async function sendPaymentReceiptEmail(transaction, event, user, emailTemplateId
             ? replaceTemplateVariables(emailTemplate.content, userLike, eventDoc, additionalVars)
             : getDefaultPaymentReceiptEmailContent(transaction, eventDoc);
         messageBody = replaceTemplateVariables(messageBody, userLike, eventDoc, additionalVars);
-        messageBody = embedKaitiFontInEmail(messageBody);
-        await ses.sendEmail(email, subject, messageBody);
+        const userId = (userLike._id && String(userLike._id)) || findEventUserIdByEmail(eventDoc, email);
+        await sendEmailWithRecord({
+            recipient: email,
+            subject,
+            messageBody,
+            emailTemplate,
+            eventId: eventDoc._id,
+            userId,
+        });
         console.log('[Payment Receipt Email] Sent to:', email);
     } catch (err) {
         console.error('[Payment Receipt Email] Error:', err);
+        throw err;
     }
 }
 
