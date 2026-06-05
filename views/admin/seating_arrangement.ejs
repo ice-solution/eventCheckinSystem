@@ -31,10 +31,10 @@
     .seating-canvas-scale { display: inline-block; vertical-align: top; }
     .seating-canvas {
         position: relative;
-        width: 5200px;
-        height: 3800px;
-        min-width: 5200px;
-        min-height: 3800px;
+        width: 1200px;
+        height: 900px;
+        min-width: 800px;
+        min-height: 600px;
         background: #f0f2f5 url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><path fill="%23e0e3e8" d="M0 0h1v20H0zm19 0h1v20h-1zM0 0h20v1H0zm0 19h20v1H0z"/></svg>');
     }
     .guest-group-title { font-size: 13px; font-weight: 600; color: #495057; margin: 12px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #dee2e6; }
@@ -61,7 +61,16 @@
         margin-bottom: 6px; font-size: 12px; font-weight: 600; color: #495057;
     }
     .rt-toolbar .cap-row { display: flex; align-items: center; gap: 4px; margin: 0; font-weight: normal; }
-    .rt-toolbar .cap-row input { width: 44px; padding: 2px 4px; font-size: 12px; height: 26px; }
+    .rt-toolbar .cap-row input.tbl-cap {
+        width: 52px; padding: 2px 6px; font-size: 12px; height: 26px;
+        text-align: center;
+        -moz-appearance: textfield;
+    }
+    .rt-toolbar .cap-row input.tbl-cap::-webkit-outer-spin-button,
+    .rt-toolbar .cap-row input.tbl-cap::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
     .rt-plate {
         position: relative; width: 280px; height: 280px; margin: 0 auto;
         border-radius: 50%;
@@ -166,8 +175,8 @@
                             <div class="seating-canvas-toolbar">
                                 <span class="mb-0 font-weight-bold"><%= t('seating.canvasLabel') %></span>
                                 <label class="mb-0"><%= t('seating.zoomLabel') %></label>
-                                <input type="range" id="canvasZoom" min="10" max="100" step="5" value="55" title="<%= t('seating.zoomLabel') %>">
-                                <span id="canvasZoomPct" class="text-monospace">55%</span>
+                                <input type="range" id="canvasZoom" min="25" max="100" step="5" value="75" title="<%= t('seating.zoomLabel') %>">
+                                <span id="canvasZoomPct" class="text-monospace">75%</span>
                                 <button type="button" class="btn btn-sm btn-outline-secondary" id="btnZoomFit"><%= t('seating.fitWindowBtn') %></button>
                                 <button type="button" class="btn btn-sm btn-outline-primary" id="btnLayoutGrid"><%= t('seating.gridLayoutBtn') %></button>
                                 <button type="button" class="btn btn-sm btn-outline-success" id="btnExportPng"><%= t('seating.exportPngBtn') %></button>
@@ -197,11 +206,13 @@
         noUnassigned: '<%= t("seating.noUnassigned") %>',
         unassignedStat: '<%= t("seating.unassignedStat") %>',
         companions: '<%= t("seating.companions") %>',
+        tableNum: '<%= t("seating.tableNum") %>',
         capacityLabel: '<%= t("seating.capacityLabel") %>',
         emptySlotTitle: '<%= t("seating.emptySlotTitle") %>',
         companionSlotTitle: '<%= t("seating.companionSlotTitle") %>',
         clickToUnassign: '<%= t("seating.clickToUnassign") %>',
         removeFromTable: '<%= t("seating.removeFromTable") %>',
+        occupiedStat: '<%= t("seating.occupiedStat") %>',
         removeTableBtn: '<%= t("seating.removeTableBtn") %>',
         tableFullError: '<%= t("seating.tableFullError") %>',
         saved: '<%= t("seating.saved") %>',
@@ -240,12 +251,13 @@
 
     var CANVAS_TABLE_W = 300;
     var CANVAS_TABLE_H = 360;
-    var MIN_CANVAS_W = 5200;
-    var MIN_CANVAS_H = 3800;
+    var CANVAS_PAD = 120;
+    var DEFAULT_CANVAS_ZOOM = 75;
+    var MIN_CANVAS_ZOOM = 25;
 
     function getCanvasZoom() {
         var v = parseInt($canvasZoom.value, 10);
-        if (isNaN(v) || v < 10) v = 100;
+        if (isNaN(v) || v < MIN_CANVAS_ZOOM) v = DEFAULT_CANVAS_ZOOM;
         return v / 100;
     }
     function applyCanvasZoom() {
@@ -255,9 +267,9 @@
         if (el) el.textContent = Math.round(z * 100) + '%';
     }
     function sizeCanvasFromTables() {
-        var pad = 120;
-        var maxR = MIN_CANVAS_W;
-        var maxB = MIN_CANVAS_H;
+        var pad = CANVAS_PAD;
+        var maxR = 800;
+        var maxB = 600;
         state.tables.forEach(function(t) {
             var x = t.x != null ? t.x : 40;
             var y = t.y != null ? t.y : 40;
@@ -295,10 +307,15 @@
         var zw = (w > 0) ? ($canvasScroll.clientWidth - 32) / w : 1;
         var zh = (h > 0) ? ($canvasScroll.clientHeight - 32) / h : 1;
         var z = Math.min(1, zw, zh);
-        z = Math.max(0.1, z);
+        z = Math.max(MIN_CANVAS_ZOOM / 100, z);
         var pct = Math.round(z * 100);
-        pct = Math.max(10, Math.min(100, Math.round(pct / 5) * 5));
+        pct = Math.max(MIN_CANVAS_ZOOM, Math.min(100, Math.round(pct / 5) * 5));
         $canvasZoom.value = String(pct);
+        applyCanvasZoom();
+    }
+    function applyInitialCanvasZoom() {
+        sizeCanvasFromTables();
+        $canvasZoom.value = String(DEFAULT_CANVAS_ZOOM);
         applyCanvasZoom();
     }
 
@@ -782,7 +799,6 @@
     }
     renderGuestList();
     renderTables();
-    applyCanvasZoom();
-    setTimeout(zoomFitViewport, 100);
+    applyInitialCanvasZoom();
 })();
 </script>
