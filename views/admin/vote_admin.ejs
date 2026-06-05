@@ -76,7 +76,7 @@
                                             <label class="custom-control-label" for="isActive"><%= t('vote_admin.enableVote') %></label>
                                         </div>
                                     </div>
-                                    <button type="submit" class="btn btn-primary"><%= t('vote_admin.updateSettings') %></button>
+                                    <button type="submit" class="btn btn-primary"><i class="fa fa-save mr-1"></i><%= t('vote_admin.updateSettings') %></button>
                                 </form>
                             </div>
 
@@ -97,7 +97,7 @@
                                         <input type="file" class="form-control-file" id="optionImage" accept="image/*">
                                         <small class="form-text text-muted"><%= t('vote_admin.imageHint') %></small>
                                     </div>
-                                    <button type="submit" class="btn btn-success"><%= t('vote_admin.addOption') %></button>
+                                    <button type="submit" class="btn btn-success"><i class="fa fa-plus mr-1"></i><%= t('vote_admin.addOption') %></button>
                                 </form>
                             </div>
 
@@ -157,8 +157,7 @@
                             </div>
 
                             <div class="mt-3">
-                                <a href="/events/<%= eventId %>" class="btn btn-secondary"><%= t('vote_admin.backToEvent') %></a>
-                                <a href="/votes/<%= eventId %>" target="_blank" class="btn btn-info"><%= t('vote_admin.viewVotePage') %></a>
+                                <a href="/votes/<%= eventId %>" target="_blank" class="btn btn-info"><i class="fa fa-external-link mr-1"></i><%= t('vote_admin.viewVotePage') %></a>
                             </div>
                         </div>
                     </div>

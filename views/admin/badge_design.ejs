@@ -84,12 +84,12 @@
         <div class="row mb-3">
             <div class="col-12">
                 <h2><%= t('badge_design.canvasDimensions').split(' (')[0] %> - <%= event.name %></h2>
-                <div class="btn-group">
-                    <button class="btn btn-primary" onclick="saveConfig()"><%= t('badge_design.saveConfig') %></button>
-                    <button class="btn btn-success" onclick="generateTestImage()"><%= t('badge_design.generateTestImage') %></button>
-                    <button class="btn btn-danger" onclick="deleteSelectedElement()" id="deleteElementBtn" disabled><%= t('badge_design.deleteSelectedElement') %></button>
-                    <button class="btn btn-secondary" onclick="clearCanvas()"><%= t('badge_design.clear') %></button>
-                    <button class="btn btn-outline-secondary" id="toggleGuidesBtn" onclick="toggleCenterGuides()"><%= t('badge_design.hideCenterLines') %></button>
+                <div class="d-flex flex-wrap" style="gap: 8px; margin-top: 5px;">
+                    <button class="btn btn-primary" onclick="saveConfig()"><i class="fa fa-save mr-1"></i><%= t('badge_design.saveConfig') %></button>
+                    <button class="btn btn-success" onclick="generateTestImage()"><i class="fa fa-image mr-1"></i><%= t('badge_design.generateTestImage') %></button>
+                    <button class="btn btn-danger" onclick="deleteSelectedElement()" id="deleteElementBtn" disabled><i class="fa fa-trash mr-1"></i><%= t('badge_design.deleteSelectedElement') %></button>
+                    <button class="btn btn-secondary" onclick="clearCanvas()"><i class="fa fa-times mr-1"></i><%= t('badge_design.clear') %></button>
+                    <button class="btn btn-outline-secondary" id="toggleGuidesBtn" onclick="toggleCenterGuides()"><i class="fa fa-eye-slash mr-1"></i><%= t('badge_design.hideCenterLines') %></button>
                 </div>
             </div>
         </div>
