@@ -13,7 +13,7 @@
                         </div>
                         <div class="card-body">
                             <p class="text-muted mb-3">
-                                <%= lang === 'zh' ? '目前活動名稱：' : 'Current Event Name: ' %>
+                                <%= t('edit_event_name.currentName') %>
                                 <strong><%= typeof eventName !== 'undefined' ? eventName : '' %></strong>
                             </p>
                             <form id="editEventNameForm">

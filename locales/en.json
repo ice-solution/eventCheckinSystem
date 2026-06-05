@@ -19,7 +19,8 @@
     "backToList": "Back to List", "note": "Note", "selectOption": "--- Please Select ---",
     "noImage": "No image", "quantity": "Quantity", "image": "Image",
     "company": "Company", "table": "Table", "description": "Description", "points": "Points",
-    "type": "Type", "content": "Content", "subject": "Subject", "role": "Role"
+    "type": "Type", "content": "Content", "subject": "Subject", "role": "Role",
+    "deselectAll": "Deselect All", "sendEmail": "Send Email", "sendSms": "Send SMS"
   },
   "menu": {
     "adminTitle": "Admin", "events": "Events", "userManagement": "Login Account Management",
@@ -50,7 +51,8 @@
   },
   "edit_event_name": {
     "title": "Edit Event Name", "label": "Event Name", "required": "Please enter event name",
-    "saving": "Saving...", "saved": "Event name updated.", "error": "Update failed"
+    "saving": "Saving...", "saved": "Event name updated.", "error": "Update failed",
+    "currentName": "Current Event Name: "
   },
   "auth_users": {
     "title": "Login Account Management", "addUser": "Add User",
@@ -366,7 +368,8 @@
     "uploadingBtn": "Uploading..."
   },
   "qrcode_login": {
-    "pageTitle": "QR Code Login", "heading": "Scan QR Code to Login", "eventIdLabel": "Event ID: "
+    "pageTitle": "QR Code Login", "heading": "Scan QR Code to Login", "eventIdLabel": "Event ID: ",
+    "qrCodeAlt": "QR Code for Event ID: "
   },
   "scan_point_users": {
     "title": "Scan Point Users", "addUserBtn": "Add Scan Point User",
@@ -388,7 +391,7 @@
     "itemNamePlaceholder": "e.g. Treasure A", "pointsLabel": "Points *",
     "pointsPlaceholder": "e.g. 10", "descriptionLabel": "Description",
     "descriptionPlaceholder": "Item description (optional)", "createItemBtn": "Create Item",
-    "colName": "Item Name", "colPoints": "Points", "colDescription": "Description", "colCreatedAt": "Created At",
+    "colName": "Item Name", "colPoints": "Points", "colQrCode": "QR Code", "colDescription": "Description", "colCreatedAt": "Created At",
     "qrNotGenerated": "Not generated", "viewQrBtn": "View QR Code",
     "qrModalScanHint": "Scan this QR Code to earn points", "qrModalDataLabel": "Data: ",
     "qrDownloadBtn": "Download QR Code", "editModalTitle": "Edit Item",
@@ -545,5 +548,66 @@
     "usernameLabel": "Username", "passwordLabel": "Password", "roleLabel": "Role",
     "roleAdmin": "Admin", "roleReception": "Reception", "roleStaff": "Staff", "roleUser": "User",
     "createBtn": "Create User"
+  },
+  "login": {
+    "signInBtn": "Sign in",
+    "loginFailed": "Login failed. Please check your username and password."
+  },
+  "checkin_scan": {
+    "title": "Guest Check-in",
+    "guestListHeading": "Guest List",
+    "scanQrBtn": "Scan QR Code",
+    "refreshListBtn": "Refresh List",
+    "refreshing": "Refreshing...",
+    "pointCol": "Point",
+    "statusCol": "Status",
+    "guestDetailsHeading": "Guest Details",
+    "selectGuestHint": "Select a guest to view details.",
+    "checkInBtn": "Check In",
+    "printBtn": "Print",
+    "checkedInStatus": "Checked In",
+    "checkInStatus": "Check In",
+    "addGuestTitle": "Add Guest",
+    "checkInSuccess": "User checked in successfully!",
+    "alreadyCheckedIn": "User is already checked in.",
+    "checkInFailed": "Failed to check in user.",
+    "userNotFound": "User not found. Please check the QR code.",
+    "loadFailed": "Failed to load user details",
+    "addGuestSuccess": "Guest added successfully!",
+    "addGuestFailed": "Failed to add guest.",
+    "invalidQrCode": "Invalid QR code format",
+    "cameraFailed": "Unable to start camera. Please check camera permissions and try again."
+  },
+  "seating": {
+    "title": "Seating Arrangement",
+    "reloadBtn": "Reload",
+    "categoryFieldLabel": "Category Field (FormConfig)",
+    "addTableBtn": "Add Round Table",
+    "canvasLabel": "Canvas",
+    "zoomLabel": "Zoom",
+    "fitWindowBtn": "Fit Window",
+    "gridLayoutBtn": "Grid Layout",
+    "exportPngBtn": "Export PNG",
+    "canvasHint": "Canvas is scrollable; for 20+ tables, use Grid Layout first then adjust. Export at full canvas resolution.",
+    "unfilledCategory": "(Not filled)",
+    "noUnassigned": "No unassigned guests",
+    "unassignedStat": "Unassigned: {count} people (estimated {seats} seats remaining incl. companions)",
+    "companions": "Companions",
+    "tableNum": "Table {num}",
+    "capacityLabel": "Capacity",
+    "emptySlotTitle": "Empty",
+    "companionSlotTitle": "Companion",
+    "clickToUnassign": "Click to move back to unassigned list",
+    "removeFromTable": "Remove from table",
+    "occupiedStat": "Occupied {used} / {cap} seats (incl. companions)",
+    "removeTableBtn": "Remove Table",
+    "tableFullError": "Table is full or companion count exceeds capacity. Please adjust.",
+    "saved": "Saved",
+    "saveFailed": "Save failed",
+    "loadFailed": "Load failed",
+    "exportFailed": "Export failed. Please retry or reduce canvas size.",
+    "exportLoadError": "Export plugin failed to load. Please check network.",
+    "gridLayoutConfirm": "Rearrange tables into grid layout?",
+    "noTablesAlert": "Please add a round table first"
   }
 }

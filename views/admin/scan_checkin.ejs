@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <link rel="stylesheet" href="https://cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css">
-    <title>Guest Check-in</title>
+    <title><%= t('checkin_scan.title') %></title>
     <style>
         body {
             background-color: #f8f9fa;
@@ -137,11 +137,11 @@
 
 <div class="scan-container container-fluid">
     <div class="user-list">
-        <h4>Guest List</h4>
-        
+        <h4><%= t('checkin_scan.guestListHeading') %></h4>
+
         <!-- <input type="text" id="searchInput" class="form-control mb-3" placeholder="Search Users..." onkeyup="searchUsers()"> -->
-        <button id="scanButton" class="btn btn-primary mt-3" onclick="openLightbox()">Scan QR Code</button>
-        <button id="refreshListButton" class="btn btn-info mt-3 ml-2" onclick="refreshUserList()">Refresh List</button>
+        <button id="scanButton" class="btn btn-primary mt-3" onclick="openLightbox()"><%= t('checkin_scan.scanQrBtn') %></button>
+        <button id="refreshListButton" class="btn btn-info mt-3 ml-2" onclick="refreshUserList()"><%= t('checkin_scan.refreshListBtn') %></button>
         <!-- <button id="addGuestButton" class="btn btn-success mt-3" data-toggle="modal" data-target="#addGuestModal">Add Guest</button> -->
         
         <div class="table-responsive mt-3">
@@ -174,12 +174,12 @@
                             <% }); %>
                         <% } else { %>
                             <!-- Default columns (if no formConfig) -->
-                            <th>Email</th>
-                        <th>Name</th>
-                        <th>Phone</th>
+                            <th><%= t('common.email') %></th>
+                        <th><%= t('common.name') %></th>
+                        <th><%= t('common.phone') %></th>
                         <% } %>
-                        <th>Point</th>
-                        <th>Status</th>
+                        <th><%= t('checkin_scan.pointCol') %></th>
+                        <th><%= t('checkin_scan.statusCol') %></th>
                     </tr>
                 </thead>
                 <tbody id="userList">
@@ -223,7 +223,7 @@
                             <td><%= user.point || 0 %></td>
                             <td>
                                 <span class="<%= user.isCheckIn ? 'text-primary' : 'text-secondary' %>">
-                                    <%= user.isCheckIn ? 'Checked In' : 'Check In' %>
+                                    <%= user.isCheckIn ? t('checkin_scan.checkedInStatus') : t('checkin_scan.checkInStatus') %>
                                 </span>
                             </td>
                         </tr>
@@ -234,12 +234,12 @@
         
     </div>
     <div class="user-details" id="userDetails">
-        <h4>Guest Details</h4>
-        <p>Select a guest to view details.</p>
+        <h4><%= t('checkin_scan.guestDetailsHeading') %></h4>
+        <p><%= t('checkin_scan.selectGuestHint') %></p>
         <div id="detailsContent"></div>
-        <button id="checkInButton" class="btn btn-primary mt-3" onclick="checkInUser()">Check In</button>
-        <button id="printButton" class="btn btn-secondary mt-3" onclick="printDetails()">Print</button>
-        <button id="refreshButton" class="btn btn-info mt-3" onclick="refreshUserList()">Refresh List</button>
+        <button id="checkInButton" class="btn btn-primary mt-3" onclick="checkInUser()"><%= t('checkin_scan.checkInBtn') %></button>
+        <button id="printButton" class="btn btn-secondary mt-3" onclick="printDetails()"><%= t('checkin_scan.printBtn') %></button>
+        <button id="refreshButton" class="btn btn-info mt-3" onclick="refreshUserList()"><%= t('checkin_scan.refreshListBtn') %></button>
     </div>
 </div>
 
@@ -248,7 +248,7 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addGuestModalLabel">Add Guest</h5>
+                <h5 class="modal-title" id="addGuestModalLabel"><%= t('checkin_scan.addGuestTitle') %></h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -256,18 +256,18 @@
             <div class="modal-body">
                 <form id="addGuestForm">
                     <div class="form-group">
-                        <label for="guestName">Name</label>
+                        <label for="guestName"><%= t('common.name') %></label>
                         <input type="text" class="form-control" id="guestName" required>
                     </div>
                     <div class="form-group">
-                        <label for="guestCompany">Company</label>
+                        <label for="guestCompany"><%= t('common.company') %></label>
                         <input type="text" class="form-control" id="guestCompany">
                     </div>
                     <div class="form-group">
-                        <label for="guestPhone">Phone</label>
+                        <label for="guestPhone"><%= t('common.phone') %></label>
                         <input type="text" class="form-control" id="guestPhone" required>
                     </div>
-                    <button type="submit" class="btn btn-primary">Add Guest</button>
+                    <button type="submit" class="btn btn-primary"><%= t('checkin_scan.addGuestTitle') %></button>
                 </form>
             </div>
         </div>
@@ -287,6 +287,21 @@
 <script>
     const eventId = "<%= event._id %>"; // Get event ID from backend
     const formConfig = <%- JSON.stringify(formConfig || null) %>; // Get form config from backend
+    const _CS = {
+        checkedIn: '<%= t("checkin_scan.checkedInStatus") %>',
+        checkIn: '<%= t("checkin_scan.checkInStatus") %>',
+        refreshListBtn: '<%= t("checkin_scan.refreshListBtn") %>',
+        refreshing: '<%= t("checkin_scan.refreshing") %>',
+        checkInSuccess: '<%= t("checkin_scan.checkInSuccess") %>',
+        alreadyCheckedIn: '<%= t("checkin_scan.alreadyCheckedIn") %>',
+        checkInFailed: '<%= t("checkin_scan.checkInFailed") %>',
+        userNotFound: '<%= t("checkin_scan.userNotFound") %>',
+        loadFailed: '<%= t("checkin_scan.loadFailed") %>',
+        addGuestSuccess: '<%= t("checkin_scan.addGuestSuccess") %>',
+        addGuestFailed: '<%= t("checkin_scan.addGuestFailed") %>',
+        invalidQrCode: '<%= t("checkin_scan.invalidQrCode") %>',
+        cameraFailed: '<%= t("checkin_scan.cameraFailed") %>'
+    };
     const html5QrCode = new Html5Qrcode("reader");
     let scanning = false;
     let currentUserId = null; // Store current user ID for check-in
@@ -325,11 +340,11 @@
     function refreshUserList() {
         const refreshListBtn = $('#refreshListButton');
         const refreshBtn = $('#refreshButton');
-        const originalText = 'Refresh List';
-        
+        const originalText = _CS.refreshListBtn;
+
         // Show loading state for both buttons
-        refreshListBtn.prop('disabled', true).text('Refreshing...');
-        refreshBtn.prop('disabled', true).text('Refreshing...');
+        refreshListBtn.prop('disabled', true).text(_CS.refreshing);
+        refreshBtn.prop('disabled', true).text(_CS.refreshing);
         
         fetchUsers().then(() => {
             // Restore button state after a short delay
@@ -374,7 +389,7 @@
                         
                         // Add Point and Status columns
                         rowData.push(user.point || 0);
-                        rowData.push(`<span class="${user.isCheckIn ? 'text-primary' : 'text-secondary'}">${user.isCheckIn ? 'Checked In' : 'Check In'}</span>`);
+                        rowData.push(`<span class="${user.isCheckIn ? 'text-primary' : 'text-secondary'}">${user.isCheckIn ? _CS.checkedIn : _CS.checkIn}</span>`);
                         
                         rowsData.push({ data: rowData, userId: user._id });
                     });
@@ -445,7 +460,7 @@
             })
             .catch(error => {
                 console.error('Error fetching user:', error);
-                alert('Failed to load user details');
+                alert(_CS.loadFailed);
             });
     }
     
@@ -548,12 +563,12 @@
                     });
                 }, 200);
                 
-                alert('User checked in successfully!');
+                alert(_CS.checkInSuccess);
                 $('#addGuestModal').modal('hide'); // Close modal
             },
             error: function(err) {
                 console.error('Error checking in user:', err);
-                alert('Failed to check in user.');
+                alert(_CS.checkInFailed);
             }
         });
     }
@@ -651,7 +666,7 @@
                 // Assume QR code contains user ID
                 const userId = decodedText.split(',')[0].trim();
                 if (!userId) {
-                    alert('Invalid QR code format');
+                    alert(_CS.invalidQrCode);
                     closeLightbox();
                     return;
                 }
@@ -686,7 +701,7 @@
                                     // Use response data if available, otherwise use original user data
                                     const updatedUser = (response && response._id) ? response : { ...user, isCheckIn: true };
                                     showDetails(updatedUser.name, updatedUser.table, updatedUser.company, updatedUser.phone, true, updatedUser._id, updatedUser.point || 0);
-                                    alert('User checked in successfully!');
+                                    alert(_CS.checkInSuccess);
                                     // Update button states first
                                     document.getElementById('checkInButton').style.display = 'none';
                                     document.getElementById('printButton').style.display = 'inline-block';
@@ -699,8 +714,8 @@
                                 error: function(err) {
                                     console.error('Error checking in user:', err);
                                     const errorMsg = err.responseJSON && err.responseJSON.message 
-                                        ? err.responseJSON.message 
-                                        : 'Failed to check in user.';
+                                        ? err.responseJSON.message
+                                        : _CS.checkInFailed;
                                     alert(errorMsg);
                                     closeLightbox();
                                 }
@@ -708,14 +723,14 @@
                         } else {
                             // User is already checked in
                             showDetails(user.name, user.table, user.company, user.phone, user.isCheckIn, user._id, user.point || 0);
-                            alert('User is already checked in.');
+                            alert(_CS.alreadyCheckedIn);
                             fetchUsers();
                             closeLightbox(); // Close Lightbox
                         }
                     })
                     .catch(error => {
                         console.error('Error fetching user:', error);
-                        alert('User not found. Please check the QR code.');
+                        alert(_CS.userNotFound);
                         closeLightbox();
                     });
             },
@@ -731,7 +746,7 @@
             console.error('Unable to start scanning:', err);
             scanning = false; // Reset scanning flag on error
             clearReader(); // Clear reader on error
-            alert('Unable to start camera. Please check camera permissions and try again.');
+            alert(_CS.cameraFailed);
             closeLightbox();
         });
     }
@@ -857,13 +872,13 @@
                 isCheckIn: true // Add checkin
             }),
             success: function(response) {
-                alert('Guest added successfully!');
+                alert(_CS.addGuestSuccess);
                 $('#addGuestModal').modal('hide'); // Close modal
                 fetchUsers(); // Refresh user list
             },
             error: function(err) {
                 console.error('Error adding guest:', err);
-                alert('Failed to add guest.');
+                alert(_CS.addGuestFailed);
             }
         });
     });

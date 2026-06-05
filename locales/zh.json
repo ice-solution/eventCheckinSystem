@@ -19,7 +19,8 @@
     "backToList": "返回列表", "note": "備注", "selectOption": "--- 請選擇 ---",
     "noImage": "無圖片", "quantity": "數量", "image": "圖片",
     "company": "公司", "table": "桌號", "description": "描述", "points": "積分",
-    "type": "類型", "content": "內容", "subject": "主題", "role": "角色"
+    "type": "類型", "content": "內容", "subject": "主題", "role": "角色",
+    "deselectAll": "取消全選", "sendEmail": "發送郵件", "sendSms": "發送 SMS"
   },
   "menu": {
     "adminTitle": "後台管理", "events": "活動列表", "userManagement": "登入帳號管理",
@@ -49,7 +50,8 @@
   },
   "edit_event_name": {
     "title": "修改活動名稱", "label": "活動名稱", "required": "請輸入活動名稱",
-    "saving": "儲存中...", "saved": "已更新活動名稱。", "error": "更新失敗"
+    "saving": "儲存中...", "saved": "已更新活動名稱。", "error": "更新失敗",
+    "currentName": "目前活動名稱："
   },
   "auth_users": {
     "title": "登入帳號管理", "addUser": "新增用戶",
@@ -365,7 +367,8 @@
     "uploadingBtn": "上傳中..."
   },
   "qrcode_login": {
-    "pageTitle": "QR Code 登入", "heading": "掃描 QR Code 登入", "eventIdLabel": "活動 ID："
+    "pageTitle": "QR Code 登入", "heading": "掃描 QR Code 登入", "eventIdLabel": "活動 ID：",
+    "qrCodeAlt": "活動 QR Code，活動 ID："
   },
   "scan_point_users": {
     "title": "掃瞄加分用戶管理", "addUserBtn": "添加掃瞄加分用戶",
@@ -387,7 +390,7 @@
     "itemNamePlaceholder": "例如：寶箱 A", "pointsLabel": "積分數值 *",
     "pointsPlaceholder": "例如：10", "descriptionLabel": "描述",
     "descriptionPlaceholder": "項目描述（可選）", "createItemBtn": "創建項目",
-    "colName": "項目名稱", "colPoints": "積分", "colDescription": "描述", "colCreatedAt": "創建時間",
+    "colName": "項目名稱", "colPoints": "積分", "colQrCode": "QR Code", "colDescription": "描述", "colCreatedAt": "創建時間",
     "qrNotGenerated": "未生成", "viewQrBtn": "查看 QR Code",
     "qrModalScanHint": "掃描此 QR Code 可獲得積分", "qrModalDataLabel": "數據：",
     "qrDownloadBtn": "下載 QR Code", "editModalTitle": "編輯項目",
@@ -544,5 +547,66 @@
     "usernameLabel": "用戶名", "passwordLabel": "密碼", "roleLabel": "角色",
     "roleAdmin": "管理員", "roleReception": "接待員", "roleStaff": "工作人員", "roleUser": "用戶",
     "createBtn": "建立用戶"
+  },
+  "login": {
+    "signInBtn": "登入",
+    "loginFailed": "登入失敗，請確認帳號及密碼是否正確。"
+  },
+  "checkin_scan": {
+    "title": "賓客簽到",
+    "guestListHeading": "賓客名單",
+    "scanQrBtn": "掃描 QR Code",
+    "refreshListBtn": "重新整理",
+    "refreshing": "重新整理中...",
+    "pointCol": "積分",
+    "statusCol": "狀態",
+    "guestDetailsHeading": "賓客詳情",
+    "selectGuestHint": "選擇賓客查看詳情。",
+    "checkInBtn": "簽到",
+    "printBtn": "列印",
+    "checkedInStatus": "已簽到",
+    "checkInStatus": "簽到",
+    "addGuestTitle": "新增賓客",
+    "checkInSuccess": "用戶簽到成功！",
+    "alreadyCheckedIn": "用戶已簽到。",
+    "checkInFailed": "簽到失敗。",
+    "userNotFound": "找不到用戶，請確認 QR Code。",
+    "loadFailed": "載入賓客詳情失敗",
+    "addGuestSuccess": "賓客新增成功！",
+    "addGuestFailed": "新增賓客失敗。",
+    "invalidQrCode": "QR Code 格式無效",
+    "cameraFailed": "無法啟動相機，請確認相機權限後再試。"
+  },
+  "seating": {
+    "title": "排桌設定",
+    "reloadBtn": "重新載入",
+    "categoryFieldLabel": "分類欄位（FormConfig）",
+    "addTableBtn": "新增圓桌",
+    "canvasLabel": "畫布",
+    "zoomLabel": "縮放",
+    "fitWindowBtn": "適合視窗",
+    "gridLayoutBtn": "圓桌網格排列",
+    "exportPngBtn": "匯出 PNG",
+    "canvasHint": "畫布可捲動；20 桌以上建議先「網格排列」再微調。匯出為完整畫布解析度。",
+    "unfilledCategory": "(未填)",
+    "noUnassigned": "暫無未排桌來賓",
+    "unassignedStat": "未排桌：{count} 人（左側剩餘總席次估算 {seats}，含攜眷）",
+    "companions": "攜眷",
+    "tableNum": "第 {num} 桌",
+    "capacityLabel": "上限",
+    "emptySlotTitle": "空位",
+    "companionSlotTitle": "攜眷",
+    "clickToUnassign": "點擊姓名或圓圈：移回左側未排桌",
+    "removeFromTable": "移出此桌",
+    "occupiedStat": "已佔 {used} / {cap} 席（含攜眷）",
+    "removeTableBtn": "移除此桌",
+    "tableFullError": "此桌已滿或攜眷人數超出上限，請調整攜眷或人數上限。",
+    "saved": "已儲存",
+    "saveFailed": "儲存失敗",
+    "loadFailed": "載入失敗",
+    "exportFailed": "匯出失敗，請重試或縮小畫布後再匯出。",
+    "exportLoadError": "無法載入匯出套件（html2canvas），請檢查網路或稍後再試。",
+    "gridLayoutConfirm": "將依目前桌數重新排列成網格，是否繼續？",
+    "noTablesAlert": "請先新增圓桌"
   }
 }

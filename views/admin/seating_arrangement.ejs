@@ -144,17 +144,17 @@
         <div class="animated fadeIn">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap">
-                    <strong class="card-title">排桌設定 — <%= eventName || eventId %></strong>
+                    <strong class="card-title"><%= t('seating.title') %> — <%= eventName || eventId %></strong>
                     <div>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnReloadApi">重新載入</button>
-                        <button type="button" class="btn btn-success btn-sm" id="btnSave">儲存</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnReloadApi"><%= t('seating.reloadBtn') %></button>
+                        <button type="button" class="btn btn-success btn-sm" id="btnSave"><%= t('common.save') %></button>
                     </div>
                 </div>
                 <div class="card-body">
                     <div class="toolbar-top">
-                        <label class="mb-0">分類欄位（FormConfig）</label>
+                        <label class="mb-0"><%= t('seating.categoryFieldLabel') %></label>
                         <select id="categoryField" class="form-control form-control-sm" style="width: 220px;"></select>
-                        <button type="button" class="btn btn-primary btn-sm" id="btnAddTable">新增圓桌</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="btnAddTable"><%= t('seating.addTableBtn') %></button>
                         <span class="stat-line mb-0" id="statUnassignedToolbar"></span>
                     </div>
                     <div id="alertSeating" class="alert alert-danger" style="display:none;"></div>
@@ -164,14 +164,14 @@
                         </div>
                         <div class="seating-canvas-wrap" id="canvasWrap">
                             <div class="seating-canvas-toolbar">
-                                <span class="mb-0 font-weight-bold">畫布</span>
-                                <label class="mb-0">縮放</label>
-                                <input type="range" id="canvasZoom" min="10" max="100" step="5" value="55" title="縮放僅影響畫面，儲存座標不變">
+                                <span class="mb-0 font-weight-bold"><%= t('seating.canvasLabel') %></span>
+                                <label class="mb-0"><%= t('seating.zoomLabel') %></label>
+                                <input type="range" id="canvasZoom" min="10" max="100" step="5" value="55" title="<%= t('seating.zoomLabel') %>">
                                 <span id="canvasZoomPct" class="text-monospace">55%</span>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnZoomFit">適合視窗</button>
-                                <button type="button" class="btn btn-sm btn-outline-primary" id="btnLayoutGrid" title="依目前桌數排成多列網格">圓桌網格排列</button>
-                                <button type="button" class="btn btn-sm btn-outline-success" id="btnExportPng">匯出 PNG</button>
-                                <span class="toolbar-hint">畫布可捲動；20 桌以上建議先「網格排列」再微調。匯出為完整畫布解析度。</span>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnZoomFit"><%= t('seating.fitWindowBtn') %></button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="btnLayoutGrid"><%= t('seating.gridLayoutBtn') %></button>
+                                <button type="button" class="btn btn-sm btn-outline-success" id="btnExportPng"><%= t('seating.exportPngBtn') %></button>
+                                <span class="toolbar-hint"><%= t('seating.canvasHint') %></span>
                             </div>
                             <div class="seating-canvas-scroll" id="canvasScroll">
                                 <div class="seating-canvas-scale" id="seatingCanvasScale" style="transform-origin: 0 0;">
@@ -192,6 +192,26 @@
 <script>
 (function() {
     const eventId = '<%= eventId %>';
+    const _SA = {
+        unfilledCategory: '<%= t("seating.unfilledCategory") %>',
+        noUnassigned: '<%= t("seating.noUnassigned") %>',
+        unassignedStat: '<%= t("seating.unassignedStat") %>',
+        companions: '<%= t("seating.companions") %>',
+        capacityLabel: '<%= t("seating.capacityLabel") %>',
+        emptySlotTitle: '<%= t("seating.emptySlotTitle") %>',
+        companionSlotTitle: '<%= t("seating.companionSlotTitle") %>',
+        clickToUnassign: '<%= t("seating.clickToUnassign") %>',
+        removeFromTable: '<%= t("seating.removeFromTable") %>',
+        removeTableBtn: '<%= t("seating.removeTableBtn") %>',
+        tableFullError: '<%= t("seating.tableFullError") %>',
+        saved: '<%= t("seating.saved") %>',
+        saveFailed: '<%= t("seating.saveFailed") %>',
+        loadFailed: '<%= t("seating.loadFailed") %>',
+        exportFailed: '<%= t("seating.exportFailed") %>',
+        exportLoadError: '<%= t("seating.exportLoadError") %>',
+        gridLayoutConfirm: '<%= t("seating.gridLayoutConfirm") %>',
+        noTablesAlert: '<%= t("seating.noTablesAlert") %>'
+    };
     let users = <%- usersJson %>;
     let formFields = <%- formFieldsJson %>;
     let state = {
@@ -337,7 +357,7 @@
         const groups = {};
         unassigned.forEach(u => {
             const raw = u[field];
-            const key = (raw !== undefined && raw !== null && String(raw).trim() !== '') ? String(raw).trim() : '(未填)';
+            const key = (raw !== undefined && raw !== null && String(raw).trim() !== '') ? String(raw).trim() : _SA.unfilledCategory;
             if (!groups[key]) groups[key] = [];
             groups[key].push(u);
         });
@@ -351,7 +371,7 @@
                 const comp = parseInt(state.companionByUserId[uid], 10) || 0;
                 html += '<div class="guest-row" draggable="true" data-user-id="' + uid + '">' +
                     '<span class="guest-name" title="' + escapeAttr(u.name || '') + '">' + escapeHtml(u.name || uid) + '</span>' +
-                    '<span class="text-muted small mr-1">攜眷</span>' +
+                    '<span class="text-muted small mr-1">' + _SA.companions + '</span>' +
                     '<div class="companion-stepper" data-user-id="' + uid + '">' +
                     '<button type="button" data-d="-1">−</button>' +
                     '<span>' + comp + '</span>' +
@@ -359,7 +379,7 @@
                     '</div></div>';
             });
         });
-        $guestMount.innerHTML = html || '<p class="text-muted small">暫無未排桌來賓</p>';
+        $guestMount.innerHTML = html || '<p class="text-muted small">' + _SA.noUnassigned + '</p>';
 
         $guestMount.querySelectorAll('.guest-row').forEach(row => {
             row.addEventListener('dragstart', function(e) {
@@ -400,7 +420,7 @@
         const inTable = assignedUserIds();
         const unassigned = users.filter(u => !inTable[u._id]).length;
         const totalSeats = users.reduce((sum, u) => sum + (inTable[u._id] ? 0 : seatsForUser(u._id)), 0);
-        const txt = '未排桌：' + unassigned + ' 人（左側剩餘總席次估算 ' + totalSeats + '，含攜眷）';
+        const txt = _SA.unassignedStat.replace('{count}', unassigned).replace('{seats}', totalSeats);
         const el1 = document.getElementById('statUnassignedInner');
         const el2 = document.getElementById('statUnassignedToolbar');
         if (el1) el1.textContent = txt;
@@ -428,7 +448,7 @@
         { brd: '#ef6c00', bg: '#fff3e0' }
     ];
     function hashCat(str) {
-        var s = String(str || '(未填)');
+        var s = String(str || _SA.unfilledCategory);
         var h = 0;
         for (var i = 0; i < s.length; i++) h = ((h << 5) - h) + s.charCodeAt(i) | 0;
         return Math.abs(h);
@@ -437,7 +457,7 @@
         var u = findUser(uid);
         var field = state.categoryFieldName || 'company';
         var raw = u ? u[field] : '';
-        var key = (raw !== undefined && raw !== null && String(raw).trim() !== '') ? String(raw).trim() : '(未填)';
+        var key = (raw !== undefined && raw !== null && String(raw).trim() !== '') ? String(raw).trim() : _SA.unfilledCategory;
         var p = RT_PALETTE[hashCat(key) % RT_PALETTE.length];
         return { brd: p.brd, bg: p.bg, label: key };
     }
@@ -495,8 +515,8 @@
 
             var toolbar = document.createElement('div');
             toolbar.className = 'rt-toolbar';
-            toolbar.innerHTML = '<span>第 ' + (idx + 1) + ' 桌</span>' +
-                '<div class="cap-row">上限 <input type="number" min="1" max="999" value="' + cap + '" class="form-control form-control-sm tbl-cap"/></div>';
+            toolbar.innerHTML = '<span>' + _SA.tableNum.replace('{num}', idx + 1) + '</span>' +
+                '<div class="cap-row">' + _SA.capacityLabel + ' <input type="number" min="1" max="999" value="' + cap + '" class="form-control form-control-sm tbl-cap"/></div>';
 
             var plate = document.createElement('div');
             plate.className = 'rt-plate';
@@ -525,14 +545,14 @@
 
                 if (slot.kind === 'empty') {
                     slotEl.className = 'rt-slot empty';
-                    slotEl.title = '空位';
+                    slotEl.title = _SA.emptySlotTitle;
                 } else if (slot.kind === 'companion') {
                     slotEl.className = 'rt-slot companion';
                     slotEl.textContent = '+1';
-                    slotEl.title = '攜眷';
+                    slotEl.title = _SA.companionSlotTitle;
                 } else {
                     slotEl.className = 'rt-slot guest';
-                    slotEl.title = '點擊姓名或圓圈：移回左側未排桌';
+                    slotEl.title = _SA.clickToUnassign;
                     var cols = categoryColorsForUser(slot.uid);
                     slotEl.style.setProperty('--rt-brd', cols.brd);
                     slotEl.style.setProperty('--rt-bg', cols.bg);
@@ -545,7 +565,7 @@
                     rm.type = 'button';
                     rm.className = 'rt-remove';
                     rm.innerHTML = '&times;';
-                    rm.title = '移出此桌';
+                    rm.title = _SA.removeFromTable;
                     var unassignThisGuest = function(ev) {
                         if (ev) {
                             ev.preventDefault();
@@ -571,8 +591,8 @@
 
             var foot = document.createElement('div');
             foot.className = 'rt-foot';
-            foot.innerHTML = '<span>已佔 ' + used + ' / ' + cap + ' 席（含攜眷）</span> ' +
-                '<button type="button" class="btn btn-sm btn-outline-danger tbl-remove">移除此桌</button>';
+            foot.innerHTML = '<span>' + _SA.occupiedStat.replace('{used}', used).replace('{cap}', cap) + '</span> ' +
+                '<button type="button" class="btn btn-sm btn-outline-danger tbl-remove">' + _SA.removeTableBtn + '</button>';
 
             div.appendChild(toolbar);
             div.appendChild(plate);
@@ -610,7 +630,7 @@
                 var trial = { userIds: (t.userIds || []).concat([uid]), capacity: cap };
                 var newUsed = tableSeatsUsed({ userIds: trial.userIds });
                 if (newUsed > cap) {
-                    showErr('此桌已滿或攜眷人數超出上限，請調整攜眷或人數上限。');
+                    showErr(_SA.tableFullError);
                     setTimeout(function() { showErr(''); }, 3500);
                     return;
                 }
@@ -674,17 +694,17 @@
     document.getElementById('btnZoomFit').addEventListener('click', zoomFitViewport);
     document.getElementById('btnLayoutGrid').addEventListener('click', function() {
         if (state.tables.length === 0) {
-            alert('請先新增圓桌');
+            alert(_SA.noTablesAlert);
             return;
         }
-        if (!confirm('將依目前桌數重新排列成網格，是否繼續？')) return;
+        if (!confirm(_SA.gridLayoutConfirm)) return;
         layoutTablesGrid();
         zoomFitViewport();
     });
     document.getElementById('btnExportPng').addEventListener('click', function() {
         var btn = document.getElementById('btnExportPng');
         if (typeof html2canvas === 'undefined') {
-            alert('無法載入匯出套件（html2canvas），請檢查網路或稍後再試。');
+            alert(_SA.exportLoadError);
             return;
         }
         sizeCanvasFromTables();
@@ -708,7 +728,7 @@
                 link.click();
             }).catch(function(err) {
                 console.error(err);
-                alert('匯出失敗，請重試或縮小畫布後再匯出。');
+                alert(_SA.exportFailed);
             }).finally(function() {
                 $canvasZoom.value = prevZ;
                 applyCanvasZoom();
@@ -730,11 +750,11 @@
             })
         }).then(function(r) {
             return r.json().then(function(j) {
-                if (!r.ok) throw new Error(j.message || '儲存失敗');
-                alert('已儲存');
+                if (!r.ok) throw new Error(j.message || _SA.saveFailed);
+                alert(_SA.saved);
             });
         }).catch(function(err) {
-            alert(err.message || '儲存失敗');
+            alert(err.message || _SA.saveFailed);
         });
     });
 
@@ -750,7 +770,7 @@
                 renderGuestList();
                 renderTables();
             })
-            .catch(function() { alert('載入失敗'); });
+            .catch(function() { alert(_SA.loadFailed); });
     });
 
     renderCategorySelect();
