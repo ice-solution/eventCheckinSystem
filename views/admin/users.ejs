@@ -788,8 +788,8 @@
                                 </button>
                                 <div class="btn-scroll-separator"></div>
                                 <!-- Group 2: Email -->
-                                <button id="emailSettingsBtn" class="btn btn-secondary" style="display: none;">
-                                    <i class="fas fa-paper-plane"></i> Send Email
+                                <button id="emailSettingsBtn" class="btn btn-secondary">
+                                    <i class="fas fa-paper-plane"></i> <%= t('users.emailSettingsBtn') %>
                                 </button>
                                 <a href="/events/<%= event._id %>/email-records" class="btn btn-warning">
                                     <i class="fas fa-inbox"></i> <%= t('users.emailRecordsBtn') %>
@@ -1009,7 +1009,7 @@
                                             </div>
                                         </div>
                                         <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0; display: flex; justify-content: flex-end;">
-                                            <button type="button" class="btn btn-warning" id="sendEmailNowBtn"><i class="fas fa-envelope"></i> Send Email</button>
+                                            <button type="button" class="btn btn-warning" id="sendEmailNowBtn"><i class="fas fa-envelope"></i> <%= t('users.saveEmailSettings') %></button>
                                         </div>
                                     </form>
                                         </div>
