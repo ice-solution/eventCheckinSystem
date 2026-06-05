@@ -118,12 +118,7 @@ If you cannot read this message, please &lt;a href="{{emailPreviewUrl}}" target=
                                 <br>付款憑證（<code>payment_receipt</code><% if (invoiceEmailEnabled) { %>／發票 <code>invoice</code><% } %>）：可加 <code>&amp;transactionId=訂單_id</code>；未加時會用該活動<strong>最新一筆訂單</strong>作範例
                                 <br>變數名稱正確：<code>{{transaction._id}}</code>、<code>{{transaction.ticketTitle}}</code>、<code>{{invoice.currency}}</code> 等
                             </small>
-                            <button type="button" class="btn btn-danger" onclick="deleteTemplate()"><%= t('create_email_template.deleteTemplateBtn') %></button>
-                            <% if (eventId) { %>
-                            <a href="/events/<%= eventId %>/emailTemplate" class="btn btn-secondary"><%= t('create_email_template.backToEventList') %></a>
-                            <% } else { %>
-                            <a href="/emailTemplate" class="btn btn-secondary"><%= t('common.backToAdmin') %></a>
-                            <% } %>
+                            <button type="button" class="btn btn-danger" onclick="deleteTemplate()" style="display: none;"><%= t('create_email_template.deleteTemplateBtn') %></button>
                             </form>
                             <div id="alertContainer" class="mt-3"></div>
 
