@@ -788,10 +788,10 @@
                                 </button>
                                 <div class="btn-scroll-separator"></div>
                                 <!-- Group 2: Email -->
-                                <button id="emailSettingsBtn" class="btn btn-secondary">
+                                <button id="emailSettingsBtn" class="btn btn-secondary" style="display: none;">
                                     <i class="fas fa-paper-plane"></i> Send Email
                                 </button>
-                                <a href="/events/<%= event._id %>/email-records" class="btn btn-secondary">
+                                <a href="/events/<%= event._id %>/email-records" class="btn btn-warning">
                                     <i class="fas fa-inbox"></i> <%= t('users.emailRecordsBtn') %>
                                 </a>
                                 <button id="batchSendEmailBtn" class="btn btn-warning" style="display: none;">
@@ -802,13 +802,12 @@
                                 </button>
                                 <div class="btn-scroll-separator"></div>
                                 <!-- Group 3: Import & Report -->
-                                <a href="/events/<%= event._id%>/import" class="btn btn-secondary">
+                                <a href="/events/<%= event._id%>/import" class="btn btn-success">
                                     <i class="fas fa-upload"></i> <%= t('users.importBtn') %>
                                 </a>
-                                <a href="/events/<%= event._id %>/report" class="btn btn-success">
+                                <a href="/events/<%= event._id %>/report" class="btn btn-info">
                                     <i class="fas fa-download"></i> <%= t('users.reportBtn') %>
                                 </a>
-                                <div class="btn-scroll-separator"></div>
                                 <%# HIDDEN: Scan QR Code — reserved for future use %>
                                 <% if (false) { %>
                                 <a href="/events/<%= event._id%>/scan" class="btn btn-secondary">
@@ -1018,7 +1017,8 @@
                             </div>
 
                             <!-- Add User Form -->
-                            <div id="addUserForm" class="add-user-form" style="display: none;">
+                            <div id="addUserForm" class="add-user-form" style="display: none; position: relative;">
+                                <button type="button" id="cancelAddUser" aria-label="Close" style="position: absolute; top: 20px; right: 20px; background: none; border: none; font-size: 1.4rem; line-height: 1; color: #6c757d; cursor: pointer;">&times;</button>
                                 <h5><%= t('users.addUserFormTitle') %></h5>
                                 <form id="newUserForm">
                                     <% if (formConfig && formConfig.sections) { %>
@@ -1032,8 +1032,8 @@
                                                         let sectionTitle = '';
                                                         if (typeof section.sectionTitle === 'string') {
                                                             sectionTitle = section.sectionTitle;
-                                                        } else if (section.sectionTitle && section.sectionTitle[formConfig.defaultLanguage]) {
-                                                            sectionTitle = section.sectionTitle[formConfig.defaultLanguage];
+                                                        } else if (section.sectionTitle && section.sectionTitle[lang]) {
+                                                            sectionTitle = section.sectionTitle[lang];
                                                         } else if (section.sectionTitle && section.sectionTitle.zh) {
                                                             sectionTitle = section.sectionTitle.zh;
                                                         } else {
@@ -1053,8 +1053,8 @@
                                                                             let fieldLabel = '';
                                                                             if (typeof field.label === 'string') {
                                                                                 fieldLabel = field.label;
-                                                                            } else if (field.label && field.label[formConfig.defaultLanguage]) {
-                                                                                fieldLabel = field.label[formConfig.defaultLanguage];
+                                                                            } else if (field.label && field.label[lang]) {
+                                                                                fieldLabel = field.label[lang];
                                                                             } else if (field.label && field.label.zh) {
                                                                                 fieldLabel = field.label.zh;
                                                                             } else {
@@ -1078,8 +1078,8 @@
                                                                                         let optionLabel = '';
                                                                                         if (typeof option.label === 'string') {
                                                                                             optionLabel = option.label;
-                                                                                        } else if (option.label && option.label[formConfig.defaultLanguage]) {
-                                                                                            optionLabel = option.label[formConfig.defaultLanguage];
+                                                                                        } else if (option.label && option.label[lang]) {
+                                                                                            optionLabel = option.label[lang];
                                                                                         } else if (option.label && option.label.zh) {
                                                                                             optionLabel = option.label.zh;
                                                                                         } else {
@@ -1104,8 +1104,8 @@
                                                                                         let optionLabel = '';
                                                                                         if (typeof option.label === 'string') {
                                                                                             optionLabel = option.label;
-                                                                                        } else if (option.label && option.label[formConfig.defaultLanguage]) {
-                                                                                            optionLabel = option.label[formConfig.defaultLanguage];
+                                                                                        } else if (option.label && option.label[lang]) {
+                                                                                            optionLabel = option.label[lang];
                                                                                         } else if (option.label && option.label.zh) {
                                                                                             optionLabel = option.label.zh;
                                                                                         } else {
@@ -1130,8 +1130,8 @@
                                                                                             let optionLabel = '';
                                                                                             if (typeof option.label === 'string') {
                                                                                                 optionLabel = option.label;
-                                                                                            } else if (option.label && option.label[formConfig.defaultLanguage]) {
-                                                                                                optionLabel = option.label[formConfig.defaultLanguage];
+                                                                                            } else if (option.label && option.label[lang]) {
+                                                                                                optionLabel = option.label[lang];
                                                                                             } else if (option.label && option.label.zh) {
                                                                                                 optionLabel = option.label.zh;
                                                                                             } else {
@@ -1157,8 +1157,8 @@
                                                                                             let optionLabel = '';
                                                                                             if (typeof option.label === 'string') {
                                                                                                 optionLabel = option.label;
-                                                                                            } else if (option.label && option.label[formConfig.defaultLanguage]) {
-                                                                                                optionLabel = option.label[formConfig.defaultLanguage];
+                                                                                            } else if (option.label && option.label[lang]) {
+                                                                                                optionLabel = option.label[lang];
                                                                                             } else if (option.label && option.label.zh) {
                                                                                                 optionLabel = option.label.zh;
                                                                                             } else {
@@ -1172,10 +1172,10 @@
                                                                             </div>
                                                                         <% } else if (field.type === 'textarea') { %>
                                                                             <textarea class="form-control" id="newUser<%= field.fieldName %>" name="<%= field.fieldName %>" 
-                                                                                      placeholder="<%= (typeof field.placeholder === 'string' ? field.placeholder : (field.placeholder && field.placeholder[formConfig.defaultLanguage] ? field.placeholder[formConfig.defaultLanguage] : (field.placeholder && field.placeholder.zh ? field.placeholder.zh : ''))) || '' %>" <%= field.required ? 'required' : '' %> rows="3"></textarea>
+                                                                                      placeholder="<%= (typeof field.placeholder === 'string' ? field.placeholder : (field.placeholder && field.placeholder[lang] ? field.placeholder[lang] : (field.placeholder && field.placeholder.zh ? field.placeholder.zh : ''))) || '' %>" <%= field.required ? 'required' : '' %> rows="3"></textarea>
                                                                         <% } else { %>
                                                                             <input type="<%= field.type %>" class="form-control" id="newUser<%= field.fieldName %>" name="<%= field.fieldName %>" 
-                                                                                   placeholder="<%= (typeof field.placeholder === 'string' ? field.placeholder : (field.placeholder && field.placeholder[formConfig.defaultLanguage] ? field.placeholder[formConfig.defaultLanguage] : (field.placeholder && field.placeholder.zh ? field.placeholder.zh : ''))) || '' %>" <%= field.required ? 'required' : '' %>>
+                                                                                   placeholder="<%= (typeof field.placeholder === 'string' ? field.placeholder : (field.placeholder && field.placeholder[lang] ? field.placeholder[lang] : (field.placeholder && field.placeholder.zh ? field.placeholder.zh : ''))) || '' %>" <%= field.required ? 'required' : '' %>>
                                                                         <% } %>
                                                                     </div>
                                                                 </div>
@@ -1217,8 +1217,7 @@
                                         </div>
                                     <% } %>
                                     <div class="form-group">
-                                        <button type="submit" class="btn btn-success"><%= t('users.addUserBtn') %></button>
-                                        <button type="button" class="btn btn-secondary ml-2" id="cancelAddUser"><%= t('common.cancel') %></button>
+                                        <button type="submit" class="btn btn-success"><i class="fas fa-plus"></i> <%= t('users.addUserBtn') %></button>
                                     </div>
                                 </form>
                             </div>
@@ -1257,7 +1256,7 @@
                                                             <% const cond1Fields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
                                                             <% cond1Fields.forEach(field => { %>
                                                                 <% if (field.visible) { %>
-                                                                    <% let l1 = (typeof field.label === 'string') ? field.label : (field.label && (field.label[formConfig.defaultLanguage] || field.label.zh || field.label.en)) ? (field.label[formConfig.defaultLanguage] || field.label.zh || field.label.en) : field.fieldName; %>
+                                                                    <% let l1 = (typeof field.label === 'string') ? field.label : (field.label && (field.label[lang] || field.label.zh || field.label.en)) ? (field.label[lang] || field.label.zh || field.label.en) : field.fieldName; %>
                                                                     <option value="<%= field.fieldName %>"><%= l1 %> (<%= field.fieldName %>)</option>
                                                                 <% } %>
                                                             <% }); %>
@@ -1294,7 +1293,7 @@
                                                             <% const cond2Fields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
                                                             <% cond2Fields.forEach(field => { %>
                                                                 <% if (field.visible) { %>
-                                                                    <% let l2 = (typeof field.label === 'string') ? field.label : (field.label && (field.label[formConfig.defaultLanguage] || field.label.zh || field.label.en)) ? (field.label[formConfig.defaultLanguage] || field.label.zh || field.label.en) : field.fieldName; %>
+                                                                    <% let l2 = (typeof field.label === 'string') ? field.label : (field.label && (field.label[lang] || field.label.zh || field.label.en)) ? (field.label[lang] || field.label.zh || field.label.en) : field.fieldName; %>
                                                                     <option value="<%= field.fieldName %>"><%= l2 %> (<%= field.fieldName %>)</option>
                                                                 <% } %>
                                                             <% }); %>
@@ -1360,8 +1359,8 @@
                                                                 let displayLabel = '';
                                                                 if (typeof field.label === 'string') {
                                                                     displayLabel = field.label;
-                                                                } else if (field.label && field.label[formConfig.defaultLanguage]) {
-                                                                    displayLabel = field.label[formConfig.defaultLanguage];
+                                                                } else if (field.label && field.label[lang]) {
+                                                                    displayLabel = field.label[lang];
                                                                 } else if (field.label && field.label.zh) {
                                                                     displayLabel = field.label.zh;
                                                                 } else {

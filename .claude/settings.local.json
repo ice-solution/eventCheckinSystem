@@ -51,7 +51,10 @@
       "Bash(powershell -Command \"Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait\\('%{F4}'\\)\")",
       "Bash(cat)",
       "Bash(chmod +x /tmp/test_email_routes.sh)",
-      "Bash(bash /tmp/test_email_routes.sh)"
+      "Bash(bash /tmp/test_email_routes.sh)",
+      "Bash(git checkout *)",
+      "Bash(grep -n \"jQuery\\\\|\\\\$\\(\" views/admin/badge_design.ejs)",
+      "Bash(grep -n \"include.*footer\\\\|<\\\\/script>\" views/admin/users.ejs)"
     ]
   }
 }

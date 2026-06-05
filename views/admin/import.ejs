@@ -41,14 +41,14 @@
                                 <div class="d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
                                     <div style="display:flex; gap:8px; flex-wrap:wrap;">
                                         <% if (importFields && importFields.length > 0) { %>
-                                            <a href="/events/<%= event._id %>/import/export-current" class="btn btn-info"><%= t('import_users.downloadCurrent') %></a>
-                                            <a href="/events/<%= event._id %>/import/sample" class="btn btn-info"><%= t('import_users.downloadSample') %></a>
+                                            <a href="/events/<%= event._id %>/import/export-current" class="btn btn-info"><i class="fas fa-download"></i> <%= t('import_users.downloadCurrent') %></a>
+                                            <a href="/events/<%= event._id %>/import/sample" class="btn btn-info"><i class="fas fa-download"></i> <%= t('import_users.downloadSample') %></a>
                                         <% } else { %>
-                                            <span class="btn btn-info disabled" aria-disabled="true"><%= t('import_users.downloadCurrent') %></span>
-                                            <span class="btn btn-info disabled" aria-disabled="true"><%= t('import_users.downloadSample') %></span>
+                                            <span class="btn btn-info disabled" aria-disabled="true"><i class="fas fa-download"></i> <%= t('import_users.downloadCurrent') %></span>
+                                            <span class="btn btn-info disabled" aria-disabled="true"><i class="fas fa-download"></i> <%= t('import_users.downloadSample') %></span>
                                         <% } %>
                                     </div>
-                                    <button type="submit" class="btn btn-primary" <%= (importFields && importFields.length > 0) ? '' : 'disabled' %>><%= t('import_users.importBtn') %></button>
+                                    <button type="submit" class="btn btn-primary" <%= (importFields && importFields.length > 0) ? '' : 'disabled' %>><i class="fas fa-upload"></i> <%= t('import_users.importBtn') %></button>
                                 </div>
                             </form>
                         </div>
