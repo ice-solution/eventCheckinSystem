@@ -312,6 +312,7 @@ router.get('/:eventId/email-records/:trackingId', eventsController.getEmailRecor
 // Email Template
 // Email Template 路由（更具體的路由優先）
 router.get('/:eventId/emailTemplate/create', emailTemplateController.renderCreateEmailTemplatePage); // 創建頁面（必須在 /:id 之前）
+router.get('/:eventId/emailTemplate/seed', emailTemplateController.getEmailTemplateSeed); // 建立時載入已存／預設模板
 router.post('/:eventId/emailTemplate/:id/send', emailTemplateController.sendEmailById); // 發送電子郵件
 router.get('/:eventId/emailTemplate', emailTemplateController.renderEmailTemplateList); // 列表頁面
 router.post('/:eventId/emailTemplate', emailTemplateController.createEmailTemplate); // 創建郵件

@@ -26,6 +26,7 @@ const eventsController = require('./controllers/eventsController');
 const luckydrawGameConfigController = require('./controllers/luckydrawGameConfigController');
 
 const Auth = require('./model/Auth'); // 引入 Auth 模型
+const { isInvoiceEmailEnabled } = require('./utils/featureFlags');
 const path = require('path'); // 引入 path 模組
 const bcrypt = require('bcrypt');
 const { render } = require('ejs');
@@ -90,6 +91,7 @@ app.use((req, res, next) => {
     res.locals.success_msg = req.flash('success_msg');
     res.locals.error_msg = req.flash('error_msg');
     res.locals.TINYMCE_API_KEY = process.env.TINYMCE_API_KEY || '';
+    res.locals.invoiceEmailEnabled = isInvoiceEmailEnabled();
     if (req.session && req.session.user) {
         res.locals.userForMenu = req.session.user; // 左側選單依權限顯示用
     } else {

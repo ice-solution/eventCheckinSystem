@@ -1481,6 +1481,10 @@
                                                             <a class="dropdown-item resend-email-option" href="#" data-type="welcome"><%= t('users.emailTypeWelcome') %></a>
                                                             <a class="dropdown-item resend-email-option" href="#" data-type="knowledge"><%= t('users.emailTypeKnowledge') %></a>
                                                             <a class="dropdown-item resend-email-option" href="#" data-type="reminder"><%= t('users.emailTypeReminder') %></a>
+                                                            <% if (invoiceEmailEnabled) { %>
+                                                            <a class="dropdown-item resend-email-option" href="#" data-type="invoice"><%= t('users.emailTypeInvoice') %></a>
+                                                            <% } %>
+                                                            <a class="dropdown-item resend-email-option" href="#" data-type="payment_receipt"><%= t('users.emailTypePaymentReceipt') %></a>
                                                         </div>
                                                     </div>
                                                     <button class="btn btn-delete-x delete-user" data-_id="<%= user._id %>" title="<%= t('common.delete') %>">✕</button>
@@ -1543,6 +1547,9 @@ const _US = {
     emailTypeWelcome: '<%= t("users.emailTypeWelcome") %>',
     emailTypeKnowledge: '<%= t("users.emailTypeKnowledge") %>',
     emailTypeReminder: '<%= t("users.emailTypeReminder") %>',
+    invoiceEmailEnabled: <%= invoiceEmailEnabled ? 'true' : 'false' %>,
+    emailTypeInvoice: '<%= t("users.emailTypeInvoice") %>',
+    emailTypePaymentReceipt: '<%= t("users.emailTypePaymentReceipt") %>',
     conditionLabel: '<%= t("users.condition") %>',
     useDefaultTemplate: '<%= t("users.useDefaultTemplate") %>',
     confirmSend: '<%= t("users.confirmSend") %>',
@@ -3081,6 +3088,8 @@ const _US = {
                         '<a class="dropdown-item resend-email-option" href="#" data-type="welcome">' + _US.emailTypeWelcome + '</a>' +
                         '<a class="dropdown-item resend-email-option" href="#" data-type="knowledge">' + _US.emailTypeKnowledge + '</a>' +
                         '<a class="dropdown-item resend-email-option" href="#" data-type="reminder">' + _US.emailTypeReminder + '</a>' +
+                        (_US.invoiceEmailEnabled ? '<a class="dropdown-item resend-email-option" href="#" data-type="invoice">' + _US.emailTypeInvoice + '</a>' : '') +
+                        '<a class="dropdown-item resend-email-option" href="#" data-type="payment_receipt">' + _US.emailTypePaymentReceipt + '</a>' +
                         '</div>' +
                         '</div>' +
                         '<button class="btn btn-delete-x delete-user" data-_id="' + response._id + '" title="' + _US.deleteBtn + '">✕</button>' +

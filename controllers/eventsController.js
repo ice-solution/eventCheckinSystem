@@ -23,7 +23,8 @@ const multer = require('multer');
 const fs = require('fs');
 const { getSocket } = require('../socket'); // 引入 socket 以發送實時更新
 const { embedKaitiFontInEmail } = require('../utils/embedEmailFonts'); // 引入字型嵌入功能
-const { replaceTemplateVariables, buildEmailTemplateAdditionalVars } = require('../utils/replaceTemplateVariables');
+const { replaceTemplateVariables, buildEmailTemplateAdditionalVars, flattenForTemplate } = require('../utils/replaceTemplateVariables');
+const { isInvoiceEmailEnabled } = require('../utils/featureFlags');
 
 /** 取得對外 base URL（依 DOMAIN/domain，缺協議時自動補 https://） */
 function getPublicBaseUrl() {
@@ -40,18 +41,11 @@ function getPrizePictureUrl(picture) {
     return p.startsWith('/') ? base + p : base + '/' + p;
 }
 
-/** 將物件壓平為 {{prefix.key}} 用的變數表（一層，巢狀用 prefix.key） */
-function flattenForTemplate(obj, prefix) {
-    if (!obj || typeof obj !== 'object') return {};
-    const out = {};
-    const toStr = (v) => (v === undefined || v === null ? '' : String(v));
-    Object.keys(obj).forEach(key => {
-        if (key.startsWith('_') && key !== '_id') return;
-        const val = obj[key];
-        if (val !== null && typeof val === 'object' && !(val instanceof Date) && !Array.isArray(val)) return; // 略過巢狀物件
-        out[`${prefix}.${key}`] = Array.isArray(val) ? JSON.stringify(val) : toStr(val);
-    });
-    return out;
+/** 查詢活動或全域郵件模板（eventId 優先，其次 eventId: null） */
+async function findEmailTemplateForEvent(eventId, type) {
+    const eventTemplate = await EmailTemplate.findOne({ eventId, type });
+    if (eventTemplate) return eventTemplate;
+    return EmailTemplate.findOne({ eventId: null, type });
 }
 
 /** 發票 email 預設內容（建立訂單後發送） */
@@ -89,14 +83,49 @@ function getDefaultPaymentReceiptEmailContent(transaction, event) {
 </body></html>`;
 }
 
+/** 從 event.users 以 email 找 userId（供郵件記錄） */
+function findEventUserIdByEmail(eventDoc, email) {
+    if (!eventDoc || !email || !Array.isArray(eventDoc.users)) return null;
+    const normalized = String(email).trim().toLowerCase();
+    const user = eventDoc.users.find(u => u.email && String(u.email).trim().toLowerCase() === normalized);
+    return user && user._id ? String(user._id) : null;
+}
+
+/** 發送郵件並寫入 EmailRecord（invoice / payment_receipt 等） */
+async function sendEmailWithRecord({ recipient, subject, messageBody, emailTemplate, eventId, userId }) {
+    let body = embedKaitiFontInEmail(messageBody);
+    const trackingId = await emailTracking.createEmailRecord({
+        recipient,
+        subject,
+        emailTemplateId: emailTemplate ? emailTemplate._id : null,
+        eventId,
+        userId: userId || null,
+    });
+    if (trackingId) {
+        body = emailTracking.addTrackingToEmail(body, trackingId);
+    }
+    const result = await ses.sendEmail(recipient, subject, body);
+    if (trackingId) {
+        if (result && result.MessageId) {
+            await emailTracking.updateEmailRecordStatus(trackingId, 'sent', result.MessageId);
+        } else if (result instanceof Error) {
+            await emailTracking.updateEmailRecordStatus(trackingId, 'failed');
+        } else {
+            await emailTracking.updateEmailRecordStatus(trackingId, 'sent');
+        }
+    }
+    return result;
+}
+
 /** 發送發票 email（建立訂單後，寄給登記者） */
-async function sendInvoiceEmail(transaction, event) {
+async function sendInvoiceEmail(transaction, event, emailTemplateId = null) {
     const email = transaction.userEmail;
     if (!email || !email.trim()) return;
     try {
         const eventDoc = typeof event.populate === 'function' ? event : await Event.findById(transaction.eventId);
         if (!eventDoc) return;
-        let emailTemplate = await EmailTemplate.findOne({ eventId: eventDoc._id, type: 'invoice' });
+        let emailTemplate = emailTemplateId ? await EmailTemplate.findById(emailTemplateId) : null;
+        if (!emailTemplate) emailTemplate = await EmailTemplate.findOne({ eventId: eventDoc._id, type: 'invoice' });
         if (!emailTemplate) emailTemplate = await EmailTemplate.findOne({ eventId: null, type: 'invoice' });
         const userLike = { name: transaction.userName || '', email: transaction.userEmail || '' };
         const invoiceData = transaction.transactionData && Object.keys(transaction.transactionData).length > 0
@@ -117,22 +146,31 @@ async function sendInvoiceEmail(transaction, event) {
             ? replaceTemplateVariables(emailTemplate.content, userLike, eventDoc, additionalVars)
             : getDefaultInvoiceEmailContent(transaction, eventDoc);
         messageBody = replaceTemplateVariables(messageBody, userLike, eventDoc, additionalVars);
-        messageBody = embedKaitiFontInEmail(messageBody);
-        await ses.sendEmail(email, subject, messageBody);
+        const userId = findEventUserIdByEmail(eventDoc, email);
+        await sendEmailWithRecord({
+            recipient: email,
+            subject,
+            messageBody,
+            emailTemplate,
+            eventId: eventDoc._id,
+            userId,
+        });
         console.log('[Invoice Email] Sent to:', email);
     } catch (err) {
         console.error('[Invoice Email] Error:', err);
+        throw err;
     }
 }
 
 /** 發送付款憑證 email（webhook 付款完成後，寄給登記者） */
-async function sendPaymentReceiptEmail(transaction, event, user) {
+async function sendPaymentReceiptEmail(transaction, event, user, emailTemplateId = null) {
     const email = (user && user.email) || transaction.userEmail;
     if (!email || !email.trim()) return;
     try {
         const eventDoc = typeof event.populate === 'function' ? event : await Event.findById(transaction.eventId);
         if (!eventDoc) return;
-        let emailTemplate = await EmailTemplate.findOne({ eventId: eventDoc._id, type: 'payment_receipt' });
+        let emailTemplate = emailTemplateId ? await EmailTemplate.findById(emailTemplateId) : null;
+        if (!emailTemplate) emailTemplate = await EmailTemplate.findOne({ eventId: eventDoc._id, type: 'payment_receipt' });
         if (!emailTemplate) emailTemplate = await EmailTemplate.findOne({ eventId: null, type: 'payment_receipt' });
         const userLike = user ? (user.toObject ? user.toObject() : user) : { name: transaction.userName || '', email: transaction.userEmail || '' };
         const invoiceData = transaction.transactionData && Object.keys(transaction.transactionData).length > 0
@@ -153,11 +191,19 @@ async function sendPaymentReceiptEmail(transaction, event, user) {
             ? replaceTemplateVariables(emailTemplate.content, userLike, eventDoc, additionalVars)
             : getDefaultPaymentReceiptEmailContent(transaction, eventDoc);
         messageBody = replaceTemplateVariables(messageBody, userLike, eventDoc, additionalVars);
-        messageBody = embedKaitiFontInEmail(messageBody);
-        await ses.sendEmail(email, subject, messageBody);
+        const userId = (userLike._id && String(userLike._id)) || findEventUserIdByEmail(eventDoc, email);
+        await sendEmailWithRecord({
+            recipient: email,
+            subject,
+            messageBody,
+            emailTemplate,
+            eventId: eventDoc._id,
+            userId,
+        });
         console.log('[Payment Receipt Email] Sent to:', email);
     } catch (err) {
         console.error('[Payment Receipt Email] Error:', err);
+        throw err;
     }
 }
 
@@ -672,16 +718,36 @@ exports.resendEmail = async (req, res) => {
         
         // 根據 emailType 發送不同類型的郵件
         const type = emailType || 'welcome';
-        
-        if (type === 'welcome') {
-            // 如果指定了模板 ID，使用 sendEmailByType 並傳入模板 ID
+
+        if (type === 'payment_receipt') {
+            const transaction = await Transaction.findOne({
+                eventId,
+                userEmail: user.email,
+                status: 'paid',
+            }).sort({ updatedAt: -1 });
+            if (!transaction) {
+                return res.status(400).json({ message: '找不到此用戶的已付款訂單，無法重發付款憑證' });
+            }
+            await sendPaymentReceiptEmail(transaction, event, userData, emailTemplateId);
+        } else if (type === 'invoice') {
+            if (!isInvoiceEmailEnabled()) {
+                return res.status(400).json({ message: '發票郵件功能已停用' });
+            }
+            const transaction = await Transaction.findOne({
+                eventId,
+                userEmail: user.email,
+            }).sort({ createdAt: -1 });
+            if (!transaction) {
+                return res.status(400).json({ message: '找不到此用戶的訂單記錄，無法重發發票' });
+            }
+            await sendInvoiceEmail(transaction, event, emailTemplateId);
+        } else if (type === 'welcome') {
             if (emailTemplateId) {
                 await exports.sendEmailByType(userData, event, type, emailTemplateId);
             } else {
                 await exports.sendEmail(userData, event);
             }
         } else {
-            // 發送其他類型的郵件（confirmation, reminder, thankYou）
             await exports.sendEmailByType(userData, event, type, emailTemplateId);
         }
 
@@ -3963,7 +4029,12 @@ exports.stripeCheckout = async (req, res) => {
             });
             transaction.stripeSessionId = orderId || transaction._id.toString();
             await transaction.save();
-            try { await sendInvoiceEmail(transaction, event); } catch (e) { console.error('Invoice email error:', e); }
+            if (isInvoiceEmailEnabled()) {
+                const invoiceTemplate = await findEmailTemplateForEvent(event._id, 'invoice');
+                if (invoiceTemplate) {
+                    try { await sendInvoiceEmail(transaction, event, invoiceTemplate._id); } catch (e) { console.error('Invoice email error:', e); }
+                }
+            }
             return res.json({ url: paymentUrl });
         }
 
@@ -3995,7 +4066,12 @@ exports.stripeCheckout = async (req, res) => {
         });
         transaction.stripeSessionId = session.id;
         await transaction.save();
-        try { await sendInvoiceEmail(transaction, event); } catch (e) { console.error('Invoice email error:', e); }
+        if (isInvoiceEmailEnabled()) {
+            const invoiceTemplate = await findEmailTemplateForEvent(event._id, 'invoice');
+            if (invoiceTemplate) {
+                try { await sendInvoiceEmail(transaction, event, invoiceTemplate._id); } catch (e) { console.error('Invoice email error:', e); }
+            }
+        }
         res.json({ url: session.url });
     } catch (error) {
         console.error(`${gateway} checkout error:`, error);

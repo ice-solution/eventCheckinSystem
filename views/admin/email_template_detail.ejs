@@ -80,7 +80,9 @@
                     <option value="welcome" <%= template.type === 'welcome' ? 'selected' : '' %>><%= t('create_email_template.typeWelcome') %></option>
                     <option value="knowledge" <%= template.type === 'knowledge' ? 'selected' : '' %>><%= t('create_email_template.typeKnowledge') %></option>
                     <option value="reminder" <%= template.type === 'reminder' ? 'selected' : '' %>><%= t('create_email_template.typeReminder') %></option>
+                    <% if (invoiceEmailEnabled || template.type === 'invoice') { %>
                     <option value="invoice" <%= template.type === 'invoice' ? 'selected' : '' %>><%= t('create_email_template.typeInvoice') %></option>
+                    <% } %>
                     <option value="payment_receipt" <%= template.type === 'payment_receipt' ? 'selected' : '' %>><%= t('create_email_template.typePaymentReceipt') %></option>
                 </select>
             </div>
@@ -91,7 +93,8 @@
                 </textarea>
             </div>
                             <button type="submit" class="btn btn-primary"><%= t('create_email_template.saveBtn') %></button>
-                            <a href="/emailTemplate/preview/<%= template._id %>" class="btn btn-outline-info" target="_blank" rel="noopener">Preview HTML</a>
+                            <% const _previewQs = eventId ? ('?eventId=' + eventId) : ''; %>
+                            <a href="/emailTemplate/preview/<%= template._id %><%= _previewQs %>" class="btn btn-outline-info" target="_blank" rel="noopener">Preview HTML</a>
                             <small class="d-block text-muted mt-2">
                                 <strong>網頁版郵件連結（請貼在模板 HTML，勿寫死 URL）：</strong>
                                 <pre class="bg-light p-2 mt-1 mb-2" style="font-size:12px;white-space:pre-wrap;">&lt;center&gt;
@@ -99,9 +102,9 @@ If you cannot read this message, please &lt;a href="{{emailPreviewUrl}}" target=
 （亦可使用 {{contentUrl}} 或 {{webVersionUrl}}，內容相同）
 &lt;/center&gt;</pre>
                                 發信時會自動換成：<code>{DOMAIN}/emailTemplate/preview/本模板ID?userId=該用戶_id</code>
-                                <br>後台預覽：<code>/emailTemplate/preview/<%= template._id %>?userId=用戶_id</code>
-                                <% if (!eventId) { %><br>全域模板預覽請加 <code>&amp;eventId=活動_id</code><% } %>
-                                <br>發票／付款信可加 <code>&amp;transactionId=Transaction_id</code>
+                                <br>                                後台預覽（建議）：<code>/emailTemplate/preview/<%= template._id %><%= eventId ? ('?eventId=' + eventId) : '?eventId=活動_id' %>&amp;userId=用戶_id</code>
+                                <br>付款憑證（<code>payment_receipt</code><% if (invoiceEmailEnabled) { %>／發票 <code>invoice</code><% } %>）：可加 <code>&amp;transactionId=訂單_id</code>；未加時會用該活動<strong>最新一筆訂單</strong>作範例
+                                <br>變數名稱正確：<code>{{transaction._id}}</code>、<code>{{transaction.ticketTitle}}</code>、<code>{{invoice.currency}}</code> 等
                             </small>
                             <button type="button" class="btn btn-danger" onclick="deleteTemplate()"><%= t('create_email_template.deleteTemplateBtn') %></button>
                             <% if (eventId) { %>
