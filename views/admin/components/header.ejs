@@ -87,3 +87,36 @@
 </script>
 <div id="mobile-sidebar-overlay"></div>
 <button id="mobile-sidebar-btn" aria-label="Toggle sidebar"><i class="fa fa-bars"></i></button>
+
+<!-- Page loading overlay -->
+<div id="page-loading-overlay">
+    <div class="page-loading-spinner"></div>
+</div>
+<style>
+    #page-loading-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(240, 244, 248, 0.96);
+        z-index: 199999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.35s ease;
+        pointer-events: all;
+    }
+    #page-loading-overlay.page-loaded {
+        opacity: 0;
+        pointer-events: none;
+    }
+    .page-loading-spinner {
+        width: 52px;
+        height: 52px;
+        border: 5px solid #dde3ea;
+        border-top-color: #4DD0CA;
+        border-radius: 50%;
+        animation: pageSpinAnim 0.75s linear infinite;
+    }
+    @keyframes pageSpinAnim {
+        to { transform: rotate(360deg); }
+    }
+</style>
