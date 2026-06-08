@@ -20,7 +20,7 @@
     "noImage": "No image", "quantity": "Quantity", "image": "Image",
     "company": "Company", "table": "Table", "description": "Description", "points": "Points",
     "type": "Type", "content": "Content", "subject": "Subject", "role": "Role",
-    "deselectAll": "Deselect All", "sendEmail": "Send Email", "sendSms": "Send SMS"
+    "deselectAll": "Deselect All", "sendEmail": "Send Email", "sendSms": "Send SMS", "recipient": "Recipient"
   },
   "menu": {
     "adminTitle": "Admin", "events": "Events", "userManagement": "Login Account Management",
@@ -623,6 +623,7 @@
     "importJson": "Import JSON",
     "resetToDefault": "Reset to Default",
     "saveConfig": "Save Config",
+    "savedSuccess": "Saved!",
     "configureHint": "Configure registration form field display for this event",
 
     "cardRegisterPageTitle": "Registration Page",
@@ -703,7 +704,7 @@
 
     "sectionOrder": "Order",
     "fieldName": "Field Name",
-    "labelZh": "Label (ZH)",
+    "labelZh": "Chinese Label",
     "labelEn": "English Label",
     "fieldType": "Field Type",
     "required": "Required",

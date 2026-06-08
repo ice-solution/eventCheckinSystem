@@ -424,7 +424,7 @@
                             <div id="formConfigContainer">
                                 <% if (formConfig && formConfig.sections) { %>
                                     <%
-                                    const fcHeaderLang = (formConfig && formConfig.defaultLanguage) ? formConfig.defaultLanguage : 'zh';
+                                    const fcHeaderLang = (typeof lang !== 'undefined' && lang) ? lang : ((formConfig && formConfig.defaultLanguage) ? formConfig.defaultLanguage : 'zh');
                                     function fcLangText(val, lang) {
                                         if (val == null || val === '') return '';
                                         if (typeof val === 'string') return val;
@@ -792,26 +792,19 @@
 
     // 顯示提示信息
     function showAlert(type, message) {
-        // 創建提示元素
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-        alertDiv.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        // 插入到頁面頂部
-        const container = document.querySelector('.card-body');
-        if (container) {
-            container.insertBefore(alertDiv, container.firstChild);
-            
-            // 3秒後自動消失
-            setTimeout(() => {
-                if (alertDiv.parentNode) {
-                    alertDiv.remove();
-                }
-            }, 3000);
-        }
+        const id = 'toast-' + Date.now();
+        const toast = document.createElement('div');
+        toast.id = id;
+        toast.setAttribute('role', 'alert');
+        toast.className = `alert alert-${type} alert-dismissible fade show`;
+        toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:99999;min-width:300px;max-width:520px;box-shadow:0 4px 16px rgba(0,0,0,0.15);border-radius:8px;';
+        toast.innerHTML = `${message}<button type="button" class="close" onclick="this.parentElement.remove()"><span>&times;</span></button>`;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+            toast.style.transition = 'opacity 0.3s';
+            toast.style.opacity = '0';
+            setTimeout(() => { if (toast.parentNode) toast.remove(); }, 300);
+        }, 3500);
     }
 
     // 更新默認語言
@@ -1251,7 +1244,7 @@
                 if (result.formConfig && typeof result.formConfig.languageSwitcherEnabled === 'boolean') {
                     formConfig.languageSwitcherEnabled = result.formConfig.languageSwitcherEnabled;
                 }
-                console.log('表單配置已儲存！');
+                showAlert('success', '<%= t("form_config.savedSuccess") %>');
             } else {
                 console.error('儲存失敗：' + result.message);
                 throw new Error(result.message);
