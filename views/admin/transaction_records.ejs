@@ -129,29 +129,24 @@
 
 <%- include ("components/footer") %>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
 <script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
 <script>
     $(document).ready(function() {
-        $('#transactionTable').DataTable({
-            pageLength: 25,
+        initStyledDT('transactionTable', {
             order: [[1, 'desc']],
-            columnDefs: [
-                {
-                    targets: 1,
-                    type: 'num',
-                    render: function(data, type, row, meta) {
-                        if (type === 'sort' || type === 'type') {
-                            const tr = meta.settings.aoData[meta.row].nTr;
-                            const td = tr && tr.cells ? tr.cells[meta.col] : null;
-                            const v = td ? td.getAttribute('data-order') : null;
-                            return v !== null && v !== '' ? parseInt(v, 10) : 0;
-                        }
-                        return data;
+            columnDefs: [{
+                targets: 1, type: 'num',
+                render: function(data, type, row, meta) {
+                    if (type === 'sort' || type === 'type') {
+                        var tr = meta.settings.aoData[meta.row].nTr;
+                        var td = tr && tr.cells ? tr.cells[meta.col] : null;
+                        var v = td ? td.getAttribute('data-order') : null;
+                        return v !== null && v !== '' ? parseInt(v, 10) : 0;
                     }
+                    return data;
                 }
-            ]
+            }]
         });
     });
 </script>

@@ -1,9 +1,153 @@
 <%- include ("components/header") %>
 <%- include ("components/menu", {eventId: ''}) %>
+<%- include("components/responsive_layout_style") %>
 <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
 <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
 <link rel="stylesheet" href="/admin/assets/css/style.css">
-<%- include("components/responsive_layout_style") %>
+<style>
+    .events-table-area {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+    .events-table-xscroll {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        overflow-y: visible;
+        border: 1px solid var(--border-color, #e4e9f0);
+        border-radius: 8px;
+        scrollbar-width: thin;
+        scrollbar-color: transparent transparent;
+    }
+    .events-table-xscroll:hover {
+        scrollbar-color: rgba(0,0,0,0.28) transparent;
+    }
+    .events-table-xscroll::-webkit-scrollbar { height: 8px; }
+    .events-table-xscroll::-webkit-scrollbar-thumb {
+        background: rgba(0,0,0,0.18);
+        border-radius: 4px;
+    }
+    .events-table-xscroll.is-dragging { cursor: grabbing; user-select: none; }
+
+    #eventsTable_wrapper.dataTables_wrapper {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-sizing: border-box;
+    }
+    #eventsTable_wrapper #eventsTable {
+        width: max-content !important;
+        min-width: 100%;
+        margin: 0 !important;
+        border-collapse: collapse;
+    }
+    #eventsTable_wrapper #eventsTable thead th,
+    #eventsTable_wrapper #eventsTable tbody td {
+        box-sizing: border-box !important;
+        white-space: nowrap;
+        vertical-align: middle;
+        padding: 10px 14px !important;
+        font-size: 13px;
+        border-bottom: 1px solid #eef1f5;
+        text-align: left;
+    }
+    #eventsTable_wrapper #eventsTable thead th {
+        font-weight: 600;
+        color: #334155;
+        border-bottom: 1px solid #e4e9f0;
+        background: #f8fafc;
+    }
+    #eventsTable_wrapper #eventsTable thead th.sorting,
+    #eventsTable_wrapper #eventsTable thead th.sorting_asc,
+    #eventsTable_wrapper #eventsTable thead th.sorting_desc {
+        background-image: none !important;
+        padding: 10px 14px !important;
+        position: relative;
+    }
+    #eventsTable_wrapper #eventsTable thead th.sorting::before,
+    #eventsTable_wrapper #eventsTable thead th.sorting_asc::before,
+    #eventsTable_wrapper #eventsTable thead th.sorting_desc::before { display: none !important; }
+    #eventsTable_wrapper #eventsTable thead th.sorting::after,
+    #eventsTable_wrapper #eventsTable thead th.sorting_asc::after,
+    #eventsTable_wrapper #eventsTable thead th.sorting_desc::after {
+        position: absolute !important;
+        right: 4px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        display: block !important;
+        margin: 0 !important;
+        font-size: 9px !important;
+        line-height: 1 !important;
+        content: '▲▼' !important;
+        color: #ccc !important;
+        pointer-events: none;
+    }
+    #eventsTable_wrapper #eventsTable thead th.sorting_asc::after  { content: '▲' !important; color: #444 !important; }
+    #eventsTable_wrapper #eventsTable thead th.sorting_desc::after { content: '▼' !important; color: #444 !important; }
+
+    #eventsTable_wrapper .dataTables_info {
+        padding: 14px 12px 6px !important;
+        margin: 0 !important;
+        font-size: 13px;
+        color: #64748b;
+    }
+    #eventsTable_wrapper .dataTables_paginate {
+        padding: 4px 12px 10px !important;
+        text-align: center;
+    }
+    #eventsTable_wrapper .dataTables_paginate .pagination {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 2px;
+        margin: 0 !important;
+    }
+    #eventsTable_wrapper .dataTables_paginate .page-link {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        height: 32px !important;
+        min-width: 32px !important;
+        padding: 0 6px !important;
+        border: none !important;
+        border-radius: 50% !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        color: #b0b8c1 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        text-decoration: none !important;
+    }
+    #eventsTable_wrapper .dataTables_paginate .page-link:hover { color: #555 !important; }
+    #eventsTable_wrapper .dataTables_paginate .page-item.active .page-link {
+        color: #4DD0CA !important;
+        font-weight: 700 !important;
+    }
+    #eventsTable_wrapper .dataTables_paginate .page-item.previous .page-link,
+    #eventsTable_wrapper .dataTables_paginate .page-item.next .page-link {
+        font-size: 26px !important;
+        width: 44px !important;
+        min-width: 44px !important;
+        height: 30px !important;
+        padding: 0 !important;
+        background: transparent !important;
+    }
+    #eventsTable_wrapper .dataTables_paginate .page-item.previous .page-link::before,
+    #eventsTable_wrapper .dataTables_paginate .page-item.next .page-link::after { content: none !important; }
+    #eventsTable_wrapper .dataTables_paginate .page-item.disabled .page-link {
+        color: #d5d9dd !important;
+        cursor: default !important;
+    }
+    #eventsTable_wrapper > .row:last-child > div[class*="col-"] {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+</style>
+
 <div id="right-panel" class="right-panel">
     <%- include ("components/rightpanel_header") %>
     <div class="content">
@@ -20,8 +164,8 @@
                                 <a href="/events/create" class="btn btn-sm btn-primary"><i class="fa fa-plus"></i> <%= t('events_list.createEvent') %></a>
                             </div>
                         </div>
-                        <div class="card-body">
-                            <table id="bootstrap-data-table" class="table table-bordered">
+                        <div class="card-body events-table-area">
+                            <table id="eventsTable" class="table table-bordered">
                                 <thead>
                                     <tr>
                                         <th><%= t('events_list.eventName') %></th>
@@ -38,7 +182,7 @@
                                                 <td><a href="/events/<%= event._id %>"><%= event.name %></a></td>
                                                 <td><%= new Date(event.from).toLocaleString() %></td>
                                                 <td><%= new Date(event.to).toLocaleString() %></td>
-                                                <td><%= new Date(event.created_at).toLocaleString() %></td>
+                                                <td data-order="<%= new Date(event.created_at).getTime() %>"><%= new Date(event.created_at).toLocaleString() %></td>
                                                 <td><%= event.users.length %></td>
                                             </tr>
                                         <% }); %>
@@ -56,20 +200,61 @@
         </div>
     </div>
 </div>
+
 <%- include ("components/footer") %>
 <script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
 <script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
-<script src="/admin/assets/js/lib/data-table/dataTables.buttons.min.js"></script>
-<script src="/admin/assets/js/lib/data-table/buttons.bootstrap.min.js"></script>
-<script src="/admin/assets/js/lib/data-table/jszip.min.js"></script>
-<script src="/admin/assets/js/lib/data-table/vfs_fonts.js"></script>
-<script src="/admin/assets/js/lib/data-table/buttons.html5.min.js"></script>
-<script src="/admin/assets/js/lib/data-table/buttons.print.min.js"></script>
-<script src="/admin/assets/js/lib/data-table/buttons.colVis.min.js"></script>
-<script src="/admin/assets/js/init/datatables-init.js"></script>
 <script type="text/javascript">
-    $(document).ready(function() {
-        $('#bootstrap-data-table-export').DataTable();
-        $('[data-toggle="tooltip"]').tooltip();
+$(document).ready(function() {
+    $('[data-toggle="tooltip"]').tooltip();
+
+    const table = $('#eventsTable').DataTable({
+        pageLength: 25,
+        dom: 'rtip',
+        autoWidth: true,
+        columnDefs: [
+            { targets: 3, type: 'num', orderable: true, searchable: false },
+            { targets: 4, type: 'num', orderable: true }
+        ],
+        order: [[3, 'desc']],
+        initComplete: function() {
+            if (!$('#eventsTable').parent().hasClass('events-table-xscroll')) {
+                $('#eventsTable').wrap('<div class="events-table-xscroll"></div>');
+            }
+            fixPaginationArrows();
+            initDragScroll();
+        },
+        drawCallback: function() {
+            fixPaginationArrows();
+        }
     });
+
+    function fixPaginationArrows() {
+        $('#eventsTable_wrapper .paginate_button.previous a').html('&#8249;');
+        $('#eventsTable_wrapper .paginate_button.next a').html('&#8250;');
+        $('#eventsTable_wrapper .page-item.previous .page-link, #eventsTable_wrapper .page-item.next .page-link')
+            .css({ background: 'transparent', 'border-color': 'transparent' });
+    }
+
+    function initDragScroll() {
+        const el = document.querySelector('.events-table-xscroll');
+        if (!el) return;
+        let drag = { active: false, x: 0, scroll: 0, moved: false };
+        el.addEventListener('mousedown',  function(e) {
+            drag = { active: true, x: e.clientX, scroll: el.scrollLeft, moved: false };
+            el.classList.add('is-dragging');
+        });
+        el.addEventListener('mouseup',    function() { drag.active = false; el.classList.remove('is-dragging'); });
+        el.addEventListener('mouseleave', function() { drag.active = false; el.classList.remove('is-dragging'); });
+        el.addEventListener('mousemove',  function(e) {
+            if (!drag.active) return;
+            const dx = drag.x - e.clientX;
+            if (Math.abs(dx) > 5) drag.moved = true;
+            el.scrollLeft = drag.scroll + dx;
+        });
+        el.addEventListener('click', function(e) {
+            if (drag.moved) { e.preventDefault(); e.stopPropagation(); drag.moved = false; }
+        });
+    }
+});
 </script>

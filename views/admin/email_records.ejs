@@ -332,15 +332,12 @@
     };
 
     $(document).ready(function() {
-        console.log('Email Records page script loaded');
-
-        const table = $('#emailRecordsTable').DataTable({
+        const table = initStyledDT('emailRecordsTable', {
             pageLength: 50,
             order: [[0, 'desc']],
             columnDefs: [{
-                targets: 0,
-                type: 'num',
-                render: function (data, type, row, meta) {
+                targets: 0, type: 'num',
+                render: function(data, type, row, meta) {
                     if (type === 'sort' || type === 'type') {
                         var tr = meta.settings.aoData[meta.row].nTr;
                         var td = tr && tr.cells ? tr.cells[meta.col] : null;
@@ -349,10 +346,7 @@
                     }
                     return data;
                 }
-            }],
-            drawCallback: function() {
-                console.log('Table redrawn, button count:', $('.view-email-details').length);
-            }
+            }]
         });
 
         var filterEmailType = '';
@@ -369,13 +363,10 @@
             table.draw();
         });
 
-        console.log('DataTable initialized, total buttons:', $('.view-email-details').length);
 
         setTimeout(function() {
-            console.log('Checking buttons after 1 second, count:', $('.view-email-details').length);
             $('.view-email-details').each(function(index) {
                 const tid = $(this).attr('data-tracking-id') || $(this).data('tracking-id');
-                console.log('Button ' + index + ' trackingId:', tid);
             });
         }, 1000);
 
@@ -386,7 +377,6 @@
                 try {
                     $modal.modal('hide');
                 } catch(e) {
-                    console.log('Bootstrap modal hide failed, using manual close');
                 }
             }
 
@@ -435,16 +425,12 @@
             }
         });
 
-        console.log('Setting up view-email-details click handler');
 
         $('#emailRecordsTable tbody').on('click', '.view-email-details', function(e) {
             e.preventDefault();
             e.stopPropagation();
 
-            console.log('=== View Details button clicked ===');
             const $btn = $(this);
-            console.log('Button element:', $btn[0]);
-            console.log('Button classes:', $btn.attr('class'));
 
             let trackingId = $btn.attr('data-tracking-id');
             if (!trackingId) {
@@ -452,7 +438,6 @@
             }
             if (!trackingId) {
                 const allAttrs = $btn[0] ? Array.from($btn[0].attributes) : [];
-                console.log('All button attributes:', allAttrs.map(a => a.name + '=' + a.value));
                 for (let attr of allAttrs) {
                     if (attr.name.indexOf('tracking') !== -1) {
                         trackingId = attr.value;
@@ -463,8 +448,6 @@
 
             const eventId = '<%= eventId %>';
 
-            console.log('Tracking ID found:', trackingId);
-            console.log('Event ID:', eventId);
 
             if (!trackingId || trackingId === 'undefined' || trackingId === 'null' || trackingId === '') {
                 console.error('No valid tracking ID found!');
@@ -495,16 +478,13 @@
             }, 200);
 
             const ajaxUrl = '/events/' + eventId + '/email-records/' + trackingId;
-            console.log('Sending AJAX request to:', ajaxUrl);
 
             $.ajax({
                 url: ajaxUrl,
                 type: 'GET',
                 beforeSend: function() {
-                    console.log('AJAX request started');
                 },
                 success: function(response) {
-                    console.log('AJAX success, response received');
                     if (response.success && response.record) {
                         const record = response.record;
 
