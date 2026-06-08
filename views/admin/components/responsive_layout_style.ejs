@@ -228,7 +228,7 @@
     }
 
     @media (max-width: 767px) {
-        /* Sidebar: fixed, off-screen left by default */
+        /* Sidebar: fixed, off-screen left, full height, above header bar */
         #left-panel {
             position: fixed !important;
             left: -85vw !important;
@@ -236,7 +236,7 @@
             height: 100% !important;
             width: 85vw !important;
             max-width: 85vw !important;
-            z-index: 1050 !important;
+            z-index: 1065 !important;
             transition: left 0.3s ease !important;
             overflow-y: auto !important;
             overflow-x: hidden !important;
@@ -260,20 +260,20 @@
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0, 0, 0, 0.5);
-            z-index: 1045;
+            z-index: 1060;
         }
 
         body.mobile-sidebar-open #mobile-sidebar-overlay {
             display: block;
         }
 
-        /* Mobile toggle button: fixed top-left, always visible */
+        /* Mobile toggle button: fixed top-left, vertically centred in 56px bar */
         #mobile-sidebar-btn {
             display: flex !important;
             position: fixed;
-            top: 12px;
-            left: 12px;
-            z-index: 1060;
+            top: 8px;
+            left: 8px;
+            z-index: 1070;
             background: #0d1b2a;
             color: #fff;
             border: none;
@@ -297,9 +297,29 @@
             padding-left: 52px !important;
         }
 
-        /* Offset right-panel header so content clears the fixed button */
+        /* Fixed top bar: header sits at top, same level as ☰ button */
+        #right-panel #header {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            height: 56px !important;
+            z-index: 1055 !important;
+            background: #fff !important;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08) !important;
+            display: flex !important;
+            align-items: center !important;
+            padding: 0 !important;
+        }
+
         #right-panel #header .top-right {
             padding-left: 60px !important;
+            width: 100% !important;
+        }
+
+        /* Push page content below the fixed header */
+        #right-panel .content {
+            padding-top: calc(56px + 1rem) !important;
         }
 
         /* Hide flyout sub-menus (1024px rule sets display:block + right:-160px) */
