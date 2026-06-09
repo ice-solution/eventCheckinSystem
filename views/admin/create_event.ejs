@@ -38,49 +38,76 @@
     </div>
 </div>
 
-<%- include ("components/footer") %>
 <script>
-    $(document).ready(function() {
-        $('#createEventForm').on('submit', function(e) {
+(function() {
+    var successMsg = <%- JSON.stringify(t('create_event.successMsg')) %>;
+    var errorMsg = <%- JSON.stringify(t('create_event.errorMsg')) %>;
+    var timeRangeError = <%- JSON.stringify(lang === 'en' ? 'End time must be after start time.' : '結束時間必須晚於開始時間。') %>;
+
+    function escapeHtml(str) {
+        return String(str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function showAlert(type, message) {
+        var container = document.getElementById('alertContainer');
+        if (!container) return;
+        container.innerHTML =
+            '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+            escapeHtml(message) +
+            '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+            '<span aria-hidden="true">&times;</span></button></div>';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var form = document.getElementById('createEventForm');
+        if (!form) return;
+
+        form.addEventListener('submit', function(e) {
             e.preventDefault();
 
-            const newEvent = {
-                name: $('#name').val(),
-                from: $('#from').val(),
-                to: $('#to').val()
-            };
+            var nameInput = document.getElementById('name');
+            var fromInput = document.getElementById('from');
+            var toInput = document.getElementById('to');
+            var submitBtn = form.querySelector('button[type="submit"]');
 
-            $.ajax({
-                url: '/events/create',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(newEvent),
-                success: function(response) {
-                    const alertHtml = `
-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            <%= t('create_event.successMsg') %>
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                    `;
-                    $('#alertContainer').append(alertHtml);
-                    setTimeout(() => {
+            var name = (nameInput && nameInput.value || '').trim();
+            var from = fromInput ? fromInput.value : '';
+            var to = toInput ? toInput.value : '';
+
+            if (!name || !from || !to) {
+                showAlert('danger', errorMsg);
+                return;
+            }
+            if (new Date(from).getTime() >= new Date(to).getTime()) {
+                showAlert('danger', timeRangeError);
+                return;
+            }
+
+            if (submitBtn) submitBtn.disabled = true;
+
+            fetch('/events/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name, from: from, to: to }),
+                credentials: 'same-origin'
+            }).then(function(res) {
+                return res.json().then(function(data) {
+                    if (!res.ok) throw new Error((data && data.message) || errorMsg);
+                    showAlert('success', successMsg);
+                    setTimeout(function() {
                         window.location.href = '/events/list';
                     }, 1500);
-                },
-                error: function(xhr, status, error) {
-                    const alertHtml = `
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <%= t('create_event.errorMsg') %>
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                    `;
-                    $('#alertContainer').append(alertHtml);
-                }
+                });
+            }).catch(function(err) {
+                showAlert('danger', err.message || errorMsg);
+                if (submitBtn) submitBtn.disabled = false;
             });
         });
     });
+})();
 </script>
+<%- include ("components/footer") %>

@@ -1391,7 +1391,8 @@
                                 </thead>
                                 <tbody>
                                     <% event.users.forEach(user => { %>
-                                        <tr class="<%= user.isCheckIn ? 'checkin-true' : 'checkin-false' %>" data-id="<%= user._id %>">
+                                        <% const userRow = user && typeof user.toObject === 'function' ? user.toObject() : user; %>
+                                        <tr class="<%= userRow.isCheckIn ? 'checkin-true' : 'checkin-false' %>" data-id="<%= userRow._id %>">
                                             <td><input type="checkbox" class="user-select" data-_id="<%= user._id %>" /></td>
                                             <% if (formConfig && formConfig.sections) { %>
                                                 <% const sortedSections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
@@ -1400,25 +1401,25 @@
                                                         <% const sortedFields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
                                                         <% sortedFields.forEach(field => { %>
                                                             <% if (field.visible) { %>
-                                                        <td data-field-name="<%= field.fieldName %>"><%= user[field.fieldName] || '-' %></td>
+                                                        <td data-field-name="<%= field.fieldName %>"><%= userRow[field.fieldName] || '-' %></td>
                                                             <% } %>
                                                         <% }); %>
                                                     <% } %>
                                                 <% }); %>
                                             <% } else { %>
                                                 <!-- 預設列（如果沒有formConfig） -->
-                                            <td data-field-name="email"><%= user.email %></td>
-                                            <td data-field-name="name"><%= user.name %></td>
-                                            <td data-field-name="company"><%= user.company %></td>
-                                            <td data-field-name="phone"><%= user.phone %></td>
+                                            <td data-field-name="email"><%= userRow.email %></td>
+                                            <td data-field-name="name"><%= userRow.name %></td>
+                                            <td data-field-name="company"><%= userRow.company %></td>
+                                            <td data-field-name="phone"><%= userRow.phone %></td>
                                             <% } %>
                                             <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
-                                            <td class="agreement-meta-cell" data-field-name="agreementAgreed" data-order="<%= user.agreementAgreed === true ? 1 : (user.agreementAgreed === false ? 0 : -1) %>">
-                                                <% if (user.agreementAgreed === true) { %>同意<% } else if (user.agreementAgreed === false) { %>未同意<% } else { %>-<% } %>
+                                            <td class="agreement-meta-cell" data-field-name="agreementAgreed" data-order="<%= agreementAgreedSortOrder(userRow.agreementAgreed) %>">
+                                                <%= formatAgreementAgreedLabel(userRow.agreementAgreed) %>
                                             </td>
-                                            <td class="agreement-meta-cell" data-field-name="agreementRecordedAt" data-order="<%= user.agreementRecordedAt ? new Date(user.agreementRecordedAt).getTime() : 0 %>">
-                                                <% if (user.agreementRecordedAt) {
-                                                    const agreementDate = new Date(user.agreementRecordedAt);
+                                            <td class="agreement-meta-cell" data-field-name="agreementRecordedAt" data-order="<%= userRow.agreementRecordedAt ? new Date(userRow.agreementRecordedAt).getTime() : 0 %>">
+                                                <% if (userRow.agreementRecordedAt) {
+                                                    const agreementDate = new Date(userRow.agreementRecordedAt);
                                                     if (!isNaN(agreementDate.getTime())) { %>
                                                     <%= agreementDate.toLocaleString('zh-TW', {
                                                         timeZone: 'Asia/Hong_Kong',
@@ -1594,6 +1595,27 @@ const _US = {
     manageSmsTemplates: '<%= t("users.manageSmsTemplates") %>',
     closeBtn: '<%= t("users.closeBtn") %>'
 };
+
+    function formatAgreementAgreedCell(val) {
+        if (val === true || val === 'true' || val === 1 || val === '1') return '同意';
+        if (val === false || val === 'false' || val === 0 || val === '0') return '未同意';
+        return '-';
+    }
+    function formatAgreementRecordedAtCell(val) {
+        if (!val) return '-';
+        const d = new Date(val);
+        if (isNaN(d.getTime())) return '-';
+        return d.toLocaleString('zh-TW', {
+            timeZone: 'Asia/Hong_Kong',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        });
+    }
 
     $(document).ready(function() {
         // 將 modal 移到 body 最外層，避免被父元素 overflow 或 stacking context 遮擋
@@ -3049,8 +3071,8 @@ const _US = {
                         newRow.push(userData.phone || '-');
                     <% } %>
                     <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
-                        newRow.push('-');
-                        newRow.push('-');
+                        newRow.push(formatAgreementAgreedCell(response.agreementAgreed));
+                        newRow.push(formatAgreementRecordedAtCell(response.agreementRecordedAt));
                     <% } %>
                     
                     // 添加 Created At 列

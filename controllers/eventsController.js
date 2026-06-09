@@ -25,6 +25,7 @@ const { getSocket } = require('../socket'); // 引入 socket 以發送實時更�
 const { embedKaitiFontInEmail } = require('../utils/embedEmailFonts'); // 引入字型嵌入功能
 const { replaceTemplateVariables, buildEmailTemplateAdditionalVars, flattenForTemplate } = require('../utils/replaceTemplateVariables');
 const { isInvoiceEmailEnabled } = require('../utils/featureFlags');
+const { normalizeAgreementAgreed, formatAgreementAgreedLabel, agreementAgreedSortOrder } = require('../utils/agreementFields');
 
 /** 取得對外 base URL（依 DOMAIN/domain，缺協議時自動補 https://） */
 function getPublicBaseUrl() {
@@ -207,31 +208,83 @@ async function sendPaymentReceiptEmail(transaction, event, user, emailTemplateId
     }
 }
 
+/** 建立活動後，非 admin 建立者須寫入 allowedEvents / eventPermissions，否則列表與後台皆看不到 */
+async function grantCreatorEventAccess(authId, eventId, sessionUser) {
+    const permission = require('../middleware/permission');
+    const allFuncKeys = [...new Set(permission.getEventFunctionList().map((f) => f.key))];
+    const auth = await Auth.findById(authId);
+    if (!auth) return;
+
+    const eidStr = String(eventId);
+    if (!auth.allowedEvents.some((id) => String(id) === eidStr)) {
+        auth.allowedEvents.push(eventId);
+    }
+
+    const perms = auth.eventPermissions || [];
+    let entry = perms.find((p) => p.eventId && String(p.eventId) === eidStr);
+    if (!entry) {
+        auth.eventPermissions.push({ eventId, functions: allFuncKeys });
+    } else {
+        entry.functions = allFuncKeys;
+    }
+    auth.markModified('eventPermissions');
+    await auth.save();
+
+    if (sessionUser) {
+        sessionUser.allowedEvents = sessionUser.allowedEvents || [];
+        if (!sessionUser.allowedEvents.includes(eidStr)) {
+            sessionUser.allowedEvents.push(eidStr);
+        }
+        sessionUser.eventPermissions = sessionUser.eventPermissions || [];
+        if (!sessionUser.eventPermissions.some((p) => p.eventId === eidStr)) {
+            sessionUser.eventPermissions.push({ eventId: eidStr, functions: allFuncKeys });
+        }
+    }
+}
+
 // 創建事件
 exports.createEvent = async (req, res) => {
-    const { name, from, to } = req.body;
+    const { name, from, to } = req.body || {};
 
     try {
-        // 檢查是否有用戶數據
         if (!req.session || !req.session.user || !req.session.user._id) {
             return res.status(401).json({ message: '未授權：請先登入' });
         }
 
+        const trimmedName = name != null ? String(name).trim() : '';
+        if (!trimmedName || !from || !to) {
+            return res.status(400).json({ message: '請填寫活動名稱與開始／結束時間' });
+        }
+
+        const fromDate = new Date(from);
+        const toDate = new Date(to);
+        if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+            return res.status(400).json({ message: '活動時間格式無效' });
+        }
+        if (fromDate.getTime() >= toDate.getTime()) {
+            return res.status(400).json({ message: '結束時間必須晚於開始時間' });
+        }
+
+        const sessionUser = req.session.user;
         const newEvent = new Event({
-            name,
-            from,
-            to,
-            owner: req.session.user._id, // 使用 session 中的用戶 ID 作為擁有者
-            created_at: Date.now(), // 設置創建時間
-            modified_at: Date.now(), // 設置修改時間
-            
+            name: trimmedName,
+            from: fromDate,
+            to: toDate,
+            owner: sessionUser._id,
+            created_at: new Date(),
+            modified_at: new Date(),
         });
 
-        await newEvent.save(); // 保存事件
-        res.status(201).json(newEvent); // 返回創建的事件
+        await newEvent.save();
+
+        if (sessionUser.role !== 'admin') {
+            await grantCreatorEventAccess(sessionUser._id, newEvent._id, sessionUser);
+        }
+
+        res.status(201).json(newEvent);
     } catch (error) {
         console.error('Error creating event:', error);
-        res.status(500).json({ message: 'Error creating event' });
+        res.status(500).json({ message: error.message || '建立活動失敗' });
     }
 };
 
@@ -261,7 +314,11 @@ exports.getEventUsersByEventID = async (req, res) => {
     const { eventId } = req.params; // 從請求參數中獲取事件 ID
     
     try {
-        const event = await Event.findById(eventId).populate('users'); // 根據事件 ID 查詢事件並填充用戶信息
+        if (!mongoose.Types.ObjectId.isValid(eventId)) {
+            return res.redirect('/events/list');
+        }
+
+        const event = await Event.findById(eventId);
         if (!event) {
             return res.status(404).json({ message: 'Event not found' });
         }
@@ -306,7 +363,12 @@ exports.getEventUsersByEventID = async (req, res) => {
         if (eventForView.PaymentTickets && eventForView.PaymentTickets.length) {
             eventForView.PaymentTickets = normalizeTicketsForView(eventForView.PaymentTickets);
         }
-        res.render('admin/users', { event: eventForView, formConfig });
+        res.render('admin/users', {
+            event: eventForView,
+            formConfig,
+            formatAgreementAgreedLabel,
+            agreementAgreedSortOrder,
+        });
     } catch (error) {
         console.error('Error fetching event:', error);
         res.status(500).json({ message: 'Error fetching event' });
@@ -402,7 +464,11 @@ exports.addUserToEvent = async (req, res) => {
             }
             // 添加字段值（包括空字符串和 null，但不包括 undefined）
             else if (userData[key] !== undefined) {
-                newUser[key] = userData[key];
+                if (key === 'agreementAgreed') {
+                    newUser[key] = normalizeAgreementAgreed(userData[key]);
+                } else {
+                    newUser[key] = userData[key];
+                }
             }
         });
 
@@ -4171,6 +4237,10 @@ async function markTransactionPaidAndAddUser(transaction) {
         Object.keys(transaction.userFormData).forEach(key => {
             if (excludedFields.includes(key)) return;
             const val = transaction.userFormData[key];
+            if (key === 'agreementAgreed') {
+                newUser[key] = normalizeAgreementAgreed(val);
+                return;
+            }
             if (Array.isArray(val)) newUser[key] = val;
             else if (val !== undefined) newUser[key] = val;
         });

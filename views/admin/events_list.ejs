@@ -69,7 +69,9 @@
 <script src="/admin/assets/js/init/datatables-init.js"></script>
 <script type="text/javascript">
     $(document).ready(function() {
-        $('#bootstrap-data-table-export').DataTable();
+        if ($('#bootstrap-data-table').length && !$.fn.DataTable.isDataTable('#bootstrap-data-table')) {
+            $('#bootstrap-data-table').DataTable();
+        }
         $('[data-toggle="tooltip"]').tooltip();
     });
 </script>
