@@ -242,7 +242,7 @@
     "deleteTemplateConfirm": "Are you sure you want to delete this email template? This cannot be undone!",
     "deleteSuccess": "Email template deleted! Redirecting...",
     "deleteFailed": "Failed to delete email template. Please try again later.",
-    "sendEmailTitle": "Send Email", "recipientsLabel": "Recipients",
+    "sendEmailTitle": "Send Email for Testing", "recipientsLabel": "Recipients",
     "recipientsPlaceholder": "Please enter recipient email addresses",
     "sendEmailBtn": "Send Email",
     "loadTypeSeedBtn": "Load template for this type",

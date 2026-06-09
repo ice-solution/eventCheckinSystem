@@ -407,6 +407,36 @@
             font-size: 13px !important;
             padding: 6px 12px 6px 30px !important;
         }
+
+        /* On mobile, cancel out body.open (collapsed icon-only) sidebar styles */
+        body.open aside#left-panel .navbar .navbar-nav li > a {
+            font-size: 14px !important;
+            max-width: 100% !important;
+        }
+        body.open aside#left-panel .navbar .navbar-nav li > a .menu-title-text {
+            font-size: 14px !important;
+        }
+        body.open aside#left-panel .navbar .navbar-nav li > a .menu-icon {
+            font-size: inherit !important;
+            width: 55px !important;
+            text-align: left !important;
+        }
+        body.open aside#left-panel .nav.navbar-nav > li > a,
+        body.open aside#left-panel .nav.navbar-nav > li > a:visited {
+            font-size: 13.5px !important;
+        }
+        body.open aside#left-panel .nav.navbar-nav > li {
+            padding: 0 !important;
+        }
+        body.open .sidebar-collapsed-logo {
+            display: none !important;
+        }
+        body.open .sidebar-brand-logo {
+            display: inline-block !important;
+        }
+        body.open .sidebar-brand-text {
+            display: inline !important;
+        }
     }
 </style>
 <script>

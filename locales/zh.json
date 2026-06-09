@@ -241,7 +241,7 @@
     "deleteTemplateConfirm": "確定要刪除此郵件模板？此操作不可復原！",
     "deleteSuccess": "郵件模板已刪除！正在跳轉...",
     "deleteFailed": "刪除郵件模板失敗，請稍後再試。",
-    "sendEmailTitle": "發送郵件", "recipientsLabel": "收件人",
+    "sendEmailTitle": "發送測試郵件", "recipientsLabel": "收件人",
     "recipientsPlaceholder": "請輸入收件人電郵地址",
     "sendEmailBtn": "發送郵件",
     "loadTypeSeedBtn": "載入此類型模板",
