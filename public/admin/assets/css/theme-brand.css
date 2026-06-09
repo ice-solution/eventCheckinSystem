@@ -199,12 +199,30 @@ aside#left-panel .menu-title {
   padding: 18px 20px 6px !important;
 }
 
+/* Move li padding onto a so hover bg spans full sidebar width */
+aside#left-panel .nav.navbar-nav > li {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
 aside#left-panel .nav.navbar-nav > li > a,
 aside#left-panel .nav.navbar-nav > li > a:visited {
+  display: block !important;
+  padding-left: 30px !important;
+  padding-right: 30px !important;
   color: var(--sidebar-text) !important;
   font-size: 13.5px !important;
   font-weight: 400 !important;
   transition: all 0.18s ease !important;
+}
+
+/* Collapsed (icon-only) state: restore li padding, remove a left/right padding */
+body.open aside#left-panel .nav.navbar-nav > li {
+  padding: 0 15px !important;
+}
+body.open aside#left-panel .nav.navbar-nav > li > a {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
 }
 
 aside#left-panel .nav.navbar-nav > li > a:hover {
