@@ -294,7 +294,7 @@ router.get('/:eventId/email/:userId', eventsController.renderEmailHtml);
 
 router.get('/:eventId/payment-settings', eventsController.renderPaymentSettings);
 router.get('/:eventId/payment-settings/export', eventsController.exportPaymentTickets);
-router.post('/:eventId/payment-settings/import', upload.single('file'), eventsController.importPaymentTickets);
+router.post('/:eventId/payment-settings/import', upload, eventsController.importPaymentTickets);
 router.patch('/:eventId/paymentEvent', eventsController.updatePaymentEvent);
 router.patch('/:eventId/emailSettings', eventsController.updateEmailSettings);
 
