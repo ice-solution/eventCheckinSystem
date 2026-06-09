@@ -70,13 +70,115 @@ function normalizePaymentTicketForSave(ticket) {
         t.datetimeFrom = t.datetimeTo;
         t.datetimeTo = swap;
     }
-    return {
+    const out = {
         title: normalizeTicketTitle(t.title),
         price: t.price,
         category: getTicketCategoryKey(t),
         datetimeFrom: t.datetimeFrom || undefined,
         datetimeTo: t.datetimeTo || undefined
     };
+    const idStr = t._id != null ? String(t._id).trim() : '';
+    if (/^[a-f0-9]{24}$/i.test(idStr)) {
+        out._id = idStr;
+    }
+    return out;
+}
+
+/** Excel 匯出／匯入欄位（_id 用於相同 id 時更新取代） */
+const PAYMENT_TICKET_XLSX_COLUMNS = ['_id', 'category', 'title_zh', 'title_en', 'price', 'datetimeFrom', 'datetimeTo'];
+
+function parsePaymentTicketDateCell(val) {
+    if (val === undefined || val === null || val === '') return undefined;
+    if (val instanceof Date && !Number.isNaN(val.getTime())) return val;
+    if (typeof val === 'number' && Number.isFinite(val)) {
+        // Excel 序列日（xlsx 常見）
+        const epoch = new Date(Date.UTC(1899, 11, 30));
+        const d = new Date(epoch.getTime() + val * 86400000);
+        return Number.isNaN(d.getTime()) ? undefined : d;
+    }
+    const s = String(val).trim();
+    if (!s) return undefined;
+    const d = new Date(s);
+    return Number.isNaN(d.getTime()) ? undefined : d;
+}
+
+function ticketToXlsxRow(ticket) {
+    const t = ticket && typeof ticket.toObject === 'function' ? ticket.toObject() : (ticket || {});
+    const title = normalizeTicketTitle(t.title);
+    const fmt = (d) => {
+        if (!d) return '';
+        const dt = d instanceof Date ? d : new Date(d);
+        return Number.isNaN(dt.getTime()) ? '' : dt.toISOString();
+    };
+    return {
+        _id: t._id ? String(t._id) : '',
+        category: getTicketCategoryKey(t),
+        title_zh: title.zh || '',
+        title_en: title.en || '',
+        price: t.price != null ? Number(t.price) : '',
+        datetimeFrom: fmt(t.datetimeFrom),
+        datetimeTo: fmt(t.datetimeTo || t.datetime),
+    };
+}
+
+function xlsxRowToPaymentTicket(row) {
+    if (!row || typeof row !== 'object') return null;
+    const titleZh = row.title_zh != null ? String(row.title_zh).trim() : '';
+    const titleEn = row.title_en != null ? String(row.title_en).trim() : '';
+    if (!titleZh && !titleEn) return null;
+
+    const idRaw = row._id != null ? String(row._id).trim() : '';
+    const ticket = {
+        title: { zh: titleZh, en: titleEn },
+        category: row.category != null ? String(row.category).trim() : '',
+        price: Number(row.price),
+        datetimeFrom: parsePaymentTicketDateCell(row.datetimeFrom),
+        datetimeTo: parsePaymentTicketDateCell(row.datetimeTo),
+    };
+    if (/^[a-f0-9]{24}$/i.test(idRaw)) {
+        ticket._id = idRaw;
+    }
+    if (Number.isNaN(ticket.price)) ticket.price = 0;
+    return normalizePaymentTicketForSave(ticket);
+}
+
+/**
+ * 依 _id 合併：檔內相同 _id 更新現有票券；無 _id 或新 _id 則新增；未出現在檔內的既有票券保留
+ */
+function mergePaymentTicketsFromImportRows(existingTickets, rows) {
+    const merged = (existingTickets || []).map((t) => {
+        const raw = t && typeof t.toObject === 'function' ? t.toObject() : { ...t };
+        return normalizePaymentTicketForSave(raw);
+    });
+    const byId = new Map();
+    merged.forEach((t) => {
+        if (t._id) byId.set(String(t._id), t);
+    });
+
+    let updated = 0;
+    let created = 0;
+    const errors = [];
+
+    (rows || []).forEach((row, index) => {
+        const parsed = xlsxRowToPaymentTicket(row);
+        if (!parsed) {
+            if (row && Object.values(row).some((v) => v !== '' && v != null)) {
+                errors.push(`第 ${index + 2} 列：缺少 title_zh / title_en`);
+            }
+            return;
+        }
+        const id = parsed._id ? String(parsed._id) : '';
+        if (id && byId.has(id)) {
+            Object.assign(byId.get(id), parsed);
+            updated++;
+        } else {
+            merged.push(parsed);
+            if (parsed._id) byId.set(String(parsed._id), parsed);
+            created++;
+        }
+    });
+
+    return { tickets: merged, updated, created, errors };
 }
 
 function normalizeTicketsForView(tickets) {
@@ -177,5 +279,9 @@ module.exports = {
     getDistinctCategoryKeys,
     ticketsUseCategories,
     getCategoryButtonLabel,
-    normalizePaymentTicketUi
+    normalizePaymentTicketUi,
+    PAYMENT_TICKET_XLSX_COLUMNS,
+    ticketToXlsxRow,
+    xlsxRowToPaymentTicket,
+    mergePaymentTicketsFromImportRows,
 };

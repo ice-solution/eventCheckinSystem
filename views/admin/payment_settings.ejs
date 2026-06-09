@@ -73,9 +73,12 @@
                             <h5 id="ticketSettingsHeading" class="mb-1"></h5>
                             <p class="text-muted small mb-3" id="ticketTimeSlotNote"></p>
                             <div id="ticketsList"></div>
-                            <div class="mt-2">
+                            <div class="mt-2 d-flex flex-wrap align-items-center" style="gap:8px;">
                                 <button type="button" class="btn btn-primary btn-sm" id="addTicketBtn"></button>
-                                <button type="submit" class="btn btn-success btn-sm ml-2" id="savePaymentBtn"></button>
+                                <button type="submit" class="btn btn-success btn-sm" id="savePaymentBtn"></button>
+                                <a class="btn btn-outline-secondary btn-sm" id="exportTicketsBtn" href="/events/<%= event._id %>/payment-settings/export" download><i class="fa fa-download"></i> <span id="exportTicketsLabel"></span></a>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="importTicketsBtn"><i class="fa fa-upload"></i> <span id="importTicketsLabel"></span></button>
+                                <input type="file" id="importTicketsFile" accept=".xlsx,.xls" class="d-none">
                             </div>
                         </form>
 
@@ -97,7 +100,11 @@
         ticketSettingsTitle:     '<%= t("users.ticketSettingsTitle") %>',
         ticketTimeSlotNote:      '<%= t("users.ticketTimeSlotNote") %>',
         addTicketBtn:            '<%= t("users.addTicketBtn") %>',
-        savePaymentSettings:     '<%= t("users.savePaymentSettings") %>'
+        savePaymentSettings:     '<%= t("users.savePaymentSettings") %>',
+        exportTicketsBtn:        '<%= t("users.exportPaymentTickets") %>',
+        importTicketsBtn:        '<%= t("users.importPaymentTickets") %>',
+        importSuccess:           '<%= t("users.importPaymentTicketsSuccess") %>',
+        importFailed:            '<%= t("users.importPaymentTicketsFailed") %>'
     };
 
     const eventId      = '<%= event._id %>';
@@ -139,7 +146,8 @@
             const range  = getTicketRangeValues(ticket);
             const titles = getTicketTitleParts(ticket);
             const cat    = (ticket.category || '').replace(/"/g, '&quot;');
-            html += `<div class="ticket-item mb-3 p-3 border rounded" data-idx="${idx}">
+            const ticketId = ticket._id ? String(ticket._id) : '';
+            html += `<div class="ticket-item mb-3 p-3 border rounded" data-idx="${idx}" data-ticket-id="${ticketId.replace(/"/g, '&quot;')}">
                 <div class="d-flex flex-wrap align-items-center" style="gap:8px;">
                     <input type="text" class="form-control ticket-category" placeholder="Category key" value="${cat}" style="width:120px;" title="與 Form Config 分類按鈕 key 對應；留空=其他">
                     <input type="text" class="form-control ticket-title-zh" placeholder="票券名稱（中文）" value="${(titles.zh||'').replace(/"/g,'&quot;')}" style="width:140px;">
@@ -161,6 +169,8 @@
         $('#ticketTimeSlotNote').text(_PS.ticketTimeSlotNote);
         $('#addTicketBtn').text(_PS.addTicketBtn);
         $('#savePaymentBtn').text(_PS.savePaymentSettings);
+        $('#exportTicketsLabel').text(_PS.exportTicketsBtn);
+        $('#importTicketsLabel').text(_PS.importTicketsBtn);
         $('#paymentEventForm').show();
         renderTickets();
     }
@@ -227,6 +237,20 @@
         delete paymentTickets[idx].datetime;
     });
 
+    function applyTicketsFromServer(tickets, paymentEnabled) {
+        paymentTickets = Array.isArray(tickets) ? tickets : [];
+        if (typeof paymentEnabled === 'boolean') {
+            isPaymentEvent = paymentEnabled;
+            $('#paymentEvent').prop('checked', isPaymentEvent);
+        }
+        if (isPaymentEvent) {
+            showTicketForm();
+        } else {
+            $('#paymentEventForm').hide();
+        }
+        renderTickets();
+    }
+
     $(document).on('submit', '#paymentEventForm', function(e) {
         e.preventDefault();
         syncPaymentTicketsFromDom();
@@ -240,7 +264,46 @@
             type: 'PATCH',
             contentType: 'application/json',
             data: JSON.stringify({ isPaymentEvent: $('#paymentEvent').is(':checked'), PaymentTickets: paymentTickets }),
-            success: () => showAlert('success', _PS.paymentSavedSuccess)
+            success: (res) => {
+                if (res && res.PaymentTickets) {
+                    applyTicketsFromServer(res.PaymentTickets, $('#paymentEvent').is(':checked'));
+                }
+                showAlert('success', _PS.paymentSavedSuccess);
+            }
+        });
+    });
+
+    $('#importTicketsBtn').on('click', function() {
+        $('#importTicketsFile').val('').trigger('click');
+    });
+
+    $('#importTicketsFile').on('change', function() {
+        const file = this.files && this.files[0];
+        if (!file) return;
+        const formData = new FormData();
+        formData.append('file', file);
+        $('#importTicketsBtn').prop('disabled', true);
+        $.ajax({
+            url: `/events/${eventId}/payment-settings/import`,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: (res) => {
+                applyTicketsFromServer(res.PaymentTickets, res.isPaymentEvent);
+                let msg = (res && res.message) ? res.message : _PS.importSuccess;
+                if (res.errors && res.errors.length) {
+                    msg += ' (' + res.errors.slice(0, 3).join('；') + ')';
+                }
+                showAlert('success', msg);
+            },
+            error: (xhr) => {
+                const msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : _PS.importFailed;
+                showAlert('danger', msg);
+            },
+            complete: () => {
+                $('#importTicketsBtn').prop('disabled', false);
+            }
         });
     });
 

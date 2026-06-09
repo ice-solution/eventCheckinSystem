@@ -500,6 +500,8 @@
     "batchEmailFailed": "Failed to send email. Please try again.",
     "emailSettingsTitle": "Auto Email Settings", "saveEmailSettings": "Save Email Settings",
     "ticketSettingsTitle": "Ticket Settings", "ticketTimeSlotNote": "Each ticket can have a purchase time window (start – end); leave blank for no restriction.", "addTicketBtn": "Add Ticket", "savePaymentSettings": "Save Payment Settings",
+    "exportPaymentTickets": "Export Excel", "importPaymentTickets": "Import Excel",
+    "importPaymentTicketsSuccess": "Tickets imported successfully", "importPaymentTicketsFailed": "Failed to import tickets",
     "viewQrCode": "View QR Code", "deleteBtn": "Delete",
     "batchEmailSummaryTitle": "Send Summary", "emailTypeResultLabel": "Email Type",
     "successLabel": "Success", "failedLabel": "Failed", "skippedLabel": "Skipped", "totalLabel": "Total", "detailsLabel": "Details",

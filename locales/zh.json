@@ -499,6 +499,8 @@
     "batchEmailFailed": "發送郵件失敗，請重試。",
     "emailSettingsTitle": "自動電郵設定", "saveEmailSettings": "儲存電郵設定",
     "ticketSettingsTitle": "票券設置", "ticketTimeSlotNote": "每張票券可設定可購買時段（開始 – 結束）；留空則不限制該端。", "addTicketBtn": "新增票券", "savePaymentSettings": "儲存付費設置",
+    "exportPaymentTickets": "匯出 Excel", "importPaymentTickets": "匯入 Excel",
+    "importPaymentTicketsSuccess": "票券匯入成功", "importPaymentTicketsFailed": "票券匯入失敗",
     "viewQrCode": "查看 QR Code", "deleteBtn": "刪除",
     "batchEmailSummaryTitle": "發送摘要", "emailTypeResultLabel": "郵件類型",
     "successLabel": "成功", "failedLabel": "失敗", "skippedLabel": "跳過", "totalLabel": "總計", "detailsLabel": "詳情",

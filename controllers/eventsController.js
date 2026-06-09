@@ -3914,10 +3914,14 @@ exports.renderEmailHtml = async (req, res) => {
     }
 };
 
+const XLSX = require('xlsx');
 const {
     normalizeTicketTitle,
     normalizePaymentTicketForSave,
-    normalizeTicketsForView
+    normalizeTicketsForView,
+    PAYMENT_TICKET_XLSX_COLUMNS,
+    ticketToXlsxRow,
+    mergePaymentTicketsFromImportRows,
 } = require('../utils/paymentTicket');
 
 function getPaymentTicketTitle(ticket, lang = 'zh') {
@@ -3964,11 +3968,79 @@ exports.updatePaymentEvent = async (req, res) => {
         if (Array.isArray(PaymentTickets)) {
             event.PaymentTickets = PaymentTickets.map(normalizePaymentTicket);
         }
+        event.markModified('PaymentTickets');
         await event.save();
-        res.status(200).json({ message: 'Payment event updated', event });
+        const ticketsForClient = normalizeTicketsForView(event.PaymentTickets);
+        res.status(200).json({ message: 'Payment event updated', PaymentTickets: ticketsForClient });
     } catch (error) {
         console.error('Error updating payment event:', error);
         res.status(500).json({ message: 'Error updating payment event' });
+    }
+};
+
+/** 匯出付費票券為 Excel（含 _id） */
+exports.exportPaymentTickets = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+        const rows = (event.PaymentTickets || []).map(ticketToXlsxRow);
+        const worksheet = XLSX.utils.json_to_sheet(rows, { header: PAYMENT_TICKET_XLSX_COLUMNS });
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'PaymentTickets');
+        const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+        const safeName = String(event.name || 'event').replace(/[^\w\u4e00-\u9fff-]+/g, '_').slice(0, 40);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=payment_tickets_${safeName}_${eventId}.xlsx`);
+        res.send(buffer);
+    } catch (error) {
+        console.error('Error exporting payment tickets:', error);
+        res.status(500).json({ message: '匯出票券失敗' });
+    }
+};
+
+/** 從 Excel 匯入付費票券（相同 _id 則更新取代） */
+exports.importPaymentTickets = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        if (!req.file || !req.file.buffer) {
+            return res.status(400).json({ message: '請上傳 Excel 檔案' });
+        }
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        const workbook = XLSX.read(req.file.buffer, { type: 'buffer', cellDates: true });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+        if (!rows.length) {
+            return res.status(400).json({ message: '檔案沒有資料列' });
+        }
+
+        const { tickets, updated, created, errors } = mergePaymentTicketsFromImportRows(event.PaymentTickets, rows);
+        event.PaymentTickets = tickets;
+        if (tickets.length > 0) {
+            event.isPaymentEvent = true;
+        }
+        event.markModified('PaymentTickets');
+        await event.save();
+
+        res.status(200).json({
+            message: `匯入完成：更新 ${updated} 張、新增 ${created} 張`,
+            updated,
+            created,
+            errors: errors.length ? errors : undefined,
+            PaymentTickets: normalizeTicketsForView(event.PaymentTickets),
+            isPaymentEvent: event.isPaymentEvent,
+        });
+    } catch (error) {
+        console.error('Error importing payment tickets:', error);
+        res.status(500).json({ message: error.message || '匯入票券失敗' });
     }
 };
 
@@ -3983,7 +4055,9 @@ exports.renderPaymentSettings = async (req, res) => {
         if (!event) {
             return res.status(404).send('Event not found');
         }
-        res.render('admin/payment_settings', { event, eventId });
+        const eventForView = event.toObject ? event.toObject() : event;
+        eventForView.PaymentTickets = normalizeTicketsForView(event.PaymentTickets);
+        res.render('admin/payment_settings', { event: eventForView, eventId });
     } catch (error) {
         console.error('Error rendering payment settings page:', error);
         res.status(500).send('Error rendering payment settings page.');
