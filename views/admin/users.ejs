@@ -1009,7 +1009,7 @@
                                             </div>
                                         </div>
                                         <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0; display: flex; justify-content: flex-end;">
-                                            <button type="button" class="btn btn-warning" id="sendEmailNowBtn"><i class="fas fa-envelope"></i> <%= t('users.saveEmailSettings') %></button>
+                                            <button type="button" class="btn btn-warning" id="saveEmailSettingsBtn"><i class="fas fa-envelope"></i> <%= t('users.saveEmailSettings') %></button>
                                         </div>
                                     </form>
                                         </div>
@@ -2866,46 +2866,6 @@ const _US = {
                 $('#emailSettingsModalBackdrop').css('display', 'none');
                 $('#emailSettingsModal').css('display', 'none');
             }
-        });
-
-        // Send Email Now button (from email settings modal)
-        $('#sendEmailNowBtn').on('click', function() {
-            const selectedIds = Array.from(selectedUserIds);
-
-            if (selectedIds.length === 0) {
-                showAlert('warning', _US.batchEmailNoUsers);
-                return;
-            }
-
-            // Close email settings modal
-            $('#emailSettingsModalBackdrop').hide();
-            $('#emailSettingsModal').hide();
-
-            // Trigger batch send email modal
-            setTimeout(function() {
-                $('#selectedUsersCount').text(selectedIds.length);
-                $('#batchEmailType').val('invitation');
-                loadBatchEmailTemplates('invitation');
-
-                const $modal = $('#batchSendEmailModal');
-                if ($modal.length === 0) {
-                    showAlert('danger', _US.modalNotFound);
-                    return;
-                }
-
-                $modal.removeClass('show').attr('aria-hidden', 'false');
-                $modal.modal('show');
-
-                setTimeout(function() {
-                    if (!$modal.hasClass('show') || $modal.css('display') === 'none') {
-                        $modal.addClass('show').css('display', 'block');
-                        $('body').addClass('modal-open');
-                        if ($('.modal-backdrop').length === 0) {
-                            $('<div class="modal-backdrop fade show"></div>').appendTo('body').css('z-index', '10550');
-                        }
-                    }
-                }, 200);
-            }, 200);
         });
 
         // Save Email Settings from Modal
