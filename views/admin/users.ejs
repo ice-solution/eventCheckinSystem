@@ -1,5 +1,6 @@
 <%- include ("components/header") %>
 <%- include ("components/menu", { eventId: event._id }) %>
+<%- include("components/responsive_layout_style") %>
 <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
 <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
 <link rel="stylesheet" href="/admin/assets/css/style.css">
@@ -446,6 +447,10 @@
             height: 30px !important;
             padding: 0 !important;
             background: transparent !important;
+        }
+        #usersTable_wrapper .dataTables_paginate .page-item.previous .page-link::before,
+        #usersTable_wrapper .dataTables_paginate .page-item.next .page-link::after {
+            content: none !important;
         }
         #usersTable_wrapper .dataTables_paginate .page-item.disabled .page-link {
             color: #d5d9dd !important;
@@ -902,6 +907,24 @@
                                             </button>
                                         </div>
                                         <div class="modal-body">
+                                            <div id="resendUserInfo" class="mb-3 p-2 bg-light rounded border" style="display:none;">
+                                                <small class="text-muted d-block mb-1"><%= t('common.recipient') || 'Recipient' %></small>
+                                                <span id="resendUserInfoText" class="font-weight-bold"></span>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="resendEmailType"><%= t('users.selectEmailTypeLabel') %>:</label>
+                                                <select class="form-control" id="resendEmailType">
+                                                    <option value="">-- <%= t('users.selectEmailTypeLabel') %> --</option>
+                                                    <option value="invitation"><%= t('users.emailTypeInvitation') %></option>
+                                                    <option value="welcome"><%= t('users.emailTypeWelcome') %></option>
+                                                    <option value="knowledge"><%= t('users.emailTypeKnowledge') %></option>
+                                                    <option value="reminder"><%= t('users.emailTypeReminder') %></option>
+                                                    <% if (invoiceEmailEnabled) { %>
+                                                    <option value="invoice"><%= t('users.emailTypeInvoice') %></option>
+                                                    <% } %>
+                                                    <option value="payment_receipt"><%= t('users.emailTypePaymentReceipt') %></option>
+                                                </select>
+                                            </div>
                                             <div class="form-group" id="resendEmailTemplateGroup" style="display: none;">
                                                 <label for="resendEmailTemplate"><%= t('users.selectEmailTemplateLabel') %>:</label>
                                                 <select class="form-control" id="resendEmailTemplate">
@@ -1462,7 +1485,7 @@
                                             <td>
                                                 <div class="user-action-buttons">
                                                     <div class="qrcode-container">
-                                                        <button type="button" class="btn btn-outline-info qrcode-btn" data-user-id="<%= user._id %>" title="<%= t('users.downloadQrCodeBtn') %>">
+                                                        <button type="button" class="btn btn-sm btn-info qrcode-btn" data-user-id="<%= user._id %>" title="<%= t('users.downloadQrCodeBtn') %>">
                                                             <i class="fa fa-qrcode"></i>
                                                         </button>
                                                         <div class="qrcode-popup">
@@ -1472,21 +1495,9 @@
                                                             </button>
                                                         </div>
                                                     </div>
-                                                    <div class="btn-group">
-                                                        <button type="button" class="btn btn-outline-primary dropdown-toggle resend-email-btn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-_id="<%= user._id %>">
-                                                            <i class="fa fa-envelope mr-1"></i> <%= t('users.resendDropdown') %>
-                                                        </button>
-                                                        <div class="dropdown-menu">
-                                                            <a class="dropdown-item resend-email-option" href="#" data-type="invitation"><%= t('users.emailTypeInvitation') %></a>
-                                                            <a class="dropdown-item resend-email-option" href="#" data-type="welcome"><%= t('users.emailTypeWelcome') %></a>
-                                                            <a class="dropdown-item resend-email-option" href="#" data-type="knowledge"><%= t('users.emailTypeKnowledge') %></a>
-                                                            <a class="dropdown-item resend-email-option" href="#" data-type="reminder"><%= t('users.emailTypeReminder') %></a>
-                                                            <% if (invoiceEmailEnabled) { %>
-                                                            <a class="dropdown-item resend-email-option" href="#" data-type="invoice"><%= t('users.emailTypeInvoice') %></a>
-                                                            <% } %>
-                                                            <a class="dropdown-item resend-email-option" href="#" data-type="payment_receipt"><%= t('users.emailTypePaymentReceipt') %></a>
-                                                        </div>
-                                                    </div>
+                                                    <button type="button" class="btn btn-sm btn-primary resend-email-btn" data-_id="<%= user._id %>" data-user-name="<%= user.name || '' %>" data-user-email="<%= user.email || '' %>">
+                                                        <i class="fa fa-envelope mr-1"></i> <%= t('users.resendDropdown') %>
+                                                    </button>
                                                     <button class="btn btn-delete-x delete-user" data-_id="<%= user._id %>" title="<%= t('common.delete') %>">✕</button>
                                                 </div>
                                             </td>
@@ -1998,29 +2009,65 @@ const _US = {
             originalHtml: null
         };
 
-        // Resend email functionality (支持選擇類型)
-        $('#usersTable tbody').on('click', '.resend-email-option', function(e) {
-            e.preventDefault();
-            const _id = $(this).closest('.btn-group').find('.resend-email-btn').data('_id');
-            const emailType = $(this).data('type');
-            const event_id = '<%= event._id %>';
-            const button = $(this).closest('.btn-group').find('.resend-email-btn');
+        // Resend email — open modal directly
+        $('#usersTable tbody').on('click', '.resend-email-btn', function(e) {
+            const _id = $(this).data('_id');
+            const userName = $(this).data('user-name') || '';
+            const userEmail = $(this).data('user-email') || '';
+            const button = $(this);
             const originalHtml = button.html();
 
-            // Store context for later use
             resendEmailContext = {
                 userId: _id,
-                emailType: emailType,
+                emailType: null,
                 button: button,
                 originalHtml: originalHtml
             };
 
-            // Load templates for this type
+            // Show user info
+            const userInfoText = [userName, userEmail].filter(Boolean).join('  |  ');
+            if (userInfoText) {
+                $('#resendUserInfoText').text(userInfoText);
+                $('#resendUserInfo').show();
+            } else {
+                $('#resendUserInfo').hide();
+            }
+
+            // Reset modal state
+            $('#resendEmailType').val('');
+            $('#resendEmailTemplate').html('<option value="">' + _US.useDefaultTemplate + '</option>');
+            $('#resendEmailTemplateGroup').hide();
+            $('#confirmResendEmail').prop('disabled', true);
+
+            const $modal = $('#resendEmailModal');
+            $modal.removeClass('show').attr('aria-hidden', 'false');
+            $modal.modal('show');
+
+            setTimeout(function() {
+                if (!$modal.hasClass('show') || $modal.css('display') === 'none') {
+                    $modal.addClass('show').css('display', 'block');
+                    $('body').addClass('modal-open');
+                    if ($('.modal-backdrop').length === 0) {
+                        $('<div class="modal-backdrop fade show"></div>').appendTo('body');
+                    }
+                }
+            }, 200);
+        });
+
+        // When email type changes — fetch matching templates
+        $(document).on('change', '#resendEmailType', function() {
+            const emailType = $(this).val();
+            const event_id = '<%= event._id %>';
             const $templateSelect = $('#resendEmailTemplate');
             const $templateGroup = $('#resendEmailTemplateGroup');
-            
+
+            resendEmailContext.emailType = emailType || null;
+            $('#confirmResendEmail').prop('disabled', !emailType);
+
             $templateSelect.html('<option value="">' + _US.useDefaultTemplate + '</option>');
             $templateGroup.hide();
+
+            if (!emailType) return;
 
             $.ajax({
                 url: `/events/api/${event_id}/emailTemplates`,
@@ -2034,38 +2081,8 @@ const _US = {
                                 `${template.subject} ` + _US.globalTemplateLabel;
                             $templateSelect.append(`<option value="${template._id}">${label}</option>`);
                         });
-                        $templateGroup.show();
                     }
-                    
-                    // Show modal for template selection
-                    const $modal = $('#resendEmailModal');
-                    if ($modal.length === 0) {
-                        console.error('Resend email modal not found!');
-                        showAlert('danger', _US.modalNotFound);
-                        return;
-                    }
-                    
-                    // Reset modal state before showing
-                    $modal.removeClass('show').attr('aria-hidden', 'false');
-                    
-                    // Show modal - Bootstrap 4 syntax
-                    $modal.modal('show');
-                    
-                    // Ensure modal is visible (fallback if Bootstrap doesn't work)
-                    setTimeout(function() {
-                        if (!$modal.hasClass('show') || $modal.css('display') === 'none') {
-                            $modal.addClass('show').css('display', 'block');
-                            $('body').addClass('modal-open');
-                            if ($('.modal-backdrop').length === 0) {
-                                $('<div class="modal-backdrop fade show"></div>').appendTo('body');
-                            }
-                        }
-                    }, 200);
-                },
-                error: function(xhr) {
-                    console.error('Error fetching email templates:', xhr);
-                    // If error, proceed with default template
-                    confirmResendEmail();
+                    $templateGroup.show();
                 }
             });
         });
@@ -2121,7 +2138,6 @@ const _US = {
         
         // Handle resend email modal close events
         $('#resendEmailModal').on('hidden.bs.modal', function() {
-            // Cleanup when modal is fully hidden
             const $modal = $(this);
             $modal.removeClass('show').attr('aria-hidden', 'true');
             $('.modal-backdrop').remove();
@@ -2129,6 +2145,7 @@ const _US = {
                 'padding-right': '',
                 'overflow': ''
             });
+            $('#confirmResendEmail').prop('disabled', false);
         });
         
         // Handle close button clicks for resend email modal
@@ -3056,23 +3073,13 @@ const _US = {
                     const userNameForQR = userData.name || userData.email || 'user';
                     const actionsHtml = '<div class="user-action-buttons">' +
                         '<div class="qrcode-container">' +
-                        '<button type="button" class="btn btn-outline-info qrcode-btn" data-user-id="' + response._id + '" title="' + _US.viewQrCode + '"><i class="fa fa-qrcode"></i></button>' +
+                        '<button type="button" class="btn btn-sm btn-info qrcode-btn" data-user-id="' + response._id + '" title="' + _US.viewQrCode + '"><i class="fa fa-qrcode"></i></button>' +
                         '<div class="qrcode-popup">' +
                         '<img src="https://api.qrserver.com/v1/create-qr-code/?data=' + response._id + '&size=200x200" alt="QR Code" class="qrcode-image" id="qrcode-' + response._id + '">' +
                         '<button type="button" class="btn btn-primary btn-sm qrcode-download-btn" data-user-id="' + response._id + '" data-user-name="' + userNameForQR + '"><i class="fa fa-download"></i> ' + _US.downloadQrCodeBtn + '</button>' +
                         '</div>' +
                         '</div>' +
-                        '<div class="btn-group">' +
-                        '<button type="button" class="btn btn-outline-primary dropdown-toggle resend-email-btn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-_id="' + response._id + '"><i class="fa fa-envelope mr-1"></i> ' + _US.resendDropdown + '</button>' +
-                        '<div class="dropdown-menu">' +
-                        '<a class="dropdown-item resend-email-option" href="#" data-type="invitation">' + _US.emailTypeInvitation + '</a>' +
-                        '<a class="dropdown-item resend-email-option" href="#" data-type="welcome">' + _US.emailTypeWelcome + '</a>' +
-                        '<a class="dropdown-item resend-email-option" href="#" data-type="knowledge">' + _US.emailTypeKnowledge + '</a>' +
-                        '<a class="dropdown-item resend-email-option" href="#" data-type="reminder">' + _US.emailTypeReminder + '</a>' +
-                        (_US.invoiceEmailEnabled ? '<a class="dropdown-item resend-email-option" href="#" data-type="invoice">' + _US.emailTypeInvoice + '</a>' : '') +
-                        '<a class="dropdown-item resend-email-option" href="#" data-type="payment_receipt">' + _US.emailTypePaymentReceipt + '</a>' +
-                        '</div>' +
-                        '</div>' +
+                        '<button type="button" class="btn btn-sm btn-primary resend-email-btn" data-_id="' + response._id + '" data-user-name="' + (userData.name || '') + '" data-user-email="' + (userData.email || '') + '"><i class="fa fa-envelope mr-1"></i> ' + _US.resendDropdown + '</button>' +
                         '<button class="btn btn-delete-x delete-user" data-_id="' + response._id + '" title="' + _US.deleteBtn + '">✕</button>' +
                         '</div>';
                     newRow.push(actionsHtml);

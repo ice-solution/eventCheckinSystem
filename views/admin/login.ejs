@@ -104,7 +104,11 @@
                                 </button>
                             </div>
                         `;
-                        $('#alertContainer').append(alertHtml);
+                        const $alert = $(alertHtml);
+                        $('#alertContainer').append($alert);
+                        setTimeout(function() {
+                            $alert.alert('close');
+                        }, 4000);
                     }
                 });
             });

@@ -1,5 +1,6 @@
 <%- include ("components/header") %>
 <%- include ("components/menu", { eventId: event._id }) %>
+<%- include("components/responsive_layout_style") %>
 <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
 <link rel="stylesheet" href="/admin/assets/css/style.css">
 <style>
@@ -41,6 +42,11 @@
     }
     .content-native-width {
         max-width: calc(100vw - 360px);
+    }
+    @media (max-width: 767px) {
+        .content-native-width {
+            max-width: 100% !important;
+        }
     }
 </style>
 

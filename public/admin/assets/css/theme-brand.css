@@ -155,10 +155,21 @@ aside#left-panel.left-panel {
 
 aside#left-panel .navbar {
   background: transparent !important;
+  width: 100% !important;
+  padding: 0 !important;
+}
+
+aside#left-panel .main-menu.navbar-collapse {
+  width: 100% !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
 }
 
 aside#left-panel .nav.navbar-nav {
-  width: 100%;
+  width: 100% !important;
+  flex-direction: column !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 /* ── Collapsed-only logo block (outside nav/ul) ─────────────── */
@@ -184,6 +195,14 @@ body.open .sidebar-brand-logo {
   display: none !important;
 }
 
+/* Dropdown arrow — keep inside padding area */
+aside#left-panel .navbar-nav li.menu-item-has-children > a:before {
+  right: 16px !important;
+}
+aside#left-panel .navbar-nav li.menu-item-has-children.show > a:before {
+  right: 11px !important;
+}
+
 aside#left-panel .menu-divider {
   border-top: 1px solid rgba(255,255,255,0.1);
   margin: 8px 16px;
@@ -199,8 +218,18 @@ aside#left-panel .menu-title {
   padding: 18px 20px 6px !important;
 }
 
+aside#left-panel .nav.navbar-nav > li {
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
 aside#left-panel .nav.navbar-nav > li > a,
 aside#left-panel .nav.navbar-nav > li > a:visited {
+  display: block !important;
+  width: 100% !important;
+  padding-left: 20px !important;
+  padding-right: 16px !important;
   color: var(--sidebar-text) !important;
   font-size: 13.5px !important;
   font-weight: 400 !important;
@@ -529,14 +558,49 @@ body.open a.sidebar-toggle {
   font-size: 22px !important;
 }
 
-/* Hide menu item text in collapsed state */
+/* Hide menu item text in collapsed state, center icon */
+body.open aside#left-panel #main-menu {
+  width: 83px !important;
+  display: block !important;
+}
+
+body.open aside#left-panel .nav.navbar-nav > li {
+  width: 83px !important;
+  padding: 0 !important;
+  text-align: center !important;
+}
+
 body.open aside#left-panel .nav.navbar-nav > li > a,
 body.open aside#left-panel .nav.navbar-nav > li > a:visited {
   font-size: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 83px !important;
+  max-width: 83px !important;
+  height: 44px !important;
+  padding: 0 !important;
 }
 
 body.open aside#left-panel .nav.navbar-nav > li > a .menu-icon {
+  float: none !important;
+  display: inline-block !important;
   font-size: 18px !important;
+  width: auto !important;
+  margin: 0 !important;
+  z-index: 1 !important;
+}
+
+/* Collapsed dropdown arrow — vertically centered */
+body.open aside#left-panel .navbar-nav li.menu-item-has-children > a:before {
+  top: 50% !important;
+  right: 8px !important;
+  transform: translateY(-50%) rotate(45deg) !important;
+}
+body.open aside#left-panel .navbar-nav li.menu-item-has-children.show > a:before {
+  top: 50% !important;
+  right: 8px !important;
+  transform: translateY(-50%) rotate(135deg) !important;
 }
 
 /* ── Collapsed sidebar submenu background ───────────────────── */

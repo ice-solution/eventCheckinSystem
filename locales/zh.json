@@ -20,7 +20,7 @@
     "noImage": "無圖片", "quantity": "數量", "image": "圖片",
     "company": "公司", "table": "桌號", "description": "描述", "points": "積分",
     "type": "類型", "content": "內容", "subject": "主題", "role": "角色",
-    "deselectAll": "取消全選", "sendEmail": "發送郵件", "sendSms": "發送 SMS"
+    "deselectAll": "取消全選", "sendEmail": "發送郵件", "sendSms": "發送 SMS", "recipient": "收件人"
   },
   "menu": {
     "adminTitle": "後台管理", "events": "活動列表", "userManagement": "登入帳號管理",
@@ -241,7 +241,7 @@
     "deleteTemplateConfirm": "確定要刪除此郵件模板？此操作不可復原！",
     "deleteSuccess": "郵件模板已刪除！正在跳轉...",
     "deleteFailed": "刪除郵件模板失敗，請稍後再試。",
-    "sendEmailTitle": "發送郵件", "recipientsLabel": "收件人",
+    "sendEmailTitle": "發送測試郵件", "recipientsLabel": "收件人",
     "recipientsPlaceholder": "請輸入收件人電郵地址",
     "sendEmailBtn": "發送郵件",
     "loadTypeSeedBtn": "載入此類型模板",
@@ -624,6 +624,7 @@
     "importJson": "匯入 JSON",
     "resetToDefault": "重設為預設",
     "saveConfig": "儲存設定",
+    "savedSuccess": "已儲存！",
     "configureHint": "設定此活動的報名表單欄位顯示",
 
     "cardRegisterPageTitle": "報名頁版面開關",
@@ -704,7 +705,7 @@
 
     "sectionOrder": "Order",
     "fieldName": "Field Name",
-    "labelZh": "Label (ZH)",
+    "labelZh": "Chinese Label",
     "labelEn": "English Label",
     "fieldType": "Field Type",
     "required": "Required",

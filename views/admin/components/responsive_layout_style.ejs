@@ -221,4 +221,262 @@
     .dataTables_wrapper .dataTables_paginate .page-item.disabled .page-link::after {
         color: #d5d9dd !important;
     }
+
+    /* ── Shared styled DataTable (used by email_template_list, transaction_records, email_records) ── */
+    .dt-styled-xscroll {
+        width: 100%;
+        overflow-x: auto;
+        overflow-y: visible;
+        border: 1px solid var(--border-color, #e4e9f0);
+        border-radius: 8px;
+        scrollbar-width: thin;
+        scrollbar-color: transparent transparent;
+        box-sizing: border-box;
+    }
+    .dt-styled-xscroll:hover { scrollbar-color: rgba(0,0,0,0.28) transparent; }
+    .dt-styled-xscroll::-webkit-scrollbar { height: 8px; }
+    .dt-styled-xscroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.18); border-radius: 4px; }
+    .dt-styled-xscroll.is-dragging { cursor: grabbing; user-select: none; }
+
+    .dt-styled-wrapper { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 !important; box-sizing: border-box; }
+    .dt-styled-wrapper table { width: max-content !important; min-width: 100%; margin: 0 !important; border-collapse: collapse; }
+    .dt-styled-wrapper table thead th,
+    .dt-styled-wrapper table tbody td {
+        box-sizing: border-box !important; white-space: nowrap; vertical-align: middle;
+        padding: 10px 14px !important; font-size: 13px; border-bottom: 1px solid #eef1f5; text-align: left;
+    }
+    .dt-styled-wrapper table thead th { font-weight: 600; color: #334155; border-bottom: 1px solid #e4e9f0; background: #f8fafc; }
+    .dt-styled-wrapper table thead th.sorting,
+    .dt-styled-wrapper table thead th.sorting_asc,
+    .dt-styled-wrapper table thead th.sorting_desc { background-image: none !important; position: relative; padding-right: 22px !important; }
+    .dt-styled-wrapper table thead th.sorting::before,
+    .dt-styled-wrapper table thead th.sorting_asc::before,
+    .dt-styled-wrapper table thead th.sorting_desc::before { display: none !important; }
+    .dt-styled-wrapper table thead th.sorting::after,
+    .dt-styled-wrapper table thead th.sorting_asc::after,
+    .dt-styled-wrapper table thead th.sorting_desc::after {
+        position: absolute !important; right: 4px !important; top: 50% !important; transform: translateY(-50%) !important;
+        display: block !important; font-size: 9px !important; line-height: 1 !important;
+        content: '▲▼' !important; color: #ccc !important; pointer-events: none;
+    }
+    .dt-styled-wrapper table thead th.sorting_asc::after  { content: '▲' !important; color: #444 !important; }
+    .dt-styled-wrapper table thead th.sorting_desc::after { content: '▼' !important; color: #444 !important; }
+
+    .dt-styled-wrapper .dataTables_info { padding: 14px 12px 6px !important; font-size: 13px; color: #64748b; }
+    .dt-styled-wrapper .dataTables_paginate { padding: 4px 12px 10px !important; text-align: center; }
+    .dt-styled-wrapper .dataTables_paginate .pagination { display: flex !important; justify-content: center !important; align-items: center !important; gap: 2px; margin: 0 !important; }
+    .dt-styled-wrapper .dataTables_paginate .page-link {
+        display: inline-flex !important; align-items: center !important; justify-content: center !important;
+        height: 32px !important; min-width: 32px !important; padding: 0 6px !important;
+        border: none !important; border-radius: 50% !important; font-size: 14px !important;
+        font-weight: 500 !important; color: #b0b8c1 !important; background: transparent !important;
+        box-shadow: none !important; text-decoration: none !important;
+    }
+    .dt-styled-wrapper .dataTables_paginate .page-link:hover { color: #555 !important; }
+    .dt-styled-wrapper .dataTables_paginate .page-item.active .page-link { color: #4DD0CA !important; font-weight: 700 !important; }
+    .dt-styled-wrapper .dataTables_paginate .page-item.previous .page-link,
+    .dt-styled-wrapper .dataTables_paginate .page-item.next .page-link {
+        font-size: 26px !important; width: 44px !important; min-width: 44px !important;
+        height: 30px !important; padding: 0 !important; background: transparent !important;
+    }
+    .dt-styled-wrapper .dataTables_paginate .page-item.previous .page-link::before,
+    .dt-styled-wrapper .dataTables_paginate .page-item.next .page-link::after { content: none !important; }
+    .dt-styled-wrapper .dataTables_paginate .page-item.disabled .page-link { color: #d5d9dd !important; cursor: default !important; }
+    .dt-styled-wrapper > .row:last-child > div[class*="col-"] { flex: 0 0 100% !important; max-width: 100% !important; }
+
+    /* ── Mobile sidebar toggle button (hidden on desktop) ── */
+    #mobile-sidebar-btn {
+        display: none;
+    }
+
+    @media (max-width: 767px) {
+        /* Sidebar: fixed, off-screen left, full height, above header bar */
+        #left-panel {
+            position: fixed !important;
+            left: -85vw !important;
+            top: 0 !important;
+            height: 100% !important;
+            width: 85vw !important;
+            max-width: 85vw !important;
+            z-index: 1065 !important;
+            transition: left 0.3s ease !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+        }
+
+        body.mobile-sidebar-open #left-panel {
+            left: 0 !important;
+        }
+
+        /* Right panel: full width, no left margin */
+        #right-panel,
+        body.open #right-panel {
+            width: 100% !important;
+            margin-left: 0 !important;
+            max-width: 100vw !important;
+        }
+
+        /* Dim overlay when sidebar is open */
+        #mobile-sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1060;
+        }
+
+        body.mobile-sidebar-open #mobile-sidebar-overlay {
+            display: block;
+        }
+
+        /* Mobile toggle button: fixed top-left, vertically centred in 56px bar */
+        #mobile-sidebar-btn {
+            display: flex !important;
+            position: fixed;
+            top: 8px;
+            left: 8px;
+            z-index: 1070;
+            background: #0d1b2a;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            width: 40px;
+            height: 40px;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+            font-size: 16px;
+        }
+
+        /* Hide the in-sidebar toggle on mobile */
+        #left-panel #menuToggle {
+            display: none !important;
+        }
+
+        /* Push sidebar brand content past the fixed toggle button */
+        #left-panel .sidebar-brand {
+            padding-left: 52px !important;
+        }
+
+        /* Fixed top bar: header sits at top, same level as ☰ button */
+        #right-panel #header {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            height: 56px !important;
+            z-index: 1055 !important;
+            background: #fff !important;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08) !important;
+            display: flex !important;
+            align-items: center !important;
+            padding: 0 !important;
+        }
+
+        #right-panel #header .top-right {
+            padding-left: 60px !important;
+            width: 100% !important;
+        }
+
+        /* Push page content below the fixed header */
+        #right-panel .content {
+            padding-top: calc(56px + 1rem) !important;
+        }
+
+        /* Hide flyout sub-menus (1024px rule sets display:block + right:-160px) */
+        #left-panel .navbar .navbar-nav li.menu-item-has-children .sub-menu {
+            display: none !important;
+            position: static !important;
+            right: auto !important;
+        }
+
+        /* Show sub-menu inline when expanded */
+        #left-panel .navbar .navbar-nav li.menu-item-has-children.show .sub-menu {
+            display: block !important;
+            position: static !important;
+            right: auto !important;
+            margin-left: 20px !important;
+        }
+
+        /* Sub-menu links: full width, text wrap allowed */
+        #left-panel .navbar .navbar-nav li.menu-item-has-children.show .sub-menu li a {
+            width: 100% !important;
+            max-width: 100% !important;
+            white-space: normal !important;
+            font-size: 13px !important;
+            padding: 6px 12px 6px 30px !important;
+        }
+
+        /* On mobile, cancel out body.open (collapsed icon-only) sidebar styles */
+        body.open aside#left-panel .navbar .navbar-nav li > a {
+            font-size: 14px !important;
+            max-width: 100% !important;
+        }
+        body.open aside#left-panel .navbar .navbar-nav li > a .menu-title-text {
+            font-size: 14px !important;
+        }
+        body.open aside#left-panel .navbar .navbar-nav li > a .menu-icon {
+            font-size: inherit !important;
+            width: 55px !important;
+            text-align: left !important;
+        }
+        body.open aside#left-panel .nav.navbar-nav > li > a,
+        body.open aside#left-panel .nav.navbar-nav > li > a:visited {
+            font-size: 13.5px !important;
+        }
+        body.open aside#left-panel .nav.navbar-nav > li {
+            padding: 0 !important;
+        }
+        body.open .sidebar-collapsed-logo {
+            display: none !important;
+        }
+        body.open .sidebar-brand-logo {
+            display: inline-block !important;
+        }
+        body.open .sidebar-brand-text {
+            display: inline !important;
+        }
+    }
 </style>
+<script>
+window.initStyledDT = function(tableId, dtOptions) {
+    var $table = $('#' + tableId);
+    if (!$table.length || !$.fn.DataTable) return;
+    var defaults = { pageLength: 25, dom: 'rtip' };
+    var opts = $.extend(true, defaults, dtOptions || {});
+    var origInit = opts.initComplete;
+    var origDraw = opts.drawCallback;
+    opts.initComplete = function() {
+        var $wrap = $('#' + tableId + '_wrapper');
+        $wrap.addClass('dt-styled-wrapper');
+        if (!$table.parent().hasClass('dt-styled-xscroll')) {
+            $table.wrap('<div class="dt-styled-xscroll"></div>');
+        }
+        _dtFixArrows(tableId);
+        _dtInitDrag(tableId);
+        if (origInit) origInit.apply(this, arguments);
+    };
+    opts.drawCallback = function() {
+        _dtFixArrows(tableId);
+        if (origDraw) origDraw.apply(this, arguments);
+    };
+    return $table.DataTable(opts);
+};
+window._dtFixArrows = function(tableId) {
+    $('#' + tableId + '_wrapper .paginate_button.previous a').html('&#8249;');
+    $('#' + tableId + '_wrapper .paginate_button.next a').html('&#8250;');
+    $('#' + tableId + '_wrapper .page-item.previous .page-link, #' + tableId + '_wrapper .page-item.next .page-link')
+        .css({ background: 'transparent', 'border-color': 'transparent' });
+};
+window._dtInitDrag = function(tableId) {
+    var el = document.querySelector('#' + tableId + '_wrapper .dt-styled-xscroll');
+    if (!el) return;
+    var d = { on: false, x: 0, s: 0, moved: false };
+    el.addEventListener('mousedown',  function(e) { d = { on: true, x: e.clientX, s: el.scrollLeft, moved: false }; el.classList.add('is-dragging'); });
+    el.addEventListener('mouseup',    function() { d.on = false; el.classList.remove('is-dragging'); });
+    el.addEventListener('mouseleave', function() { d.on = false; el.classList.remove('is-dragging'); });
+    el.addEventListener('mousemove',  function(e) { if (!d.on) return; var dx = d.x - e.clientX; if (Math.abs(dx) > 5) d.moved = true; el.scrollLeft = d.s + dx; });
+    el.addEventListener('click',      function(e) { if (d.moved) { e.preventDefault(); e.stopPropagation(); d.moved = false; } });
+};
+</script>

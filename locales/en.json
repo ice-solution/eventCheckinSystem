@@ -20,7 +20,7 @@
     "noImage": "No image", "quantity": "Quantity", "image": "Image",
     "company": "Company", "table": "Table", "description": "Description", "points": "Points",
     "type": "Type", "content": "Content", "subject": "Subject", "role": "Role",
-    "deselectAll": "Deselect All", "sendEmail": "Send Email", "sendSms": "Send SMS"
+    "deselectAll": "Deselect All", "sendEmail": "Send Email", "sendSms": "Send SMS", "recipient": "Recipient"
   },
   "menu": {
     "adminTitle": "Admin", "events": "Events", "userManagement": "Login Account Management",
@@ -242,7 +242,7 @@
     "deleteTemplateConfirm": "Are you sure you want to delete this email template? This cannot be undone!",
     "deleteSuccess": "Email template deleted! Redirecting...",
     "deleteFailed": "Failed to delete email template. Please try again later.",
-    "sendEmailTitle": "Send Email", "recipientsLabel": "Recipients",
+    "sendEmailTitle": "Send Email for Testing", "recipientsLabel": "Recipients",
     "recipientsPlaceholder": "Please enter recipient email addresses",
     "sendEmailBtn": "Send Email",
     "loadTypeSeedBtn": "Load template for this type",
@@ -625,6 +625,7 @@
     "importJson": "Import JSON",
     "resetToDefault": "Reset to Default",
     "saveConfig": "Save Config",
+    "savedSuccess": "Saved!",
     "configureHint": "Configure registration form field display for this event",
 
     "cardRegisterPageTitle": "Registration Page",
@@ -705,7 +706,7 @@
 
     "sectionOrder": "Order",
     "fieldName": "Field Name",
-    "labelZh": "Label (ZH)",
+    "labelZh": "Chinese Label",
     "labelEn": "English Label",
     "fieldType": "Field Type",
     "required": "Required",
