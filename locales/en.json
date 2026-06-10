@@ -508,7 +508,7 @@
     "detailedRecordsTitle": "Detailed Send Records",
     "nameColLabel": "Name", "emailColLabel": "Email", "statusColLabel": "Status", "phoneColLabel": "Phone",
     "welcomeMethodLabel": "Welcome Message Method", "methodEmail": "Email", "methodSms": "SMS", "methodBoth": "Both",
-    "sendWelcomeEmailLabel": "Auto Send Welcome Email after Registered", "sendConfirmationEmailLabel": "Auto Send Confirmation Email (Coming soon)",
+    "sendWelcomeEmailLabel": "Auto Send Welcome Email after Registered", "sendConfirmationEmailLabel": "Auto Send payment receipt email after paid",
     "sendReminderEmailLabel": "Auto Send Reminder Email (Coming soon)", "sendThankYouEmailLabel": "Auto Send Thank You Email (Coming soon)",
     "manageSmsTemplates": "Manage SMS Templates", "closeBtn": "Close",
     "smsSentSuccess": "SMS sent successfully!",
