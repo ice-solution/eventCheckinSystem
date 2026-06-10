@@ -6,7 +6,7 @@ const Event = require('../model/Event');
 const eventsController = require('../controllers/eventsController');
 const Transaction = require('../model/Transaction');
 const { getBannerRenderData } = require('../utils/bannerCache');
-const { normalizeTicketsForView, ticketsUseCategories } = require('../utils/paymentTicket');
+const { normalizeTicketsForView, ticketsUseCategories, isFreePaymentTicketPrice } = require('../utils/paymentTicket');
 
 function getWebApiKeys() {
     const raw = (process.env.WEB_SITE_API_KEYS || process.env.WEB_API_KEYS || '').toString().trim();
@@ -125,6 +125,9 @@ router.get('/:event_id/register/success', async (req, res) => {
             ? { $or: [{ stripeSessionId: session_id }, { _id: session_id }] }
             : { stripeSessionId: session_id };
         transaction = await Transaction.findOne(query);
+        if (transaction && (transaction.status === 'free' || isFreePaymentTicketPrice(transaction.ticketPrice))) {
+            transaction = null;
+        }
     }
     res.render('exvent/success', { event_id, transaction, lang: lang || null });
 });

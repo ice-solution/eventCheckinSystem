@@ -37,6 +37,11 @@ function normalizeBilingualField(field) {
     return { zh: '', en: '' };
 }
 
+function isFreePaymentTicketPrice(price) {
+    const n = Number(price);
+    return !Number.isNaN(n) && n <= 0;
+}
+
 function isPaymentTicketInRange(ticket, now = new Date()) {
     if (!ticket) return false;
     const from = ticket.datetimeFrom ? new Date(ticket.datetimeFrom) : null;
@@ -274,6 +279,7 @@ module.exports = {
     getTicketDisplayLabel,
     normalizePaymentTicketForSave,
     normalizeTicketsForView,
+    isFreePaymentTicketPrice,
     isPaymentTicketInRange,
     getTicketCategoryKey,
     getDistinctCategoryKeys,

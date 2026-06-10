@@ -3922,6 +3922,7 @@ const {
     PAYMENT_TICKET_XLSX_COLUMNS,
     ticketToXlsxRow,
     mergePaymentTicketsFromImportRows,
+    isFreePaymentTicketPrice,
 } = require('../utils/paymentTicket');
 
 function getPaymentTicketTitle(ticket, lang = 'zh') {
@@ -4115,6 +4116,74 @@ function getPaymentGateway() {
     return v === 'stripe' ? 'stripe' : 'wonder';
 }
 
+/** $0 票券：視作免費登記（不經付款閘道、不標記 paid） */
+async function completeFreePaymentTicketRegistration(event, ticket, userFormData, lang) {
+    const now = new Date();
+    const ticketTitleDisplay = getPaymentTicketTitle(ticket, lang);
+    const excludedFields = ['_id', '__v', 'create_at', 'modified_at'];
+    const newUser = {
+        create_at: now,
+        modified_at: now,
+        isCheckIn: false,
+        ticketId: ticket._id,
+        ticketTitle: ticketTitleDisplay,
+    };
+
+    Object.keys(userFormData).forEach((key) => {
+        if (excludedFields.includes(key)) return;
+        const val = userFormData[key];
+        if (key === 'agreementAgreed') {
+            newUser[key] = normalizeAgreementAgreed(val);
+            return;
+        }
+        if (Array.isArray(val)) newUser[key] = val;
+        else if (val !== undefined) newUser[key] = val;
+    });
+
+    if (!newUser.name || newUser.name === '') {
+        newUser.name = newUser.email || newUser.company || '未提供姓名';
+    }
+
+    event.users.push(newUser);
+    event.markModified('users');
+    await event.save();
+
+    const savedUser = event.users[event.users.length - 1];
+    const userForEmail = { ...newUser, _id: savedUser._id };
+
+    if (userForEmail.role !== 'guest' && event.emailSettings && event.emailSettings.sendWelcomeEmail) {
+        try {
+            await exports.sendWelcomeMessage(userForEmail, event);
+        } catch (e) {
+            console.error('Free ticket welcome email error:', e);
+        }
+    }
+
+    if (isInvoiceEmailEnabled()) {
+        const transaction = await Transaction.create({
+            eventId: event._id,
+            userEmail: userForEmail.email || userFormData.email,
+            userName: userForEmail.name || userFormData.name,
+            ticketId: ticket._id,
+            ticketTitle: ticketTitleDisplay,
+            ticketPrice: 0,
+            stripeSessionId: 'free',
+            paymentGateway: 'none',
+            status: 'free',
+            userFormData,
+            transactionData: { currency: 'HKD', paid_total: '0.00', state: 'free' },
+        });
+        try {
+            const invoiceTemplate = await findEmailTemplateForEvent(event._id, 'invoice');
+            await sendInvoiceEmail(transaction, event, invoiceTemplate ? invoiceTemplate._id : null);
+        } catch (e) {
+            console.error('Free ticket invoice email error:', e);
+        }
+    }
+
+    return userForEmail;
+}
+
 // 統一 Checkout 入口：依 PAYMENT_GATEWAY 選擇 Stripe 或 Wonder，前端不需改動
 exports.stripeCheckout = async (req, res) => {
     const { event_id } = req.params;
@@ -4137,42 +4206,28 @@ exports.stripeCheckout = async (req, res) => {
         delete userFormData.lang;
 
         const langQuery = lang && lang !== 'zh' ? `&lang=${lang}` : '';
+        const ticketTitleDisplay = getPaymentTicketTitle(ticket, lang);
+
+        // 免費票券（$0）：視作免費登記，不建立付款交易、不導向 Wonder/Stripe
+        if (isFreePaymentTicketPrice(ticket.price)) {
+            await completeFreePaymentTicketRegistration(event, ticket, userFormData, lang);
+            const langOnlyQuery = lang && lang !== 'zh' ? `?lang=${lang}` : '';
+            const successUrl = `${baseUrl}/web/${event_id}/register/success${langOnlyQuery}`;
+            return res.json({ url: successUrl });
+        }
+
         const transaction = await Transaction.create({
             eventId: event_id,
             userEmail: email,
             userName: name,
             ticketId: ticket._id,
-            ticketTitle: getPaymentTicketTitle(ticket, lang),
+            ticketTitle: ticketTitleDisplay,
             ticketPrice: ticket.price,
             stripeSessionId: 'pending',
             paymentGateway: gateway,
             status: 'pending',
             userFormData
         });
-
-        const ticketTitleDisplay = getPaymentTicketTitle(ticket, lang);
-
-        // 免費票券（$0）：跳過付款閘道，直接完成登記並導向成功頁
-        const ticketPrice = Number(ticket.price);
-        if (!Number.isNaN(ticketPrice) && ticketPrice <= 0) {
-            transaction.stripeSessionId = transaction._id.toString();
-            transaction.status = 'paid';
-            await transaction.save();
-            await markTransactionPaidAndAddUser(transaction);
-            const eventDoc = await Event.findById(event_id);
-            if (eventDoc) {
-                try {
-                    await sendPaymentReceiptEmail(transaction, eventDoc, {
-                        email: transaction.userEmail,
-                        name: transaction.userName
-                    });
-                } catch (e) {
-                    console.error('Free ticket receipt email error:', e);
-                }
-            }
-            const successUrl = `${baseUrl}/web/${event_id}/register/success?session_id=${transaction._id}${langQuery}`;
-            return res.json({ url: successUrl });
-        }
 
         if (gateway === 'wonder') {
             const FormConfig = require('../model/FormConfig');
