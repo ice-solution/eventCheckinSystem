@@ -4152,6 +4152,28 @@ exports.stripeCheckout = async (req, res) => {
 
         const ticketTitleDisplay = getPaymentTicketTitle(ticket, lang);
 
+        // 免費票券（$0）：跳過付款閘道，直接完成登記並導向成功頁
+        const ticketPrice = Number(ticket.price);
+        if (!Number.isNaN(ticketPrice) && ticketPrice <= 0) {
+            transaction.stripeSessionId = transaction._id.toString();
+            transaction.status = 'paid';
+            await transaction.save();
+            await markTransactionPaidAndAddUser(transaction);
+            const eventDoc = await Event.findById(event_id);
+            if (eventDoc) {
+                try {
+                    await sendPaymentReceiptEmail(transaction, eventDoc, {
+                        email: transaction.userEmail,
+                        name: transaction.userName
+                    });
+                } catch (e) {
+                    console.error('Free ticket receipt email error:', e);
+                }
+            }
+            const successUrl = `${baseUrl}/web/${event_id}/register/success?session_id=${transaction._id}${langQuery}`;
+            return res.json({ url: successUrl });
+        }
+
         if (gateway === 'wonder') {
             const FormConfig = require('../model/FormConfig');
             const formConfig = await FormConfig.findOne({ eventId: event_id });
