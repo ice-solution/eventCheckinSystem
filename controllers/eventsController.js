@@ -4507,9 +4507,9 @@ exports.outputReport = async (req, res) => {
         const FormConfig = require('../model/FormConfig');
         let formConfig = await FormConfig.findOne({ eventId });
 
-        // Build columns: formConfig fields (in order), then CheckInAt, then 已簽到 at the end
-        const columnDefs = [];
-        const fieldKeys = []; // key for each column, for building row data
+        // Build columns: _id first, then formConfig fields (in order), then CheckInAt, then 已簽到 at the end
+        const columnDefs = [{ header: '_id', key: '_id', width: 26 }];
+        const fieldKeys = ['_id']; // key for each column, for building row data
 
         if (formConfig && formConfig.sections && formConfig.sections.length > 0) {
             const lang = formConfig.defaultLanguage || 'zh';
@@ -4565,7 +4565,9 @@ exports.outputReport = async (req, res) => {
             const userObj = user.toObject ? user.toObject() : user;
             const row = {};
             fieldKeys.forEach(key => {
-                if (key === 'checkInAt') {
+                if (key === '_id') {
+                    row[key] = userObj._id != null ? String(userObj._id) : '';
+                } else if (key === 'checkInAt') {
                     row[key] = checkInAtFormat(userObj.checkInAt);
                 } else if (key === 'isCheckIn') {
                     row[key] = userObj.isCheckIn ? '✓' : '';
