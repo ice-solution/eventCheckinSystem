@@ -26,6 +26,7 @@ const { embedKaitiFontInEmail } = require('../utils/embedEmailFonts'); // 引入
 const { replaceTemplateVariables, buildEmailTemplateAdditionalVars, flattenForTemplate } = require('../utils/replaceTemplateVariables');
 const { isInvoiceEmailEnabled } = require('../utils/featureFlags');
 const { normalizeAgreementAgreed, formatAgreementAgreedLabel, agreementAgreedSortOrder } = require('../utils/agreementFields');
+const { resolveUserDisplayName, ensureUserNameField } = require('../utils/userDisplayName');
 
 /** 取得對外 base URL（依 DOMAIN/domain，缺協議時自動補 https://） */
 function getPublicBaseUrl() {
@@ -428,7 +429,7 @@ exports.publicRegister = async (req, res) => {
 
 exports.addUserToEvent = async (req, res) => {
     const { eventId } = req.params; // 獲取事件 ID
-    const userData = req.body; // 獲取用戶資料（包括所有動態字段）
+    const userData = ensureUserNameField(req.body || {}); // 獲取用戶資料（包括所有動態字段）
 
     try {
         const event = await Event.findById(eventId); // 查找事件
@@ -443,8 +444,11 @@ exports.addUserToEvent = async (req, res) => {
             isCheckIn: userData.isCheckIn || false // 默認為未登記進場
         };
         
-        // 確保必填字段 name 有值（如果表單中沒有 name 字段）
-        if (!userData.name || userData.name === '' || userData.name === null) {
+        // 確保必填字段 name 有值（支援 lastname + surname 等動態欄位）
+        const resolvedName = resolveUserDisplayName(userData);
+        if (resolvedName) {
+            newUser.name = resolvedName;
+        } else if (!userData.name || userData.name === '' || userData.name === null) {
             newUser.name = userData.email || userData.company || '未提供姓名';
         }
         
@@ -4141,7 +4145,7 @@ async function completeFreePaymentTicketRegistration(event, ticket, userFormData
     });
 
     if (!newUser.name || newUser.name === '') {
-        newUser.name = newUser.email || newUser.company || '未提供姓名';
+        newUser.name = resolveUserDisplayName(newUser) || newUser.email || newUser.company || '未提供姓名';
     }
 
     event.users.push(newUser);
@@ -4163,7 +4167,7 @@ async function completeFreePaymentTicketRegistration(event, ticket, userFormData
         const transaction = await Transaction.create({
             eventId: event._id,
             userEmail: userForEmail.email || userFormData.email,
-            userName: userForEmail.name || userFormData.name,
+            userName: resolveUserDisplayName(userForEmail) || userForEmail.name || resolveUserDisplayName(userFormData) || userFormData.email || '未提供姓名',
             ticketId: ticket._id,
             ticketTitle: ticketTitleDisplay,
             ticketPrice: 0,
@@ -4201,9 +4205,11 @@ exports.stripeCheckout = async (req, res) => {
         // 付款回調／重導向一律用 .env 的 DOMAIN，不用 req，避免從 localhost 發起時導回 localhost
         const baseUrl = getPublicBaseUrl();
 
-        const userFormData = { email, name, company, phone_code, phone, ...restBody };
+        let userFormData = ensureUserNameField({ email, name, company, phone_code, phone, ...restBody });
         delete userFormData.ticketId;
         delete userFormData.lang;
+
+        const displayName = resolveUserDisplayName(userFormData) || email || '未提供姓名';
 
         const langQuery = lang && lang !== 'zh' ? `&lang=${lang}` : '';
         const ticketTitleDisplay = getPaymentTicketTitle(ticket, lang);
@@ -4219,7 +4225,7 @@ exports.stripeCheckout = async (req, res) => {
         const transaction = await Transaction.create({
             eventId: event_id,
             userEmail: email,
-            userName: name,
+            userName: displayName,
             ticketId: ticket._id,
             ticketTitle: ticketTitleDisplay,
             ticketPrice: ticket.price,
@@ -4396,7 +4402,7 @@ async function markTransactionPaidAndAddUser(transaction) {
             else if (val !== undefined) newUser[key] = val;
         });
         if (!newUser.name || newUser.name === '') {
-            newUser.name = newUser.email || newUser.company || transaction.userName || '未提供姓名';
+            newUser.name = resolveUserDisplayName(newUser) || newUser.email || newUser.company || transaction.userName || '未提供姓名';
         }
         if (!newUser.email) newUser.email = transaction.userEmail;
     } else {
