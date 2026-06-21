@@ -108,23 +108,31 @@
             flex: 1;
             max-width: 400px;
         }
-        /* radio / checkbox：題目在上、選項在下（避免長題目擠在左欄） */
+        /* radio / checkbox：題目在上、選項在下，題目由左側起全寬顯示 */
         .form-row.form-row-stacked {
             flex-direction: column;
             align-items: stretch;
+            --form-label-col: 200px;
+            --form-label-gap: 20px;
+            --form-content-offset: calc(var(--form-label-col) + var(--form-label-gap));
         }
         .form-row.form-row-stacked .form-label {
             flex: none;
             width: 100%;
             max-width: none;
+            margin-left: 0;
             text-align: left;
             padding-right: 0;
             margin-bottom: 10px;
             line-height: 1.5;
+            overflow-wrap: anywhere;
+            word-break: break-word;
         }
+        /* 選項區維持與一般 input 相同起點 */
         .form-row.form-row-stacked .form-input {
-            width: 100%;
+            width: calc(100% - var(--form-content-offset));
             max-width: none;
+            margin-left: var(--form-content-offset);
         }
         .radio-group,
         .checkbox-group {
@@ -141,6 +149,7 @@
             margin: 0;
             min-height: auto;
         }
+        /* stacked 選項沿用一般 flex 排版（起點由 .form-input offset 控制） */
         .radio-group .form-check-input,
         .checkbox-group .form-check-input {
             position: static;
@@ -324,6 +333,11 @@
                 padding-right: 0;
             }
             .form-input {
+                width: 100%;
+                max-width: none;
+            }
+            .form-row.form-row-stacked .form-input {
+                margin-left: 0;
                 width: 100%;
                 max-width: none;
             }
