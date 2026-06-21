@@ -108,6 +108,50 @@
             flex: 1;
             max-width: 400px;
         }
+        /* radio / checkbox：題目在上、選項在下（避免長題目擠在左欄） */
+        .form-row.form-row-stacked {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .form-row.form-row-stacked .form-label {
+            flex: none;
+            width: 100%;
+            max-width: none;
+            text-align: left;
+            padding-right: 0;
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        .form-row.form-row-stacked .form-input {
+            width: 100%;
+            max-width: none;
+        }
+        .radio-group,
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .radio-group .form-check,
+        .checkbox-group .form-check {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding-left: 0;
+            margin: 0;
+            min-height: auto;
+        }
+        .radio-group .form-check-input,
+        .checkbox-group .form-check-input {
+            position: static;
+            margin: 0.2rem 0 0 0;
+            flex-shrink: 0;
+        }
+        .radio-group .form-check-label,
+        .checkbox-group .form-check-label {
+            line-height: 1.5;
+            padding-left: 0;
+        }
         .required {
             color: #e74c3c;
             margin-left: 3px;
@@ -418,7 +462,8 @@
                                     <% if (fieldDisplayed) { %>
                                         <% var _selectHasOther = (field.type === 'select' && field.options && field.options.some(function (o) { return o && o.isOther; })); %>
                                         <% var _fieldControlId = (field.type === 'select' && _selectHasOther) ? (field.fieldName + '_sel') : field.fieldName; %>
-                                        <div class="form-row">
+                                        <% var _isChoiceField = field.type === 'radio' || field.type === 'checkbox'; %>
+                                        <div class="form-row<%= _isChoiceField ? ' form-row-stacked' : '' %>">
                                             <label class="form-label field-label" for="<%= _fieldControlId %>" 
                                                    data-zh="<%= field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '') %>" 
                                                    data-en="<%= field.label && field.label.en ? field.label.en : '' %>">
