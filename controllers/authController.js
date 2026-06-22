@@ -97,6 +97,10 @@ exports.updateUserPermissions = async (req, res) => {
         } else if (Array.isArray(eventPermissionsRaw)) {
             user.eventPermissions = eventPermissionsRaw;
         }
+        const allowedSet = new Set(user.allowedEvents.map((id) => String(id)));
+        user.eventPermissions = (user.eventPermissions || []).filter(
+            (p) => p.eventId && allowedSet.has(String(p.eventId))
+        );
         await user.save();
         return res.redirect('/auth/users');
     } catch (error) {

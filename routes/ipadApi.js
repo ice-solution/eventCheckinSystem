@@ -6,6 +6,7 @@ const Auth = require('../model/Auth');
 const Event = require('../model/Event');
 const BadgeConfig = require('../model/BadgeConfig');
 const { authenticateJwt, getJwtSecret } = require('../utils/jwtAuth');
+const permission = require('../middleware/permission');
 const formConfigController = require('../controllers/formConfigController');
 const eventsController = require('../controllers/eventsController');
 
@@ -50,12 +51,16 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// 2) 取得所有 event 的 name/_id（預設：只回傳該 token 使用者(owner)的 events；admin 可回全部）
+// 2) 取得 event 清單（admin：全部；其他：依 Auth.allowedEvents，與後台 /events/list 一致）
 router.get('/events', authenticateJwt, async (req, res) => {
   try {
     const { role, authId } = req.jwt || {};
 
-    const filter = role === 'admin' ? {} : { owner: authId };
+    let filter = {};
+    if (role !== 'admin') {
+      const allowedIds = await permission.loadAuthAllowedEventIds(authId);
+      filter = allowedIds.length ? { _id: { $in: allowedIds } } : { owner: authId };
+    }
     const events = await Event.find(filter).select({ _id: 1, name: 1 }).sort({ created_at: -1 });
 
     return res.json(events);
@@ -74,12 +79,8 @@ router.get('/events/:eventId/users', authenticateJwt, async (req, res) => {
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    const { role, authId } = req.jwt || {};
-    const isAdmin = role === 'admin';
-    const isOwner = String(event.owner) === String(authId);
-
-    if (!isAdmin && !isOwner) {
-      return res.status(403).json({ message: 'Forbidden' });
+    if (!(await permission.assertJwtEventAccess(req, res, event))) {
+      return;
     }
 
     return res.json(event.users || []);
@@ -100,12 +101,8 @@ router.get('/events/:eventId/registration-config', authenticateJwt, async (req, 
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    const { role, authId } = req.jwt || {};
-    const isAdmin = role === 'admin';
-    const isOwner = String(event.owner) === String(authId);
-
-    if (!isAdmin && !isOwner) {
-      return res.status(403).json({ message: 'Forbidden' });
+    if (!(await permission.assertJwtEventAccess(req, res, event))) {
+      return;
     }
 
     // 直接重用 formConfigController 的邏輯（會自動建立 default config & 做資料遷移）
@@ -127,12 +124,8 @@ router.get('/events/:eventId/users/:userId', authenticateJwt, async (req, res) =
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    const { role, authId } = req.jwt || {};
-    const isAdmin = role === 'admin';
-    const isOwner = String(event.owner) === String(authId);
-
-    if (!isAdmin && !isOwner) {
-      return res.status(403).json({ message: 'Forbidden' });
+    if (!(await permission.assertJwtEventAccess(req, res, event))) {
+      return;
     }
 
     // 查找用戶
@@ -162,12 +155,8 @@ router.put('/events/:eventId/users/:userId', authenticateJwt, async (req, res) =
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    const { role, authId } = req.jwt || {};
-    const isAdmin = role === 'admin';
-    const isOwner = String(event.owner) === String(authId);
-
-    if (!isAdmin && !isOwner) {
-      return res.status(403).json({ message: 'Forbidden' });
+    if (!(await permission.assertJwtEventAccess(req, res, event))) {
+      return;
     }
 
     // 查找用戶
@@ -232,12 +221,8 @@ router.post('/events/:eventId/users', authenticateJwt, async (req, res) => {
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    const { role, authId } = req.jwt || {};
-    const isAdmin = role === 'admin';
-    const isOwner = String(event.owner) === String(authId);
-
-    if (!isAdmin && !isOwner) {
-      return res.status(403).json({ message: 'Forbidden' });
+    if (!(await permission.assertJwtEventAccess(req, res, event))) {
+      return;
     }
 
     // 直接重用 eventsController.addUserToEvent 的邏輯
@@ -259,12 +244,8 @@ router.delete('/events/:eventId/users/:userId', authenticateJwt, async (req, res
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    const { role, authId } = req.jwt || {};
-    const isAdmin = role === 'admin';
-    const isOwner = String(event.owner) === String(authId);
-
-    if (!isAdmin && !isOwner) {
-      return res.status(403).json({ message: 'Forbidden' });
+    if (!(await permission.assertJwtEventAccess(req, res, event))) {
+      return;
     }
 
     // 查找用戶的索引
@@ -295,12 +276,8 @@ router.get('/events/:eventId/badge-config', authenticateJwt, async (req, res) =>
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    const { role, authId } = req.jwt || {};
-    const isAdmin = role === 'admin';
-    const isOwner = String(event.owner) === String(authId);
-
-    if (!isAdmin && !isOwner) {
-      return res.status(403).json({ message: 'Forbidden' });
+    if (!(await permission.assertJwtEventAccess(req, res, event))) {
+      return;
     }
 
     // 取得或建立 badge 配置
@@ -332,12 +309,8 @@ router.delete('/events/:eventId/badge-config/elements/:elementId', authenticateJ
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    const { role, authId } = req.jwt || {};
-    const isAdmin = role === 'admin';
-    const isOwner = String(event.owner) === String(authId);
-
-    if (!isAdmin && !isOwner) {
-      return res.status(403).json({ message: 'Forbidden' });
+    if (!(await permission.assertJwtEventAccess(req, res, event))) {
+      return;
     }
 
     // 取得 badge 配置
@@ -381,12 +354,8 @@ router.put('/events/:eventId/badge-config', authenticateJwt, async (req, res) =>
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    const { role, authId } = req.jwt || {};
-    const isAdmin = role === 'admin';
-    const isOwner = String(event.owner) === String(authId);
-
-    if (!isAdmin && !isOwner) {
-      return res.status(403).json({ message: 'Forbidden' });
+    if (!(await permission.assertJwtEventAccess(req, res, event))) {
+      return;
     }
 
     // 取得或建立 badge 配置
@@ -425,12 +394,8 @@ router.get('/events/:eventId/users/:userId/badge', authenticateJwt, async (req, 
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    const { role, authId } = req.jwt || {};
-    const isAdmin = role === 'admin';
-    const isOwner = String(event.owner) === String(authId);
-
-    if (!isAdmin && !isOwner) {
-      return res.status(403).json({ message: 'Forbidden' });
+    if (!(await permission.assertJwtEventAccess(req, res, event))) {
+      return;
     }
 
     // 查找用戶

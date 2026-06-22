@@ -93,6 +93,8 @@
             const eventId = cb.getAttribute('data-event-id');
             const func = cb.getAttribute('data-func');
             if (!eventId || !func) return;
+            const eventCb = document.getElementById('ev_' + eventId);
+            if (!eventCb || !eventCb.checked) return;
             let ep = eventPermissions.find(function(p) { return p.eventId === eventId; });
             if (!ep) { ep = { eventId: eventId, functions: [] }; eventPermissions.push(ep); }
             ep.functions.push(func);

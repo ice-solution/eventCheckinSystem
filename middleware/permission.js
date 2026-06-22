@@ -2,6 +2,8 @@
  * 後台用戶權限：admin 唯一且擁有全部權限；其他用戶依 allowedEvents + eventPermissions 限制。
  */
 
+const Auth = require('../model/Auth');
+
 // Event 功能鍵（與路由對應）
 const EVENT_FUNCTIONS = [
     { key: 'rsvp', label: 'RSVP / User List', pathMatch: /^\/events\/[^/]+\/?$/ },
@@ -63,7 +65,6 @@ async function refreshUserPermissions(req, res, next) {
         return next();
     }
     try {
-        const Auth = require('../model/Auth');
         const auth = await Auth.findById(req.session.user._id).select('allowedEvents eventPermissions').lean();
         if (auth) {
             req.session.user.allowedEvents = (auth.allowedEvents || []).map(id => id && id.toString());
@@ -76,6 +77,44 @@ async function refreshUserPermissions(req, res, next) {
         console.error('refreshUserPermissions error:', err);
     }
     next();
+}
+
+/** 從 DB 載入後台用戶可存取的 eventId 列表（字串） */
+async function loadAuthAllowedEventIds(authId) {
+    if (!authId) return [];
+    const auth = await Auth.findById(authId).select('allowedEvents').lean();
+    return (auth?.allowedEvents || []).map((id) => id && id.toString()).filter(Boolean);
+}
+
+/** 非 admin 是否可存取該 event（allowedEvents 優先；向後相容 owner） */
+function canAccessEvent({ role, authId, eventId, ownerId, allowedEventIds }) {
+    if (role === 'admin') return true;
+    const eid = eventId && eventId.toString();
+    if (!eid || !authId) return false;
+    if ((allowedEventIds || []).includes(eid)) return true;
+    if (ownerId && String(ownerId) === String(authId)) return true;
+    return false;
+}
+
+/** iPad API：檢查 JWT 用戶是否可存取 event，並快取 allowedEventIds 於 req */
+async function assertJwtEventAccess(req, res, event) {
+    const { role, authId } = req.jwt || {};
+    if (role === 'admin') return true;
+    if (req._authAllowedEventIds === undefined) {
+        req._authAllowedEventIds = await loadAuthAllowedEventIds(authId);
+    }
+    const ok = canAccessEvent({
+        role,
+        authId,
+        eventId: event._id,
+        ownerId: event.owner,
+        allowedEventIds: req._authAllowedEventIds,
+    });
+    if (!ok) {
+        res.status(403).json({ message: 'Forbidden' });
+        return false;
+    }
+    return true;
 }
 
 /** 檢查當前用戶是否有權存取該 event 的該功能（用於 /events/:eventId/* 等） */
@@ -160,4 +199,7 @@ module.exports = {
     refreshUserPermissions,
     getEventFunctionList,
     getFunctionKeyByPath,
+    loadAuthAllowedEventIds,
+    canAccessEvent,
+    assertJwtEventAccess,
 };
