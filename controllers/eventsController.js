@@ -4503,6 +4503,93 @@ exports.renderTransactionRecords = async (req, res) => {
     }
 };
 
+function formatTransactionExportDate(date) {
+    if (!date) return '';
+    return new Date(date).toLocaleString('zh-HK', {
+        timeZone: 'Asia/Hong_Kong',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+    });
+}
+
+exports.exportTransactionRecords = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.status(401).send('Unauthorized');
+        }
+
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found');
+        }
+
+        const transactions = await Transaction.find({ eventId })
+            .sort({ createdAt: -1 })
+            .lean();
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Transactions');
+        worksheet.columns = [
+            { header: 'Transaction ID (交易 ID)', key: '_id', width: 26 },
+            { header: 'Date (日期)', key: 'createdAt', width: 22 },
+            { header: 'Updated At (更新時間)', key: 'updatedAt', width: 22 },
+            { header: 'User Name (用戶姓名)', key: 'userName', width: 20 },
+            { header: 'User Email (用戶電郵)', key: 'userEmail', width: 28 },
+            { header: 'Ticket Title (票券標題)', key: 'ticketTitle', width: 25 },
+            { header: 'Price HKD (價格)', key: 'ticketPrice', width: 14 },
+            { header: 'Status (狀態)', key: 'status', width: 12 },
+            { header: 'Payment Gateway (付款閘道)', key: 'paymentGateway', width: 18 },
+            { header: 'Session / Reference ID', key: 'stripeSessionId', width: 30 },
+            { header: 'Invoice Number (發票編號)', key: 'invoiceNumber', width: 22 },
+            { header: 'Invoice State (發票狀態)', key: 'invoiceState', width: 18 },
+            { header: 'Paid Total (實付金額)', key: 'paidTotal', width: 14 },
+            { header: 'Currency (幣種)', key: 'currency', width: 10 },
+        ];
+
+        worksheet.getRow(1).font = { bold: true };
+        worksheet.getRow(1).fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFE0E0E0' },
+        };
+
+        transactions.forEach((tx) => {
+            const td = tx.transactionData && typeof tx.transactionData === 'object' ? tx.transactionData : {};
+            worksheet.addRow({
+                _id: tx._id != null ? String(tx._id) : '',
+                createdAt: formatTransactionExportDate(tx.createdAt),
+                updatedAt: formatTransactionExportDate(tx.updatedAt),
+                userName: tx.userName || '',
+                userEmail: tx.userEmail || '',
+                ticketTitle: tx.ticketTitle || '',
+                ticketPrice: tx.ticketPrice != null ? tx.ticketPrice : '',
+                status: tx.status || '',
+                paymentGateway: tx.paymentGateway || '',
+                stripeSessionId: tx.stripeSessionId || '',
+                invoiceNumber: td.number || td.invoice_number || td.reference_number || '',
+                invoiceState: td.state || td.correspondence_state || '',
+                paidTotal: td.paid_total != null ? td.paid_total : '',
+                currency: td.currency || 'HKD',
+            });
+        });
+
+        const safeName = (event.name || 'event').replace(/[^\w\u4e00-\u9fff-]+/g, '_').slice(0, 50);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="${safeName}_transactions.xlsx"`);
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (error) {
+        console.error('Export transaction records error:', error);
+        res.status(500).send('Transaction export failed');
+    }
+};
+
 exports.outputReport = async (req, res) => {
     const { eventId } = req.params;
     try {

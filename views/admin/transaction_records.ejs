@@ -38,8 +38,11 @@
             <div class="row">
                 <div class="col-lg-12">
                     <div class="card">
-                        <div class="card-header">
+                        <div class="card-header card-header-with-action">
                             <strong class="card-title"><%= t('transaction_records.title') %> - <%= event.name %></strong>
+                            <a href="/events/<%= eventId %>/transactions/export" class="btn btn-info btn-sm">
+                                <i class="fas fa-download"></i> <%= t('transaction_records.exportBtn') %>
+                            </a>
                         </div>
                         <div class="card-body">
                             <!-- Summary Statistics -->

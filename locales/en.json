@@ -334,7 +334,8 @@
     "totalRevenue": "Total Revenue",
     "transactionId": "Transaction ID", "date": "Date",
     "userName": "User Name", "userEmail": "User Email",
-    "ticketTitle": "Ticket Title", "price": "Price (HKD)", "status": "Status"
+    "ticketTitle": "Ticket Title", "price": "Price (HKD)", "status": "Status",
+    "exportBtn": "Export Transactions"
   },
   "attachments": {
     "title": "Attachments Management", "uploadBtn": "Upload File",
