@@ -15,14 +15,16 @@
 
 ### DOMAIN ⚠️ **重要**
 - **說明**：應用程式的完整域名（包含協議）
-- **用途**：用於 Stripe Checkout 的重定向 URL
+- **用途**：用於付款回調與重導向 URL（Wonder callback_url / redirect_url）、郵件連結等
 - **範例**：
   - 本地開發：`DOMAIN=http://localhost:3377`
   - 生產環境：`DOMAIN=https://demo.brandactivation.hk`
 - **注意**：
-  - ✅ 必須包含協議（`http://` 或 `https://`）
+  - ✅ 變數名請用大寫 **DOMAIN**（小寫 `domain` 也會讀取，但建議統一用 DOMAIN）
+  - ✅ 必須包含協議（`http://` 或 `https://`）；若只填網域如 `demo.brandactivation.hk`，系統會自動補 `https://`
   - ✅ 不要在結尾加斜線 `/`
-  - ✅ 生產環境必須使用 HTTPS
+  - ✅ 修改 .env 後**必須重啟** Node（如 nodemon）才會生效
+- **若畫面上仍是 localhost:3377**：請確認 (1) .env 裡是 `DOMAIN=https://demo.brandactivation.hk` (2) 存檔後已重啟服務
 
 ---
 
@@ -36,23 +38,65 @@
 
 ---
 
-## 💳 Stripe 配置
+## 💳 付款閘道選擇
 
-### STRIPE_SECRET_KEY
-- **說明**：Stripe 密鑰
-- **範例**：
-  - 測試環境：`STRIPE_SECRET_KEY=sk_test_xxxxxxxxxxxxxxxxxxxxx`
-  - 生產環境：`STRIPE_SECRET_KEY=sk_live_xxxxxxxxxxxxxxxxxxxxx`
-- **獲取方式**：[Stripe Dashboard](https://dashboard.stripe.com/apikeys)
+### PAYMENT_GATEWAY
+- **說明**：選擇付款方式，不影響前端（前端仍 POST 到同一 checkout 路徑）
+- **可選值**：`wonder` | `stripe`
+- **範例**：`PAYMENT_GATEWAY=wonder` 或 `PAYMENT_GATEWAY=stripe`
+- **預設**：未設或非 `stripe` 時為 `wonder`
+- **效果**：每筆付款記錄（Transaction）會寫入 `paymentGateway` 欄位（`stripe` 或 `wonder`），API 回傳的資料會照常包含該筆記錄
 
-### STRIPE_WEBHOOK_SECRET
-- **說明**：Stripe Webhook 簽名密鑰
-- **範例**：`STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxxxxxxx`
-- **獲取方式**：[Stripe Webhooks](https://dashboard.stripe.com/webhooks)
-- **設定步驟**：
-  1. 在 Stripe Dashboard 創建 Webhook 端點
-  2. 端點 URL：`https://yourdomain.com/web/webhook/stripe`
-  3. 複製 Signing secret
+---
+
+## 💳 Wonder Payment 配置（PAYMENT_GATEWAY=wonder 時使用）
+
+### PAYMENT_DEV / payment_dev
+- **說明**：是否使用 Wonder 測試環境
+- **範例**：`PAYMENT_DEV=true` 或 `payment_dev=true`
+- **效果**：
+  - `true` → 使用 `https://gateway-stg.wonder.today`
+  - `false` / 未設 → 使用 `https://gateway.wonder.today`
+
+### WONDER_APP_ID
+- **說明**：Wonder 的 app_id（建立訂單 API 必填，亦用於 Credential 簽名）
+- **範例**：`WONDER_APP_ID=00000000-0000-0000-0000-000000000000`
+
+### WONDER_PRIVATE_KEY
+- **說明**：Wonder 的 RSA 私鑰（PEM），用於 Wonder-RSA-SHA256 簽名，每次 create order 前會先做認證
+- **範例**：將整段 PEM（含 `-----BEGIN RSA PRIVATE KEY-----` 與 `-----END RSA PRIVATE KEY-----`）貼入 .env，換行處可用 `\n` 表示，例如：`WONDER_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\nMIIE...\n-----END RSA PRIVATE KEY-----"`
+
+### WONDER_CUSTOMER_UUID
+- **說明**：Wonder 的 customer_uuid（選填，依 Wonder 文件）
+- **範例**：`WONDER_CUSTOMER_UUID=00000000-0000-0000-0000-000000000000`
+
+### WONDER_API_KEY
+- **說明**：Wonder API 認證金鑰（選填，若 API 需要 Bearer 或 X-API-Key）
+- **範例**：`WONDER_API_KEY=your_api_key`
+
+### 回調 URL
+- Wonder 付款完成後會呼叫：`{DOMAIN}/web/webhook/wonder`（請在 Wonder 後台設定此 callback_url）
+
+---
+
+## 💳 Stripe 配置（PAYMENT_GATEWAY=stripe 時使用）
+
+### STRIPE_SECRET_KEY / STRIPE_SECRET
+- **說明**：Stripe 私鑰（後端建立 Checkout Session 用）
+- **範例**：`STRIPE_SECRET_KEY=sk_live_xxx` 或 `STRIPE_SECRET=sk_live_xxx`
+
+### STRIPE_PK（前端用）
+- **說明**：Stripe 公鑰（Publishable key），供前端載入 Stripe.js 用（若前端有使用）
+- **範例**：`STRIPE_PK=pk_live_xxx`
+
+### STRIPE_WEBHOOK_SECRET / STRIPE_WH_SECRET
+- **說明**：Stripe Webhook 簽名密鑰（在 Stripe Dashboard → Developers → Webhooks 建立 endpoint 後取得）
+- **範例**：`STRIPE_WEBHOOK_SECRET=whsec_xxx`
+- **Webhook URL**：`{DOMAIN}/web/webhook/stripe`（請在 Stripe 後台新增此 URL，事件選 `checkout.session.completed`）
+
+### STRIPE_CURRENCY（選填）
+- **說明**：Stripe 金額幣別（小寫），預設 `hkd`
+- **範例**：`STRIPE_CURRENCY=hkd`
 
 ---
 
@@ -61,6 +105,7 @@
 ### SendGrid
 ```env
 SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxx
+SENDER_EMAIL=noreply@yourdomain.com
 ```
 
 ### AWS SES
@@ -68,7 +113,62 @@ SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxx
 AWS_ACCESS_KEY_ID=xxxxxxxxxxxxxxxxxxxxx
 AWS_SECRET_ACCESS_KEY=xxxxxxxxxxxxxxxxxxxxx
 AWS_REGION=us-east-1
+SENDER_EMAIL=noreply@yourdomain.com
 ```
+
+## 📱 SMS 配置（選填 - 使用 Twilio）
+
+### Twilio
+```env
+TWILIO_ACCOUNT_SID=your_twilio_account_sid
+TWILIO_AUTH_TOKEN=your_twilio_auth_token
+TWILIO_PHONE_NUMBER=+1234567890
+```
+
+**或者使用舊的環境變數名稱（向後兼容）**：
+```env
+twiliosid=your_twilio_account_sid
+twilioauthtoken=your_twilio_auth_token
+TWILIO_PHONE_NUMBER=+1234567890
+```
+
+**獲取方式**：
+1. 註冊 [Twilio 帳號](https://www.twilio.com/)
+2. 在 Twilio Console Dashboard 獲取 Account SID 和 Auth Token
+3. 購買或使用 Twilio 提供的電話號碼作為發送號碼
+4. 電話號碼格式必須包含國家代碼（例如：+85212345678）
+
+**注意**：
+- `TWILIO_PHONE_NUMBER` 必須是已驗證的 Twilio 號碼
+- 電話號碼格式：`+[國家代碼][號碼]`（例如：`+85212345678`）
+- 支持使用 `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN` 或 `twiliosid`/`twilioauthtoken`（向後兼容）
+
+---
+
+## 🔑 外部系統讀取用戶資料（網站 API Key）
+
+提供給外部系統用（透過 `eventId + userId` 讀取 Event 內嵌的 RSVP user 資料）。
+
+```env
+WEB_API_KEYS=key1,key2
+```
+
+- **使用方式**：呼叫 `GET /web/:event_id/users/:userId` 時，帶上 header `X-WEB-API-KEY: <key>`
+- **注意**：
+  - 這不是瀏覽器端安全機制；請把 key 放在你的後端，不要直接寫在前端 JS。
+  - 可搭配 CORS 白名單（`CORS_ENABLED=true` + `CORS_ORIGIN=...`）限制哪些網站可在瀏覽器讀取回應。
+
+---
+
+## 🔌 Socket.IO（選填，LuckyDraw 防靜默斷線）
+
+### SOCKET_PING_INTERVAL
+- **說明**：Socket.IO 服務端 ping 間隔（ms），逾時未收到 pong 會判定斷線。預設 10000。
+- **範例**：`SOCKET_PING_INTERVAL=10000`
+
+### SOCKET_PING_TIMEOUT
+- **說明**：Socket.IO 服務端等待 pong 的逾時（ms）。預設 8000，應小於 SOCKET_PING_INTERVAL。
+- **範例**：`SOCKET_PING_TIMEOUT=8000`
 
 ---
 
@@ -78,6 +178,17 @@ AWS_REGION=us-east-1
 - **說明**：Session 加密密鑰
 - **範例**：`SESSION_SECRET=your_random_secret_key_here`
 - **建議**：使用隨機生成的長字串
+
+---
+
+## 📝 編輯器配置（選填）
+
+### TINYMCE_API_KEY
+- **說明**：TinyMCE 富文本編輯器的 API Key
+- **範例**：`TINYMCE_API_KEY=0o0ixrpieipnq3fsu3kbsdu9e627qg468y6lpup3gmhx8lz7`
+- **用途**：用於電子郵件模板和 SMS 模板的富文本編輯器
+- **獲取方式**：[TinyMCE Cloud Dashboard](https://www.tiny.cloud/my-account/dashboard/)
+- **注意**：如果不設置，系統會使用默認的 API Key（可能有使用限制）
 
 ---
 
@@ -99,6 +210,9 @@ STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxxxxxxx
 
 # Session Secret
 SESSION_SECRET=events
+
+# TinyMCE API Key (選填)
+TINYMCE_API_KEY=0o0ixrpieipnq3fsu3kbsdu9e627qg468y6lpup3gmhx8lz7
 ```
 
 ### 生產環境
@@ -117,9 +231,22 @@ STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxxxxxxx
 
 # Email Configuration
 SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxx
+# 或使用 AWS SES
+AWS_ACCESS_KEY_ID=xxxxxxxxxxxxxxxxxxxxx
+AWS_SECRET_ACCESS_KEY=xxxxxxxxxxxxxxxxxxxxx
+AWS_REGION=us-east-1
+SENDER_EMAIL=noreply@yourdomain.com
+
+# SMS Configuration (Twilio)
+TWILIO_ACCOUNT_SID=your_twilio_account_sid
+TWILIO_AUTH_TOKEN=your_twilio_auth_token
+TWILIO_PHONE_NUMBER=+1234567890
 
 # Session Secret
 SESSION_SECRET=your_production_secret_key_here
+
+# TinyMCE API Key (選填)
+TINYMCE_API_KEY=your_tinymce_api_key_here
 ```
 
 ---

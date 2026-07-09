@@ -1,12 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
+const permission = require('../middleware/permission');
 
-// 添加用戶路由
+// 用戶登入管理（僅 admin）
+router.get('/users', permission.requireAdmin, authController.listUsersPage);
+router.get('/users/add', permission.requireAdmin, authController.addUserPage);
+router.post('/users/add', permission.requireAdmin, authController.addUser);
+router.get('/users/:id/edit', permission.requireAdmin, authController.editUserPage);
+router.post('/users/:id/permissions', permission.requireAdmin, authController.updateUserPermissions);
 
-router.post('/add', authController.addUser); // 只有經過身份驗證的用戶可以添加用戶
-router.post('/create', authController.createUser); // 添加用戶創建的路由
-
-router.get('/add', authController.addUserPage);
+// 舊路由相容
+router.get('/add', permission.requireAdmin, authController.addUserPageLegacy);
+router.post('/add', permission.requireAdmin, authController.addUser);
+router.post('/create', permission.requireAdmin, authController.createUser);
 
 module.exports = router;

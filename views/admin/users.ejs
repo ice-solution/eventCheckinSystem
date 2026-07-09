@@ -1,21 +1,62 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <title>User List</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
+<%- include ("components/header") %>
+<%- include ("components/menu", { eventId: event._id }) %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+<%- include("components/responsive_layout_style") %>
+<style>
+        /* 響應式容器：禁止整頁橫向捲動，表格／按鈕列各自捲動 */
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            max-width: 100vw;
+        }
+
+        #right-panel {
+            width: calc(100% - 280px); /* 100% 減去左邊欄寬度 */
+            margin-left: 280px;
+            box-sizing: border-box;
+            transition: width 0.3s ease, margin-left 0.3s ease;
+            overflow-x: hidden;
+            max-width: calc(100vw - 280px);
+        }
+
+        /* 當左邊欄折疊時（body.open 時） */
+        body.open #right-panel {
+            width: calc(100% - 83px); /* 100% 減去折疊後的左邊欄寬度 */
+            margin-left: 83px;
+            max-width: calc(100vw - 83px);
+        }
+
+        #right-panel .content,
+        #right-panel .animated,
+        #right-panel .stat-cards-row,
+        #right-panel .main-content-row {
+            overflow-x: hidden;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+        }
+
+        .content {
+            width: 100%;
+            max-width: 100%;
+            padding: 1.875em;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
         }
         .checkin-true {
             background-color: #E9F0FE !important; /* Green background */
         }
         .checkin-false {
-            background-color: #FFF !important; /* Yellow background */
+            background-color: #F7F7F7 !important;
         }
         .add-user-form {
             display: none; /* Initially hidden */
@@ -25,76 +66,700 @@
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
-    </style>
-</head>
-<body>
+        .user-action-buttons {
+            display: inline-flex;
+            gap: 6px;
+            align-items: center;
+        }
+        /* Email Settings Modal */
+        #emailSettingsModal {
+            z-index: 10600 !important;
+        }
+        #emailSettingsModal .modal-dialog {
+            z-index: 10601 !important;
+        }
+        body.modal-open {
+            overflow: hidden;
+        }
+        .qrcode-container {
+            position: relative;
+            display: inline-block;
+        }
+        .qrcode-popup {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            min-width: 230px;
+            text-align: center;
+        }
+        .qrcode-popup.popup-right::after {
+            content: '';
+            position: absolute;
+            left: -16px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 8px solid transparent;
+            border-right-color: white;
+            z-index: 10000;
+        }
+        .qrcode-popup.popup-right::before {
+            content: '';
+            position: absolute;
+            left: -18px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 9px solid transparent;
+            border-right-color: #ddd;
+            z-index: 9998;
+        }
+        .qrcode-popup.popup-left::after {
+            content: '';
+            position: absolute;
+            right: -16px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 8px solid transparent;
+            border-left-color: white;
+            z-index: 10000;
+        }
+        .qrcode-popup.popup-left::before {
+            content: '';
+            position: absolute;
+            right: -18px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 9px solid transparent;
+            border-left-color: #ddd;
+            z-index: 9998;
+        }
+        .qrcode-image {
+            width: 200px;
+            height: 200px;
+            display: block;
+            margin: 0 auto 10px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+        }
+        .qrcode-download-btn {
+            width: 100%;
+            margin-top: 10px;
+        }
+        /* 確保在 DataTable 中 popup 能正確顯示 */
+        .dataTables_wrapper .qrcode-popup {
+            position: fixed !important;
+        }
+        /* 按鈕區域樣式優化 */
+        .action-buttons-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 12px 0;
+        }
+        .action-buttons-container .btn {
+            margin: 0;
+            white-space: nowrap;
+        }
+        .action-buttons-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+        .action-buttons-group .btn {
+            margin: 0;
+        }
+        /* Modal 樣式修復 - 確保 modal 顯示在最上層（高於 admin 模板 z-index: 9999） */
+        #batchSendEmailModal,
+        #batchSendSmsModal {
+            z-index: 10600 !important;
+            position: fixed !important;
+        }
+        #batchSendEmailModal .modal-dialog,
+        #batchSendSmsModal .modal-dialog {
+            z-index: 10601 !important;
+        }
+        body.modal-open .modal-backdrop {
+            z-index: 10550 !important;
+            background-color: rgba(0, 0, 0, 0.5) !important;
+        }
+        #resendEmailModal,
+        #batchSendSmsResultsModal,
+        #batchSendEmailResultsModal {
+            z-index: 10600 !important;
+            position: fixed !important;
+        }
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.5) !important;
+            opacity: 0.5 !important;
+            z-index: 1040 !important;
+        }
+        .modal-backdrop.show {
+            opacity: 0.5 !important;
+        }
+        .modal.show {
+            display: block !important;
+            opacity: 1 !important;
+        }
+        .modal.fade.show {
+            opacity: 1 !important;
+        }
+        #batchSendEmailModal.show,
+        #batchSendSmsModal.show {
+            display: block !important;
+            opacity: 1 !important;
+        }
+        #resendEmailModal.show {
+            display: block !important;
+            opacity: 1 !important;
+        }
+        .modal-content {
+            background-color: #ffffff !important;
+            opacity: 1 !important;
+            border: 1px solid rgba(0, 0, 0, 0.2) !important;
+            border-radius: 0.3rem !important;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+            color: #212529 !important;
+        }
+        .modal-header {
+            background-color: #ffffff !important;
+            border-bottom: 1px solid #dee2e6 !important;
+            padding: 1rem !important;
+            color: #212529 !important;
+        }
+        .modal-title {
+            color: #212529 !important;
+            font-weight: 600 !important;
+        }
+        .modal-body {
+            background-color: #ffffff !important;
+            padding: 1rem !important;
+            color: #212529 !important;
+        }
+        .modal-body p, .modal-body label, .modal-body strong {
+            color: #212529 !important;
+        }
+        .modal-footer {
+            background-color: #ffffff !important;
+            border-top: 1px solid #dee2e6 !important;
+            padding: 1rem !important;
+        }
+        /* 響應式設計 */
+        @media (max-width: 768px) {
+            .action-buttons-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .action-buttons-group {
+                width: 100%;
+                justify-content: flex-start;
+            }
+            .action-buttons-group .btn {
+                flex: 1;
+                min-width: 120px;
+            }
+        }
 
-<%- include ("components/header") %>
-<%- include ("components/menu", { eventId: event._id }) %>
-<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
-<!-- <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css"> -->
-<link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
-<link rel="stylesheet" href="/admin/assets/css/style.css">
+        /* ── Guest list table（與 card 內距對齊，區塊內橫向捲動）── */
+        .users-table-area {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        .users-table-area .table-search-btn-container {
+            margin-bottom: 10px;
+            margin-right: 20px;
+            text-align: right;
+        }
+        .users-table-area .table-search-btn-container .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+        #usersTable_wrapper.dataTables_wrapper {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-sizing: border-box;
+        }
+        /* 單一 table 橫向捲動（不用 scrollX，title/value 永遠同一張表對齊） */
+        .users-table-xscroll {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            overflow-y: visible;
+            border: 1px solid var(--border-color, #e4e9f0);
+            border-radius: 8px;
+            scrollbar-width: thin;
+            scrollbar-color: transparent transparent;
+        }
+        .users-table-xscroll:hover {
+            scrollbar-color: rgba(0, 0, 0, 0.28) transparent;
+        }
+        .users-table-xscroll::-webkit-scrollbar {
+            height: 8px;
+        }
+        .users-table-xscroll::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.18);
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+        #usersTable_wrapper .dataTables_scrollBody:hover::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.28);
+        }
+        #usersTable_wrapper #usersTable {
+            width: max-content !important;
+            min-width: 100%;
+            margin: 0 !important;
+            border-collapse: collapse;
+        }
+        #usersTable_wrapper #usersTable thead th,
+        #usersTable_wrapper #usersTable tbody td {
+            box-sizing: border-box !important;
+            white-space: nowrap;
+            vertical-align: middle;
+            padding: 10px 14px !important;
+            font-size: 13px;
+            border-bottom: 1px solid #eef1f5;
+            text-align: left;
+        }
+        #usersTable_wrapper #usersTable thead th:first-child,
+        #usersTable_wrapper #usersTable tbody td:first-child {
+            width: 42px;
+            text-align: center !important;
+            vertical-align: middle !important;
+            padding: 0 !important;
+            height: 44px;
+            line-height: 44px;
+        }
+        #usersTable_wrapper .dataTables_scrollBody td:first-child {
+            display: table-cell;
+            vertical-align: middle;
+        }
+        #usersTable_wrapper .dataTables_scrollBody td:first-child input[type="checkbox"] {
+            vertical-align: middle;
+            margin: 0;
+            line-height: 1;
+        }
+        #usersTable_wrapper #usersTable thead th {
+            font-weight: 600;
+            color: #334155;
+            border-bottom: 1px solid #e4e9f0;
+            background: #f8fafc;
+        }
+        #usersTable_wrapper #usersTable thead th:nth-last-child(2),
+        #usersTable_wrapper #usersTable tbody td:nth-last-child(2) {
+            text-align: center !important;
+        }
+        #usersTable_wrapper #usersTable thead th.sorting,
+        #usersTable_wrapper #usersTable thead th.sorting_asc,
+        #usersTable_wrapper #usersTable thead th.sorting_desc {
+            background-image: none !important;
+            padding: 10px 14px !important;
+            position: relative;
+        }
+        #usersTable_wrapper #usersTable thead th.sorting::before,
+        #usersTable_wrapper #usersTable thead th.sorting_asc::before,
+        #usersTable_wrapper #usersTable thead th.sorting_desc::before {
+            display: none !important;
+        }
+        #usersTable_wrapper #usersTable thead th.sorting::after,
+        #usersTable_wrapper #usersTable thead th.sorting_asc::after,
+        #usersTable_wrapper #usersTable thead th.sorting_desc::after {
+            position: absolute !important;
+            right: 4px !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            display: block !important;
+            margin: 0 !important;
+            font-size: 9px !important;
+            line-height: 1 !important;
+            content: '▲▼' !important;
+            color: #ccc !important;
+            pointer-events: none;
+        }
+        #usersTable_wrapper #usersTable thead th.sorting_asc::after {
+            content: '▲' !important;
+            color: #444 !important;
+        }
+        #usersTable_wrapper #usersTable thead th.sorting_desc::after {
+            content: '▼' !important;
+            color: #444 !important;
+        }
+        /* Footer：Showing … 與分頁 */
+        #usersTable_wrapper .dataTables_info {
+            padding: 14px 12px 6px !important;
+            margin: 0 !important;
+            font-size: 13px;
+            color: #64748b;
+            line-height: 1.5;
+        }
+        #usersTable_wrapper .dataTables_paginate {
+            padding: 4px 12px 10px !important;
+            margin: 0 !important;
+            text-align: center;
+        }
+        #usersTable_wrapper .dataTables_paginate .pagination {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            gap: 2px;
+            margin: 0 !important;
+        }
+        #usersTable_wrapper .dataTables_paginate .page-link {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            height: 32px !important;
+            min-width: 32px !important;
+            padding: 0 6px !important;
+            border: none !important;
+            border-radius: 50% !important;
+            font-size: 14px !important;
+            font-weight: 500 !important;
+            color: #b0b8c1 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            text-decoration: none !important;
+        }
+        #usersTable_wrapper .dataTables_paginate .page-link:hover {
+            color: #555 !important;
+            background: transparent !important;
+        }
+        #usersTable_wrapper .dataTables_paginate .page-item.active .page-link {
+            color: #4DD0CA !important;
+            font-weight: 700 !important;
+            background: transparent !important;
+        }
+        #usersTable_wrapper .dataTables_paginate .page-item.previous .page-link,
+        #usersTable_wrapper .dataTables_paginate .page-item.next .page-link {
+            font-size: 26px !important;
+            width: 44px !important;
+            min-width: 44px !important;
+            height: 30px !important;
+            padding: 0 !important;
+            background: transparent !important;
+        }
+        #usersTable_wrapper .dataTables_paginate .page-item.previous .page-link::before,
+        #usersTable_wrapper .dataTables_paginate .page-item.next .page-link::after {
+            content: none !important;
+        }
+        #usersTable_wrapper .dataTables_paginate .page-item.disabled .page-link {
+            color: #d5d9dd !important;
+            cursor: default !important;
+        }
+        /* Red square X delete button */
+        .btn-delete-x {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 1;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .btn-delete-x:hover {
+            background: #b02a37;
+            color: white;
+        }
+        .card-header-with-action {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px !important;
+        }
+        /* Tighten card-body padding */
+        .main-content-row .card > .card-body {
+            padding: 12px 16px !important;
+            min-width: 0;
+        }
+        .column-toggle-gear-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            border: 1px solid var(--border-color, #e4e9f0);
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            color: #666;
+            transition: all 0.2s ease;
+            margin: 0;
+        }
+        .column-toggle-gear-btn:hover {
+            background: #f5f5f5;
+            color: #333;
+            border-color: #999;
+        }
+        .column-toggle-gear-btn:active {
+            transform: scale(0.95);
+        }
+        .column-toggle-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 500px;
+            background: white;
+            border: 1px solid var(--border-color, #e4e9f0);
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            z-index: 9999;
+            overflow: hidden;
+        }
+        .column-toggle-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color, #e4e9f0);
+            background: var(--body-bg, #f0f4f8);
+        }
+        .column-toggle-header h6 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-color, #333);
+        }
+        .column-toggle-content {
+            padding: 16px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .column-toggle-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 14px;
+        }
+        .column-toggle-item {
+            display: inline-flex;
+            align-items: center;
+            font-size: 13px;
+            gap: 6px;
+            white-space: nowrap;
+        }
+        /* Horizontal scrollable button toolbar */
+        .btn-scroll-row {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 8px;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding-bottom: 10px;
+            margin-bottom: 16px;
+            cursor: grab;
+            user-select: none;
+            scrollbar-width: thin;
+            scrollbar-color: transparent transparent;
+            -webkit-overflow-scrolling: touch;
+        }
+        .btn-scroll-row:hover {
+            scrollbar-color: var(--accent, #00c4b4) var(--border-color, #e4e9f0);
+        }
+        .btn-scroll-row::-webkit-scrollbar { height: 6px; }
+        .btn-scroll-row::-webkit-scrollbar-track {
+            background: transparent;
+            border-radius: 3px;
+        }
+        .btn-scroll-row::-webkit-scrollbar-thumb {
+            background: transparent;
+            border-radius: 3px;
+        }
+        .btn-scroll-row:hover::-webkit-scrollbar-track {
+            background: var(--border-color, #e4e9f0);
+        }
+        .btn-scroll-row:hover::-webkit-scrollbar-thumb {
+            background: var(--accent, #00c4b4);
+        }
+        .btn-scroll-row::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-dark, #00a89a);
+        }
+        .btn-scroll-row.is-dragging { cursor: grabbing; }
+        .btn-scroll-row .btn { flex-shrink: 0; }
+        /* Filter Modal */
+        #filterModalBackdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 10650;
+            display: none;
+        }
+        #filterModal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 700px;
+            max-height: 80vh;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            z-index: 10700;
+            display: none;
+            flex-direction: column;
+        }
+        #filterModal > div:first-child {
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        #filterModal > div:first-child h5 {
+            margin: 0;
+        }
+        #filterModal > div:first-child button {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+        #filterModalContent {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .advanced-search-panel {
+            margin-bottom: 20px;
+            display: none; /* Hide initially, only show in modal */
+        }
+        /* Fix select field text display */
+        .advancedSearchField {
+            line-height: 1.5 !important;
+            padding: 6px 8px !important;
+            min-height: 36px !important;
+            vertical-align: middle !important;
+        }
+        .btn-scroll-separator {
+            width: 1px;
+            min-height: 28px;
+            background: var(--border-color, #e4e9f0);
+            flex-shrink: 0;
+            align-self: center;
+            margin: 0 4px;
+        }
+        /* Main content card */
+        .main-content-row {
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+        }
+        .main-content-row .card {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        /* Stat cards row — fill visible viewport width */
+        .stat-cards-row {
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .stat-card {
+            flex: 1 1 calc(33.333% - 10px);
+            min-width: 280px;
+            margin: 0 !important;
+        }
+        /* Responsive: tablet (2 columns) */
+        @media (max-width: 992px) {
+            .stat-card {
+                flex: 1 1 calc(50% - 8px);
+                min-width: 250px;
+            }
+        }
+        /* Responsive: mobile (1 column) */
+        @media (max-width: 576px) {
+            .stat-card {
+                flex: 1 1 100%;
+                min-width: 0;
+            }
+        }
+    </style>
 
 <div id="right-panel" class="right-panel">
     <%- include ("components/rightpanel_header") %>
     <div class="content">
         <div class="animated fadeIn">
             <div id="alertContainer"></div>
-            <div class="row">
-                <div class="col-lg-4 col-md-6">
-                    <div class="card">
-                        <% 
-                            const totalUsers = event.users.length; 
-                            const checkedInUsers = event.users.filter(user => user.isCheckIn).length; 
-                            const checkInRate = totalUsers > 0 ? ((checkedInUsers / totalUsers) * 100).toFixed(2) : 0; 
-                        %>
-                        <div class="card-body">
-                            <div class="stat-widget-five">
-                                <div class="stat-icon dib flat-color-1">
-                                    <i class="pe-7s-user"></i>
-                                </div>
-                                <div class="stat-content">
-                                    <div class="text-left dib">
-                                        <div class="stat-text"><span class="count"><%= checkedInUsers %></span></div>
-                                        <div class="stat-heading">Checked In Users</div>
-                                    </div>
+            <%
+                const totalUsers = event.users.length;
+                const checkedInUsers = event.users.filter(user => user.isCheckIn).length;
+                const checkInRate = totalUsers > 0 ? ((checkedInUsers / totalUsers) * 100).toFixed(2) : 0;
+            %>
+            <div class="d-flex stat-cards-row">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <div class="stat-widget-five">
+                            <div class="stat-icon dib flat-color-1">
+                                <i class="pe-7s-user"></i>
+                            </div>
+                            <div class="stat-content">
+                                <div class="text-left dib">
+                                    <div class="stat-text"><span class="count"><%= checkedInUsers %></span></div>
+                                    <div class="stat-heading"><%= t('users.checkedInStat') %></div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-lg-4 col-md-6">
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="stat-widget-five">
-                                <div class="stat-icon dib flat-color-2">
-                                    <i class="pe-7s-users"></i>
-                                </div>
-                                <div class="stat-content">
-                                    <div class="text-left dib">
-                                        <div class="stat-text"><span class="count"><%= totalUsers %></span></div>
-                                        <div class="stat-heading">Total Users</div>
-                                    </div>
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <div class="stat-widget-five">
+                            <div class="stat-icon dib flat-color-2">
+                                <i class="pe-7s-users"></i>
+                            </div>
+                            <div class="stat-content">
+                                <div class="text-left dib">
+                                    <div class="stat-text"><span class="count"><%= totalUsers %></span></div>
+                                    <div class="stat-heading"><%= t('users.totalStat') %></div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-lg-4 col-md-6">
-                    <div class="card">
-                        <div class="card-body">
-                            <div class="stat-widget-five">
-                                <div class="stat-icon dib flat-color-3">
-                                    <i class="pe-7s-calculator"></i>
-                                </div>
-                                <div class="stat-content">
-                                    <div class="text-left dib">
-                                        <div class="stat-text"><span class="count"><%= checkInRate %></span>%</div>
-                                        <div class="stat-heading">Check-in Rate</div>
-                                    </div>
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <div class="stat-widget-five">
+                            <div class="stat-icon dib flat-color-3">
+                                <i class="pe-7s-calculator"></i>
+                            </div>
+                            <div class="stat-content">
+                                <div class="text-left dib">
+                                    <div class="stat-text"><span class="count"><%= checkInRate %></span>%</div>
+                                    <div class="stat-heading"><%= t('users.checkInRateStat') %></div>
                                 </div>
                             </div>
                         </div>
@@ -102,49 +767,296 @@
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-lg-12 col-md-12">
+            <div class="main-content-row">
                     <div class="card">
-                        <div class="card-header">
-                            <strong class="card-title"><%= event.name %> User List</strong>
+                        <div class="card-header card-header-with-action">
+                            <strong class="card-title"><a href="/events/<%= event._id %>/edit-name" class="btn btn-link p-0 mr-1" style="color:#6c757d; vertical-align:middle;" title="<%= t('menu.editEventName') %>"><i class="fa fa-edit"></i></a><%= t('users.cardTitle') %> - <%= event.name %></strong>
+                            <button id="columnToggleBtn" class="column-toggle-gear-btn" type="button" title="<%= t('users.columnVisibility') %>">
+                                <i class="fa fa-cog"></i>
+                            </button>
                         </div>
                         <div class="card-body">
-                            <div>
-                                <a href="/events/<%= event._id %>" class="btn btn-outline-secondary">User List</a>
-                                <a href="/events/<%= event._id%>/scan" class="btn btn-outline-secondary">Scan QR Code</a>
-                                <a href="/events/<%= event._id%>/import" class="btn btn-outline-secondary">Import Data</a>
-                                <a href="/events/<%= event._id%>/banner" class="btn btn-outline-info ml-2">
-                                    <i class="fas fa-image"></i> Banner Management
+                            <!-- 單行橫向可 drag 滾動按鈕列 -->
+                            <div class="btn-scroll-row" id="btnScrollRow">
+                                <!-- Group 1: Guest selection & add -->
+                                <button id="selectAllUsersBtn" class="btn btn-primary">
+                                    <i class="fas fa-check-square"></i> <%= t('users.selectAllBtn') %>
+                                </button>
+                                <button id="deselectAllUsersBtn" class="btn btn-secondary">
+                                    <i class="fas fa-square"></i> <%= t('users.deselectAllBtn') %>
+                                </button>
+                                <button id="addUserBtn" class="btn btn-primary">
+                                    <i class="fas fa-user-plus"></i> <%= t('users.addUserBtn') %>
+                                </button>
+                                <button id="batchDeleteBtn" class="btn btn-danger" style="display: none;">
+                                    <i class="fas fa-trash"></i> <%= t('users.batchDeleteBtn') %>
+                                </button>
+                                <div class="btn-scroll-separator"></div>
+                                <!-- Group 2: Email -->
+                                <button id="emailSettingsBtn" class="btn btn-secondary">
+                                    <i class="fas fa-paper-plane"></i> <%= t('users.emailSettingsBtn') %>
+                                </button>
+                                <a href="/events/<%= event._id %>/email-records" class="btn btn-warning">
+                                    <i class="fas fa-inbox"></i> <%= t('users.emailRecordsBtn') %>
                                 </a>
+                                <button id="batchSendEmailBtn" class="btn btn-warning" style="display: none;">
+                                    <i class="fas fa-envelope"></i> <%= t('users.batchSendEmailBtn') %>
+                                </button>
+                                <button id="batchSendSmsBtn" class="btn btn-primary" style="display: none;">
+                                    <i class="fas fa-comments"></i> <%= t('users.batchSendSmsBtn') %>
+                                </button>
+                                <div class="btn-scroll-separator"></div>
+                                <!-- Group 3: Import & Report -->
+                                <a href="/events/<%= event._id%>/import" class="btn btn-success">
+                                    <i class="fas fa-upload"></i> <%= t('users.importBtn') %>
+                                </a>
+                                <a href="/events/<%= event._id %>/report" class="btn btn-info">
+                                    <i class="fas fa-download"></i> <%= t('users.reportBtn') %>
+                                </a>
+                                <%# HIDDEN: Scan QR Code — reserved for future use %>
+                                <% if (false) { %>
+                                <a href="/events/<%= event._id%>/scan" class="btn btn-secondary">
+                                    <i class="fas fa-qrcode"></i> <%= t('users.scanBtn') %>
+                                </a>
+                                <% } %>
+                            </div>
+                            
+                            <div class="clearfix" style="margin-top:4px"></div>
 
-                                <a href="/events/<%= event._id %>/report" class="btn btn-outline-success ml-2">Download Report</a>
-                                <a href="/events/<%= event._id %>/transactions" class="btn btn-outline-warning ml-2">
-                                    <i class="fa fa-credit-card"></i> Transaction Records
-                                </a>
-                                <button id="batchDeleteBtn" class="btn btn-danger ml-2" style="display: none;">Batch Delete Selected</button>
-                                <button id="addUserBtn" class="btn btn-primary ml-2">Add User</button>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" role="switch" id="paymentEvent">
-                                    <label class="form-check-label" for="paymentEvent">Payment Event</label>
+                            <!-- Batch Send Email Modal -->
+                            <div class="modal fade" id="batchSendEmailModal" tabindex="-1" role="dialog" aria-labelledby="batchSendEmailModalLabel" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="batchSendEmailModalLabel"><%= t('users.batchEmailModalTitle') %></h5>
+                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p><%= t('users.selectedCount').replace('{count}', '') %><strong id="selectedUsersCount">0</strong></p>
+                                            <div class="form-group">
+                                                <label for="batchEmailType"><%= t('users.selectEmailTypeLabel') %>:</label>
+                                                <select class="form-control" id="batchEmailType">
+                                                    <option value="invitation"><%= t('users.emailTypeInvitation') %></option>
+                                                    <option value="welcome"><%= t('users.emailTypeWelcome') %></option>
+                                                    <option value="knowledge"><%= t('users.emailTypeKnowledge') %></option>
+                                                    <option value="reminder"><%= t('users.emailTypeReminder') %></option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group" id="batchEmailTemplateGroup" style="display: none;">
+                                                <label for="batchEmailTemplate"><%= t('users.selectEmailTemplateLabel') %>:</label>
+                                                <select class="form-control" id="batchEmailTemplate">
+                                                    <option value=""><%= t('users.useDefaultTemplate') %></option>
+                                                </select>
+                                            </div>
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle"></i> <%= t('users.emailWillBeSent') %>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('common.cancel') %></button>
+                                            <button type="button" class="btn btn-primary" id="confirmBatchSendEmail">
+                                                <i class="fas fa-paper-plane"></i> <%= t('users.confirmSend') %>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="clearfix" style="margin-top:20px"></div>
+
+                            <!-- Batch Send SMS Modal -->
+                            <div class="modal fade" id="batchSendSmsModal" tabindex="-1" role="dialog" aria-labelledby="batchSendSmsModalLabel" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="batchSendSmsModalLabel"><%= t('users.batchSmsModalTitle') %></h5>
+                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p><strong id="selectedUsersCountSms">0</strong> <%= t('users.selectedCountSms').replace('{count}', '').trim() %></p>
+                                            <div class="form-group">
+                                                <label for="batchSmsTemplate"><%= t('users.selectSmsTemplateLabel') %>:</label>
+                                                <select class="form-control" id="batchSmsTemplate" required>
+                                                    <option value=""><%= t('common.selectOption') %></option>
+                                                </select>
+                                            </div>
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle"></i> <%= t('users.smsWillBeSent') %>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('common.cancel') %></button>
+                                            <button type="button" class="btn btn-primary" id="confirmBatchSendSms">
+                                                <i class="fas fa-paper-plane"></i> <%= t('users.confirmSend') %>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Resend Email Template Selection Modal -->
+                            <div class="modal fade" id="resendEmailModal" tabindex="-1" role="dialog" aria-labelledby="resendEmailModalLabel" aria-hidden="true">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="resendEmailModalLabel"><%= t('users.resendEmailModalTitle') %></h5>
+                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div id="resendUserInfo" class="mb-3 p-2 bg-light rounded border" style="display:none;">
+                                                <small class="text-muted d-block mb-1"><%= t('common.recipient') || 'Recipient' %></small>
+                                                <span id="resendUserInfoText" class="font-weight-bold"></span>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="resendEmailType"><%= t('users.selectEmailTypeLabel') %>:</label>
+                                                <select class="form-control" id="resendEmailType">
+                                                    <option value="">-- <%= t('users.selectEmailTypeLabel') %> --</option>
+                                                    <option value="invitation"><%= t('users.emailTypeInvitation') %></option>
+                                                    <option value="welcome"><%= t('users.emailTypeWelcome') %></option>
+                                                    <option value="knowledge"><%= t('users.emailTypeKnowledge') %></option>
+                                                    <option value="reminder"><%= t('users.emailTypeReminder') %></option>
+                                                    <% if (invoiceEmailEnabled) { %>
+                                                    <option value="invoice"><%= t('users.emailTypeInvoice') %></option>
+                                                    <% } %>
+                                                    <option value="payment_receipt"><%= t('users.emailTypePaymentReceipt') %></option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group" id="resendEmailTemplateGroup" style="display: none;">
+                                                <label for="resendEmailTemplate"><%= t('users.selectEmailTemplateLabel') %>:</label>
+                                                <select class="form-control" id="resendEmailTemplate">
+                                                    <option value=""><%= t('users.useDefaultTemplate') %></option>
+                                                </select>
+                                            </div>
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle"></i> <%= t('users.resendEmailWill') %>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('common.cancel') %></button>
+                                            <button type="button" class="btn btn-primary" id="confirmResendEmail">
+                                                <i class="fas fa-paper-plane"></i> <%= t('users.confirmSend') %>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Batch Send SMS Results Modal -->
+                            <div class="modal fade" id="batchSendSmsResultsModal" tabindex="-1" role="dialog" aria-labelledby="batchSendSmsResultsModalLabel" aria-hidden="true">
+                                <div class="modal-dialog modal-lg" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="batchSendSmsResultsModalLabel"><%= t('users.batchSmsResultsTitle') %></h5>
+                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div id="batchSendSmsResultsContent"></div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('common.close') %></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Batch Send Email Results Modal -->
+                            <div class="modal fade" id="batchSendEmailResultsModal" tabindex="-1" role="dialog" aria-labelledby="batchSendEmailResultsModalLabel" aria-hidden="true">
+                                <div class="modal-dialog modal-lg" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="batchSendEmailResultsModalLabel"><%= t('users.batchEmailResultsTitle') %></h5>
+                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div id="batchSendResultsContent">
+                                                <!-- Results will be inserted here -->
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <a href="/events/<%= event._id %>/email-records" class="btn btn-info">
+                                                <i class="fas fa-envelope-open"></i> <%= t('users.viewEmailRecords') %>
+                                            </a>
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('common.close') %></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Email Settings Modal (Custom Implementation) -->
+                            <div id="emailSettingsModalBackdrop" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10550; display: none;"></div>
+                            <div id="emailSettingsModal" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 500px; max-height: 80vh; background: white; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 10600; display: none;">
+                                <div style="padding: 20px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; min-height: 50px;">
+                                    <h5 style="margin: 0;"><%= t('users.emailSettingsTitle') %></h5>
+                                    <button type="button" id="emailSettingsModalClose" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
+                                </div>
+                                <div style="padding: 20px; overflow-y: auto; flex: 1; min-height: 200px;">
+                                    <form id="emailSettingsFormContent">
+                                        <div class="form-group">
+                                            <label for="welcomeMessageMethod"><%= t('users.welcomeMethodLabel') %>:</label>
+                                            <select class="form-control" id="welcomeMessageMethod">
+                                                <option value="email"><%= t('users.methodEmail') %></option>
+                                                <option value="sms"><%= t('users.methodSms') %></option>
+                                                <option value="both"><%= t('users.methodBoth') %></option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="sendWelcomeEmail">
+                                                <label class="form-check-label" for="sendWelcomeEmail"><%= t('users.sendWelcomeEmailLabel') %></label>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="sendConfirmationEmail">
+                                                <label class="form-check-label" for="sendConfirmationEmail"><%= t('users.sendConfirmationEmailLabel') %></label>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="sendReminderEmail">
+                                                <label class="form-check-label" for="sendReminderEmail"><%= t('users.sendReminderEmailLabel') %></label>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="sendThankYouEmail">
+                                                <label class="form-check-label" for="sendThankYouEmail"><%= t('users.sendThankYouEmailLabel') %></label>
+                                            </div>
+                                        </div>
+                                        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0; display: flex; justify-content: flex-end;">
+                                            <button type="button" class="btn btn-warning" id="saveEmailSettingsBtn"><i class="fas fa-envelope"></i> <%= t('users.saveEmailSettings') %></button>
+                                        </div>
+                                    </form>
+                                        </div>
+                                </div>
+                            </div>
 
                             <!-- Add User Form -->
-                            <div id="addUserForm" class="add-user-form" style="display: none;">
-                                <h5>Add New User</h5>
+                            <div id="addUserForm" class="add-user-form" style="display: none; position: relative;">
+                                <button type="button" id="cancelAddUser" aria-label="Close" style="position: absolute; top: 20px; right: 20px; background: none; border: none; font-size: 1.4rem; line-height: 1; color: #6c757d; cursor: pointer;">&times;</button>
+                                <h5><%= t('users.addUserFormTitle') %></h5>
                                 <form id="newUserForm">
                                     <% if (formConfig && formConfig.sections) { %>
-                                        <% formConfig.sections.forEach((section, sectionIndex) => { %>
+                                        <% const addFormSortedSections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                                        <% addFormSortedSections.forEach((section, sectionIndex) => { %>
                                             <% if (section.visible && section.fields) { %>
+                                                <% const addFormSortedFields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
                                                 <div class="form-section mb-4">
                                                     <h6>
                                                         <% 
                                                         let sectionTitle = '';
                                                         if (typeof section.sectionTitle === 'string') {
                                                             sectionTitle = section.sectionTitle;
-                                                        } else if (section.sectionTitle && section.sectionTitle[formConfig.defaultLanguage]) {
-                                                            sectionTitle = section.sectionTitle[formConfig.defaultLanguage];
+                                                        } else if (section.sectionTitle && section.sectionTitle[lang]) {
+                                                            sectionTitle = section.sectionTitle[lang];
                                                         } else if (section.sectionTitle && section.sectionTitle.zh) {
                                                             sectionTitle = section.sectionTitle.zh;
                                                         } else {
@@ -154,17 +1066,18 @@
                                                         <%= sectionTitle %>
                                                     </h6>
                                                     <div class="row">
-                                                        <% section.fields.forEach((field, fieldIndex) => { %>
+                                                        <% addFormSortedFields.forEach((field, fieldIndex) => { %>
                                                             <% if (field.visible) { %>
+                                                                <% const _addUserSelectOther = (field.type === 'select' && field.options && field.options.some(o => o && o.isOther)); %>
                                                                 <div class="col-md-6">
                                                                     <div class="form-group">
-                                                                        <label for="newUser<%= field.fieldName %>">
+                                                                        <label for="<%= _addUserSelectOther ? ('newUser_' + field.fieldName + '_sel') : ('newUser' + field.fieldName) %>">
                                                                             <% 
                                                                             let fieldLabel = '';
                                                                             if (typeof field.label === 'string') {
                                                                                 fieldLabel = field.label;
-                                                                            } else if (field.label && field.label[formConfig.defaultLanguage]) {
-                                                                                fieldLabel = field.label[formConfig.defaultLanguage];
+                                                                            } else if (field.label && field.label[lang]) {
+                                                                                fieldLabel = field.label[lang];
                                                                             } else if (field.label && field.label.zh) {
                                                                                 fieldLabel = field.label.zh;
                                                                             } else {
@@ -177,16 +1090,19 @@
                                                                             <% } %>
                                                                         </label>
                                                                         <% if (field.type === 'select' && field.options) { %>
-                                                                            <select class="form-control" id="newUser<%= field.fieldName %>" name="<%= field.fieldName %>" <%= field.required ? 'required' : '' %>>
-                                                                                <option value="">--- 請選擇 ---</option>
+                                                                            <% if (_addUserSelectOther) { %>
+                                                                            <select class="form-control js-select-maybe-other" id="newUser_<%= field.fieldName %>_sel"
+                                                                                    data-select-other-base="newUser_<%= field.fieldName %>"
+                                                                                    <%= field.required ? 'required' : '' %>>
+                                                                                <option value="">--- Please Select ---</option>
                                                                                 <% field.options.forEach((option) => { %>
-                                                                                    <option value="<%= option.value %>">
+                                                                                    <option value="<%= option.value %>" data-is-other="<%= option.isOther ? '1' : '' %>">
                                                                                         <% 
                                                                                         let optionLabel = '';
                                                                                         if (typeof option.label === 'string') {
                                                                                             optionLabel = option.label;
-                                                                                        } else if (option.label && option.label[formConfig.defaultLanguage]) {
-                                                                                            optionLabel = option.label[formConfig.defaultLanguage];
+                                                                                        } else if (option.label && option.label[lang]) {
+                                                                                            optionLabel = option.label[lang];
                                                                                         } else if (option.label && option.label.zh) {
                                                                                             optionLabel = option.label.zh;
                                                                                         } else {
@@ -197,12 +1113,92 @@
                                                                                     </option>
                                                                                 <% }); %>
                                                                             </select>
+                                                                            <input type="text" class="form-control mt-2 d-none js-select-other-text"
+                                                                                   id="newUser_<%= field.fieldName %>_other"
+                                                                                   placeholder="<%= t('users.pleaseSpecify') %>"
+                                                                                   autocomplete="off">
+                                                                            <input type="hidden" name="<%= field.fieldName %>" id="newUser_<%= field.fieldName %>_hidden" value="">
+                                                                            <% } else { %>
+                                                                            <select class="form-control" id="newUser<%= field.fieldName %>" name="<%= field.fieldName %>" <%= field.required ? 'required' : '' %>>
+                                                                                <option value="">--- Please Select ---</option>
+                                                                                <% field.options.forEach((option) => { %>
+                                                                                    <option value="<%= option.value %>">
+                                                                                        <% 
+                                                                                        let optionLabel = '';
+                                                                                        if (typeof option.label === 'string') {
+                                                                                            optionLabel = option.label;
+                                                                                        } else if (option.label && option.label[lang]) {
+                                                                                            optionLabel = option.label[lang];
+                                                                                        } else if (option.label && option.label.zh) {
+                                                                                            optionLabel = option.label.zh;
+                                                                                        } else {
+                                                                                            optionLabel = option.value || '';
+                                                                                        }
+                                                                                        %>
+                                                                                        <%= optionLabel %>
+                                                                                    </option>
+                                                                                <% }); %>
+                                                                            </select>
+                                                                            <% } %>
+                                                                        <% } else if (field.type === 'checkbox' && field.options) { %>
+                                                                            <div class="checkbox-group">
+                                                                                <% field.options.forEach((option, optionIndex) => { %>
+                                                                                    <div class="form-check">
+                                                                                        <input class="form-check-input" type="checkbox" 
+                                                                                               id="newUser<%= field.fieldName %>_<%= optionIndex %>" 
+                                                                                               name="<%= field.fieldName %>[]" 
+                                                                                               value="<%= option.value %>">
+                                                                                        <label class="form-check-label" for="newUser<%= field.fieldName %>_<%= optionIndex %>">
+                                                                                            <% 
+                                                                                            let optionLabel = '';
+                                                                                            if (typeof option.label === 'string') {
+                                                                                                optionLabel = option.label;
+                                                                                            } else if (option.label && option.label[lang]) {
+                                                                                                optionLabel = option.label[lang];
+                                                                                            } else if (option.label && option.label.zh) {
+                                                                                                optionLabel = option.label.zh;
+                                                                                            } else {
+                                                                                                optionLabel = option.value || '';
+                                                                                            }
+                                                                                            %>
+                                                                                            <%= optionLabel %>
+                                                                                        </label>
+                                                                                    </div>
+                                                                                <% }); %>
+                                                                            </div>
+                                                                        <% } else if (field.type === 'radio' && field.options) { %>
+                                                                            <div class="radio-group">
+                                                                                <% field.options.forEach((option, optionIndex) => { %>
+                                                                                    <div class="form-check">
+                                                                                        <input class="form-check-input" type="radio" 
+                                                                                               id="newUser<%= field.fieldName %>_<%= optionIndex %>" 
+                                                                                               name="<%= field.fieldName %>" 
+                                                                                               value="<%= option.value %>"
+                                                                                               <%= field.required ? 'required' : '' %>>
+                                                                                        <label class="form-check-label" for="newUser<%= field.fieldName %>_<%= optionIndex %>">
+                                                                                            <% 
+                                                                                            let optionLabel = '';
+                                                                                            if (typeof option.label === 'string') {
+                                                                                                optionLabel = option.label;
+                                                                                            } else if (option.label && option.label[lang]) {
+                                                                                                optionLabel = option.label[lang];
+                                                                                            } else if (option.label && option.label.zh) {
+                                                                                                optionLabel = option.label.zh;
+                                                                                            } else {
+                                                                                                optionLabel = option.value || '';
+                                                                                            }
+                                                                                            %>
+                                                                                            <%= optionLabel %>
+                                                                                        </label>
+                                                                                    </div>
+                                                                                <% }); %>
+                                                                            </div>
                                                                         <% } else if (field.type === 'textarea') { %>
                                                                             <textarea class="form-control" id="newUser<%= field.fieldName %>" name="<%= field.fieldName %>" 
-                                                                                      placeholder="<%= (typeof field.placeholder === 'string' ? field.placeholder : (field.placeholder && field.placeholder[formConfig.defaultLanguage] ? field.placeholder[formConfig.defaultLanguage] : (field.placeholder && field.placeholder.zh ? field.placeholder.zh : ''))) || '' %>" <%= field.required ? 'required' : '' %> rows="3"></textarea>
+                                                                                      placeholder="<%= (typeof field.placeholder === 'string' ? field.placeholder : (field.placeholder && field.placeholder[lang] ? field.placeholder[lang] : (field.placeholder && field.placeholder.zh ? field.placeholder.zh : ''))) || '' %>" <%= field.required ? 'required' : '' %> rows="3"></textarea>
                                                                         <% } else { %>
                                                                             <input type="<%= field.type %>" class="form-control" id="newUser<%= field.fieldName %>" name="<%= field.fieldName %>" 
-                                                                                   placeholder="<%= (typeof field.placeholder === 'string' ? field.placeholder : (field.placeholder && field.placeholder[formConfig.defaultLanguage] ? field.placeholder[formConfig.defaultLanguage] : (field.placeholder && field.placeholder.zh ? field.placeholder.zh : ''))) || '' %>" <%= field.required ? 'required' : '' %>>
+                                                                                   placeholder="<%= (typeof field.placeholder === 'string' ? field.placeholder : (field.placeholder && field.placeholder[lang] ? field.placeholder[lang] : (field.placeholder && field.placeholder.zh ? field.placeholder.zh : ''))) || '' %>" <%= field.required ? 'required' : '' %>>
                                                                         <% } %>
                                                                     </div>
                                                                 </div>
@@ -244,28 +1240,150 @@
                                         </div>
                                     <% } %>
                                     <div class="form-group">
-                                        <button type="submit" class="btn btn-success">Add User</button>
-                                        <button type="button" class="btn btn-secondary ml-2" id="cancelAddUser">Cancel</button>
+                                        <button type="submit" class="btn btn-success"><i class="fas fa-plus"></i> <%= t('users.addUserBtn') %></button>
                                     </div>
                                 </form>
                             </div>
 
-                            <table id="usersTable" class="display">
+                            <!-- Filter Modal (Backdrop and Dialog) -->
+                            <div id="filterModalBackdrop"></div>
+                            <div id="filterModal">
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid #e0e0e0; flex-shrink: 0;">
+                                    <h5 style="margin: 0;"><%= t('users.advancedSearchTitle') || 'Filter' %></h5>
+                                    <button type="button" id="filterModalClose" style="display: none; background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
+                                </div>
+                                <div id="filterModalContent" style="padding: 20px; overflow-y: auto; flex: 1;">
+                                    <!-- Advanced Search content will be dynamically placed here -->
+                                </div>
+                                <div style="padding: 20px; border-top: 1px solid #e0e0e0; display: flex; justify-content: flex-end; gap: 10px; flex-shrink: 0;">
+                                    <button type="button" id="filterDoneBtn" class="btn btn-primary" style="min-width: 80px;"><%= t('users.filterDoneBtn') %></button>
+                                </div>
+                            </div>
+
+                            <!-- 進階搜尋 Advanced Search（可同時符合多個條件 AND）-->
+                            <div class="card mb-3 advanced-search-panel">
+                                <div class="card-body py-2">
+                                    <p class="mb-2 small text-muted"><%= t('users.advancedSearchHint') %>:</p>
+                                    <div id="advancedSearchConditionsContainer">
+                                    <div class="form-row align-items-center flex-wrap mb-2 advanced-search-condition-row" data-index="1">
+                                        <div class="col-auto">
+                                            <label class="col-form-label col-form-label-sm mb-0"><%= t('users.condition') %> 1</label>
+                                        </div>
+                                        <div class="col-auto">
+                                            <select class="form-control form-control-sm advancedSearchField" style="min-width: 200px;">
+                                                <option value=""><%= t('users.selectFieldPlaceholder') %></option>
+                                                <% if (formConfig && formConfig.sections) { %>
+                                                    <% const cond1Sections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                                                    <% cond1Sections.forEach(section => { %>
+                                                        <% if (section.visible && section.fields) { %>
+                                                            <% const cond1Fields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                                                            <% cond1Fields.forEach(field => { %>
+                                                                <% if (field.visible) { %>
+                                                                    <% let l1 = (typeof field.label === 'string') ? field.label : (field.label && (field.label[lang] || field.label.zh || field.label.en)) ? (field.label[lang] || field.label.zh || field.label.en) : field.fieldName; %>
+                                                                    <option value="<%= field.fieldName %>"><%= l1 %> (<%= field.fieldName %>)</option>
+                                                                <% } %>
+                                                            <% }); %>
+                                                        <% } %>
+                                                    <% }); %>
+                                                <% } else { %>
+                                                    <option value="email">Email</option>
+                                                    <option value="name">Name</option>
+                                                    <option value="company">Company</option>
+                                                    <option value="phone">Phone</option>
+                                                <% } %>
+                                                <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
+                                                    <option value="agreementAgreed">協議同意 (agreementAgreed)</option>
+                                                    <option value="agreementRecordedAt">協議記錄時間 (agreementRecordedAt)</option>
+                                                <% } %>
+                                            </select>
+                                        </div>
+                                        <div class="col-auto">
+                                            <input type="text" class="form-control form-control-sm advancedSearchInput" placeholder="<%= t('users.keywordPlaceholder') %>" style="min-width: 160px;">
+                                        </div>
+                                        <div class="col-auto advanced-search-remove-wrap" style="display: none;"><button type="button" class="btn btn-sm btn-outline-danger advanced-search-remove">×</button></div>
+                                    </div>
+                                    <div class="form-row align-items-center flex-wrap mb-2 advanced-search-condition-row" data-index="2">
+                                        <div class="col-auto">
+                                            <label class="col-form-label col-form-label-sm mb-0"><%= t('users.condition') %> 2</label>
+                                        </div>
+                                        <div class="col-auto">
+                                            <select class="form-control form-control-sm advancedSearchField" style="min-width: 200px;">
+                                                <option value=""><%= t('users.selectFieldPlaceholder') %></option>
+                                                <% if (formConfig && formConfig.sections) { %>
+                                                    <% const cond2Sections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                                                    <% cond2Sections.forEach(section => { %>
+                                                        <% if (section.visible && section.fields) { %>
+                                                            <% const cond2Fields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                                                            <% cond2Fields.forEach(field => { %>
+                                                                <% if (field.visible) { %>
+                                                                    <% let l2 = (typeof field.label === 'string') ? field.label : (field.label && (field.label[lang] || field.label.zh || field.label.en)) ? (field.label[lang] || field.label.zh || field.label.en) : field.fieldName; %>
+                                                                    <option value="<%= field.fieldName %>"><%= l2 %> (<%= field.fieldName %>)</option>
+                                                                <% } %>
+                                                            <% }); %>
+                                                        <% } %>
+                                                    <% }); %>
+                                                <% } else { %>
+                                                    <option value="email">Email</option>
+                                                    <option value="name">Name</option>
+                                                    <option value="company">Company</option>
+                                                    <option value="phone">Phone</option>
+                                                <% } %>
+                                                <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
+                                                    <option value="agreementAgreed">協議同意 (agreementAgreed)</option>
+                                                    <option value="agreementRecordedAt">協議記錄時間 (agreementRecordedAt)</option>
+                                                <% } %>
+                                            </select>
+                                        </div>
+                                        <div class="col-auto">
+                                            <input type="text" class="form-control form-control-sm advancedSearchInput" placeholder="<%= t('users.keywordPlaceholder') %>" style="min-width: 160px;">
+                                        </div>
+                                        <div class="col-auto advanced-search-remove-wrap" style="display: none;"><button type="button" class="btn btn-sm btn-outline-danger advanced-search-remove">×</button></div>
+                                    </div>
+                                    </div>
+                                    <div class="form-row align-items-center flex-wrap">
+                                        <div class="col-auto">
+                                            <button type="button" id="advancedSearchAddCondition" class="btn btn-sm btn-primary mr-2"><i class="fas fa-plus"></i> <%= t('users.addCondition') %></button>
+                                            <button type="button" id="advancedSearchClear" class="btn btn-sm btn-danger"><%= t('users.clearCondition') %></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="columnTogglePanel" class="column-toggle-panel" style="display: none;">
+                                <div class="column-toggle-header">
+                                    <h6 class="mb-3"><%= t('users.columnVisibilitySetting') %></h6>
+                                </div>
+                                <div id="columnToggleContent" class="column-toggle-content">
+                                    <p class="mb-2 small text-muted"><%= t('users.columnToggleHint') %></p>
+                                    <div id="columnToggleList" class="column-toggle-list"></div>
+                                </div>
+                            </div>
+
+                            <div class="users-table-area">
+                            <!-- Search Button (positioned above table) -->
+                            <div class="table-search-btn-container">
+                                <button id="filterBtn" class="btn btn-secondary btn-sm" type="button">
+                                    <i class="fa fa-search"></i> <%= t('users.searchBtn') %>
+                                </button>
+                            </div>
+
+                            <table id="usersTable" class="display nowrap">
                                 <thead>
                                     <tr>
                                         <th><input type="checkbox" id="selectAll" /></th>
                                         <% if (formConfig && formConfig.sections) { %>
-                                            <% formConfig.sections.forEach(section => { %>
+                                            <% const sortedSections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                                            <% sortedSections.forEach(section => { %>
                                                 <% if (section.visible && section.fields) { %>
-                                                    <% section.fields.forEach(field => { %>
+                                                    <% const sortedFields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                                                    <% sortedFields.forEach(field => { %>
                                                         <% if (field.visible) { %>
-                                                            <th>
+                                                            <th data-field-name="<%= field.fieldName %>">
                                                                 <% 
                                                                 let displayLabel = '';
                                                                 if (typeof field.label === 'string') {
                                                                     displayLabel = field.label;
-                                                                } else if (field.label && field.label[formConfig.defaultLanguage]) {
-                                                                    displayLabel = field.label[formConfig.defaultLanguage];
+                                                                } else if (field.label && field.label[lang]) {
+                                                                    displayLabel = field.label[lang];
                                                                 } else if (field.label && field.label.zh) {
                                                                     displayLabel = field.label.zh;
                                                                 } else {
@@ -280,54 +1398,116 @@
                                             <% }); %>
                                         <% } else { %>
                                             <!-- 預設列（如果沒有formConfig） -->
-                                            <th>Email</th>
-                                            <th>Name</th>
-                                            <th>Company</th>
-                                            <th>Phone</th>
+                                            <th data-field-name="email">Email</th>
+                                            <th data-field-name="name">Name</th>
+                                            <th data-field-name="company">Company</th>
+                                            <th data-field-name="phone">Phone</th>
                                         <% } %>
-                                        <th>Checked In</th>
-                                        <th>Actions</th>
+                                        <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
+                                            <th data-field-name="agreementAgreed">協議同意</th>
+                                            <th data-field-name="agreementRecordedAt">協議記錄時間</th>
+                                        <% } %>
+                                        <th><%= t('users.colCreatedAt') %></th>
+                                        <th><%= t('users.colCheckedIn') %></th>
+                                        <th></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <% event.users.forEach(user => { %>
-                                        <tr class="<%= user.isCheckIn ? 'checkin-true' : 'checkin-false' %>" data-id="<%= user._id %>">
+                                        <% const userRow = user && typeof user.toObject === 'function' ? user.toObject() : user; %>
+                                        <tr class="<%= userRow.isCheckIn ? 'checkin-true' : 'checkin-false' %>" data-id="<%= userRow._id %>">
                                             <td><input type="checkbox" class="user-select" data-_id="<%= user._id %>" /></td>
                                             <% if (formConfig && formConfig.sections) { %>
-                                                <% formConfig.sections.forEach(section => { %>
+                                                <% const sortedSections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                                                <% sortedSections.forEach(section => { %>
                                                     <% if (section.visible && section.fields) { %>
-                                                        <% section.fields.forEach(field => { %>
+                                                        <% const sortedFields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                                                        <% sortedFields.forEach(field => { %>
                                                             <% if (field.visible) { %>
-                                                                <td><%= user[field.fieldName] || '-' %></td>
+                                                        <td data-field-name="<%= field.fieldName %>"><%= userRow[field.fieldName] || '-' %></td>
                                                             <% } %>
                                                         <% }); %>
                                                     <% } %>
                                                 <% }); %>
                                             <% } else { %>
                                                 <!-- 預設列（如果沒有formConfig） -->
-                                                <td><%= user.email %></td>
-                                                <td><%= user.name %></td>
-                                                <td><%= user.company %></td>
-                                                <td><%= user.phone %></td>
+                                            <td data-field-name="email"><%= userRow.email %></td>
+                                            <td data-field-name="name"><%= userRow.name %></td>
+                                            <td data-field-name="company"><%= userRow.company %></td>
+                                            <td data-field-name="phone"><%= userRow.phone %></td>
                                             <% } %>
-                                            <td>
+                                            <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
+                                            <td class="agreement-meta-cell" data-field-name="agreementAgreed" data-order="<%= agreementAgreedSortOrder(userRow.agreementAgreed) %>">
+                                                <%= formatAgreementAgreedLabel(userRow.agreementAgreed) %>
+                                            </td>
+                                            <td class="agreement-meta-cell" data-field-name="agreementRecordedAt" data-order="<%= userRow.agreementRecordedAt ? new Date(userRow.agreementRecordedAt).getTime() : 0 %>">
+                                                <% if (userRow.agreementRecordedAt) {
+                                                    const agreementDate = new Date(userRow.agreementRecordedAt);
+                                                    if (!isNaN(agreementDate.getTime())) { %>
+                                                    <%= agreementDate.toLocaleString('zh-TW', {
+                                                        timeZone: 'Asia/Hong_Kong',
+                                                        year: 'numeric',
+                                                        month: '2-digit',
+                                                        day: '2-digit',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit',
+                                                        second: '2-digit',
+                                                        hour12: false
+                                                    }) %>
+                                                <% } else { %>-<% }
+                                                } else { %>-<% } %>
+                                            </td>
+                                            <% } %>
+                                            <td data-order="<%= (user.create_at || user.created_at) ? new Date(user.create_at || user.created_at).getTime() : 0 %>">
+                                                <% 
+                                                const createdDate = user.create_at || user.created_at;
+                                                if (createdDate) {
+                                                    const date = new Date(createdDate);
+                                                    const formattedDate = date.toLocaleString('zh-TW', {
+                                                        timeZone: 'Asia/Hong_Kong',
+                                                        year: 'numeric',
+                                                        month: '2-digit',
+                                                        day: '2-digit',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit',
+                                                        second: '2-digit',
+                                                        hour12: false
+                                                    });
+                                                %>
+                                                    <%= formattedDate %>
+                                                <% } else { %>
+                                                    -
+                                                <% } %>
+                                            </td>
+                                            <td data-order="<%= user.isCheckIn ? 1 : 0 %>">
                                                 <input type="checkbox" class="checkin-toggle" data-_id="<%= user._id %>" <%= user.isCheckIn ? 'checked' : '' %> />
                                             </td>
                                             <td>
                                                 <div class="user-action-buttons">
-                                                    <button class="btn btn-info btn-sm resend-email" data-_id="<%= user._id %>" title="重發歡迎電郵">
-                                                        <i class="fa fa-envelope"></i>
+                                                    <div class="qrcode-container">
+                                                        <button type="button" class="btn btn-sm btn-info qrcode-btn" data-user-id="<%= user._id %>" title="<%= t('users.downloadQrCodeBtn') %>">
+                                                            <i class="fa fa-qrcode"></i>
+                                                        </button>
+                                                        <div class="qrcode-popup">
+                                                            <img src="https://api.qrserver.com/v1/create-qr-code/?data=<%= user._id %>&size=200x200" alt="QR Code" class="qrcode-image" id="qrcode-<%= user._id %>">
+                                                            <button type="button" class="btn btn-primary btn-sm qrcode-download-btn" data-user-id="<%= user._id %>" data-user-name="<%= user.name || user.email %>">
+                                                                <i class="fa fa-download"></i> <%= t('users.downloadQrCodeBtn') %>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <button type="button" class="btn btn-sm btn-primary resend-email-btn" data-_id="<%= user._id %>" data-user-name="<%= user.name || '' %>" data-user-email="<%= user.email || '' %>">
+                                                        <i class="fa fa-envelope mr-1"></i> <%= t('users.resendDropdown') %>
                                                     </button>
-                                                    <button class="btn btn-danger btn-sm delete-user" data-_id="<%= user._id %>">Delete</button>
+                                                    <button class="btn btn-delete-x delete-user" data-_id="<%= user._id %>" title="<%= t('common.delete') %>">✕</button>
                                                 </div>
                                             </td>
                                         </tr>
                                     <% }) %>
                                 </tbody>
                             </table>
+                            </div><!-- /.users-table-area -->
                         </div>
                     </div>
-                </div>
             </div>
         </div>
     </div>
@@ -344,7 +1524,114 @@
 <script src="/admin/assets/js/lib/data-table/buttons.print.min.js"></script>
 <script src="/admin/assets/js/lib/data-table/buttons.colVis.min.js"></script>
 <script>
+const _US = {
+    selectAllSelected: '<%= t("users.selectAllSelected") %>',
+    deselectAllDone: '<%= t("users.deselectAllDone") %>',
+    batchDeleteConfirm: '<%= t("users.batchDeleteConfirm") %>',
+    batchDeleteSuccess: '<%= t("users.batchDeleteSuccess") %>',
+    batchDeleteFailed: '<%= t("users.batchDeleteFailed") %>',
+    batchEmailNoUsers: '<%= t("users.batchEmailNoUsers") %>',
+    batchEmailNoType: '<%= t("users.batchEmailNoType") %>',
+    batchSmsNoUsers: '<%= t("users.batchSmsNoUsers") %>',
+    batchSmsNoTemplate: '<%= t("users.batchSmsNoTemplate") %>',
+    batchEmailSummary: '<%= t("users.batchEmailSummary") %>',
+    batchCheckInConfirm: '<%= t("users.batchCheckInConfirm") %>',
+    batchCheckInAllDone: '<%= t("users.batchCheckInAllDone") %>',
+    batchCheckInSuccess: '<%= t("users.batchCheckInSuccess") %>',
+    batchCheckInFailed: '<%= t("users.batchCheckInFailed") %>',
+    deleteUserConfirm: '<%= t("users.deleteUserConfirm") %>',
+    deleteUserSuccess: '<%= t("users.deleteUserSuccess") %>',
+    deleteUserFailed: '<%= t("users.deleteUserFailed") %>',
+    addUserSuccess: '<%= t("users.addUserSuccess") %>',
+    addUserFailed: '<%= t("users.addUserFailed") %>',
+    updateSuccess: '<%= t("users.updateSuccess") %>',
+    updateFailed: '<%= t("users.updateFailed") %>',
+    resendSuccess: '<%= t("users.resendSuccess") %>',
+    resendFailed: '<%= t("users.resendFailed") %>',
+    checkInUpdateSuccess: '<%= t("users.checkInUpdateSuccess") %>',
+    checkInUpdateFailed: '<%= t("users.checkInUpdateFailed") %>',
+    emailSettingsSaved: '<%= t("users.emailSettingsSaved") %>',
+    emailSettingsFailed: '<%= t("users.emailSettingsFailed") %>',
+    downloadQrCodeBtn: '<%= t("users.downloadQrCodeBtn") %>',
+    resendDropdown: '<%= t("users.resendDropdown") %>',
+    emailTypeInvitation: '<%= t("users.emailTypeInvitation") %>',
+    emailTypeWelcome: '<%= t("users.emailTypeWelcome") %>',
+    emailTypeKnowledge: '<%= t("users.emailTypeKnowledge") %>',
+    emailTypeReminder: '<%= t("users.emailTypeReminder") %>',
+    invoiceEmailEnabled: <%= invoiceEmailEnabled ? 'true' : 'false' %>,
+    emailTypeInvoice: '<%= t("users.emailTypeInvoice") %>',
+    emailTypePaymentReceipt: '<%= t("users.emailTypePaymentReceipt") %>',
+    conditionLabel: '<%= t("users.condition") %>',
+    useDefaultTemplate: '<%= t("users.useDefaultTemplate") %>',
+    confirmSend: '<%= t("users.confirmSend") %>',
+    sending: '<%= t("users.sending") %>',
+    batchDeleteSelected: '<%= t("users.batchDeleteSelected") %>',
+    batchSendEmailSelected: '<%= t("users.batchSendEmailSelected") %>',
+    batchSendSmsSelected: '<%= t("users.batchSendSmsSelected") %>',
+    processing: '<%= t("users.processing") %>',
+    errorNoFieldName: '<%= t("users.errorNoFieldName") %>',
+    errorNoUserId: '<%= t("users.errorNoUserId") %>',
+    modalNotFound: '<%= t("users.modalNotFound") %>',
+    missingResendInfo: '<%= t("users.missingResendInfo") %>',
+    eventTemplateLabel: '<%= t("users.eventTemplateLabel") %>',
+    globalTemplateLabel: '<%= t("users.globalTemplateLabel") %>',
+    batchEmailFailed: '<%= t("users.batchEmailFailed") %>',
+    emailSettingsTitle: '<%= t("users.emailSettingsTitle") %>',
+    saveEmailSettings: '<%= t("users.saveEmailSettings") %>',
+    viewQrCode: '<%= t("users.viewQrCode") %>',
+    deleteBtn: '<%= t("users.deleteBtn") %>',
+    smsSentSuccess: '<%= t("users.smsSentSuccess") %>',
+    fieldRequired: '<%= t("users.fieldRequired") %>',
+    noNameProvided: '<%= t("users.noNameProvided") %>',
+    batchEmailSummaryTitle: '<%= t("users.batchEmailSummaryTitle") %>',
+    emailTypeResultLabel: '<%= t("users.emailTypeResultLabel") %>',
+    successLabel: '<%= t("users.successLabel") %>',
+    failedLabel: '<%= t("users.failedLabel") %>',
+    skippedLabel: '<%= t("users.skippedLabel") %>',
+    totalLabel: '<%= t("users.totalLabel") %>',
+    detailsLabel: '<%= t("users.detailsLabel") %>',
+    detailedRecordsTitle: '<%= t("users.detailedRecordsTitle") %>',
+    nameColLabel: '<%= t("users.nameColLabel") %>',
+    emailColLabel: '<%= t("users.emailColLabel") %>',
+    statusColLabel: '<%= t("users.statusColLabel") %>',
+    phoneColLabel: '<%= t("users.phoneColLabel") %>',
+    welcomeMethodLabel: '<%= t("users.welcomeMethodLabel") %>',
+    methodEmail: '<%= t("users.methodEmail") %>',
+    methodSms: '<%= t("users.methodSms") %>',
+    methodBoth: '<%= t("users.methodBoth") %>',
+    sendWelcomeEmailLabel: '<%= t("users.sendWelcomeEmailLabel") %>',
+    sendConfirmationEmailLabel: '<%= t("users.sendConfirmationEmailLabel") %>',
+    sendReminderEmailLabel: '<%= t("users.sendReminderEmailLabel") %>',
+    sendThankYouEmailLabel: '<%= t("users.sendThankYouEmailLabel") %>',
+    manageSmsTemplates: '<%= t("users.manageSmsTemplates") %>',
+    closeBtn: '<%= t("users.closeBtn") %>'
+};
+
+    function formatAgreementAgreedCell(val) {
+        if (val === true || val === 'true' || val === 1 || val === '1') return '同意';
+        if (val === false || val === 'false' || val === 0 || val === '0') return '未同意';
+        return '-';
+    }
+    function formatAgreementRecordedAtCell(val) {
+        if (!val) return '-';
+        const d = new Date(val);
+        if (isNaN(d.getTime())) return '-';
+        return d.toLocaleString('zh-TW', {
+            timeZone: 'Asia/Hong_Kong',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        });
+    }
+
     $(document).ready(function() {
+        // 將 modal 移到 body 最外層，避免被父元素 overflow 或 stacking context 遮擋
+        $('#batchSendEmailModal, #batchSendSmsModal, #resendEmailModal, #batchSendSmsResultsModal, #batchSendEmailResultsModal').appendTo('body');
+        
         // Check if DataTables is loaded
         if (typeof $.fn.DataTable === 'undefined') {
             console.error('DataTables is not loaded!');
@@ -352,49 +1639,580 @@
             return;
         }
         
+        // Store all user IDs for select all functionality
+        const allUserIds = [];
+        <% event.users.forEach(user => { %>
+            allUserIds.push('<%= user._id %>');
+        <% }); %>
+
+        // Global set to track selected user IDs across all pages
+        const selectedUserIds = new Set();
+
         // Initialize DataTable with inline editing
+        // Calculate the Created At column index dynamically
+        const totalColumns = $('#usersTable thead th').length;
+        const createdAtColumnIndex = totalColumns - 3;
+
         const table = $('#usersTable').DataTable({
             pageLength: 50,
-            dom: 'frtip', // Remove buttons
+            dom: 'rtip',
+            autoWidth: true,
             columnDefs: [
                 {
-                    targets: 0, // Select checkbox column
+                    targets: 0,
                     orderable: false,
                     searchable: false
                 },
                 {
-                    targets: -2, // Checked In column
-                    orderable: false,
+                    targets: createdAtColumnIndex,
+                    type: 'num',
+                    orderable: true,
                     searchable: false
                 },
                 {
-                    targets: -1, // Actions column
+                    targets: -2,
+                    type: 'num',
+                    orderable: true,
+                    searchable: false,
+                    render: function(data, type, row, meta) {
+                        if (type === 'sort' || type === 'type') {
+                            const tr = meta.settings.aoData[meta.row].nTr;
+                            const td = tr && tr.cells ? tr.cells[meta.col] : null;
+                            const v = td ? td.getAttribute('data-order') : null;
+                            return v !== null && v !== '' ? parseInt(v, 10) : 0;
+                        }
+                        return data;
+                    }
+                },
+                {
+                    targets: -1,
                     orderable: false,
                     searchable: false
                 }
-            ]
+            ],
+            order: [[createdAtColumnIndex, 'desc']],
+            initComplete: function() {
+                if (!$('#usersTable').parent().hasClass('users-table-xscroll')) {
+                    $('#usersTable').wrap('<div class="users-table-xscroll"></div>');
+                }
+                fixPaginationArrows();
+            },
+            drawCallback: function() {
+                // Restore checkbox states after table redraw
+                $('.user-select').each(function() {
+                    const userId = $(this).data('_id');
+                    if (selectedUserIds.has(userId)) {
+                        $(this).prop('checked', true);
+                    }
+                });
+                updateSelectAllCheckbox();
+                updateBatchDeleteButton();
+                updateBatchSendEmailButton();
+                updateBatchSendSmsButton();
+                // Restore arrow icons after each draw
+                fixPaginationArrows();
+            }
+        });
+
+        function fixPaginationArrows() {
+            $('#usersTable_wrapper .paginate_button.previous a').html('&#8249;');
+            $('#usersTable_wrapper .paginate_button.next a').html('&#8250;');
+            // Force no background on prev/next via inline style (overrides Bootstrap)
+            $('#usersTable_wrapper .page-item.previous .page-link, #usersTable_wrapper .page-item.next .page-link')
+                .css({ 'background-color': 'transparent', 'background': 'transparent', 'border-color': 'transparent' })
+                .off('mouseenter.pgNav mouseleave.pgNav')
+                .on('mouseenter.pgNav', function() {
+                    $(this).css({ 'background-color': 'transparent', 'background': 'transparent' });
+                })
+                .on('mouseleave.pgNav', function() {
+                    $(this).css({ 'background-color': 'transparent', 'background': 'transparent' });
+                });
+        }
+
+        // 欄位顯示切換（暫時生效，重新整理後回復）
+        function initColumnToggles() {
+            const $list = $('#columnToggleList');
+            $list.empty();
+            $('#usersTable thead th').each(function(idx) {
+                const headerText = ($(this).text() || '').trim() || ('Column ' + (idx + 1));
+                const isProtected = idx === 0 || idx === (totalColumns - 1); // 勾選欄、Actions 欄不提供隱藏
+                if (isProtected) return;
+                const checked = table.column(idx).visible();
+                const safeLabel = $('<div>').text(headerText).html();
+                const itemHtml =
+                    '<label class="column-toggle-item">' +
+                        '<input type="checkbox" class="column-toggle-checkbox" data-col-index="' + idx + '" ' + (checked ? 'checked' : '') + '>' +
+                        '<span>' + safeLabel + '</span>' +
+                    '</label>';
+                $list.append(itemHtml);
+            });
+        }
+
+        $(document).on('change', '.column-toggle-checkbox', function() {
+            const colIndex = parseInt($(this).attr('data-col-index'), 10);
+            const shouldShow = $(this).is(':checked');
+            if (!Number.isNaN(colIndex)) {
+                table.column(colIndex).visible(shouldShow, false);
+                table.columns.adjust().draw(false);
+            }
+        });
+
+        // Column toggle gear button - show modal panel
+        $('#columnToggleBtn').off('click').on('click', function(e) {
+            e.stopPropagation();
+            const $panel = $('#columnTogglePanel');
+            if ($panel.css('display') === 'none') {
+                $panel.css('display', 'flex').css('flex-direction', 'column');
+            } else {
+                $panel.css('display', 'none');
+            }
+        });
+
+        // Close panel when clicking outside
+        $(document).off('click.columnToggle').on('click.columnToggle', function(e) {
+            const $panel = $('#columnTogglePanel');
+            const $btn = $('#columnToggleBtn');
+            if (!$panel.is(e.target) && !$panel.has(e.target).length && !$btn.is(e.target) && !$btn.has(e.target).length) {
+                $panel.css('display', 'none');
+            }
+        });
+
+        initColumnToggles();
+
+        // --- 進階搜尋：多條件 AND（例如 姓名=John doe 且 公司=government）---
+        const searchableFieldNames = [];
+        <% if (formConfig && formConfig.sections) { %>
+            <% const jsSortedSections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+            <% jsSortedSections.forEach(section => { %>
+                <% if (section.visible && section.fields) { %>
+                    <% const jsSortedFields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                    <% jsSortedFields.forEach(field => { %>
+                        <% if (field.visible) { %>
+                            searchableFieldNames.push('<%= field.fieldName %>');
+                        <% } %>
+                    <% }); %>
+                <% } %>
+            <% }); %>
+        <% } else { %>
+            searchableFieldNames.push('email', 'name', 'company', 'phone');
+        <% } %>
+        <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
+            searchableFieldNames.push('agreementAgreed', 'agreementRecordedAt');
+        <% } %>
+
+        // 條件陣列：{ field: 'name', term: 'john doe' }，須全部符合 (AND)
+        let advancedSearchConditions = [];
+
+        $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+            if (advancedSearchConditions.length === 0) return true;
+            const row = table.row(dataIndex).node();
+            const $row = $(row);
+            for (let i = 0; i < advancedSearchConditions.length; i++) {
+                const c = advancedSearchConditions[i];
+                if (!c.field || !c.term || c.term.trim() === '') continue;
+                const cellText = ($row.find('td[data-field-name="' + c.field + '"]').text() || '').trim().toLowerCase();
+                const term = c.term.trim().toLowerCase();
+                if (cellText.indexOf(term) === -1) return false; // 任一條件不符合則不顯示
+            }
+            return true;
+        });
+
+        function readConditionsFromForm() {
+            const conditions = [];
+            $('#advancedSearchConditionsContainer .advanced-search-condition-row').each(function() {
+                const field = $(this).find('.advancedSearchField').val();
+                const term = ($(this).find('.advancedSearchInput').val() || '').trim();
+                if (field && term) conditions.push({ field: field, term: term });
+            });
+            return conditions;
+        }
+
+        function populateFormFromConditions(conditions) {
+            const $container = $('#advancedSearchConditionsContainer');
+            const $templateRow = $container.find('.advanced-search-condition-row').first();
+            if (!$templateRow.length) return;
+            const rowCount = Math.max((conditions && conditions.length) || 0, 2);
+            $container.empty();
+            for (let i = 0; i < rowCount; i++) {
+                const $row = $templateRow.clone();
+                const c = conditions && conditions[i];
+                $row.find('.advancedSearchField').val(c ? c.field : '');
+                $row.find('.advancedSearchInput').val(c ? c.term : '');
+                $row.attr('data-index', i + 1);
+                $row.find('label.col-form-label').text(_US.conditionLabel + ' ' + (i + 1));
+                $container.append($row);
+            }
+            updateRemoveButtons();
+            renumberConditionLabels();
+        }
+
+        function applyAdvancedSearch() {
+            advancedSearchConditions = readConditionsFromForm();
+            table.draw();
+        }
+
+        function updateRemoveButtons() {
+            const rows = $('#advancedSearchConditionsContainer .advanced-search-condition-row');
+            rows.each(function(i) {
+                const $wrap = $(this).find('.advanced-search-remove-wrap');
+                if (rows.length > 2) $wrap.show(); else $wrap.hide();
+            });
+        }
+
+        function renumberConditionLabels() {
+            $('#advancedSearchConditionsContainer .advanced-search-condition-row').each(function(i) {
+                $(this).find('label.col-form-label').text(_US.conditionLabel + ' ' + (i + 1));
+                $(this).attr('data-index', i + 1);
+            });
+        }
+
+        // Bind add condition button with direct handler (event delegation doesn't work reliably with this element)
+        function bindAddConditionButton() {
+            $('#advancedSearchAddCondition').off('click').on('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Limit to maximum 8 filters
+                const currentRows = $('#advancedSearchConditionsContainer .advanced-search-condition-row').length;
+                if (currentRows >= 8) {
+                    showAlert('warning', 'Maximum 8 filters allowed');
+                    return;
+                }
+
+                const $firstRow = $('#advancedSearchConditionsContainer .advanced-search-condition-row').first();
+                const $newRow = $firstRow.clone().removeAttr('data-index').addClass('advanced-search-condition-row').attr('data-index', currentRows + 1);
+                $newRow.find('.advancedSearchField').val('');
+                $newRow.find('.advancedSearchInput').val('');
+                $newRow.find('label.col-form-label').text(_US.conditionLabel + ' ' + (currentRows + 1));
+                $('#advancedSearchConditionsContainer').append($newRow);
+                updateRemoveButtons();
+                renumberConditionLabels();
+            });
+        }
+        bindAddConditionButton();
+
+        // Use document delegation for remove button since it may be in modal
+        $(document).on('click', '.advanced-search-remove', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            const $row = $(this).closest('.advanced-search-condition-row');
+            if ($('#advancedSearchConditionsContainer .advanced-search-condition-row').length <= 2) return;
+            $row.remove();
+            renumberConditionLabels();
+            updateRemoveButtons();
+            return false;
+        });
+
+        // Bind clear button with direct handler
+        function bindClearButton() {
+            $('#advancedSearchClear').off('click').on('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $('#advancedSearchConditionsContainer .advanced-search-condition-row').each(function(i) {
+                    $(this).find('.advancedSearchField').val('');
+                    $(this).find('.advancedSearchInput').val('');
+                });
+                $('#advancedSearchConditionsContainer .advanced-search-condition-row').slice(2).remove();
+                renumberConditionLabels();
+                updateRemoveButtons();
+            });
+        }
+        bindClearButton();
+
+        // Filter Modal Control
+        let filterModalInitialized = false;
+
+        function showFilterModal() {
+            const $advancedSearchPanel = $('.advanced-search-panel');
+            const $filterModalContent = $('#filterModalContent');
+
+            // Move advanced search panel to modal on first open
+            if (!filterModalInitialized && $advancedSearchPanel.length) {
+                const $panel = $advancedSearchPanel.detach();
+                $panel.css('display', 'block'); // Ensure it displays in modal
+                $filterModalContent.append($panel);
+                filterModalInitialized = true;
+            }
+
+            populateFormFromConditions(advancedSearchConditions);
+            $('#filterModalBackdrop').show();
+            $('#filterModal').show();
+        }
+
+        function hideFilterModal(discardDraft) {
+            if (discardDraft !== false) {
+                populateFormFromConditions(advancedSearchConditions);
+            }
+            $('#filterModalBackdrop').hide();
+            $('#filterModal').hide();
+        }
+
+        $('#filterBtn').on('click', function() {
+            showFilterModal();
+        });
+
+        $('#filterModalClose').on('click', function() {
+            hideFilterModal(true);
+        });
+
+        $('#filterDoneBtn').on('click', function() {
+            applyAdvancedSearch();
+            hideFilterModal(false);
+        });
+
+        $('#filterModalBackdrop').on('click', function() {
+            hideFilterModal(true);
+        });
+
+        // Only prevent closing when clicking on modal header/body, not preventing internal events
+        $('#filterModal').on('click', function(e) {
+            // Only stop propagation if click is on modal itself, not on internal buttons
+            if (e.target === this) {
+                e.stopPropagation();
+            }
+        });
+
+        // Select All Users button - selects all users across all pages
+        $('#selectAllUsersBtn').on('click', function() {
+            // Add all user IDs to selected set
+            allUserIds.forEach(userId => {
+                selectedUserIds.add(userId);
+            });
+            // Select all checkboxes in current view
+            $('.user-select').prop('checked', true);
+            $('#selectAll').prop('checked', true).prop('indeterminate', false);
+            updateBatchDeleteButton();
+            updateBatchSendEmailButton();
+            updateBatchSendSmsButton();
+            showAlert('success', _US.selectAllSelected.replace('{count}', allUserIds.length));
+        });
+
+        // Deselect All Users button - unchecks all checkboxes
+        $('#deselectAllUsersBtn').on('click', function() {
+            // Clear selected set
+            selectedUserIds.clear();
+            // Uncheck all checkboxes in current view
+            $('.user-select').prop('checked', false);
+            $('#selectAll').prop('checked', false).prop('indeterminate', false);
+            updateBatchDeleteButton();
+            updateBatchSendEmailButton();
+            updateBatchSendSmsButton();
+            showAlert('info', _US.deselectAllDone);
+        });
+
+        // Store resend email context
+        let resendEmailContext = {
+            userId: null,
+            emailType: null,
+            button: null,
+            originalHtml: null
+        };
+
+        // Resend email — open modal directly
+        $('#usersTable tbody').on('click', '.resend-email-btn', function(e) {
+            const _id = $(this).data('_id');
+            const userName = $(this).data('user-name') || '';
+            const userEmail = $(this).data('user-email') || '';
+            const button = $(this);
+            const originalHtml = button.html();
+
+            resendEmailContext = {
+                userId: _id,
+                emailType: null,
+                button: button,
+                originalHtml: originalHtml
+            };
+
+            // Show user info
+            const userInfoText = [userName, userEmail].filter(Boolean).join('  |  ');
+            if (userInfoText) {
+                $('#resendUserInfoText').text(userInfoText);
+                $('#resendUserInfo').show();
+            } else {
+                $('#resendUserInfo').hide();
+            }
+
+            // Reset modal state
+            $('#resendEmailType').val('');
+            $('#resendEmailTemplate').html('<option value="">' + _US.useDefaultTemplate + '</option>');
+            $('#resendEmailTemplateGroup').hide();
+            $('#confirmResendEmail').prop('disabled', true);
+
+            const $modal = $('#resendEmailModal');
+            $modal.removeClass('show').attr('aria-hidden', 'false');
+            $modal.modal('show');
+
+            setTimeout(function() {
+                if (!$modal.hasClass('show') || $modal.css('display') === 'none') {
+                    $modal.addClass('show').css('display', 'block');
+                    $('body').addClass('modal-open');
+                    if ($('.modal-backdrop').length === 0) {
+                        $('<div class="modal-backdrop fade show"></div>').appendTo('body');
+                    }
+                }
+            }, 200);
+        });
+
+        // When email type changes — fetch matching templates
+        $(document).on('change', '#resendEmailType', function() {
+            const emailType = $(this).val();
+            const event_id = '<%= event._id %>';
+            const $templateSelect = $('#resendEmailTemplate');
+            const $templateGroup = $('#resendEmailTemplateGroup');
+
+            resendEmailContext.emailType = emailType || null;
+            $('#confirmResendEmail').prop('disabled', !emailType);
+
+            $templateSelect.html('<option value="">' + _US.useDefaultTemplate + '</option>');
+            $templateGroup.hide();
+
+            if (!emailType) return;
+
+            $.ajax({
+                url: `/events/api/${event_id}/emailTemplates`,
+                type: 'GET',
+                data: { type: emailType },
+                success: function(templates) {
+                    if (templates && templates.length > 0) {
+                        templates.forEach(function(template) {
+                            const label = template.eventId ?
+                                `${template.subject} ` + _US.eventTemplateLabel :
+                                `${template.subject} ` + _US.globalTemplateLabel;
+                            $templateSelect.append(`<option value="${template._id}">${label}</option>`);
+                        });
+                    }
+                    $templateGroup.show();
+                }
+            });
+        });
+
+        // Confirm resend email (with template selection)
+        function confirmResendEmail() {
+            const emailTemplateId = $('#resendEmailTemplate').val() || null;
+            const event_id = '<%= event._id %>';
+            const { userId, emailType, button, originalHtml } = resendEmailContext;
+
+            if (!userId || !emailType) {
+                showAlert('danger', _US.missingResendInfo);
+                return;
+            }
+
+            button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+
+            $.ajax({
+                url: `/events/${event_id}/users/${userId}/resend-email`,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ 
+                    emailType: emailType,
+                    emailTemplateId: emailTemplateId
+                }),
+                success: function() {
+                    showAlert('success', _US.resendSuccess.replace('{type}', emailType));
+                    const $modal = $('#resendEmailModal');
+                    $modal.modal('hide');
+                    // Cleanup modal state
+                    setTimeout(function() {
+                        $modal.removeClass('show').attr('aria-hidden', 'true');
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css({
+                            'padding-right': '',
+                            'overflow': ''
+                        });
+                    }, 300);
+                },
+                error: function(xhr) {
+                    showAlert('danger', _US.resendFailed);
+                },
+                complete: function() {
+                    button.prop('disabled', false).html(originalHtml);
+                }
+            });
+        }
+
+        // Confirm button in resend email modal
+        $('#confirmResendEmail').on('click', function() {
+            confirmResendEmail();
+        });
+        
+        // Handle resend email modal close events
+        $('#resendEmailModal').on('hidden.bs.modal', function() {
+            const $modal = $(this);
+            $modal.removeClass('show').attr('aria-hidden', 'true');
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css({
+                'padding-right': '',
+                'overflow': ''
+            });
+            $('#confirmResendEmail').prop('disabled', false);
+        });
+        
+        // Handle close button clicks for resend email modal
+        $(document).off('click', '#resendEmailModal .close, #resendEmailModal [data-dismiss="modal"]');
+        $(document).on('click', '#resendEmailModal .close, #resendEmailModal [data-dismiss="modal"]', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $('#resendEmailModal').modal('hide');
         });
 
         // Batch delete functionality
         $('#selectAll').on('change', function() {
             const isChecked = $(this).is(':checked');
-            $('.user-select').prop('checked', isChecked);
+            $('.user-select').each(function() {
+                const userId = $(this).data('_id');
+                if (isChecked) {
+                    selectedUserIds.add(userId);
+                } else {
+                    selectedUserIds.delete(userId);
+                }
+                $(this).prop('checked', isChecked);
+            });
             updateBatchDeleteButton();
+            updateBatchSendEmailButton();
+                updateBatchSendSmsButton();
+            updateSelectAllCheckbox();
         });
 
         // Individual checkbox change
         $('#usersTable tbody').on('change', '.user-select', function() {
+            const userId = $(this).data('_id');
+            if ($(this).is(':checked')) {
+                selectedUserIds.add(userId);
+            } else {
+                selectedUserIds.delete(userId);
+            }
             updateBatchDeleteButton();
+            updateBatchSendEmailButton();
+                updateBatchSendSmsButton();
             updateSelectAllCheckbox();
         });
 
         // Update batch delete button visibility
         function updateBatchDeleteButton() {
-            const selectedCount = $('.user-select:checked').length;
+            const selectedCount = selectedUserIds.size;
             if (selectedCount > 0) {
-                $('#batchDeleteBtn').show().text(`Batch Delete Selected (${selectedCount})`);
+                $('#batchDeleteBtn').show().text(_US.batchDeleteSelected.replace('{count}', selectedCount));
             } else {
                 $('#batchDeleteBtn').hide();
+            }
+        }
+
+        function updateBatchSendEmailButton() {
+            const selectedCount = selectedUserIds.size;
+            if (selectedCount > 0) {
+                $('#batchSendEmailBtn').show().text(_US.batchSendEmailSelected.replace('{count}', selectedCount));
+            } else {
+                $('#batchSendEmailBtn').hide();
+            }
+        }
+
+        function updateBatchSendSmsButton() {
+            const selectedCount = selectedUserIds.size;
+            if (selectedCount > 0) {
+                $('#batchSendSmsBtn').show().text(_US.batchSendSmsSelected.replace('{count}', selectedCount));
+            } else {
+                $('#batchSendSmsBtn').hide();
             }
         }
 
@@ -414,17 +2232,15 @@
 
         // Batch delete button click
         $('#batchDeleteBtn').on('click', function() {
-            const selectedIds = [];
-            $('.user-select:checked').each(function() {
-                selectedIds.push($(this).data('_id'));
-            });
+            // Get all selected user IDs from the Set (includes all pages)
+            const selectedIds = Array.from(selectedUserIds);
 
             if (selectedIds.length === 0) {
-                showAlert('warning', 'Please select users to delete.');
+                showAlert('warning', _US.batchDeleteFailed);
                 return;
             }
 
-            if (confirm(`Are you sure you want to delete ${selectedIds.length} selected user(s)?`)) {
+            if (confirm(_US.batchDeleteConfirm.replace('{count}', selectedIds.length))) {
                 // Send all user IDs in one request
                 $.ajax({
                     url: `/events/<%= event._id %>/users/batch`,
@@ -432,32 +2248,489 @@
                     contentType: 'application/json',
                     data: JSON.stringify({ userIds: selectedIds }),
                     success: function(response) {
-                        // Remove all selected rows from DataTable
+                        // Remove all selected user IDs from the set
                         selectedIds.forEach(userId => {
+                            selectedUserIds.delete(userId);
+                            // Try to remove from table if visible
                             const row = $(`.user-select[data-_id="${userId}"]`).closest('tr');
-                            table.row(row).remove();
+                            if (row.length) {
+                                table.row(row).remove();
+                            }
                         });
                         table.draw();
                         
-                        showAlert('success', `Successfully deleted ${response.deletedCount} user(s)!`);
+                        showAlert('success', _US.batchDeleteSuccess.replace('{count}', response.deletedCount));
                         updateBatchDeleteButton();
+                        updateBatchSendEmailButton();
+                        updateBatchSendSmsButton();
                         updateSelectAllCheckbox();
                     },
                     error: function(xhr, status, error) {
-                        console.error('Error batch deleting users:', error);
-                        showAlert('danger', 'Failed to delete users. Please try again.');
+                        showAlert('danger', _US.batchDeleteFailed);
+                    }
+                });
+            }
+        });
+
+        // Function to properly close modal
+        function closeBatchSendSmsModal() {
+            const $modal = $('#batchSendSmsModal');
+            if (typeof $modal.modal === 'function') {
+                try { $modal.modal('hide'); } catch(e) { console.log('Bootstrap modal hide failed'); }
+            }
+            $modal.removeClass('show').css('display', 'none').attr('aria-hidden', 'true');
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css({ 'padding-right': '', 'overflow': '' });
+        }
+        function closeBatchSendEmailModal() {
+            const $modal = $('#batchSendEmailModal');
+            
+            // Try Bootstrap method first
+            if (typeof $modal.modal === 'function') {
+                try {
+                    $modal.modal('hide');
+                } catch(e) {
+                    console.log('Bootstrap modal hide failed, using manual close');
+                }
+            }
+            
+            // Force cleanup after a short delay to allow animation
+            setTimeout(function() {
+                // Remove modal classes and hide
+                $modal.removeClass('show').css('display', 'none').attr('aria-hidden', 'true');
+                
+                // Remove all backdrops
+                $('.modal-backdrop').remove();
+                
+                // Clean up body
+                $('body').removeClass('modal-open').css({
+                    'padding-right': '',
+                    'overflow': ''
+                });
+            }, 300);
+        }
+
+        // Batch send email button click
+        $('#batchSendEmailBtn').on('click', function() {
+            // Get all selected user IDs from the Set (includes all pages)
+            const selectedIds = Array.from(selectedUserIds);
+
+            if (selectedIds.length === 0) {
+                showAlert('warning', _US.batchEmailNoUsers);
+                return;
+            }
+
+            // Clean up any existing modal state first
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('padding-right', '');
+            
+            // Update modal with selected count
+            $('#selectedUsersCount').text(selectedIds.length);
+            // Reset email type to default
+            $('#batchEmailType').val('invitation');
+            // Reset and load templates for default email type
+            loadBatchEmailTemplates('invitation');
+            
+            const $modal = $('#batchSendEmailModal');
+            if ($modal.length === 0) {
+                showAlert('danger', _US.modalNotFound);
+                return;
+            }
+            
+            // Reset modal state before showing
+            $modal.removeClass('show').attr('aria-hidden', 'false');
+            
+            // Show modal - Bootstrap 4 syntax
+            $modal.modal('show');
+            
+            // Ensure modal is visible (fallback if Bootstrap doesn't work)
+            setTimeout(function() {
+                if (!$modal.hasClass('show') || $modal.css('display') === 'none') {
+                    $modal.addClass('show').css('display', 'block');
+                    $('body').addClass('modal-open');
+                    if ($('.modal-backdrop').length === 0) {
+                        $('<div class="modal-backdrop fade show"></div>').appendTo('body').css('z-index', '10550');
+                    }
+                }
+            }, 200);
+        });
+
+        // Handle modal close events
+        $('#batchSendEmailModal').on('hidden.bs.modal', function() {
+            // Cleanup when modal is fully hidden
+            const $modal = $(this);
+            $modal.removeClass('show').attr('aria-hidden', 'true');
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css({
+                'padding-right': '',
+                'overflow': ''
+            });
+        });
+
+        // Handle close button clicks - prevent event bubbling
+        $(document).off('click', '#batchSendEmailModal .close, #batchSendEmailModal [data-dismiss="modal"]');
+        $(document).on('click', '#batchSendEmailModal .close, #batchSendEmailModal [data-dismiss="modal"]', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeBatchSendEmailModal();
+        });
+
+        // Handle ESC key to close modal
+        $(document).off('keydown.modal-close');
+        $(document).on('keydown.modal-close', function(e) {
+            if (e.key === 'Escape' || e.keyCode === 27) {
+                e.preventDefault();
+                if ($('#batchSendSmsModal').hasClass('show')) closeBatchSendSmsModal();
+                else if ($('#batchSendEmailModal').hasClass('show')) closeBatchSendEmailModal();
+            }
+        });
+
+        // Handle backdrop click to close modal (click on gray area)
+        $('#batchSendEmailModal').off('click.backdrop');
+        $('#batchSendEmailModal').on('click.backdrop', function(e) {
+            if ($(e.target).is('#batchSendEmailModal') && !$(e.target).closest('.modal-content').length) {
+                e.preventDefault();
+                closeBatchSendEmailModal();
+            }
+        });
+
+        // Handle Batch Send SMS modal - Cancel, close button, backdrop click
+        $(document).on('click', '#batchSendSmsModal .close, #batchSendSmsModal [data-dismiss="modal"]', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeBatchSendSmsModal();
+        });
+        $('#batchSendSmsModal').on('click', function(e) {
+            if ($(e.target).is('#batchSendSmsModal')) { closeBatchSendSmsModal(); }
+        });
+        $(document).on('click', '.modal-backdrop', function() {
+            if ($('#batchSendSmsModal').hasClass('show')) closeBatchSendSmsModal();
+            else if ($('#batchSendEmailModal').hasClass('show')) closeBatchSendEmailModal();
+            else if ($('#resendEmailModal').hasClass('show')) $('#resendEmailModal').modal('hide');
+            else if ($('#batchSendSmsResultsModal').hasClass('show')) $('#batchSendSmsResultsModal').modal('hide');
+            else if ($('#batchSendEmailResultsModal').hasClass('show')) $('#batchSendEmailResultsModal').modal('hide');
+        });
+
+        // Batch send SMS button click
+        $('#batchSendSmsBtn').on('click', function() {
+            const selectedIds = Array.from(selectedUserIds);
+            if (selectedIds.length === 0) {
+                showAlert('warning', _US.batchSmsNoUsers);
+                return;
+            }
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('padding-right', '');
+            $('#selectedUsersCountSms').text(selectedIds.length);
+            $('#batchSmsTemplate').html('<option value="">' + _US.useDefaultTemplate + '</option>');
+            $.ajax({
+                url: `/events/api/<%= event._id %>/smsTemplates`,
+                type: 'GET',
+                success: function(templates) {
+                    if (templates && templates.length > 0) {
+                        const typeNames = { welcome: 'Welcome', confirmation: 'Confirmation', reminder: 'Reminder', thankYou: 'Thank You', invitation: 'Invitation' };
+                        templates.forEach(function(t) {
+                            const typeName = typeNames[t.type] || t.type || 'welcome';
+                            const scope = t.eventId ? '(Event)' : '(Global)';
+                            const preview = (t.content || '').substring(0, 40) + '...';
+                            $('#batchSmsTemplate').append(`<option value="${t._id}">${typeName} ${scope} - ${preview}</option>`);
+                        });
+                    }
+                }
+            });
+            const $smsModal = $('#batchSendSmsModal');
+            $smsModal.modal('show');
+            // 確保 modal 可見（若 Bootstrap 未正確顯示則手動顯示）
+            setTimeout(function() {
+                if (!$smsModal.hasClass('show') || $smsModal.css('display') === 'none') {
+                    $smsModal.addClass('show').css('display', 'block');
+                    $('body').addClass('modal-open');
+                    if ($('.modal-backdrop').length === 0) {
+                        $('<div class="modal-backdrop fade show"></div>').appendTo('body').css('z-index', '10550');
+                    }
+                }
+            }, 200);
+        });
+
+        // Confirm batch send SMS
+        $('#confirmBatchSendSms').on('click', function() {
+            const selectedIds = Array.from(selectedUserIds);
+            if (selectedIds.length === 0) {
+                showAlert('warning', _US.batchSmsNoUsers);
+                return;
+            }
+            const templateId = $('#batchSmsTemplate').val();
+            if (!templateId) {
+                showAlert('warning', _US.batchSmsNoTemplate);
+                return;
+            }
+            const button = $(this);
+            button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ' + _US.sending);
+            $.ajax({
+                url: `/events/<%= event._id %>/users/batch-send-sms`,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    userIds: selectedIds,
+                    templateId: templateId,
+                    sendToSelectedOnly: true
+                }),
+                success: function(response) {
+                    $('#batchSendSmsModal').modal('hide');
+                    button.prop('disabled', false).html('<i class="fas fa-paper-plane"></i> ' + _US.confirmSend);
+                    let resultsHtml = `
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle"></i> ${_US.batchEmailSummaryTitle}</h6>
+                            <p><strong>${_US.successLabel}:</strong> <span class="badge badge-success">${response.successCount || 0}</span></p>
+                            <p><strong>${_US.failedLabel}:</strong> <span class="badge badge-danger">${response.failCount || 0}</span></p>
+                            <p><strong>${_US.totalLabel}:</strong> ${response.total || 0}</p>
+                        </div>
+                    `;
+                    if (response.results && response.results.length > 0) {
+                        resultsHtml += '<h6>' + _US.detailsLabel + '</h6><div style="max-height: 400px; overflow-y: auto;"><table class="table table-sm table-bordered"><thead><tr><th>' + _US.nameColLabel + '</th><th>' + _US.phoneColLabel + '</th><th>' + _US.statusColLabel + '</th></tr></thead><tbody>';
+                        response.results.forEach(function(r) {
+                            const status = r.success ? '<span class="badge badge-success">' + _US.successLabel + '</span>' : '<span class="badge badge-danger">' + (r.error || _US.failedLabel) + '</span>';
+                            resultsHtml += `<tr><td>${r.name || '-'}</td><td>${r.phone || '-'}</td><td>${status}</td></tr>`;
+                        });
+                        resultsHtml += '</tbody></table></div>';
+                    }
+                    $('#batchSendSmsResultsContent').html(resultsHtml);
+                    $('#batchSendSmsResultsModal').modal('show');
+                    showAlert('success', response.message || _US.smsSentSuccess);
+                    updateBatchSendEmailButton();
+                    updateBatchSendSmsButton();
+                },
+                error: function(xhr) {
+                    button.prop('disabled', false).html('<i class="fas fa-paper-plane"></i> ' + _US.confirmSend);
+                    const msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Failed to send SMS.';
+                    showAlert('danger', msg);
+                }
+            });
+        });
+
+        // Load email templates for batch send based on email type
+        function loadBatchEmailTemplates(emailType) {
+            const $templateSelect = $('#batchEmailTemplate');
+            const $templateGroup = $('#batchEmailTemplateGroup');
+            const event_id = '<%= event._id %>';
+            
+            $templateSelect.html('<option value="">' + _US.useDefaultTemplate + '</option>');
+            $templateGroup.hide();
+            
+            if (!emailType) {
+                return;
+            }
+            
+            $.ajax({
+                url: `/events/api/${event_id}/emailTemplates`,
+                type: 'GET',
+                data: { type: emailType },
+                success: function(templates) {
+                    if (templates && templates.length > 0) {
+                        templates.forEach(function(template) {
+                            const label = template.eventId ?
+                                `${template.subject} ` + _US.eventTemplateLabel :
+                                `${template.subject} ` + _US.globalTemplateLabel;
+                            $templateSelect.append(`<option value="${template._id}">${label}</option>`);
+                        });
+                        $templateGroup.show();
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Error fetching email templates:', xhr);
+                    // If error, just hide the template group
+                    $templateGroup.hide();
+                }
+            });
+        }
+        
+        // Listen for email type changes in batch send modal
+        $('#batchEmailType').on('change', function() {
+            const emailType = $(this).val();
+            loadBatchEmailTemplates(emailType);
+        });
+        
+        // Confirm batch send email
+        $('#confirmBatchSendEmail').on('click', function() {
+            // Get all selected user IDs from the Set (includes all pages)
+            const selectedIds = Array.from(selectedUserIds);
+
+            if (selectedIds.length === 0) {
+                showAlert('warning', _US.batchEmailNoUsers);
+                closeBatchSendEmailModal();
+                return;
+            }
+
+            const emailType = $('#batchEmailType').val();
+            if (!emailType) {
+                showAlert('warning', _US.batchEmailNoType);
+                return;
+            }
+
+            const emailTemplateId = $('#batchEmailTemplate').val() || null; // 可選的模板 ID
+
+            const button = $(this);
+            const originalText = button.html();
+            button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ' + _US.sending);
+
+            $.ajax({
+                url: `/events/<%= event._id %>/users/batch-send-email`,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ 
+                    userIds: selectedIds,
+                    emailType: emailType,
+                    emailTemplateId: emailTemplateId
+                }),
+                success: function(response) {
+                    closeBatchSendEmailModal();
+                    const results = response.results || {};
+                    const emailType = response.emailType || 'unknown';
+                    
+                    let resultsHtml = `
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle"></i> ${_US.batchEmailSummaryTitle}</h6>
+                            <p><strong>${_US.emailTypeResultLabel}:</strong> ${emailType}</p>
+                            <p><strong>${_US.successLabel}:</strong> <span class="badge badge-success">${results.success}</span></p>
+                            <p><strong>${_US.failedLabel}:</strong> <span class="badge badge-danger">${results.failed}</span></p>
+                            <p><strong>${_US.skippedLabel}:</strong> <span class="badge badge-warning">${results.skipped}</span></p>
+                        </div>
+                    `;
+
+                    if (results.details && results.details.length > 0) {
+                        resultsHtml += `
+                            <h6>${_US.detailedRecordsTitle}</h6>
+                            <div style="max-height: 400px; overflow-y: auto;">
+                                <table class="table table-sm table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>${_US.nameColLabel}</th>
+                                            <th>${_US.emailColLabel}</th>
+                                            <th>${_US.statusColLabel}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                        `;
+
+                        results.details.forEach(function(detail) {
+                            let statusBadge = '';
+                            if (detail.status === 'success') {
+                                statusBadge = '<span class="badge badge-success">' + _US.successLabel + '</span>';
+                            } else if (detail.status === 'failed') {
+                                statusBadge = '<span class="badge badge-danger">' + _US.failedLabel + ': ' + (detail.error || 'Unknown error') + '</span>';
+                            } else {
+                                statusBadge = '<span class="badge badge-warning">' + _US.skippedLabel + ': ' + (detail.error || 'N/A') + '</span>';
+                            }
+                            
+                            resultsHtml += `
+                                <tr>
+                                    <td>${detail.name || '-'}</td>
+                                    <td>${detail.email || '-'}</td>
+                                    <td>${statusBadge}</td>
+                                </tr>
+                            `;
+                        });
+                        
+                        resultsHtml += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                    }
+                    
+                    // Show results modal
+                    $('#batchSendResultsContent').html(resultsHtml);
+                    $('#batchSendEmailResultsModal').modal('show');
+                    
+                    let message = _US.batchEmailSummary.replace('{success}', results.success).replace('{failed}', results.failed);
+                    showAlert('success', message);
+                    
+                    // Clear selected set and uncheck all checkboxes
+                    selectedUserIds.clear();
+                    $('.user-select').prop('checked', false);
+                    $('#selectAll').prop('checked', false).prop('indeterminate', false);
+                    updateBatchDeleteButton();
+                    updateBatchSendEmailButton();
+                    updateBatchSendSmsButton();
+                },
+                error: function(xhr, status, error) {
+                    const errorMsg = xhr.responseJSON?.message || _US.batchEmailFailed;
+                    showAlert('danger', errorMsg);
+                },
+                complete: function() {
+                    button.prop('disabled', false).html(originalText);
+                }
+            });
+        });
+
+        // Batch check in button click
+        $('#batchCheckInBtn').on('click', function() {
+            const totalUsers = <%= event.users.length %>;
+            const alreadyCheckedIn = <%= event.users.filter(u => u.isCheckIn).length %>;
+            const toCheckIn = totalUsers - alreadyCheckedIn;
+
+            if (toCheckIn === 0) {
+                showAlert('info', _US.batchCheckInAllDone);
+                return;
+            }
+
+            const confirmMsg = _US.batchCheckInConfirm.replace('{total}', totalUsers).replace('{checked}', alreadyCheckedIn).replace('{add}', toCheckIn);
+            if (confirm(confirmMsg)) {
+                const button = $(this);
+                const originalText = button.text();
+                button.prop('disabled', true).text(_US.processing);
+
+                $.ajax({
+                    url: `/events/<%= event._id %>/users/batch-checkin`,
+                    type: 'PUT',
+                    contentType: 'application/json',
+                    success: function(response) {
+                        $('#usersTable tbody tr').each(function() {
+                            const row = $(this);
+                            const checkInCheckbox = row.find('.checkin-toggle');
+                            if (!checkInCheckbox.is(':checked')) {
+                                checkInCheckbox.prop('checked', true);
+                                row.removeClass('checkin-false').addClass('checkin-true');
+                            }
+                        });
+                        showAlert('success', _US.batchCheckInSuccess.replace('{count}', response.checkedInCount));
+                        button.prop('disabled', false).text(originalText);
+                    },
+                    error: function(xhr, status, error) {
+                        showAlert('danger', _US.batchCheckInFailed);
+                        button.prop('disabled', false).text(originalText);
                     }
                 });
             }
         });
 
         // Add inline editing functionality
-        $('#usersTable tbody').on('dblclick', 'td:not(:last-child):not(:nth-last-child(2)):not(:first-child)', function() {
+        $('#usersTable tbody').on('dblclick', 'td:not(:last-child):not(:nth-last-child(2)):not(:first-child):not(.agreement-meta-cell)', function() {
             const cell = $(this);
-            const currentText = cell.text();
-            const columnIndex = cell.index();
+            const currentText = cell.text().trim();
+            // Try multiple ways to get field-name (compatible with data-field-name and data-fieldName)
+            let fieldName = cell.attr('data-field-name') || cell.data('field-name') || cell.data('fieldName');
             const row = cell.closest('tr');
-            const userId = row.data('id');
+            const userId = row.data('id') || row.attr('data-id');
+            
+            // Debug log
+            console.log('Double-click detected:', {
+                cell: cell[0],
+                fieldName: fieldName,
+                userId: userId,
+                currentText: currentText,
+                allAttributes: cell[0] ? Array.from(cell[0].attributes).map(attr => `${attr.name}="${attr.value}"`).join(', ') : 'N/A'
+            });
+            
+            // If no field-name attribute, skip editing
+            if (!fieldName) {
+                console.warn('No field-name attribute found for this cell. Cell HTML:', cell[0] ? cell[0].outerHTML : 'N/A');
+                return;
+            }
+            
+            if (!userId) {
+                console.warn('No user ID found for this row');
+                return;
+            }
             
             // Create input field
             const input = $('<input>', {
@@ -477,65 +2750,61 @@
                     cell.text(newValue);
                     
                     // Send update to server
-                    updateUserField(userId, columnIndex, newValue);
+                    updateUserField(userId, fieldName, newValue);
                 }
             });
         });
         
         // Function to update user field
-        function updateUserField(userId, columnIndex, newValue) {
-            const fieldMap = {
-                1: 'email',      // Column 1: email
-                2: 'name',       // Column 2: name
-                3: 'table',      // Column 3: table
-                4: 'company',    // Column 4: company
-                5: 'phone',      // Column 5: phone
-                6: 'role',       // Column 6: role
-                7: 'saluation',  // Column 7: saluation
-                8: 'industry',   // Column 8: industry
-                9: 'transport',  // Column 9: transport
-                10: 'meal',      // Column 10: meal
-                11: 'remarks'    // Column 11: remarks
-            };
-            
-            const fieldName = fieldMap[columnIndex];
+        function updateUserField(userId, fieldName, newValue) {
             if (!fieldName) {
-                console.log('No field mapping found for column index:', columnIndex);
+                showAlert('danger', _US.errorNoFieldName);
+                return;
+            }
+
+            if (!userId) {
+                showAlert('danger', _US.errorNoUserId);
                 return;
             }
             
-            console.log('Updating field:', fieldName, 'with value:', newValue, 'for user:', userId);
+            // Build request data
+            const updateData = {};
+            updateData[fieldName] = newValue;
+            
+            console.log('Updating field:', {
+                userId: userId,
+                fieldName: fieldName,
+                newValue: newValue,
+                requestData: updateData
+            });
             
             $.ajax({
                 url: `/events/<%= event._id %>/users/${userId}`,
                 type: 'PUT',
                 contentType: 'application/json',
-                data: JSON.stringify({ [fieldName]: newValue }),
+                data: JSON.stringify(updateData),
                 success: function(response) {
-                    console.log('Update successful:', response);
-                    showAlert('success', 'User updated successfully!');
+                    showAlert('success', _US.updateSuccess);
                 },
                 error: function(xhr) {
-                    console.error('Update failed:', xhr.responseText);
-                    showAlert('danger', 'Update failed: ' + xhr.responseText);
+                    showAlert('danger', _US.updateFailed + ' ' + (xhr.responseText || xhr.statusText));
                 }
             });
         }
         
         // Function to show alerts
         function showAlert(type, message) {
-            const alertHtml = `
-                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                    ${message}
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-            `;
-            $('#alertContainer').append(alertHtml);
-            setTimeout(() => {
-                $('.alert').alert('close');
-            }, 1500);
+            const id = 'toast-' + Date.now();
+            const $toast = $(`<div id="${id}" style="
+                position:fixed; top:20px; left:50%; transform:translateX(-50%);
+                z-index:99999; min-width:300px; max-width:520px;
+                box-shadow:0 4px 16px rgba(0,0,0,0.15); border-radius:8px;
+            " class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+            </div>`);
+            $('body').append($toast);
+            setTimeout(() => $toast.fadeOut(300, function() { $(this).remove(); }), 3500);
         }
 
         // Delete user functionality
@@ -543,17 +2812,16 @@
             const _id = $(this).data('_id');
             const event_id = '<%= event._id %>';
 
-            if (confirm('Are you sure you want to delete this user?')) {
+            if (confirm(_US.deleteUserConfirm)) {
                 $.ajax({
                     url: `/events/${event_id}/users/${_id}`,
                     type: 'DELETE',
                     success: function(response) {
                         $(this).closest('tr').remove();
-                        showAlert('success', 'User deleted successfully!');
+                        showAlert('success', _US.deleteUserSuccess);
                     }.bind(this),
                     error: function(xhr, status, error) {
-                        console.error('Error deleting user:', error);
-                        showAlert('danger', 'Delete failed, please try again.');
+                        showAlert('danger', _US.deleteUserFailed);
                     }
                 });
             }
@@ -579,25 +2847,12 @@
                     } else {
                         row.removeClass('checkin-true').addClass('checkin-false');
                     }
+                    row.find('td').eq(row.find('td').length - 2).attr('data-order', isCheckIn ? 1 : 0);
 
-                    // Show success alert
-                    const alertHtml = `
-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            Update successful!
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                    `;
-                    $('#alertContainer').append(alertHtml);
-                    // Auto-hide alert
-                    setTimeout(() => {
-                        $('.alert').alert('close');
-                    }, 1500);
+                    showAlert('success', _US.checkInUpdateSuccess);
                 },
                 error: function(xhr, status, error) {
-                    console.error('Error updating user:', error);
-                    alert('Update failed, please try again later.');
+                    showAlert('danger', _US.checkInUpdateFailed);
                 }
             });
         });
@@ -606,88 +2861,52 @@
 
         // Get eventId
         const eventId = '<%= event._id %>';
-        // Initialize ticket data
-        let paymentTickets = <%- JSON.stringify(event.PaymentTickets || []) %>;
-        let isPaymentEvent = <%- event.isPaymentEvent ? 'true' : 'false' %>;
+        // Initialize email settings
+        const emailSettings = <%- JSON.stringify(event.emailSettings || { sendWelcomeEmail: false, sendConfirmationEmail: false, sendReminderEmail: false, sendThankYouEmail: false, welcomeMessageMethod: 'email' }) %>;
 
-        // Payment Event checkbox status initialization
-        $('#paymentEvent').prop('checked', isPaymentEvent);
-        if(isPaymentEvent) showTicketFields();
-
-        // Dynamically display ticket fields
-        function showTicketFields() {
-            if($('#ticketFields').length) return;
-            const html = `
-                <form id="paymentEventForm" class="mt-3">
-                    <h5>Ticket Settings</h5>
-                    <div id="ticketsList"></div>
-                    <button type="button" class="btn btn-primary btn-sm" id="addTicketBtn">Add Ticket</button>
-                    <button type="submit" class="btn btn-success btn-sm ml-2">Save Payment Settings</button>
-                </form>
-            `;
-            $('#paymentEvent').closest('.form-check').after(html);
-            renderTickets();
-        }
-
-        // 渲染票券列表
-        function renderTickets() {
-            let html = '';
-            paymentTickets.forEach((ticket, idx) => {
-                html += `
-                    <div class="ticket-item mb-2" data-idx="${idx}">
-                        <input type="text" class="form-control d-inline-block w-auto mr-2 ticket-title" placeholder="票券名稱" value="${ticket.title || ''}" style="width:120px;">
-                        <input type="number" class="form-control d-inline-block w-auto mr-2 ticket-price" placeholder="價格" value="${ticket.price || ''}" style="width:100px;">
-                        <input type="datetime-local" class="form-control d-inline-block w-auto mr-2 ticket-datetime" value="${ticket.datetime ? new Date(ticket.datetime).toISOString().slice(0,16) : ''}" style="width:180px;">
-                        <button type="button" class="btn btn-danger btn-sm remove-ticket">刪除</button>
-                    </div>
-                `;
-            });
-            $('#ticketsList').html(html);
-        }
-
-        // 新增票券
-        $(document).on('click', '#addTicketBtn', function(e) {
-            e.preventDefault();
-            paymentTickets.push({ title: '', price: '', datetime: '' });
-            renderTickets();
+        // Email Settings functionality (Modal)
+        $('#emailSettingsBtn').on('click', function() {
+            // Load current settings into modal
+            $('#welcomeMessageMethod').val(emailSettings.welcomeMessageMethod);
+            $('#sendWelcomeEmail').prop('checked', emailSettings.sendWelcomeEmail);
+            $('#sendConfirmationEmail').prop('checked', emailSettings.sendConfirmationEmail);
+            $('#sendReminderEmail').prop('checked', emailSettings.sendReminderEmail);
+            $('#sendThankYouEmail').prop('checked', emailSettings.sendThankYouEmail);
+            // Open modal with backdrop
+            $('#emailSettingsModalBackdrop').css('display', 'block');
+            $('#emailSettingsModal').css({ 'display': 'flex', 'flex-direction': 'column', 'height': 'auto' });
         });
 
-        // 刪除票券
-        $(document).on('click', '.remove-ticket', function() {
-            const idx = $(this).closest('.ticket-item').data('idx');
-            paymentTickets.splice(idx, 1);
-            renderTickets();
+        // Close modal handlers
+        $('#emailSettingsModalClose, #emailSettingsModalCloseBtn, #emailSettingsModalBackdrop').on('click', function(e) {
+            if ($(e.target).is('#emailSettingsModalBackdrop') || $(e.target).is('#emailSettingsModalClose') || $(e.target).is('#emailSettingsModalCloseBtn')) {
+                $('#emailSettingsModalBackdrop').css('display', 'none');
+                $('#emailSettingsModal').css('display', 'none');
+            }
         });
 
-        // 編輯票券
-        $(document).on('change', '.ticket-title, .ticket-price, .ticket-datetime', function() {
-            const idx = $(this).closest('.ticket-item').data('idx');
-            const row = $(this).closest('.ticket-item');
-            paymentTickets[idx].title = row.find('.ticket-title').val();
-            paymentTickets[idx].price = Number(row.find('.ticket-price').val());
-            paymentTickets[idx].datetime = row.find('.ticket-datetime').val();
-        });
-
-        // 提交 payment event form
-        $(document).on('submit', '#paymentEventForm', function(e) {
-            e.preventDefault();
-            const checked = $('#paymentEvent').is(':checked');
+        // Save Email Settings from Modal
+        $('#saveEmailSettingsBtn').on('click', function() {
+            const emailSettingsData = {
+                sendWelcomeEmail: $('#sendWelcomeEmail').is(':checked'),
+                sendConfirmationEmail: $('#sendConfirmationEmail').is(':checked'),
+                sendReminderEmail: $('#sendReminderEmail').is(':checked'),
+                sendThankYouEmail: $('#sendThankYouEmail').is(':checked'),
+                welcomeMessageMethod: $('#welcomeMessageMethod').val()
+            };
             $.ajax({
-                url: `/events/${eventId}/paymentEvent`,
+                url: `/events/${eventId}/emailSettings`,
                 type: 'PATCH',
                 contentType: 'application/json',
-                data: JSON.stringify({ isPaymentEvent: checked, PaymentTickets: paymentTickets }),
+                data: JSON.stringify({ emailSettings: emailSettingsData }),
                 success: function(res) {
-                    const alertHtml = `
-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            付費活動設定已更新！
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                    `;
-                    $('#alertContainer').append(alertHtml);
-                    setTimeout(() => { $('.alert').alert('close'); }, 1500);
+                    showAlert('success', _US.emailSettingsSaved);
+                    Object.assign(emailSettings, emailSettingsData);
+                    $('#emailSettingsModalBackdrop').hide();
+                    $('#emailSettingsModal').hide();
+                },
+                error: function(error) {
+                    showAlert('danger', _US.emailSettingsFailed);
                 }
             });
         });
@@ -704,20 +2923,91 @@
             $('#newUserForm')[0].reset();
         });
 
+        function syncSelectWithOtherAdmin(selectEl) {
+            if (!selectEl || !selectEl.getAttribute('data-select-other-base')) return;
+            var base = selectEl.getAttribute('data-select-other-base');
+            var hidden = document.getElementById(base + '_hidden');
+            var other = document.getElementById(base + '_other');
+            if (!hidden || !other) return;
+            var opt = selectEl.options[selectEl.selectedIndex];
+            var isOther = opt && opt.getAttribute('data-is-other') === '1';
+            if (isOther) {
+                $(other).removeClass('d-none');
+                if (selectEl.hasAttribute('required')) other.setAttribute('required', 'required');
+                else other.removeAttribute('required');
+                hidden.value = (other.value || '').trim();
+            } else {
+                $(other).addClass('d-none');
+                other.removeAttribute('required');
+                other.value = '';
+                other.setCustomValidity('');
+                hidden.value = selectEl.value || '';
+            }
+        }
+        $(document).on('change', '#newUserForm .js-select-maybe-other', function() {
+            syncSelectWithOtherAdmin(this);
+        });
+        $(document).on('input', '#newUserForm .js-select-other-text', function() {
+            var id = this.id;
+            if (!id || id.indexOf('_other') === -1) return;
+            var base = id.replace(/_other$/, '');
+            var sel = document.getElementById(base + '_sel');
+            if (sel) syncSelectWithOtherAdmin(sel);
+        });
+
         $('#newUserForm').on('submit', function(e) {
             e.preventDefault();
+            $('#newUserForm .js-select-maybe-other').each(function() { syncSelectWithOtherAdmin(this); });
+            var newUserFormEl = document.getElementById('newUserForm');
+            $('#newUserForm .js-select-other-text').each(function() {
+                if (!$(this).hasClass('d-none') && this.hasAttribute('required') && !((this.value || '').trim())) {
+                    this.setCustomValidity(_US.fieldRequired);
+                } else {
+                    this.setCustomValidity('');
+                }
+            });
+            if (newUserFormEl && !newUserFormEl.checkValidity()) {
+                newUserFormEl.reportValidity();
+                return;
+            }
             
-            // 動態收集表單數據
+            // Dynamically collect form data
             const userData = {
                 isCheckIn: false
             };
+            const checkboxFields = {}; // 用於收集 checkbox 字段
             
             $('#newUserForm').find('input, select, textarea').each(function() {
-                const fieldName = $(this).attr('name');
+                const $field = $(this);
+                const fieldName = $field.attr('name');
+                const fieldType = $field.attr('type');
+                
                 if (fieldName) {
-                    userData[fieldName] = $(this).val();
+                    // 處理 checkbox 字段（name 以 [] 結尾）
+                    if (fieldType === 'checkbox') {
+                        const baseName = fieldName.replace(/\[\]$/, '');
+                        if (!checkboxFields[baseName]) {
+                            checkboxFields[baseName] = [];
+                        }
+                        if ($field.is(':checked')) {
+                            checkboxFields[baseName].push($field.val());
+                        }
+                    } else {
+                        // 處理其他字段類型
+                        userData[fieldName] = $field.val();
+                    }
                 }
             });
+            
+            // 合併 checkbox 字段到 userData（如果沒有選中任何選項，設為空數組）
+            Object.keys(checkboxFields).forEach(function(baseName) {
+                userData[baseName] = checkboxFields[baseName].length > 0 ? checkboxFields[baseName] : [];
+            });
+            
+            // 確保必填字段 name 有值（如果表單中沒有 name 字段）
+            if (!userData.name || userData.name === '') {
+                userData.name = userData.email || userData.company || _US.noNameProvided;
+            }
 
             $.ajax({
                 url: `/events/<%= event._id %>/users`,
@@ -731,12 +3021,16 @@
                         '<input type="checkbox" class="user-select" data-_id="' + response._id + '" />'
                     ];
                     
-                    // 根據formConfig添加字段數據
+                    // 根據formConfig添加字段數據（順序需與 table 欄位一致）
+                    const fieldNames = [];
                     <% if (formConfig && formConfig.sections) { %>
-                        <% formConfig.sections.forEach(section => { %>
+                        <% const ajaxSortedSections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                        <% ajaxSortedSections.forEach(section => { %>
                             <% if (section.visible && section.fields) { %>
-                                <% section.fields.forEach(field => { %>
+                                <% const ajaxSortedFields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                                <% ajaxSortedFields.forEach(field => { %>
                                     <% if (field.visible) { %>
+                                        fieldNames.push('<%= field.fieldName %>');
                                         newRow.push(userData['<%= field.fieldName %>'] || '-');
                                     <% } %>
                                 <% }); %>
@@ -744,119 +3038,278 @@
                         <% }); %>
                     <% } else { %>
                         // 預設字段
+                        fieldNames.push('email');
+                        fieldNames.push('name');
+                        fieldNames.push('company');
+                        fieldNames.push('phone');
                         newRow.push(userData.email || '-');
                         newRow.push(userData.name || '-');
                         newRow.push(userData.company || '-');
                         newRow.push(userData.phone || '-');
                     <% } %>
+                    <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
+                        newRow.push(formatAgreementAgreedCell(response.agreementAgreed));
+                        newRow.push(formatAgreementRecordedAtCell(response.agreementRecordedAt));
+                    <% } %>
+                    
+                    // 添加 Created At 列
+                    const now = new Date();
+                    const timestamp = now.getTime();
+                    const formattedDate = now.toLocaleString('zh-TW', {
+                        timeZone: 'Asia/Hong_Kong',
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                    });
+                    // 直接 push 文本內容，DataTable 會自動創建 td
+                    newRow.push(formattedDate);
                     
                     // 添加Checked In和Actions列
                     newRow.push('<input type="checkbox" class="checkin-toggle" data-_id="' + response._id + '" />');
-                    newRow.push('<div class="user-action-buttons">'
-                        + '<button class="btn btn-info btn-sm resend-email" data-_id="' + response._id + '" title="重發歡迎電郵">'
-                        + '<i class="fa fa-envelope"></i>'
-                        + '</button>'
-                        + '<button class="btn btn-danger btn-sm delete-user" data-_id="' + response._id + '">Delete</button>'
-                        + '</div>');
+                    const userNameForQR = userData.name || userData.email || 'user';
+                    const actionsHtml = '<div class="user-action-buttons">' +
+                        '<div class="qrcode-container">' +
+                        '<button type="button" class="btn btn-sm btn-info qrcode-btn" data-user-id="' + response._id + '" title="' + _US.viewQrCode + '"><i class="fa fa-qrcode"></i></button>' +
+                        '<div class="qrcode-popup">' +
+                        '<img src="https://api.qrserver.com/v1/create-qr-code/?data=' + response._id + '&size=200x200" alt="QR Code" class="qrcode-image" id="qrcode-' + response._id + '">' +
+                        '<button type="button" class="btn btn-primary btn-sm qrcode-download-btn" data-user-id="' + response._id + '" data-user-name="' + userNameForQR + '"><i class="fa fa-download"></i> ' + _US.downloadQrCodeBtn + '</button>' +
+                        '</div>' +
+                        '</div>' +
+                        '<button type="button" class="btn btn-sm btn-primary resend-email-btn" data-_id="' + response._id + '" data-user-name="' + (userData.name || '') + '" data-user-email="' + (userData.email || '') + '"><i class="fa fa-envelope mr-1"></i> ' + _US.resendDropdown + '</button>' +
+                        '<button class="btn btn-delete-x delete-user" data-_id="' + response._id + '" title="' + _US.deleteBtn + '">✕</button>' +
+                        '</div>';
+                    newRow.push(actionsHtml);
                     
                     const rowNode = table.row.add(newRow).draw().node();
                     $(rowNode).addClass('checkin-false').attr('data-id', response._id);
+                    
+                    // 為新行的每個數據欄位設置 data-field-name 屬性
+                    // 跳過第一個 checkbox 列、Checked In 列和 Actions 列
+                    $(rowNode).find('td').each(function(index) {
+                        if (index > 0 && index <= fieldNames.length) {
+                            $(this).attr('data-field-name', fieldNames[index - 1]);
+                        }
+                    });
+                    
+                    // 設置 Created At 列的 data-order 屬性（倒數第 3 列）
+                    const totalTds = $(rowNode).find('td').length;
+                    const createdAtTdIndex = totalTds - 3;
+                    const createdAtTd = $(rowNode).find('td').eq(createdAtTdIndex);
+                    if (createdAtTd.length) {
+                        createdAtTd.attr('data-order', timestamp);
+                    }
+                    const checkInTdIndex = totalTds - 2;
+                    const checkInTd = $(rowNode).find('td').eq(checkInTdIndex);
+                    if (checkInTd.length) {
+                        checkInTd.attr('data-order', 0);
+                    }
                     
                     // Hide form and show button
                     $('#addUserForm').hide();
                     $('#addUserBtn').show();
                     $('#newUserForm')[0].reset();
                     
-                    showAlert('success', 'User added successfully!');
+                    showAlert('success', _US.addUserSuccess);
                 },
                 error: function(xhr, status, error) {
-                    console.error('Error adding user:', error);
-                    showAlert('danger', 'Failed to add user. Please try again.');
+                    showAlert('danger', _US.addUserFailed);
                 }
             });
         });
 
-        // 監聽 Payment Event checkbox，顯示/隱藏票券欄位
-        $('#paymentEvent').on('change', function() {
-            const checked = $(this).is(':checked');
-            if(checked) {
-                showTicketFields();
+        // QR Code hover 顯示功能（使用 mouseenter/mouseleave 確保穩定性）
+        // 計算並更新 QR code popup 位置
+        function updateQRCodePopupPosition($container) {
+            const $popup = $container.find('.qrcode-popup');
+            if (!$popup.length) return;
+            
+            const containerOffset = $container.offset();
+            const containerWidth = $container.outerWidth();
+            const containerHeight = $container.outerHeight();
+            const popupWidth = 230;
+            const popupHeight = 250; // 大約的 popup 高度（200px QR + padding + button）
+            
+            const windowWidth = $(window).width();
+            const windowHeight = $(window).height();
+            const scrollTop = $(window).scrollTop();
+            const scrollLeft = $(window).scrollLeft();
+            
+            // 計算按鈕在視窗中的位置（考慮 scroll）
+            // offset() 返回的是相對於 document 的位置，需要減去 scroll 得到視窗中的位置
+            const buttonLeft = containerOffset.left - scrollLeft;
+            const buttonRight = buttonLeft + containerWidth;
+            const buttonTop = containerOffset.top - scrollTop;
+            const buttonCenterY = buttonTop + containerHeight / 2;
+            
+            // 計算右側和左側的可用空間
+            const spaceRight = windowWidth - buttonRight;
+            const spaceLeft = buttonLeft;
+            
+            let popupLeft, popupTop;
+            let positionClass = 'popup-right'; // 預設顯示在右側
+            
+            // 決定顯示位置：優先顯示在右側，如果右側空間不夠則顯示在左側
+            if (spaceRight >= popupWidth + 10) {
+                // 顯示在右側
+                popupLeft = buttonRight + 10; // fixed 定位，直接使用視窗座標
+                positionClass = 'popup-right';
+            } else if (spaceLeft >= popupWidth + 10) {
+                // 顯示在左側
+                popupLeft = buttonLeft - popupWidth - 10; // fixed 定位，直接使用視窗座標
+                positionClass = 'popup-left';
             } else {
-                $('#paymentEventForm').remove();
-                // 立即保存取消支付的設定
-                $.ajax({
-                    url: `/events/${eventId}/paymentEvent`,
-                    type: 'PATCH',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ isPaymentEvent: false, PaymentTickets: [] }),
-                    success: function(res) {
-                        const alertHtml = `
-                            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                                已取消付費活動設定！
-                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
-                            </div>
-                        `;
-                        $('#alertContainer').append(alertHtml);
-                        setTimeout(() => { $('.alert').alert('close'); }, 1500);
-                    },
-                    error: function(error) {
-                        console.error('取消付費設定失敗:', error);
-                        // 如果保存失敗，重新勾選 checkbox
-                        $('#paymentEvent').prop('checked', true);
-                        showTicketFields();
-                        const alertHtml = `
-                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                取消付費設定失敗，請重試！
-                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
-                            </div>
-                        `;
-                        $('#alertContainer').append(alertHtml);
+                // 兩邊空間都不夠，選擇空間較大的一邊
+                if (spaceRight > spaceLeft) {
+                    popupLeft = buttonRight + 5; // 緊貼右側
+                    positionClass = 'popup-right';
+                } else {
+                    popupLeft = buttonLeft - popupWidth - 5; // 緊貼左側
+                    positionClass = 'popup-left';
+                }
+            }
+            
+            // 計算垂直位置（對齊按鈕中間，但確保不超出視窗）
+            popupTop = buttonCenterY - popupHeight / 2;
+            
+            // 確保不超出視窗上下邊界
+            if (popupTop < 10) {
+                popupTop = 10;
+            } else if (popupTop + popupHeight > windowHeight - 10) {
+                popupTop = windowHeight - popupHeight - 10;
+            }
+            
+            // 確保不超出視窗左右邊界
+            if (popupLeft < 10) {
+                popupLeft = 10;
+            } else if (popupLeft + popupWidth > windowWidth - 10) {
+                popupLeft = windowWidth - popupWidth - 10;
+            }
+            
+            // 移除舊的 position class 並添加新的
+            $popup.removeClass('popup-above popup-below popup-left popup-right').addClass(positionClass);
+            
+            // 設置 fixed 位置（fixed 定位是相對於視窗的，不需要加 scroll）
+            $popup.css({
+                'position': 'fixed',
+                'left': popupLeft + 'px',
+                'top': popupTop + 'px',
+                'display': 'block'
+            });
+        }
+        
+        $(document).on('mouseenter', '.qrcode-container', function(e) {
+            e.stopPropagation();
+            const $container = $(this);
+            updateQRCodePopupPosition($container);
+        });
+        
+        // 當頁面滾動時，更新所有顯示中的 QR code popup 位置
+        let scrollTimeout;
+        $(window).on('scroll', function() {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(function() {
+                $('.qrcode-popup:visible').each(function() {
+                    const $container = $(this).closest('.qrcode-container');
+                    if ($container.length) {
+                        updateQRCodePopupPosition($container);
                     }
                 });
-            }
+            }, 10); // 稍微延遲以提升性能
+        });
+        
+        $(document).on('mouseleave', '.qrcode-container', function(e) {
+            e.stopPropagation();
+            const $popup = $(this).find('.qrcode-popup');
+            // 稍微延遲隱藏，以便用戶可以移動到 popup
+            setTimeout(function() {
+                if (!$popup.is(':hover')) {
+                    $popup.css('display', 'none');
+                }
+            }, 200);
+        });
+        
+        $(document).on('mouseenter', '.qrcode-popup', function(e) {
+            e.stopPropagation();
+        });
+        
+        $(document).on('mouseleave', '.qrcode-popup', function(e) {
+            e.stopPropagation();
+            $(this).css('display', 'none');
         });
 
-        // 重發歡迎電郵
-        $(document).on('click', '.resend-email', function() {
-            const userId = $(this).data('_id');
-            const eventId = '<%= event._id %>';
-            const button = $(this);
+        // QR Code 下載功能
+        $(document).on('click', '.qrcode-download-btn', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const userId = $(this).data('user-id');
+            const userName = $(this).data('user-name') || 'user';
+            // 清理文件名中的特殊字符
+            const cleanUserName = userName.replace(/[^a-zA-Z0-9\-_]/g, '_');
+            const qrcodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${userId}&size=500x500`;
             
-            // 顯示確認對話框
-            if (!confirm('確定要重新發送歡迎電郵給此用戶嗎？')) {
-                return;
-            }
-            
-            // 禁用按鈕防止重複點擊
-            button.prop('disabled', true);
-            
-            $.ajax({
-                url: `/events/${eventId}/users/${userId}/resend-email`,
-                type: 'POST',
-                success: function(response) {
-                    if (response.success) {
-                        showAlert('success', '歡迎電郵已成功發送！');
-                    } else {
-                        showAlert('danger', '發送失敗：' + response.message);
-                    }
-                },
-                error: function(xhr) {
-                    const errorMsg = xhr.responseJSON ? xhr.responseJSON.message : '發送電郵失敗';
-                    showAlert('danger', '發送失敗：' + errorMsg);
-                },
-                complete: function() {
-                    // 重新啟用按鈕
-                    button.prop('disabled', false);
-                }
-            });
+            // 創建臨時圖片元素以下載
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                
+                // 轉換為 blob 並下載
+                canvas.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `qrcode-${cleanUserName}-${userId}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 'image/png');
+            };
+            img.onerror = function() {
+                // 如果 crossOrigin 失敗，直接下載 URL
+                const a = document.createElement('a');
+                a.href = qrcodeUrl;
+                a.download = `qrcode-${cleanUserName}-${userId}.png`;
+                a.target = '_blank';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            };
+            img.src = qrcodeUrl;
         });
+
     });
 </script>
-
-</body>
-</html>
+<script>
+(function () {
+    const row = document.getElementById('btnScrollRow');
+    if (!row) return;
+    let drag = { active: false, x: 0, scroll: 0, moved: false };
+    row.addEventListener('mousedown', function (e) {
+        drag = { active: true, x: e.clientX, scroll: row.scrollLeft, moved: false };
+        row.classList.add('is-dragging');
+    });
+    window.addEventListener('mouseup', function () {
+        drag.active = false;
+        row.classList.remove('is-dragging');
+    });
+    row.addEventListener('mousemove', function (e) {
+        if (!drag.active) return;
+        const dx = drag.x - e.clientX;
+        if (Math.abs(dx) > 5) drag.moved = true;
+        row.scrollLeft = drag.scroll + dx;
+    });
+    row.addEventListener('click', function (e) {
+        if (drag.moved) { e.preventDefault(); e.stopPropagation(); drag.moved = false; }
+    }, true);
+})();
+</script>
 

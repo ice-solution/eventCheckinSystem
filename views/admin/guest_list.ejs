@@ -1,0 +1,569 @@
+<%- include ("components/header") %>
+<%- include ("components/menu", { eventId: eventId }) %>
+<%- include("components/responsive_layout_style") %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+
+<div id="right-panel" class="right-panel" data-event-id="<%= eventId %>">
+    <%- include ("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div id="alertContainer"></div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title"><%= t('guest_list.title') %></strong>
+                            <div class="float-right">
+                                <button id="addGuestBtn" class="btn btn-primary btn-sm" type="button" onclick="if(window.showAddGuestModal){window.showAddGuestModal();} return false;"><i class="fas fa-user-plus"></i> <%= t('guest_list.addGuest') %></button>
+                                <button id="importExcelBtn" class="btn btn-success btn-sm ml-2" type="button" onclick="if(window.showImportExcelModal){window.showImportExcelModal();} return false;"><i class="fas fa-upload"></i> <%= t('guest_list.importExcel') %></button>
+                                <a href="/events/<%= eventId %>/guest-list/export" class="btn btn-info btn-sm ml-2" type="button">
+                                    <i class="fas fa-download"></i> <%= t('guest_list.exportExcel') %>
+                                </a>
+                                <button id="sendSmsBtn" class="btn btn-warning btn-sm ml-2" type="button" onclick="if(window.showSendSmsModal){window.showSendSmsModal();} return false;">
+                                    <i class="fas fa-comments"></i> <%= t('guest_list.sendSms') %>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <strong><%= t('guest_list.noteTitle') %>:</strong> <%= t('guest_list.noteBody') %>
+                            </div>
+                            <table id="guestListTable" class="table table-bordered table-striped">
+                                <thead>
+                                    <tr>
+                                        <th><%= t('common.name') %></th>
+                                        <th><%= t('common.email') %></th>
+                                        <th><%= t('common.company') %></th>
+                                        <th><%= t('common.phone') %></th>
+                                        <th><%= t('common.role') %></th>
+                                        <th><%= t('common.created_at') %></th>
+                                        <th><%= t('common.actions') %></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (guests && guests.length > 0) { %>
+                                        <% guests.forEach(guest => { %>
+                                            <tr>
+                                                <td><%= guest.name || '-' %></td>
+                                                <td><%= guest.email || '-' %></td>
+                                                <td><%= guest.company || '-' %></td>
+                                                <td><%= guest.phone || '-' %></td>
+                                                <td>
+                                                    <% if (guest.role) { %>
+                                                        <span class="badge badge-info"><%= guest.role %></span>
+                                                    <% } else { %>
+                                                        -
+                                                    <% } %>
+                                                </td>
+                                                <td>
+                                                    <%= guest.create_at ? new Date(guest.create_at).toLocaleString() : '-' %>
+                                                </td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-primary edit-guest" data-guest-id="<%= guest._id %>" title="<%= t('common.edit') %>" onclick="if(window.showEditGuestModal){window.showEditGuestModal('<%= guest._id %>');} return false;">
+                                                        <i class="fa fa-edit"></i> <%= t('common.edit') %>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-success add-to-rsvp" data-guest-id="<%= guest._id %>" title="<%= t('guest_list.addToRsvp') %>">
+                                                        <i class="fa fa-user-plus"></i> <%= t('guest_list.addToRsvp') %>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-danger delete-guest" data-guest-id="<%= guest._id %>" title="<%= t('common.delete') %>">
+                                                        <i class="fa fa-trash"></i> <%= t('common.delete') %>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        <% }); %>
+                                    <% } else { %>
+                                        <tr>
+                                            <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                                        </tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="card-footer bg-light">
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap; padding: 10px 0;">
+                                <button id="selectAllGuestsBtn" class="btn btn-sm btn-primary" type="button">
+                                    <i class="fas fa-check-square"></i> <%= t('common.selectAll') || 'Select All' %>
+                                </button>
+                                <button id="deselectAllGuestsBtn" class="btn btn-sm btn-secondary" type="button">
+                                    <i class="fas fa-square"></i> <%= t('common.deselectAll') || 'Deselect All' %>
+                                </button>
+                                <button id="batchDeleteGuestsBtn" class="btn btn-sm btn-danger" type="button" style="display: none;">
+                                    <i class="fas fa-trash"></i> <%= t('common.delete') || 'Delete' %>
+                                </button>
+                                <button id="batchSendEmailGuestsBtn" class="btn btn-sm btn-warning" type="button" style="display: none;">
+                                    <i class="fas fa-envelope"></i> <%= t('common.sendEmail') || 'Send Email' %>
+                                </button>
+                                <button id="batchSendSmsGuestsBtn" class="btn btn-sm btn-info" type="button" style="display: none;">
+                                    <i class="fas fa-comments"></i> <%= t('common.sendSms') || 'Send SMS' %>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Guest Modal -->
+<div class="modal fade" id="addGuestModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><%= t('guest_list.addGuestTitle') %></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="addGuestForm" onsubmit="if(window.submitAddGuestForm){window.submitAddGuestForm();} return false;">
+                    <div class="form-group">
+                        <label for="guestName"><%= t('guest_list.nameLabel') %></label>
+                        <input type="text" class="form-control" id="guestName" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="guestEmail"><%= t('common.email') %></label>
+                        <input type="email" class="form-control" id="guestEmail" name="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="guestCompany"><%= t('common.company') %></label>
+                        <input type="text" class="form-control" id="guestCompany" name="company">
+                    </div>
+                    <div class="form-group">
+                        <label for="guestPhone"><%= t('common.phone') %></label>
+                        <input type="text" class="form-control" id="guestPhone" name="phone">
+                    </div>
+                    <div class="form-group">
+                        <label for="guestRole"><%= t('common.role') %></label>
+                        <select class="form-control" id="guestRole" name="role">
+                            <option value=""><%= t('common.selectOption') %></option>
+                            <option value="premium">Premium</option>
+                            <option value="VVIP">VVIP</option>
+                            <option value="VIP">VIP</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('common.cancel') %></button>
+                <button type="button" class="btn btn-primary" id="submitGuestBtn" onclick="if(window.submitAddGuestForm){window.submitAddGuestForm();} return false;"><%= t('guest_list.addGuestTitle') %></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import Excel Modal -->
+<div class="modal fade" id="importExcelModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><%= t('guest_list.importTitle') %></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <strong><%= t('guest_list.importNoteTitle') %></strong>
+                    <ul>
+                        <li><%= t('guest_list.importNote1') %></li>
+                        <li><%= t('guest_list.importNote2') %></li>
+                        <li><%= t('guest_list.importNote3') %></li>
+                    </ul>
+                </div>
+                <form id="importExcelForm" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="excelFile"><%= t('guest_list.selectFileLabel') %></label>
+                        <input type="file" class="form-control-file" id="excelFile" name="file" accept=".xlsx,.xls" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('common.cancel') %></button>
+                <button type="button" class="btn btn-primary" id="submitImportBtn"><%= t('common.import') %></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Guest Modal -->
+<div class="modal fade" id="editGuestModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><%= t('guest_list.editGuestTitle') %></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="editGuestForm" onsubmit="if(window.submitEditGuestForm){window.submitEditGuestForm();} return false;">
+                    <input type="hidden" id="editGuestId" name="guestId">
+                    <div class="form-group">
+                        <label for="editGuestName"><%= t('guest_list.nameLabel') %></label>
+                        <input type="text" class="form-control" id="editGuestName" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editGuestEmail"><%= t('common.email') %></label>
+                        <input type="email" class="form-control" id="editGuestEmail" name="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="editGuestCompany"><%= t('common.company') %></label>
+                        <input type="text" class="form-control" id="editGuestCompany" name="company">
+                    </div>
+                    <div class="form-group">
+                        <label for="editGuestPhone"><%= t('common.phone') %></label>
+                        <input type="text" class="form-control" id="editGuestPhone" name="phone">
+                    </div>
+                    <div class="form-group">
+                        <label for="editGuestRole"><%= t('common.role') %></label>
+                        <select class="form-control" id="editGuestRole" name="role">
+                            <option value=""><%= t('common.selectOption') %></option>
+                            <option value="premium">Premium</option>
+                            <option value="VVIP">VVIP</option>
+                            <option value="VIP">VIP</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('common.cancel') %></button>
+                <button type="button" class="btn btn-primary" id="submitEditGuestBtn" onclick="if(window.submitEditGuestForm){window.submitEditGuestForm();} return false;"><%= t('guest_list.updateGuestBtn') %></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
+<%- include ("components/footer") %>
+<script>
+    // I18N keys baked at render time for use in dynamic JS
+    const _GL = {
+        nameRequired: '<%= t("guest_list.nameRequired") %>',
+        addingBtn: '<%= t("guest_list.addingBtn") %>',
+        updatingBtn: '<%= t("guest_list.updatingBtn") %>',
+        sendingBtn: '<%= t("guest_list.sendingBtn") %>',
+        importingBtn: '<%= t("guest_list.importingBtn") %>',
+        addSuccess: '<%= t("guest_list.addSuccess") %>',
+        updateSuccess: '<%= t("guest_list.updateSuccess") %>',
+        importSuccess: '<%= t("guest_list.importSuccess") %>',
+        addRsvpSuccess: '<%= t("guest_list.addRsvpSuccess") %>',
+        deleteSuccess: '<%= t("guest_list.deleteSuccess") %>',
+        smsSentSuccess: '<%= t("guest_list.smsSentSuccess") %>',
+        smsSelectTemplate: '<%= t("guest_list.smsSelectTemplate") %>',
+        sendSmsFailed: '<%= t("guest_list.sendSmsFailed") %>',
+        addFailed: '<%= t("guest_list.addFailed") %>',
+        updateFailed: '<%= t("guest_list.updateFailed") %>',
+        importFailed: '<%= t("guest_list.importFailed") %>',
+        confirmAddToRsvp: '<%= t("guest_list.confirmAddToRsvp") %>',
+        confirmDelete: '<%= t("guest_list.confirmDelete") %>',
+        sendSmsTitle: '<%= t("guest_list.sendSmsTitle") %>',
+        selectRole: '<%= t("guest_list.selectRole") %>',
+        selectRoleNote: '<%= t("guest_list.selectRoleNote") %>',
+        allRoles: '<%= t("guest_list.allRoles") %>',
+        selectTemplate: '<%= t("guest_list.selectTemplate") %>',
+        pleaseSelectTemplate: '<%= t("guest_list.pleaseSelectTemplate") %>',
+        previewLabel: '<%= t("guest_list.previewLabel") %>',
+        templateContent: '<%= t("guest_list.templateContent") %>',
+        sendSmsBtn: '<%= t("guest_list.sendSmsBtn") %>',
+        cancel: '<%= t("common.cancel") %>'
+    };
+
+    window.showAddGuestModal = function() {
+        var $ = window.jQuery || window.$;
+        if (!$) return;
+        const $modal = $('#addGuestModal');
+        const $form = $('#addGuestForm');
+        if ($form.length) { $form[0].reset(); $('#guestRole').val(''); }
+        if ($modal.length) $modal.modal('show');
+    };
+
+    window.showImportExcelModal = function() {
+        var $ = window.jQuery || window.$;
+        if (!$) return;
+        const $modal = $('#importExcelModal');
+        const $form = $('#importExcelForm');
+        if ($form.length) $form[0].reset();
+        if ($modal.length) $modal.modal('show');
+    };
+
+    window.showSendSmsModal = function() {
+        var $ = window.jQuery || window.$;
+        if (!$) return;
+        const eventId = document.querySelector('[data-event-id]')?.getAttribute('data-event-id');
+        if (!eventId) return;
+        $.ajax({
+            url: `/events/api/${eventId}/smsTemplates`,
+            type: 'GET',
+            success: function(templates) { buildSendSmsModal(templates, eventId); },
+            error: function() { buildSendSmsModal([], eventId); }
+        });
+    };
+
+    function buildSendSmsModal(templates, eventId) {
+        var $ = window.jQuery || window.$;
+        const smsTypeNames = {
+            'welcome': t('sms_template_form.typeWelcome'),
+            'confirmation': t('sms_template_form.typeConfirmation'),
+            'reminder': t('sms_template_form.typeReminder'),
+            'thankYou': t('sms_template_form.typeThankYou'),
+            'invitation': t('sms_template_form.typeInvitation')
+        };
+        const optionsHtml = templates.map(tmpl => {
+            const typeName = smsTypeNames[tmpl.type || 'welcome'] || (tmpl.type || 'welcome');
+            const scope = tmpl.eventId ? '' : ' (Global)';
+            return `<option value="${tmpl._id}">${typeName}${scope} - ${(tmpl.content || '').substring(0, 50)}...</option>`;
+        }).join('');
+
+        const modalHtml = `
+            <div class="modal fade" id="sendSmsModal" tabindex="-1" role="dialog">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">${_GL.sendSmsTitle}</h5>
+                            <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="sendSmsForm">
+                                <div class="form-group">
+                                    <label>${_GL.selectRole}</label>
+                                    <select class="form-control" id="smsRoleFilter" multiple>
+                                        <option value="premium">Premium</option>
+                                        <option value="VVIP">VVIP</option>
+                                        <option value="VIP">VIP</option>
+                                        <option value="">${_GL.allRoles}</option>
+                                    </select>
+                                    <small class="form-text text-muted">${_GL.selectRoleNote}</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>${_GL.selectTemplate}</label>
+                                    <select class="form-control" id="smsTemplateSelect" required>
+                                        <option value="">${_GL.pleaseSelectTemplate}</option>
+                                        ${optionsHtml}
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>${_GL.previewLabel}</label>
+                                    <div id="smsPreview" class="alert alert-info" style="display:none;"></div>
+                                </div>
+                                <div id="smsStatus" class="alert" style="display:none;"></div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">${_GL.cancel}</button>
+                            <button type="button" class="btn btn-primary" id="confirmSendSmsBtn">${_GL.sendSmsBtn}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+
+        $('#sendSmsModal').remove();
+        $('body').append(modalHtml);
+        $('#sendSmsModal').modal('show');
+
+        $('#smsTemplateSelect').on('change', function() {
+            const templateId = $(this).val();
+            if (templateId) {
+                const tmpl = templates.find(t => t._id === templateId);
+                if (tmpl) $('#smsPreview').html(`<strong>${_GL.templateContent}:</strong><br>${tmpl.content || ''}`).show();
+            } else {
+                $('#smsPreview').hide();
+            }
+        });
+
+        $('#confirmSendSmsBtn').on('click', function() {
+            const selectedRoles = $('#smsRoleFilter').val() || [];
+            const templateId = $('#smsTemplateSelect').val();
+            if (!templateId) { alert(_GL.smsSelectTemplate); return; }
+            const button = $(this);
+            button.prop('disabled', true).text(_GL.sendingBtn);
+            $.ajax({
+                url: `/events/${eventId}/guest-list/send-sms`,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ roles: selectedRoles, templateId }),
+                success: function(response) {
+                    $('#smsStatus').removeClass('alert-danger').addClass('alert-success')
+                        .html(`<i class="fa fa-check-circle"></i> ${response.message || _GL.smsSentSuccess}`).show();
+                    setTimeout(() => { $('#sendSmsModal').modal('hide'); location.reload(); }, 2000);
+                },
+                error: function(xhr) {
+                    const errorMsg = xhr.responseJSON?.message || _GL.sendSmsFailed;
+                    $('#smsStatus').removeClass('alert-success').addClass('alert-danger')
+                        .html(`<i class="fa fa-exclamation-circle"></i> ${errorMsg}`).show();
+                    button.prop('disabled', false).text(_GL.sendSmsBtn);
+                }
+            });
+        });
+    }
+
+    window.showEditGuestModal = function(guestId) {
+        var $ = window.jQuery || window.$;
+        if (!$) return;
+        const row = $(`.edit-guest[data-guest-id="${guestId}"]`).closest('tr');
+        if (row.length === 0) return;
+        const guest = {
+            name: row.find('td:eq(0)').text().trim(),
+            email: row.find('td:eq(1)').text().trim(),
+            company: row.find('td:eq(2)').text().trim(),
+            phone: row.find('td:eq(3)').text().trim(),
+            role: row.find('td:eq(4) .badge').text().trim() || ''
+        };
+        $('#editGuestId').val(guestId);
+        $('#editGuestName').val(guest.name);
+        $('#editGuestEmail').val(guest.email);
+        $('#editGuestCompany').val(guest.company);
+        $('#editGuestPhone').val(guest.phone);
+        $('#editGuestRole').val(guest.role);
+        $('#editGuestModal').modal('show');
+    };
+
+    window.submitEditGuestForm = function() {
+        var $ = window.jQuery || window.$;
+        if (!$) return;
+        const eventId = document.querySelector('[data-event-id]')?.getAttribute('data-event-id');
+        const guestId = $('#editGuestId').val();
+        if (!eventId || !guestId) return;
+        const name = $('#editGuestName').val().trim();
+        if (!name) { alert(_GL.nameRequired); $('#editGuestName').focus(); return; }
+        const button = $('#submitEditGuestBtn');
+        const originalText = button.text();
+        button.prop('disabled', true).text(_GL.updatingBtn);
+        $.ajax({
+            url: `/events/${eventId}/guest-list/${guestId}`,
+            type: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({ name, email: $('#editGuestEmail').val().trim(), company: $('#editGuestCompany').val().trim(), phone: $('#editGuestPhone').val().trim(), role: $('#editGuestRole').val().trim() }),
+            success: function() {
+                $('#editGuestModal').modal('hide');
+                showAlert('success', _GL.updateSuccess);
+                setTimeout(() => location.reload(), 1000);
+            },
+            error: function(xhr) {
+                alert(xhr.responseJSON?.message || _GL.updateFailed);
+            },
+            complete: function() { button.prop('disabled', false).text(originalText); }
+        });
+    };
+
+    window.submitAddGuestForm = function() {
+        var $ = window.jQuery || window.$;
+        if (!$) return;
+        const eventId = document.querySelector('[data-event-id]')?.getAttribute('data-event-id');
+        if (!eventId) return;
+        const name = $('#guestName').val().trim();
+        if (!name) { alert(_GL.nameRequired); $('#guestName').focus(); return; }
+        const button = $('#submitGuestBtn');
+        const originalText = button.text();
+        button.prop('disabled', true).text(_GL.addingBtn);
+        $.ajax({
+            url: `/events/${eventId}/guest-list`,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ name, email: $('#guestEmail').val().trim(), company: $('#guestCompany').val().trim(), phone: $('#guestPhone').val().trim(), role: $('#guestRole').val().trim() }),
+            success: function() {
+                $('#addGuestModal').modal('hide');
+                showAlert('success', _GL.addSuccess);
+                setTimeout(() => location.reload(), 1000);
+            },
+            error: function(xhr) {
+                alert(xhr.responseJSON?.message || _GL.addFailed);
+            },
+            complete: function() { button.prop('disabled', false).text(originalText); }
+        });
+    };
+
+    (function() {
+        function waitForJQuery(callback) {
+            if (window.jQuery || window.$) {
+                callback(window.jQuery || window.$);
+            } else {
+                setTimeout(function() { waitForJQuery(callback); }, 50);
+            }
+        }
+
+        waitForJQuery(function($) {
+            $(document).ready(function() {
+                const eventId = '<%= eventId %>';
+                const hasData = <%= (guests && guests.length > 0) ? 'true' : 'false' %>;
+
+                try {
+                    if (hasData) {
+                        $('#guestListTable').DataTable({ "order": [[5, "desc"]], "pageLength": 25 });
+                    } else {
+                        $('#guestListTable tbody').html('<tr><td colspan="7" class="text-center"><%= t("common.noData") %></td></tr>');
+                    }
+                } catch (error) {}
+
+                $('#submitGuestBtn').off('click').on('click', function(e) {
+                    e.preventDefault(); e.stopPropagation();
+                    window.submitAddGuestForm && window.submitAddGuestForm();
+                });
+
+                $('#submitImportBtn').on('click', function() {
+                    const fileInput = $('#excelFile')[0];
+                    if (!fileInput.files || !fileInput.files[0]) { alert(_GL.importFailed); return; }
+                    const formData = new FormData();
+                    formData.append('file', fileInput.files[0]);
+                    const button = $(this);
+                    const originalText = button.text();
+                    button.prop('disabled', true).text(_GL.importingBtn);
+                    $.ajax({
+                        url: `/events/${eventId}/guest-list/import`,
+                        type: 'POST',
+                        data: formData,
+                        processData: false,
+                        contentType: false,
+                        success: function() {
+                            $('#importExcelModal').modal('hide');
+                            showAlert('success', _GL.importSuccess);
+                            setTimeout(() => location.reload(), 1000);
+                        },
+                        error: function(xhr) {
+                            showAlert('danger', xhr.responseJSON?.message || _GL.importFailed);
+                        },
+                        complete: function() { button.prop('disabled', false).text(originalText); }
+                    });
+                });
+
+                $('#guestListTable').on('click', '.edit-guest', function() {
+                    const guestId = $(this).data('guest-id');
+                    window.showEditGuestModal && window.showEditGuestModal(guestId);
+                });
+
+                $('#guestListTable').on('click', '.add-to-rsvp', function() {
+                    const guestId = $(this).data('guest-id');
+                    if (!confirm(_GL.confirmAddToRsvp)) return;
+                    $.ajax({
+                        url: `/events/${eventId}/guest-list/${guestId}/add-to-rsvp`,
+                        type: 'POST',
+                        success: function() { showAlert('success', _GL.addRsvpSuccess); setTimeout(() => location.reload(), 1000); },
+                        error: function(xhr) { showAlert('danger', xhr.responseJSON?.message || _GL.addFailed); }
+                    });
+                });
+
+                $('#guestListTable').on('click', '.delete-guest', function() {
+                    const guestId = $(this).data('guest-id');
+                    if (!confirm(_GL.confirmDelete)) return;
+                    $.ajax({
+                        url: `/events/${eventId}/guest-list/${guestId}`,
+                        type: 'DELETE',
+                        success: function() { showAlert('success', _GL.deleteSuccess); setTimeout(() => location.reload(), 1000); },
+                        error: function() { showAlert('danger', _GL.addFailed); }
+                    });
+                });
+
+                function showAlert(type, message) {
+                    $('#alertContainer').html(`
+                        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                            ${message}
+                            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+                        </div>`);
+                }
+            });
+        });
+    })();
+</script>

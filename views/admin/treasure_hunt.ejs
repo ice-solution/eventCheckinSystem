@@ -1,0 +1,339 @@
+<%- include("components/header") %>
+<%- include("components/menu", { eventId: eventId }) %>
+<%- include("components/responsive_layout_style") %>
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+<style>
+    .add-item-form {
+        display: none;
+        margin-top: 20px;
+        padding: 20px;
+        background-color: rgba(255, 255, 255, 0.9);
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    .alert-container {
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        z-index: 1050;
+        min-width: 300px;
+    }
+    .qr-code-preview {
+        max-width: 200px;
+        max-height: 200px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        padding: 10px;
+        background: white;
+    }
+    .points-badge {
+        font-size: 18px;
+        font-weight: bold;
+        color: #28a745;
+        padding: 5px 10px;
+        background: #d4edda;
+        border-radius: 4px;
+        display: inline-block;
+    }
+    .modal-qr-code {
+        text-align: center;
+        padding: 20px;
+    }
+    .modal-qr-code img {
+        max-width: 100%;
+        height: auto;
+    }
+</style>
+
+<div id="right-panel" class="right-panel">
+    <%- include("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title"><%= t('treasure_hunt.title') %></strong>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert-container" id="alertContainer"></div>
+
+                            <button id="addItemBtn" class="btn btn-primary mb-3"><%= t('treasure_hunt.addItemBtn') %></button>
+
+                            <div class="add-item-form" id="addItemForm">
+                                <h5><%= t('treasure_hunt.addItemTitle') %></h5>
+                                <form id="newItemForm">
+                                    <div class="form-group">
+                                        <label for="itemName"><%= t('treasure_hunt.itemNameLabel') %></label>
+                                        <input type="text" class="form-control" id="itemName" name="name" required placeholder="<%= t('treasure_hunt.itemNamePlaceholder') %>">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="itemPoints"><%= t('treasure_hunt.pointsLabel') %></label>
+                                        <input type="number" class="form-control" id="itemPoints" name="points" required min="1" value="10" placeholder="<%= t('treasure_hunt.pointsPlaceholder') %>">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="itemDescription"><%= t('treasure_hunt.descriptionLabel') %></label>
+                                        <textarea class="form-control" id="itemDescription" name="description" rows="3" placeholder="<%= t('treasure_hunt.descriptionPlaceholder') %>"></textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <button type="submit" class="btn btn-success"><%= t('treasure_hunt.createItemBtn') %></button>
+                                        <button type="button" class="btn btn-secondary ml-2" id="cancelBtn"><%= t('common.cancel') %></button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <table class="table table-striped table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 15%;"><%= t('treasure_hunt.colName') %></th>
+                                        <th style="width: 10%;"><%= t('treasure_hunt.colPoints') %></th>
+                                        <th style="width: 20%;"><%= t('treasure_hunt.colQrCode') %></th>
+                                        <th style="width: 25%;"><%= t('treasure_hunt.colDescription') %></th>
+                                        <th style="width: 15%;"><%= t('treasure_hunt.colCreatedAt') %></th>
+                                        <th style="width: 15%;"><%= t('common.actions') %></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="itemsList">
+                                    <% treasureHuntItems.forEach(item => { %>
+                                        <tr data-item-id="<%= item._id %>">
+                                            <td><strong><%= item.name %></strong></td>
+                                            <td>
+                                                <span class="points-badge"><%= item.points %> <%= t('treasure_hunt.pointsUnit') %></span>
+                                            </td>
+                                            <td>
+                                                <% if (item.qrCodeImage) { %>
+                                                    <img src="<%= item.qrCodeImage %>" alt="QR Code" class="qr-code-preview" style="cursor: pointer;" onclick="showQRCodeModal('<%= item.name %>', '<%= item.qrCodeImage %>', '<%= item.qrCodeData %>')">
+                                                <% } else { %>
+                                                    <span class="text-muted"><%= t('treasure_hunt.qrNotGenerated') %></span>
+                                                <% } %>
+                                            </td>
+                                            <td><%= item.description || '-' %></td>
+                                            <td><%= new Date(item.created_at).toLocaleString('zh-TW') %></td>
+                                            <td>
+                                                <button class="btn btn-info btn-sm view-qr-btn" data-item-id="<%= item._id %>" data-name="<%= item.name %>" data-image="<%= item.qrCodeImage %>" data-data="<%= item.qrCodeData %>"><%= t('treasure_hunt.viewQrBtn') %></button>
+                                                <button class="btn btn-warning btn-sm edit-item-btn" data-item-id="<%= item._id %>" data-name="<%= item.name %>" data-points="<%= item.points %>" data-description="<%= item.description || '' %>"><%= t('common.edit') %></button>
+                                                <button class="btn btn-danger btn-sm delete-item-btn" data-item-id="<%= item._id %>"><%= t('common.delete') %></button>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- QR Code 查看 Modal -->
+<div class="modal fade" id="qrCodeModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="qrCodeModalTitle">QR Code</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body modal-qr-code">
+                <img id="qrCodeModalImage" src="" alt="QR Code" style="max-width: 100%;">
+                <p class="mt-3"><strong><%= t('treasure_hunt.qrModalScanHint') %></strong></p>
+                <p class="text-muted"><small id="qrCodeModalData"></small></p>
+                <a id="qrCodeDownloadLink" href="#" download="qrcode.png" class="btn btn-primary mt-2"><%= t('treasure_hunt.qrDownloadBtn') %></a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 編輯項目 Modal -->
+<div class="modal fade" id="editItemModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><%= t('treasure_hunt.editModalTitle') %></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="editItemForm">
+                    <input type="hidden" id="editItemId">
+                    <div class="form-group">
+                        <label for="editItemName"><%= t('treasure_hunt.itemNameLabel') %></label>
+                        <input type="text" class="form-control" id="editItemName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editItemPoints"><%= t('treasure_hunt.pointsLabel') %></label>
+                        <input type="number" class="form-control" id="editItemPoints" required min="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="editItemDescription"><%= t('treasure_hunt.descriptionLabel') %></label>
+                        <textarea class="form-control" id="editItemDescription" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('common.cancel') %></button>
+                <button type="button" class="btn btn-primary" id="saveEditBtn"><%= t('common.save') %></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include("components/footer") %>
+
+<script>
+const _TH = {
+    qrModalDataLabel: '<%= t("treasure_hunt.qrModalDataLabel") %>',
+    nameRequired: '<%= t("treasure_hunt.nameRequired") %>',
+    pointsRequired: '<%= t("treasure_hunt.pointsRequired") %>',
+    createSuccessTpl: '<%= t("treasure_hunt.createSuccess") %>',
+    createFailed: '<%= t("treasure_hunt.createFailed") %>',
+    updateSuccess: '<%= t("treasure_hunt.updateSuccess") %>',
+    updateFailed: '<%= t("treasure_hunt.updateFailed") %>',
+    deleteConfirmTpl: '<%= t("treasure_hunt.deleteConfirm") %>',
+    deleteSuccess: '<%= t("treasure_hunt.deleteSuccess") %>',
+    deleteFailed: '<%= t("treasure_hunt.deleteFailed") %>'
+};
+
+$(document).ready(function() {
+    const eventId = '<%= eventId %>';
+
+    function showAlert(type, message) {
+        const alertHtml = `
+            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        `;
+        $('#alertContainer').html(alertHtml);
+        setTimeout(() => { $('.alert').alert('close'); }, 3000);
+    }
+
+    $('#addItemBtn').on('click', function() {
+        $('#addItemForm').toggle();
+    });
+
+    $('#cancelBtn').on('click', function() {
+        $('#addItemForm').hide();
+        $('#newItemForm')[0].reset();
+    });
+
+    $('#newItemForm').on('submit', function(e) {
+        e.preventDefault();
+        const name = $('#itemName').val().trim();
+        const points = parseInt($('#itemPoints').val());
+        const description = $('#itemDescription').val().trim();
+
+        if (!name) { showAlert('danger', _TH.nameRequired); return; }
+        if (!points || points <= 0) { showAlert('danger', _TH.pointsRequired); return; }
+
+        $.ajax({
+            url: `/events/${eventId}/treasure-hunt`,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ name, points, description }),
+            success: function(response) {
+                if (response.success) {
+                    showAlert('success', _TH.createSuccessTpl.replace('{name}', response.item.name));
+                    location.reload();
+                } else {
+                    showAlert('danger', response.message || _TH.createFailed);
+                }
+            },
+            error: function(xhr) {
+                showAlert('danger', xhr.responseJSON?.message || _TH.createFailed);
+            }
+        });
+    });
+
+    $(document).on('click', '.view-qr-btn', function() {
+        const name = $(this).data('name');
+        const image = $(this).data('image');
+        const data = $(this).data('data');
+
+        $('#qrCodeModalTitle').text(name + ' - QR Code');
+        $('#qrCodeModalImage').attr('src', image);
+        $('#qrCodeModalData').text(_TH.qrModalDataLabel + data);
+        $('#qrCodeDownloadLink').attr('href', image);
+        $('#qrCodeModal').modal('show');
+    });
+
+    $(document).on('click', '.edit-item-btn', function() {
+        const itemId = $(this).data('item-id');
+        const name = $(this).data('name');
+        const points = $(this).data('points');
+        const description = $(this).data('description') || '';
+
+        $('#editItemId').val(itemId);
+        $('#editItemName').val(name);
+        $('#editItemPoints').val(points);
+        $('#editItemDescription').val(description);
+        $('#editItemModal').modal('show');
+    });
+
+    $('#saveEditBtn').on('click', function() {
+        const itemId = $('#editItemId').val();
+        const name = $('#editItemName').val().trim();
+        const points = parseInt($('#editItemPoints').val());
+        const description = $('#editItemDescription').val().trim();
+
+        if (!name) { showAlert('danger', _TH.nameRequired); return; }
+        if (!points || points <= 0) { showAlert('danger', _TH.pointsRequired); return; }
+
+        $.ajax({
+            url: `/events/${eventId}/treasure-hunt/${itemId}`,
+            type: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({ name, points, description }),
+            success: function(response) {
+                if (response.success) {
+                    showAlert('success', _TH.updateSuccess);
+                    $('#editItemModal').modal('hide');
+                    location.reload();
+                } else {
+                    showAlert('danger', response.message || _TH.updateFailed);
+                }
+            },
+            error: function(xhr) {
+                showAlert('danger', xhr.responseJSON?.message || _TH.updateFailed);
+            }
+        });
+    });
+
+    $(document).on('click', '.delete-item-btn', function() {
+        const itemId = $(this).data('item-id');
+        const row = $(this).closest('tr');
+        const itemName = row.find('td:first').text().trim();
+
+        if (!confirm(_TH.deleteConfirmTpl.replace('{name}', itemName))) return;
+
+        $.ajax({
+            url: `/events/${eventId}/treasure-hunt/${itemId}`,
+            type: 'DELETE',
+            success: function(response) {
+                if (response.success) {
+                    row.remove();
+                    showAlert('success', _TH.deleteSuccess);
+                } else {
+                    showAlert('danger', response.message || _TH.deleteFailed);
+                }
+            },
+            error: function(xhr) {
+                showAlert('danger', xhr.responseJSON?.message || _TH.deleteFailed);
+            }
+        });
+    });
+});
+
+function showQRCodeModal(name, image, data) {
+    $('#qrCodeModalTitle').text(name + ' - QR Code');
+    $('#qrCodeModalImage').attr('src', image);
+    $('#qrCodeModalData').text(_TH.qrModalDataLabel + data);
+    $('#qrCodeDownloadLink').attr('href', image);
+    $('#qrCodeModal').modal('show');
+}
+</script>

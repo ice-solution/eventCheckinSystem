@@ -3,6 +3,7 @@
 <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
 <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
 <link rel="stylesheet" href="/admin/assets/css/style.css">
+<%- include("components/responsive_layout_style") %>
 <div id="right-panel" class="right-panel">
     <%- include ("components/rightpanel_header") %>
     <div class="content">
@@ -11,17 +12,17 @@
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <strong class="card-title">獎品管理 - <%= event.name %></strong>
+                            <strong class="card-title"><%= t('prize_list.title') %> - <%= event.name %></strong>
                         </div>
                         <div class="card-body">
                             <table id="bootstrap-data-table" class="table table-bordered">
                                 <thead>
                                     <tr>
-                                        <th>獎品名稱</th>
-                                        <th>圖片</th>
-                                        <th>數量</th>
-                                        <th>創建時間</th>
-                                        <th>操作</th>
+                                        <th><%= t('prize_list.prizeName') %></th>
+                                        <th><%= t('common.image') %></th>
+                                        <th><%= t('common.quantity') %></th>
+                                        <th><%= t('common.created_at') %></th>
+                                        <th><%= t('common.actions') %></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -32,21 +33,53 @@
                                                 <% if (prize.picture) { %>
                                                     <img src="<%= prize.picture %>" alt="<%= prize.name %>" style="max-width: 50px; max-height: 50px; object-fit: cover; border-radius: 4px;">
                                                 <% } else { %>
-                                                    <span class="text-muted">無圖片</span>
+                                                    <span class="text-muted"><%= t('common.noImage') %></span>
                                                 <% } %>
                                             </td>
                                             <td><%= prize.unit %></td>
-                                            <td><%= new Date(prize.created_at).toLocaleString() %></td>
+                                            <td class="prize-date"><%= prize.created_at %></td>
                                             <td>
-                                                <a href="/prizes/<%= eventId %>/prizes/<%= prize._id %>/edit" class="btn btn-sm btn-primary">編輯</a>
-                                                <button class="btn btn-sm btn-danger" onclick="deletePrize('<%= prize._id %>')">刪除</button>
+                                                <a href="/prizes/<%= eventId %>/prizes/<%= prize._id %>/edit" class="btn btn-sm btn-primary"><i class="fa fa-edit"></i> <%= t('common.edit') %></a>
+                                                <button class="btn btn-sm btn-danger" onclick="deletePrize('<%= prize._id %>')"><i class="fa fa-trash"></i> <%= t('common.delete') %></button>
                                             </td>
                                         </tr>
                                     <% }); %>
                                 </tbody>
                             </table>
-                            <a href="/prizes/<%= eventId %>/prizes/create" class="btn btn-primary">新增獎品</a>
-                            <a href="/events/<%= eventId %>" class="btn btn-secondary">返回事件</a>
+                            <div class="mb-3">
+                                <a href="/prizes/<%= eventId %>/prizes/create" class="btn btn-primary"><i class="fa fa-plus"></i> <%= t('prize_list.addPrize') %></a>
+                                <button type="button" class="btn btn-success" data-toggle="modal" data-target="#batchUploadModal"><i class="fa fa-upload"></i> <%= t('prize_list.batchUpload') %></button>
+                                <a href="/prizes/<%= eventId %>/prizes/download-sample" class="btn btn-info"><i class="fa fa-download"></i> <%= t('prize_list.downloadTemplate') %></a>
+                                <button type="button" class="btn btn-danger" onclick="deleteAllPrizes()"><i class="fa fa-trash"></i> <%= t('prize_list.deleteAll') %></button>
+                            </div>
+
+                            <div class="modal fade" id="batchUploadModal" tabindex="-1" role="dialog" aria-hidden="true">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title"><%= t('prize_list.batchUploadTitle') %></h5>
+                                            <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <form id="batchUploadForm" enctype="multipart/form-data">
+                                                <div class="form-group">
+                                                    <label for="excelFile"><%= t('prize_list.selectExcel') %></label>
+                                                    <input type="file" class="form-control-file" id="excelFile" name="file" accept=".xlsx,.xls" required>
+                                                    <small class="form-text text-muted"><%= t('prize_list.excelNote') %></small>
+                                                </div>
+                                                <div id="uploadProgress" class="progress" style="display: none;">
+                                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                                                </div>
+                                                <div id="uploadMessage" class="alert" style="display: none;"></div>
+                                            </form>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('common.cancel') %></button>
+                                            <button type="button" class="btn btn-primary" onclick="submitBatchUpload()"><%= t('common.upload') %></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -66,30 +99,74 @@
 <script src="/admin/assets/js/lib/data-table/buttons.print.min.js"></script>
 <script src="/admin/assets/js/lib/data-table/buttons.colVis.min.js"></script>
 <script src="/admin/assets/js/init/datatables-init.js"></script>
-<script type="text/javascript">
+<script>
     $(document).ready(function () {
         $('#bootstrap-data-table').DataTable();
+        $('.prize-date').each(function() {
+            const dateStr = $(this).text().trim();
+            if (dateStr) {
+                try {
+                    $(this).text(new Date(dateStr).toLocaleString('en-US', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }));
+                } catch (e) {}
+            }
+        });
     });
 
     function deletePrize(prizeId) {
-        if (confirm('確定要刪除這個獎品嗎？')) {
-            fetch(`/prizes/<%= eventId %>/prizes/${prizeId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.message) {
-                    alert(data.message);
-                    location.reload();
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('刪除失敗');
-            });
+        if (confirm(t('prize_list.confirmDelete'))) {
+            fetch(`/prizes/<%= eventId %>/prizes/${prizeId}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' } })
+            .then(r => r.json())
+            .then(data => { if (data.message) { alert(data.message); location.reload(); } })
+            .catch(() => alert(t('prize_list.deleteFailed')));
         }
     }
-</script> 
+
+    function submitBatchUpload() {
+        const file = document.getElementById('excelFile').files[0];
+        if (!file) { alert(t('prize_list.selectFile')); return; }
+        const formData = new FormData();
+        formData.append('file', file);
+        const progressDiv = document.getElementById('uploadProgress');
+        const messageDiv = document.getElementById('uploadMessage');
+        progressDiv.style.display = 'block';
+        messageDiv.style.display = 'none';
+        fetch(`/prizes/<%= eventId %>/prizes/batch-upload`, { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            progressDiv.style.display = 'none';
+            messageDiv.style.display = 'block';
+            if (data.success) {
+                messageDiv.className = 'alert alert-success';
+                messageDiv.textContent = t('prize_list.uploadSuccess').replace('{count}', data.importedCount);
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                messageDiv.className = 'alert alert-danger';
+                messageDiv.textContent = data.message || t('prize_list.uploadFailed');
+            }
+        })
+        .catch(err => {
+            progressDiv.style.display = 'none';
+            messageDiv.style.display = 'block';
+            messageDiv.className = 'alert alert-danger';
+            messageDiv.textContent = t('prize_list.uploadFailed') + ': ' + err.message;
+        });
+    }
+
+    function deleteAllPrizes() {
+        const totalPrizes = <%= prizes.length %>;
+        if (totalPrizes === 0) { alert(t('prize_list.noPrizes')); return; }
+        const r = (key) => t(key).replace('{count}', totalPrizes);
+        if (!confirm(r('prize_list.deleteAllWarn'))) return;
+        if (!confirm(r('prize_list.deleteAllConfirm'))) return;
+        if (!confirm(r('prize_list.deleteAllFinal'))) return;
+        const userInput = prompt(r('prize_list.deleteAllPrompt'));
+        if (userInput !== 'confirm delete') { alert(t('prize_list.deleteAllCancelled')); return; }
+        fetch(`/prizes/<%= eventId %>/prizes`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' } })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) { alert(t('prize_list.deleteAllSuccess').replace('{count}', data.deletedCount)); location.reload(); }
+            else alert(t('prize_list.deleteAllFailed') + (data.message || ''));
+        })
+        .catch(err => alert(t('prize_list.deleteAllFailed') + err.message));
+    }
+</script>

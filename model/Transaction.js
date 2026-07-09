@@ -8,9 +8,15 @@ const transactionSchema = new mongoose.Schema({
     ticketTitle: { type: String, required: true },
     ticketPrice: { type: Number, required: true },
     stripeSessionId: { type: String, required: true },
-    status: { type: String, enum: ['pending', 'paid', 'failed'], default: 'pending' },
+    /** 付款閘道：'stripe' | 'wonder' | 'none'（$0 免費票券無付款） */
+    paymentGateway: { type: String, enum: ['stripe', 'wonder', 'none'], default: 'wonder' },
+    status: { type: String, enum: ['pending', 'paid', 'failed', 'free'], default: 'pending' },
     createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now }
+    updatedAt: { type: Date, default: Date.now },
+    // 付款前註冊表單的完整資料（FormConfig 欄位），webhook 完成付款後用來寫入 event.users
+    userFormData: { type: mongoose.Schema.Types.Mixed },
+    /** Wonder 回調的完整 body（Invoice 等），用於對帳與排查 */
+    transactionData: { type: mongoose.Schema.Types.Mixed }
 });
 
 transactionSchema.pre('save', function(next) {

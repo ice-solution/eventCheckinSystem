@@ -4,71 +4,40 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <link rel="stylesheet" href="https://cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.dataTables.min.css">
-    <title>Guest Check-in</title>
+    <title><%= t('checkin_scan.title') %></title>
     <style>
         body {
             background-color: #f8f9fa;
-            padding: 15px 0;
         }
-        
-        .main-container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-        
-        .content-card {
-            background-color: #ffffff;
+        .scan-container {
+            display: flex;
+            flex-wrap: nowrap;
+            margin-top: 20px;
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            margin-bottom: 20px;
         }
-        
-        .user-list-card {
-            min-height: 500px;
+        .user-list {
+            width: 70%;
+            border-right: 1px solid #dee2e6;
+            padding: 20px; /* Increased padding */
+            background-color: #ffffff;
+            border-radius: 10px 0 0 10px;
+            overflow: hidden;
         }
-        
-        .user-details-card {
-            position: sticky;
-            top: 20px;
+        .user-details {
+            width: 30%;
+            padding: 20px; /* Increased padding */
+            background-color: #ffffff;
+            border-radius: 0 10px 10px 0;
+            border-left: 1px solid #dee2e6;
         }
-        
         h4 {
             margin-top: 0;
-            margin-bottom: 20px;
-            color: #333;
-            font-weight: 600;
         }
-        
-        /* Button group responsive */
-        .button-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        
-        .button-group .btn {
-            flex: 1 1 auto;
-            min-width: 120px;
-        }
-        
-        /* Table responsive wrapper */
-        .table-responsive-wrapper {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-        
-        /* DataTable responsive */
-        #userTable {
-            width: 100% !important;
-        }
-        
         /* Lightbox styles */
         .lightbox {
             display: none;
@@ -77,224 +46,200 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.9);
+            background-color: rgba(0, 0, 0, 0.8);
             justify-content: center;
             align-items: center;
-            z-index: 9999;
-            padding: 20px;
         }
-        
-        .lightbox.active {
-            display: flex;
-        }
-        
         .lightbox-content {
             position: relative;
-            width: 100%;
+            width: 80%;
             max-width: 600px;
-            background-color: #fff;
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
         }
-        
-        .lightbox-close {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.5);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            font-size: 24px;
-            cursor: pointer;
-            z-index: 10000;
-        }
-        
-        .lightbox-close:hover {
-            background: rgba(0, 0, 0, 0.7);
-        }
-        
         #reader {
+            text-align: center !important;
+            margin: 0 auto !important;
+            position: relative;
             width: 100%;
-            max-width: 500px;
-            margin: 0 auto;
+            height: auto;
         }
-        
-        /* User details */
-        #userDetails {
-            min-height: 300px;
+        #reader > div {
+            margin: 0 auto !important;
+            text-align: center !important;
+            display: inline-block !important;
         }
-        
-        #detailsContent {
-            margin-bottom: 20px;
+        #reader video {
+            margin: 0 auto !important;
+            display: block !important;
+            max-width: 100% !important;
         }
-        
-        #detailsContent h4 {
-            color: #E8B4B8;
-            margin-bottom: 15px;
+        /* Hide canvas - it's only used for processing, not display */
+        #reader canvas {
+            display: none !important;
+            visibility: hidden !important;
         }
-        
-        #detailsContent p {
-            margin-bottom: 10px;
-            color: #666;
+        #reader img {
+            margin: 0 auto !important;
+            display: block !important;
+            max-width: 100% !important;
         }
-        
-        #checkInButton,
+        #reader__dashboard,
+        #reader__camera_selection,
+        #reader__scan_region {
+            margin: 0 auto !important;
+            text-align: center !important;
+        }
+        /* Hide scanner when lightbox is closed */
+        .lightbox:not([style*="flex"]) #reader,
+        .lightbox[style*="none"] #reader {
+            display: none !important;
+        }
+        #checkInButton {
+            display: none;
+        }
         #printButton {
             display: none;
-            width: 100%;
-            margin-bottom: 10px;
         }
-        
-        #checkInButton.show,
-        #printButton.show {
-            display: block;
-        }
-        
-        /* Responsive adjustments */
-        @media (max-width: 991.98px) {
-            .user-details-card {
-                position: static;
-                margin-top: 20px;
+        @media (max-width: 992px) {
+            .scan-container {
+                flex-direction: column;
+                box-shadow: none;
             }
-            
-            .content-card {
-                padding: 15px;
-            }
-        }
-        
-        @media (max-width: 575.98px) {
-            body {
-                padding: 10px 0;
-            }
-            
-            .content-card {
-                padding: 10px;
-                border-radius: 5px;
-            }
-            
-            .button-group .btn {
+            .user-list,
+            .user-details {
                 width: 100%;
-                margin-bottom: 5px;
+                border-radius: 10px;
+                border: none;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+                margin-bottom: 20px;
             }
-            
-            .lightbox-content {
+            .user-details {
+                margin-bottom: 0;
+            }
+        }
+        @media (max-width: 576px) {
+            .user-list,
+            .user-details {
                 padding: 15px;
             }
-            
-            #reader {
-                max-width: 100%;
+            #userTable {
+                font-size: 14px;
             }
-        }
-        
-        /* Table row hover */
-        #userTable tbody tr {
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        
-        #userTable tbody tr:hover {
-            background-color: #f0f0f0;
-        }
-        
-        /* Status badges */
-        .status-badge {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-        
-        .status-checked-in {
-            color: #E8B4B8;
-        }
-        
-        .status-check-in {
-            color: #6c757d;
+            #userDetails h4 {
+                font-size: 18px;
+            }
+            #userDetails p {
+                font-size: 14px;
+            }
         }
     </style>
 </head>
 <body>
 
-<div class="main-container">
-    <div class="container-fluid px-3 px-md-4">
-        <div class="row">
-            <!-- User List Section -->
-            <div class="col-lg-8 col-md-12 mb-4 mb-lg-0">
-                <div class="content-card user-list-card">
-                    <h4>Guest List</h4>
-                    
-                    <!-- Action Buttons -->
-                    <div class="button-group">
-                        <button id="scanButton" class="btn btn-primary" onclick="openLightbox()">
-                            <i class="fas fa-qrcode"></i> Scan QR Code
-                        </button>
-                        <button id="refreshListButton" class="btn btn-info" onclick="refreshUserList()">
-                            <i class="fas fa-sync-alt"></i> Refresh List
-                        </button>
-                    </div>
-                    
-                    <!-- Table -->
-                    <div class="table-responsive-wrapper">
-                        <table id="userTable" class="table table-striped table-bordered table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Table</th>
-                                    <th>Company</th>
-                                    <th>Phone</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="userList">
-                                <% event.users.forEach(user => { %>
-                                    <tr data-user-id="<%= user._id %>" 
-                                        data-user-name="<%= user.name %>"
-                                        data-user-table="<%= typeof user.table !== 'undefined' ? user.table : '' %>"
-                                        data-user-company="<%= typeof user.company !== 'undefined' ? user.company : '' %>"
-                                        data-user-phone="<%= user.phone %>"
-                                        data-user-checkin="<%= user.isCheckIn %>">
-                                        <td><%= user.name %></td>
-                                        <td><%= typeof user.table !== 'undefined' ? user.table : '' %></td>
-                                        <td><%= typeof user.company !== 'undefined' ? user.company : '' %></td>
-                                        <td><%= user.phone %></td>
-                                        <td>
-                                            <span class="status-badge <%= user.isCheckIn ? 'status-checked-in' : 'status-check-in' %>">
-                                                <%= user.isCheckIn ? 'Checked In' : 'Check In' %>
-                                            </span>
-                                        </td>
-                                    </tr>
+<div class="scan-container container-fluid">
+    <div class="user-list">
+        <h4><%= t('checkin_scan.guestListHeading') %></h4>
+
+        <!-- <input type="text" id="searchInput" class="form-control mb-3" placeholder="Search Users..." onkeyup="searchUsers()"> -->
+        <button id="scanButton" class="btn btn-primary mt-3" onclick="openLightbox()"><%= t('checkin_scan.scanQrBtn') %></button>
+        <button id="refreshListButton" class="btn btn-info mt-3 ml-2" onclick="refreshUserList()"><%= t('checkin_scan.refreshListBtn') %></button>
+        <!-- <button id="addGuestButton" class="btn btn-success mt-3" data-toggle="modal" data-target="#addGuestModal">Add Guest</button> -->
+        
+        <div class="table-responsive mt-3">
+            <table id="userTable" class="table table-striped table-bordered mb-0">
+                <thead>
+                    <tr>
+                        <% if (formConfig && formConfig.sections) { %>
+                            <% formConfig.sections.forEach(section => { %>
+                                <% if (section.visible && section.fields) { %>
+                                    <% section.fields.forEach(field => { %>
+                                        <% if (field.visible) { %>
+                                            <th>
+                                                <% 
+                                                let displayLabel = '';
+                                                if (typeof field.label === 'string') {
+                                                    displayLabel = field.label;
+                                                } else if (field.label && field.label[formConfig.defaultLanguage]) {
+                                                    displayLabel = field.label[formConfig.defaultLanguage];
+                                                } else if (field.label && field.label.zh) {
+                                                    displayLabel = field.label.zh;
+                                                } else {
+                                                    displayLabel = field.fieldName || '';
+                                                }
+                                                %>
+                                                <%= displayLabel %>
+                                            </th>
+                                        <% } %>
+                                    <% }); %>
+                                <% } %>
+                            <% }); %>
+                        <% } else { %>
+                            <!-- Default columns (if no formConfig) -->
+                            <th><%= t('common.email') %></th>
+                        <th><%= t('common.name') %></th>
+                        <th><%= t('common.phone') %></th>
+                        <% } %>
+                        <th><%= t('checkin_scan.pointCol') %></th>
+                        <th><%= t('checkin_scan.statusCol') %></th>
+                    </tr>
+                </thead>
+                <tbody id="userList">
+                    <% event.users.forEach(user => { %>
+                        <% 
+                        // Build parameter string for showDetails function
+                        let detailParams = '';
+                        if (formConfig && formConfig.sections) {
+                            const params = [];
+                            formConfig.sections.forEach(section => {
+                                if (section.visible && section.fields) {
+                                    section.fields.forEach(field => {
+                                        if (field.visible) {
+                                            params.push("'" + (user[field.fieldName] || '').toString().replace(/'/g, "\\'") + "'");
+                                        }
+                                    });
+                                }
+                            });
+                            detailParams = params.join(', ') + ', ' + user.isCheckIn + ', \'' + user._id + '\', ' + (user.point || 0);
+                        } else {
+                            detailParams = "'" + (user.name || '').toString().replace(/'/g, "\\'") + "', '" + (user.table || '').toString().replace(/'/g, "\\'") + "', '" + (user.company || '').toString().replace(/'/g, "\\'") + "', '" + (user.phone || '').toString().replace(/'/g, "\\'") + "', " + user.isCheckIn + ", '" + user._id + "', " + (user.point || 0);
+                        }
+                        %>
+                        <tr data-user-id="<%= user._id %>" onclick="showDetailsFromRow(this)">
+                            <% if (formConfig && formConfig.sections) { %>
+                                <% formConfig.sections.forEach(section => { %>
+                                    <% if (section.visible && section.fields) { %>
+                                        <% section.fields.forEach(field => { %>
+                                            <% if (field.visible) { %>
+                                                <td><%= user[field.fieldName] || '-' %></td>
+                                            <% } %>
+                                        <% }); %>
+                                    <% } %>
                                 <% }); %>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- User Details Section -->
-            <div class="col-lg-4 col-md-12">
-                <div class="content-card user-details-card" id="userDetails">
-                    <h4>Guest Details</h4>
-                    <div id="detailsContent">
-                        <p class="text-muted">Select a guest to view details.</p>
-                    </div>
-                    <div class="d-flex flex-column">
-                        <button id="checkInButton" class="btn btn-primary mb-2" onclick="checkInUser()">
-                            Check In
-                        </button>
-                        <button id="printButton" class="btn btn-secondary mb-2" onclick="printDetails()">
-                            Print
-                        </button>
-                        <button id="refreshButton" class="btn btn-info" onclick="refreshUserList()">
-                            Refresh List
-                        </button>
-                    </div>
-                </div>
-            </div>
+                            <% } else { %>
+                                <!-- Default columns (if no formConfig) -->
+                                <td><%= user.email || '-' %></td>
+                                <td><%= user.name || '-' %></td>
+                                <td><%= user.phone || '-' %></td>
+                            <% } %>
+                            <td><%= user.point || 0 %></td>
+                            <td>
+                                <span class="<%= user.isCheckIn ? 'text-primary' : 'text-secondary' %>">
+                                    <%= user.isCheckIn ? t('checkin_scan.checkedInStatus') : t('checkin_scan.checkInStatus') %>
+                                </span>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
         </div>
+        
+    </div>
+    <div class="user-details" id="userDetails">
+        <h4><%= t('checkin_scan.guestDetailsHeading') %></h4>
+        <p><%= t('checkin_scan.selectGuestHint') %></p>
+        <div id="detailsContent"></div>
+        <button id="checkInButton" class="btn btn-primary mt-3" onclick="checkInUser()"><%= t('checkin_scan.checkInBtn') %></button>
+        <button id="printButton" class="btn btn-secondary mt-3" onclick="printDetails()"><%= t('checkin_scan.printBtn') %></button>
+        <button id="refreshButton" class="btn btn-info mt-3" onclick="refreshUserList()"><%= t('checkin_scan.refreshListBtn') %></button>
     </div>
 </div>
 
@@ -303,7 +248,7 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addGuestModalLabel">Add Guest</h5>
+                <h5 class="modal-title" id="addGuestModalLabel"><%= t('checkin_scan.addGuestTitle') %></h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -311,197 +256,273 @@
             <div class="modal-body">
                 <form id="addGuestForm">
                     <div class="form-group">
-                        <label for="guestName">Name</label>
+                        <label for="guestName"><%= t('common.name') %></label>
                         <input type="text" class="form-control" id="guestName" required>
                     </div>
                     <div class="form-group">
-                        <label for="guestCompany">Company</label>
+                        <label for="guestCompany"><%= t('common.company') %></label>
                         <input type="text" class="form-control" id="guestCompany">
                     </div>
                     <div class="form-group">
-                        <label for="guestPhone">Phone</label>
+                        <label for="guestPhone"><%= t('common.phone') %></label>
                         <input type="text" class="form-control" id="guestPhone" required>
                     </div>
-                    <button type="submit" class="btn btn-primary btn-block">Add Guest</button>
+                    <button type="submit" class="btn btn-primary"><%= t('checkin_scan.addGuestTitle') %></button>
                 </form>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Lightbox for QR Scanner -->
-<div class="lightbox" id="lightbox" onclick="handleLightboxClick(event)">
-    <button class="lightbox-close" onclick="closeLightbox()" aria-label="Close">&times;</button>
-    <div class="lightbox-content" onclick="event.stopPropagation()">
-        <h5 class="mb-3">Scan QR Code</h5>
-        <div id="reader"></div>
-        <button class="btn btn-danger mt-3" onclick="closeLightbox()">Close Scanner</button>
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <div class="lightbox-content">
+        <div id="reader" style="width: 100%; margin: auto;"></div>
     </div>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
 <script>
-    const eventId = "<%= event._id %>";
+    const eventId = "<%= event._id %>"; // Get event ID from backend
+    const formConfig = <%- JSON.stringify(formConfig || null) %>; // Get form config from backend
+    const _CS = {
+        checkedIn: '<%= t("checkin_scan.checkedInStatus") %>',
+        checkIn: '<%= t("checkin_scan.checkInStatus") %>',
+        refreshListBtn: '<%= t("checkin_scan.refreshListBtn") %>',
+        refreshing: '<%= t("checkin_scan.refreshing") %>',
+        checkInSuccess: '<%= t("checkin_scan.checkInSuccess") %>',
+        alreadyCheckedIn: '<%= t("checkin_scan.alreadyCheckedIn") %>',
+        checkInFailed: '<%= t("checkin_scan.checkInFailed") %>',
+        userNotFound: '<%= t("checkin_scan.userNotFound") %>',
+        loadFailed: '<%= t("checkin_scan.loadFailed") %>',
+        addGuestSuccess: '<%= t("checkin_scan.addGuestSuccess") %>',
+        addGuestFailed: '<%= t("checkin_scan.addGuestFailed") %>',
+        invalidQrCode: '<%= t("checkin_scan.invalidQrCode") %>',
+        cameraFailed: '<%= t("checkin_scan.cameraFailed") %>'
+    };
     const html5QrCode = new Html5Qrcode("reader");
     let scanning = false;
-    let currentUserId = null;
-    let dataTable = null;
-
-    // Initialize DataTable
-    function initializeDataTable(users) {
-        // Store users globally for row click handler
-        window.currentUsers = users;
-        
-        if ($.fn.DataTable.isDataTable('#userTable')) {
-            dataTable = $('#userTable').DataTable();
-            dataTable.clear();
-            
-            users.forEach(user => {
-                const safeName = user.name || '';
-                const safeTable = (user.table && user.table !== 'undefined') ? user.table : '';
-                const safeCompany = (user.company && user.company !== 'undefined') ? user.company : '';
-                const safePhone = (user.phone && user.phone !== 'undefined') ? user.phone : '';
-                
-                dataTable.row.add([
-                    safeName,
-                    safeTable,
-                    safeCompany,
-                    safePhone,
-                    `<span class="status-badge ${user.isCheckIn ? 'status-checked-in' : 'status-check-in'}">${user.isCheckIn ? 'Checked In' : 'Check In'}</span>`
-                ]);
-            });
-            
-            dataTable.draw();
-            
-            // Re-bind click event handlers after refresh
-            $('#userTable tbody').off('click', 'tr').on('click', 'tr', function() {
-                const rowIndex = dataTable.row(this).index();
-                const user = window.currentUsers && window.currentUsers[rowIndex];
-                
-                if (user) {
-                    showDetails(
-                        user.name || '',
-                        user.table || '',
-                        user.company || '',
-                        user.phone || '',
-                        user.isCheckIn || false,
-                        user._id
-                    );
-                }
-            });
-        } else {
-            dataTable = $('#userTable').DataTable({
-                "pageLength": 25,
-                "order": [[ 0, "asc" ]],
-                "responsive": true,
-                "columnDefs": [
-                    {
-                        "targets": -1,
-                        "orderable": false
-                    }
-                ],
-                "language": {
-                    "search": "Search:",
-                    "lengthMenu": "Show _MENU_ entries",
-                    "info": "Showing _START_ to _END_ of _TOTAL_ entries",
-                    "infoEmpty": "No entries to show",
-                    "infoFiltered": "(filtered from _MAX_ total entries)"
-                }
-            });
-            
-            // Add click event handlers
-            $('#userTable tbody').on('click', 'tr', function() {
-                const rowIndex = dataTable.row(this).index();
-                const user = window.currentUsers && window.currentUsers[rowIndex];
-                
-                if (user) {
-                    showDetails(
-                        user.name || '',
-                        user.table || '',
-                        user.company || '',
-                        user.phone || '',
-                        user.isCheckIn || false,
-                        user._id
-                    );
+    let currentUserId = null; // Store current user ID for check-in
+    
+    // Helper function to get visible fields from formConfig
+    function getVisibleFields() {
+        const fields = [];
+        if (formConfig && formConfig.sections) {
+            formConfig.sections.forEach(section => {
+                if (section.visible && section.fields) {
+                    section.fields.forEach(field => {
+                        if (field.visible) {
+                            fields.push(field);
+                        }
+                    });
                 }
             });
         }
+        return fields;
+    }
+    
+    // Helper function to get field label
+    function getFieldLabel(field) {
+        if (!formConfig) return field.fieldName || '';
+        if (typeof field.label === 'string') {
+            return field.label;
+        } else if (field.label && field.label[formConfig.defaultLanguage]) {
+            return field.label[formConfig.defaultLanguage];
+        } else if (field.label && field.label.zh) {
+            return field.label.zh;
+        }
+        return field.fieldName || '';
     }
 
     // Fetch user data
     function refreshUserList() {
         const refreshListBtn = $('#refreshListButton');
         const refreshBtn = $('#refreshButton');
-        const originalText = refreshListBtn.html();
-        
-        refreshListBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Refreshing...');
-        refreshBtn.prop('disabled', true).html('Refreshing...');
+        const originalText = _CS.refreshListBtn;
+
+        // Show loading state for both buttons
+        refreshListBtn.prop('disabled', true).text(_CS.refreshing);
+        refreshBtn.prop('disabled', true).text(_CS.refreshing);
         
         fetchUsers().then(() => {
+            // Restore button state after a short delay
             setTimeout(() => {
-                refreshListBtn.prop('disabled', false).html(originalText);
-                refreshBtn.prop('disabled', false).html('Refresh List');
+                refreshListBtn.prop('disabled', false).text(originalText);
+                refreshBtn.prop('disabled', false).text(originalText);
             }, 500);
         });
     }
 
     function fetchUsers() {
         return $.ajax({
-            url: `/events/${eventId}/users/data`,
+            url: `/events/${eventId}/users/data`, // API to fetch user data
             method: 'GET',
-            cache: false,
+            cache: false, // Prevent caching
             success: function(users) {
-                initializeDataTable(users);
+                console.log('Fetched users:', users); // Debug log
+                // Update DataTable data without recreating
+                const visibleFields = getVisibleFields();
+                
+                if ($.fn.DataTable.isDataTable('#userTable')) {
+                    const table = $('#userTable').DataTable();
+                    table.clear();
+                    
+                    // Collect all row data first
+                    const rowsData = [];
+                    users.forEach(user => {
+                        const rowData = [];
+                        
+                        // Add data fields based on formConfig
+                        if (visibleFields.length > 0) {
+                            visibleFields.forEach(field => {
+                                const value = user[field.fieldName] || '-';
+                                rowData.push(value);
+                            });
+                        } else {
+                            // Default fields if no formConfig
+                            rowData.push(user.email || '-');
+                            rowData.push(user.name || '-');
+                            rowData.push(user.phone || '-');
+                        }
+                        
+                        // Add Point and Status columns
+                        rowData.push(user.point || 0);
+                        rowData.push(`<span class="${user.isCheckIn ? 'text-primary' : 'text-secondary'}">${user.isCheckIn ? _CS.checkedIn : _CS.checkIn}</span>`);
+                        
+                        rowsData.push({ data: rowData, userId: user._id });
+                    });
+                    
+                    // Add all rows at once for better performance
+                    rowsData.forEach(rowInfo => {
+                        const rowNode = table.row.add(rowInfo.data).node();
+                        $(rowNode).attr('data-user-id', rowInfo.userId);
+                    });
+                    
+                    // Draw the table once after adding all rows
+                    table.draw(false); // false = don't reset paging
+                    
+                    // Add click event handlers for table rows
+                    $('#userTable tbody').off('click', 'tr').on('click', 'tr', function() {
+                        showDetailsFromRow(this);
+                    });
+                } else {
+                    // Initialize DataTable if not exists
+                    const table = $('#userTable').DataTable({
+                        "pageLength": 25,
+                        "order": [[ 0, "asc" ]],
+                        "columnDefs": [
+                            {
+                                "targets": -1, // Last column (Status)
+                                "orderable": false
+                            },
+                            {
+                                "targets": -2, // Point column
+                                "orderable": false
+                            }
+                        ]
+                    });
+                    
+                    // Add data-user-id to existing rows
+                    $('#userTable tbody tr').each(function() {
+                        const userId = $(this).attr('data-user-id');
+                        if (userId) {
+                            $(this).attr('data-user-id', userId);
+                        }
+                    });
+                    
+                    // Add click event handlers for table rows
+                    $('#userTable tbody').off('click', 'tr').on('click', 'tr', function() {
+                        showDetailsFromRow(this);
+                    });
+                }
             },
             error: function(err) {
                 console.error('Error fetching users:', err);
-                alert('Failed to fetch user list. Please try again.');
             }
         });
     }
 
-    // Show user details
-    function showDetails(name, table, company, phone, isCheckIn, userId) {
-        const safeTable = (table && table !== 'undefined') ? table : 'N/A';
-        const safeCompany = (company && company !== 'undefined') ? company : 'N/A';
-        const safePhone = (phone && phone !== 'undefined') ? phone : 'N/A';
-        const safeName = (name && name !== 'undefined') ? name : 'Unknown';
-        
-        document.getElementById('detailsContent').innerHTML = `
-            <h4>${escapeHtml(safeName)}</h4>
-            <p><strong>Table:</strong> ${escapeHtml(safeTable)}</p>
-            <p><strong>Company:</strong> ${escapeHtml(safeCompany)}</p>
-            <p><strong>Phone:</strong> ${escapeHtml(safePhone)}</p>
-            <p><strong>Status:</strong> <span class="status-badge ${isCheckIn ? 'status-checked-in' : 'status-check-in'}">${isCheckIn ? 'Checked In' : 'Not Checked In'}</span></p>
-        `;
-        
-        if (isCheckIn) {
-            $('#checkInButton').removeClass('show').hide();
-            $('#printButton').addClass('show').show();
-        } else {
-            $('#checkInButton').addClass('show').show();
-            $('#printButton').removeClass('show').hide();
+    // Show user details from row click
+    function showDetailsFromRow(rowElement) {
+        const userId = $(rowElement).data('user-id');
+        if (!userId) {
+            console.error('User ID not found in row');
+            return;
         }
         
-        currentUserId = userId;
-        
-        // Highlight selected row
-        $('#userTable tbody tr').removeClass('table-active');
-        $(`#userTable tbody tr[data-user-id="${userId}"]`).addClass('table-active');
+        // Fetch full user data
+        fetch(`/events/${eventId}/users/${userId}`)
+            .then(response => response.json())
+            .then(user => {
+                showDetailsFromUser(user);
+            })
+            .catch(error => {
+                console.error('Error fetching user:', error);
+                alert(_CS.loadFailed);
+            });
     }
-
-    // Escape HTML to prevent XSS
-    function escapeHtml(text) {
-        const map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        };
-        return text ? text.replace(/[&<>"']/g, m => map[m]) : '';
+    
+    // Show user details from user object
+    function showDetailsFromUser(user) {
+        if (!user) {
+            console.error('User data is empty');
+            return;
+        }
+        
+        // Build details HTML, dynamically display fields based on formConfig
+        let detailsHTML = `<h4>${user.name || '-'}</h4>`;
+        
+        const visibleFields = getVisibleFields();
+        
+        if (visibleFields.length > 0) {
+            // Display fields based on formConfig
+            visibleFields.forEach(field => {
+                const fieldValue = user[field.fieldName];
+                if (fieldValue && fieldValue !== 'undefined' && fieldValue !== '-') {
+                    const fieldLabel = getFieldLabel(field);
+                    detailsHTML += `<p>${fieldLabel}: ${fieldValue}</p>`;
+                }
+            });
+        } else {
+            // Default fields (if no formConfig)
+            if (user.email && user.email !== 'undefined') {
+                detailsHTML += `<p>Email: ${user.email}</p>`;
+            }
+            if (user.table && user.table !== 'undefined') {
+                detailsHTML += `<p>Table: ${user.table}</p>`;
+            }
+            if (user.company && user.company !== 'undefined') {
+                detailsHTML += `<p>Company: ${user.company}</p>`;
+            }
+            if (user.phone && user.phone !== 'undefined') {
+                detailsHTML += `<p>Phone: ${user.phone}</p>`;
+            }
+        }
+        
+        detailsHTML += `<p>Point: ${user.point || 0}</p>`;
+        detailsHTML += `<p>Checked In: ${user.isCheckIn ? 'Yes' : 'No'}</p>`;
+        
+        document.getElementById('detailsContent').innerHTML = detailsHTML;
+        document.getElementById('checkInButton').style.display = user.isCheckIn ? 'none' : 'inline-block';
+        document.getElementById('printButton').style.display = user.isCheckIn ? 'inline-block' : 'none';
+        currentUserId = user._id; // Store the current user ID for check-in
+    }
+    
+    // Show user details (legacy function for compatibility)
+    function showDetails(name, table, company, phone, isCheckIn, userId, point) {
+        // This is a compatibility function, now directly fetches complete user data from API
+        if (userId) {
+            fetch(`/events/${eventId}/users/${userId}`)
+                .then(response => response.json())
+                .then(user => {
+                    showDetailsFromUser(user);
+                })
+                .catch(error => {
+                    console.error('Error fetching user:', error);
+                });
+        }
     }
 
     // Check in user
@@ -510,140 +531,252 @@
             alert('No user selected for check-in.');
             return;
         }
-        
-        if (!confirm('Are you sure you want to check in this user?')) {
-            return;
-        }
-        
         $.ajax({
-            url: `/events/${eventId}/users/${currentUserId}`,
-            method: 'PUT',
+            url: `/events/${eventId}/users/${currentUserId}`, // Correct URL for check-in
+            method: 'PUT', // Using PUT method for check-in
             contentType: 'application/json',
-            data: JSON.stringify({ isCheckIn: true }),
+            data: JSON.stringify({ isCheckIn: true }), // Add isCheckIn: true
             success: function(response) {
-                alert('User checked in successfully!');
-                refreshUserList();
+                // Update button states immediately
+                document.getElementById('checkInButton').style.display = 'none';
+                document.getElementById('printButton').style.display = 'inline-block';
+                
+                // Update user details display with the response data
+                if (response && response._id) {
+                    showDetailsFromUser(response);
+                } else {
+                    // If response doesn't have full user data, fetch it
+                    fetch(`/events/${eventId}/users/${currentUserId}`)
+                        .then(res => res.json())
+                        .then(user => {
+                            showDetailsFromUser(user);
+                        })
+                        .catch(err => {
+                            console.error('Error fetching updated user:', err);
+                        });
+                }
+                
+                // Refresh user list after a short delay to ensure server has updated
+                setTimeout(function() {
+                    fetchUsers().then(function() {
+                        console.log('User list refreshed after check-in');
+                    });
+                }, 200);
+                
+                alert(_CS.checkInSuccess);
+                $('#addGuestModal').modal('hide'); // Close modal
             },
             error: function(err) {
                 console.error('Error checking in user:', err);
-                alert('Failed to check in user. Please try again.');
+                alert(_CS.checkInFailed);
             }
         });
     }
 
-    // Handle lightbox click
-    function handleLightboxClick(event) {
-        if (event.target.id === 'lightbox') {
-            closeLightbox();
-        }
+    // Search users
+    function searchUsers() {
+        const input = document.getElementById('searchInput').value.toLowerCase();
+        const rows = document.querySelectorAll('#userList tr');
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(input) ? '' : 'none';
+        });
     }
 
     // Open Lightbox
     function openLightbox() {
-        document.getElementById('lightbox').classList.add('active');
-        startScanning();
+        // Reset scanning state before opening
+        scanning = false;
+        document.getElementById('lightbox').style.display = 'flex';
+        
+        // Small delay to ensure lightbox is visible before starting camera
+        setTimeout(() => {
+            startScanning(); // Start scanning
+        }, 100);
     }
 
     // Close Lightbox
     function closeLightbox() {
-        document.getElementById('lightbox').classList.remove('active');
-        if (scanning) {
-            html5QrCode.stop().then(() => {
-                scanning = false;
-            }).catch(err => {
-                console.error('Error stopping scanner:', err);
-                scanning = false;
-            });
+        document.getElementById('lightbox').style.display = 'none';
+        // Always try to stop scanner, but catch errors silently
+        html5QrCode.stop().then(() => {
+            console.log('Scanner stopped when closing lightbox');
+            scanning = false;
+            // Clear the reader div to remove any leftover elements
+            clearReader();
+        }).catch(err => {
+            // Ignore errors - scanner might not be running
+            // This is expected if scanner wasn't started or already stopped
+            console.log('Scanner stop (may not have been running)');
+            scanning = false; // Reset flag even if stop fails
+            // Clear the reader div anyway
+            clearReader();
+        });
+    }
+    
+    // Clear reader div content
+    function clearReader() {
+        const readerElement = document.getElementById('reader');
+        if (readerElement) {
+            // Remove all child elements
+            while (readerElement.firstChild) {
+                readerElement.removeChild(readerElement.firstChild);
+            }
+            // Also clear any innerHTML to ensure complete cleanup
+            readerElement.innerHTML = '';
         }
     }
 
     // Start scanning QR code
     function startScanning() {
-        if (scanning) return;
+        if (scanning) {
+            console.log('Already scanning, skipping...');
+            return; // If already scanning, do not start again
+        }
         
-        const qrboxSize = Math.min(300, window.innerWidth - 100);
+        // Clear reader before starting to avoid duplicate elements
+        clearReader();
+        
+        scanning = true;
         
         html5QrCode.start(
-            { facingMode: "environment" },
+            { facingMode: "environment" }, // Use rear camera
             {
-                fps: 10,
-                qrbox: qrboxSize
+                fps: 10, // Frames per second
+                qrbox: { width: 250, height: 250 } // Size of QR code box (updated format)
             },
             (decodedText, decodedResult) => {
-                scanning = false;
+                // When QR code is scanned
+                console.log('QR Code scanned:', decodedText);
+                scanning = false; // Stop scanning flag
+                
+                // Stop scanning immediately
                 html5QrCode.stop().then(() => {
-                    const parts = decodedText.split(',');
-                    const userId = parts.length > 1 ? parts[1] : parts[0];
-                    
-                    fetch(`/events/${eventId}/users/${userId}`)
-                        .then(response => response.json())
-                        .then(user => {
-                            if (user) {
-                                if (!user.isCheckIn) {
-                                    $.ajax({
-                                        url: `/events/${eventId}/users/${userId}`,
-                                        method: 'PUT',
-                                        contentType: 'application/json',
-                                        data: JSON.stringify({ isCheckIn: true }),
-                                        success: function(response) {
-                                            const updatedUser = { ...user, isCheckIn: true };
-                                            showDetails(updatedUser.name, updatedUser.table, updatedUser.company, updatedUser.phone, true, updatedUser._id);
-                                            alert('User checked in successfully!');
-                                            $('#checkInButton').removeClass('show').hide();
-                                            $('#printButton').addClass('show').show();
-                                            setTimeout(() => {
-                                                refreshUserList();
-                                            }, 100);
-                                        },
-                                        error: function(err) {
-                                            console.error('Error checking in user:', err);
-                                            alert('Failed to check in user.');
-                                        }
-                                    });
-                                } else {
-                                    showDetails(user.name, user.table, user.company, user.phone, user.isCheckIn, user._id);
-                                    alert('User is already checked in.');
-                                    refreshUserList();
-                                }
-                            } else {
-                                alert('User not found');
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error fetching user:', error);
-                            alert('User not found');
-                        });
-                    
-                    closeLightbox();
+                    console.log('Scanner stopped after successful scan');
+                    // Clear the reader div
+                    clearReader();
                 }).catch(err => {
-                    console.error('Error stopping scanner:', err);
+                    // Ignore errors - scanner might have already stopped
+                    // This is expected in some cases
+                    console.log('Scanner stop (may have already stopped)');
+                    // Clear the reader div anyway
+                    clearReader();
                 });
+                
+                // Assume QR code contains user ID
+                const userId = decodedText.split(',')[0].trim();
+                if (!userId) {
+                    alert(_CS.invalidQrCode);
+                    closeLightbox();
+                    return;
+                }
+                
+                fetch(`/events/${eventId}/users/${userId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            // If response is not ok, try to get error message
+                            return response.text().then(text => {
+                                throw new Error(text || 'User not found');
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(user => {
+                        // Check if user object is valid and has required fields
+                        if (!user || !user._id) {
+                            alert('User not found');
+                            closeLightbox();
+                            return;
+                        }
+                        
+                        // If user is not checked in, perform check-in
+                        if (!user.isCheckIn) {
+                            $.ajax({
+                                url: `/events/${eventId}/users/${userId}`,
+                                method: 'PUT',
+                                contentType: 'application/json',
+                                data: JSON.stringify({ isCheckIn: true }),
+                                success: function(response) {
+                                    console.log('Check-in successful:', response); // Debug log
+                                    // Use response data if available, otherwise use original user data
+                                    const updatedUser = (response && response._id) ? response : { ...user, isCheckIn: true };
+                                    showDetails(updatedUser.name, updatedUser.table, updatedUser.company, updatedUser.phone, true, updatedUser._id, updatedUser.point || 0);
+                                    alert(_CS.checkInSuccess);
+                                    // Update button states first
+                                    document.getElementById('checkInButton').style.display = 'none';
+                                    document.getElementById('printButton').style.display = 'inline-block';
+                                    // Then refresh the user list to update the table
+                                    setTimeout(() => {
+                                        fetchUsers();
+                                    }, 100); // Small delay to ensure server update
+                                    closeLightbox(); // Close Lightbox after success
+                                },
+                                error: function(err) {
+                                    console.error('Error checking in user:', err);
+                                    const errorMsg = err.responseJSON && err.responseJSON.message 
+                                        ? err.responseJSON.message
+                                        : _CS.checkInFailed;
+                                    alert(errorMsg);
+                                    closeLightbox();
+                                }
+                            });
+                        } else {
+                            // User is already checked in
+                            showDetails(user.name, user.table, user.company, user.phone, user.isCheckIn, user._id, user.point || 0);
+                            alert(_CS.alreadyCheckedIn);
+                            fetchUsers();
+                            closeLightbox(); // Close Lightbox
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching user:', error);
+                        alert(_CS.userNotFound);
+                        closeLightbox();
+                    });
             },
             (errorMessage) => {
-                // Ignore scan errors (they're frequent during scanning)
+                // When scan fails (this is called continuously during scanning)
+                // Don't log every error message to avoid console spam
+                // Only log if it's a significant error
+                if (errorMessage && !errorMessage.includes('NotFoundException')) {
+                    // Ignore common "not found" errors during scanning
+                }
             }
         ).catch(err => {
             console.error('Unable to start scanning:', err);
-            alert('Unable to start camera. Please check permissions.');
+            scanning = false; // Reset scanning flag on error
+            clearReader(); // Clear reader on error
+            alert(_CS.cameraFailed);
             closeLightbox();
         });
-        
-        scanning = true;
     }
 
     // Print user details
     function printDetails() {
+        // Only get name and company information, excluding Table, Phone, Checked In
         const detailsElement = document.getElementById('detailsContent');
-        const nameElement = detailsElement.querySelector('h4');
-        const companyElement = detailsElement.querySelector('p:nth-of-type(2)');
+        const name = detailsElement.querySelector('h4').textContent;
+        const company = detailsElement.querySelector('p:nth-of-type(3)').textContent.replace('Company Name: ', '').trim();
+        const unit = detailsElement.querySelector('p:nth-of-type(4)').textContent.replace('Functional Unit:', '').trim();
+        const title = detailsElement.querySelector('p:nth-of-type(6)').textContent.replace('Job Title:', '').trim();
+        const award = detailsElement.querySelector('p:nth-of-type(8)').textContent.replace('Award name:', '').trim();
+        const seat = detailsElement.querySelector('p:nth-of-type(5)').textContent.replace('Seat Number:', 'Seat No:').trim();
         
-        if (!nameElement) {
-            alert('No user selected for printing.');
-            return;
+        // Build content dynamically based on whether title exists
+        let contentItems = [];
+        contentItems.push(`<h1>${name}</h1>`);
+        contentItems.push(`<h3>${company}</h3>`);
+        contentItems.push(`<h3>${unit}</h3>`);
+        
+        // Only add title if it's not empty
+        if (title && title !== '-' && title !== '') {
+            contentItems.push(`<h3>${title}</h3>`);
         }
         
-        const name = nameElement.textContent;
-        const company = companyElement ? companyElement.textContent.replace('Company: ', '').trim() : '';
+        // Always add award (it will automatically move up if title is not shown)
+        if (award && award !== '-' && award !== '') {
+            contentItems.push(`<h3>${award}</h3>`);
+        }
         
         const printContent = `
             <style>
@@ -659,47 +792,32 @@
                     font-family: Arial, sans-serif;
                     display: flex;
                     flex-direction: column;
-                    justify-content: space-between;
+                    justify-content: center;
                     align-items: stretch;
                     box-sizing: border-box;
                 }
                 .content-container {
                     display: flex;
                     flex-direction: column;
-                    justify-content: center;
-                    align-items: stretch;
+                    justify-content: flex-start;
+                    align-items: center;
                     width: 100%;
                     height: 100%;
-                    gap: 3mm;
-                }
-                .top-section {
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                }
-                .bottom-section {
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    align-items: center;
                     text-align: center;
+                    padding-top:0px;
+                    padding-left:30px;
                 }
                 h1 {
                     font-size: 22px;
-                    margin: 0 0 1mm 0;
+                    margin: 0 0 3mm 0;
                     font-weight: bold;
                     line-height: 1.1;
                     text-align: center;
                     width: 100%;
                 }
-                .qrcode {
-                    width: 38mm;
-                    height: 38mm;
-                }
                 h3 {
-                    font-size: 16px;
-                    margin: 0;
-                    color: #666;
+                    font-size: 10px;
+                    margin: 0 0 3mm 0;
                     font-weight: bold;
                     line-height: 1.1;
                     text-align: center;
@@ -707,16 +825,9 @@
                 }
             </style>
             <div class="content-container">
-                <div class="top-section">
-                    <div class="qrcode">
-                        <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(name)}&size=150x150" alt="QR Code" style="width: 100%; height: 100%;">
-                    </div>
-                </div>
-                <div class="bottom-section">
-                    <h1>${escapeHtml(name)}</h1>
-                    <h3>${escapeHtml(company)}</h3>
-                </div>
+                ${contentItems.join('\n                ')}
             </div>
+            <h5 style="position:fixed; font-size:12px; top:170;text-align:left;left:15">${seat}</h5>
         `;
         
         const printWindow = window.open('', '', 'height=600,width=800');
@@ -726,59 +837,55 @@
         printWindow.document.write('</body></html>');
         printWindow.document.close();
         
+        // printWindow.print();
         printLabel();
     }
-    
     function printLabel() {
         const detailsElement = document.getElementById('detailsContent');
-        const nameElement = detailsElement.querySelector('h4');
-        const companyElement = detailsElement.querySelector('p:nth-of-type(2)');
+        const name = detailsElement.querySelector('h4').textContent;
+        const company = detailsElement.querySelector('p:nth-of-type(2)').textContent.replace('Company: ', '');
         
-        if (!nameElement) return;
+        const printUrl = `brotherwebprint://print?filename=rsvp_label.lbx&size=62x100&copies=1&name=${encodeURIComponent(name)}&company=${encodeURIComponent(company)}`;
         
-        const name = nameElement.textContent;
-        const company = companyElement ? companyElement.textContent.replace('Company: ', '').trim() : '';
-        
-        const printUrl = `brotherwebprint://print?filename=rsvp_label.lbx&size=62x100&copies=1&name=${encodeURIComponent(name)}&qrcode=${encodeURIComponent(name)}&company=${encodeURIComponent(company)}`;
-        
-        window.location.href = printUrl;
+        window.location.href = printUrl; // Use URL scheme to send print request
     }
 
-    // Add guest form handler
+    // Add user functionality
     $('#addGuestForm').on('submit', function(event) {
-        event.preventDefault();
+        event.preventDefault(); // Prevent default form submission
 
         const name = $('#guestName').val();
         const company = $('#guestCompany').val();
         const phone = $('#guestPhone').val();
 
+        // Send AJAX request to backend to add user
         $.ajax({
-            url: `/events/${eventId}/users`,
+            url: '/events/<%= event._id %>/users', // Adjust URL according to your route settings
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({ 
                 name, 
+                table, 
                 company, 
                 phone, 
-                role: 'guest',
-                isCheckIn: true
+                role: 'guest', // Add role
+                isCheckIn: true // Add checkin
             }),
             success: function(response) {
-                alert('Guest added successfully!');
-                $('#addGuestModal').modal('hide');
-                $('#addGuestForm')[0].reset();
-                refreshUserList();
+                alert(_CS.addGuestSuccess);
+                $('#addGuestModal').modal('hide'); // Close modal
+                fetchUsers(); // Refresh user list
             },
             error: function(err) {
                 console.error('Error adding guest:', err);
-                alert('Failed to add guest. Please try again.');
+                alert(_CS.addGuestFailed);
             }
         });
     });
 
-    // Initialize on page load
+    // Initialize user data
     $(document).ready(function() {
-        fetchUsers();
+        fetchUsers(); // Fetch user data
     });
 </script>
 

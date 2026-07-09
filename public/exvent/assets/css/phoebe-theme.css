@@ -8,8 +8,6 @@
     --phoebe-brown: #D48C70;
     --phoebe-dark-brown: #5B4A43;
 }
-
-/* Button Styles */
 .btn-5,
 .btn-primary {
     background-color: var(--phoebe-primary) !important;

@@ -31,6 +31,9 @@ const userSchema = new mongoose.Schema({
     meal: { type: String }, // 餐飲選擇
     remarks: { type: String }, // 備註
     paymentStatus: { type: String, enum: ['unpaid', 'pending', 'paid', 'failed'], default: 'unpaid' }, // 付款狀態
+    scannedTreasureItems: [{ type: mongoose.Schema.Types.ObjectId }] // 已掃描的 Treasure Hunt 項目 ID 列表
+}, {
+    strict: false // 允許保存 formConfig 中定義的動態字段（如 funcation_unit 等）
 });
 
 const winnerSchema = new mongoose.Schema({
@@ -40,13 +43,39 @@ const winnerSchema = new mongoose.Schema({
     table: { type: String }, // 桌號
     prizeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Prize' }, // 獎品ID
     prizeName: { type: String }, // 獎品名稱
+    order: { type: Number, required: false, default: 0 }, // 抽獎號碼（從1開始）；舊資料可能無此欄位，故不設 required
     wonAt: { type: Date, default: Date.now } // 中獎時間
 });
 
 const ticketSchema = new mongoose.Schema({
-    title: { type: String, required: true },
+    // Mixed：相容舊版字串 title 與新版 { zh, en }
+    title: { type: mongoose.Schema.Types.Mixed, default: () => ({ zh: '', en: '' }) },
     price: { type: Number, required: true },
-    datetime: { type: Date, required: true }
+    /** 票券分類 key（與 FormConfig.paymentTicketUi.categoryButtons[].key 對應） */
+    category: { type: String, default: '' },
+    /** @deprecated 舊單一截止日，新資料請用 datetimeTo */
+    datetime: { type: Date },
+    datetimeFrom: { type: Date },
+    datetimeTo: { type: Date }
+});
+
+// 掃瞄加分用戶 schema
+const scanPointUserSchema = new mongoose.Schema({
+    name: { type: String, required: true }, // 用戶名稱
+    pin: { type: String, required: true }, // 6位數字 PIN 碼
+    created_at: { type: Date, default: Date.now }, // 創建時間
+    modified_at: { type: Date, default: Date.now } // 修改時間
+});
+
+// Treasure Hunt 項目 schema
+const treasureHuntItemSchema = new mongoose.Schema({
+    name: { type: String, required: true }, // 項目名稱
+    points: { type: Number, required: true, min: 1 }, // 積分數值
+    qrCodeData: { type: String, required: true }, // QR Code 數據（用於掃描識別）
+    qrCodeImage: { type: String }, // QR Code 圖片 URL（可選）
+    description: { type: String }, // 描述
+    created_at: { type: Date, default: Date.now }, // 創建時間
+    modified_at: { type: Date, default: Date.now } // 修改時間
 });
 
 const eventSchema = new mongoose.Schema({
@@ -57,12 +86,49 @@ const eventSchema = new mongoose.Schema({
     created_at: { type: Date, default: Date.now }, // 創建時間
     modified_at: { type: Date, default: Date.now }, // 修改時間
     emailTemplate: { type: mongoose.Schema.Types.ObjectId, ref: 'EmailTemplate' }, // 引用 EmailTemplate
-    users:[userSchema],
+    users:[userSchema], // RSVP 註冊用戶
+    guestList: [userSchema], // Guest List（預先準備的來賓列表，尚未註冊為 RSVP）
     points: [pointSchema],
     winners: [winnerSchema], // 新增 winners 字段
+    maxLuckydrawOrder: { type: Number, default: 0 }, // 追蹤最大的中獎編號（即使刪除也不會減少，確保唯一性）
+    /** Luckydraw List / Award / Export 要顯示的來賓欄位（FormConfig fieldName）；空則用預設 name, company, table */
+    luckydrawListFieldNames: [{ type: String }],
+    /** 中獎名單頁（/luckydraw/award）密碼；空則不需密碼 */
+    luckydrawAwardPassword: { type: String, default: '' },
     isPaymentEvent: { type: Boolean, default: false }, // 是否為付費活動
     PaymentTickets: [ticketSchema], // 票券陣列
-    gameIds: [{ type: String }] // 新增 gameIds 陣列，存儲該事件開放的遊戲ID
+    gameIds: [{ type: String }], // 新增 gameIds 陣列，存儲該事件開放的遊戲ID
+    scanPointUsers: [scanPointUserSchema], // 掃瞄加分用戶列表
+    treasureHuntItems: [treasureHuntItemSchema], // Treasure Hunt 項目列表
+    // 電郵發送設置
+    emailSettings: {
+        sendWelcomeEmail: { type: Boolean, default: false }, // 是否立即發送歡迎電郵
+        sendConfirmationEmail: { type: Boolean, default: false }, // 是否立即發送確認電郵
+        sendReminderEmail: { type: Boolean, default: false }, // 是否立即發送提示電郵
+        sendThankYouEmail: { type: Boolean, default: false }, // 是否立即發送感謝電郵
+        welcomeMessageMethod: { type: String, enum: ['email', 'sms', 'both'], default: 'email' } // 歡迎消息發送方式：email/sms/both
+    },
+    // 排桌：左側依 FormConfig 欄位分類、右側圓桌拖放；攜眷數 N 則佔席 (N+1)
+    seatingArrangement: {
+        categoryFieldName: { type: String, default: 'company' },
+        companionByUserId: { type: mongoose.Schema.Types.Mixed, default: {} },
+        tables: [{
+            id: { type: String, required: true },
+            x: { type: Number, default: 48 },
+            y: { type: Number, default: 48 },
+            capacity: { type: Number, default: 10 },
+            userIds: [{ type: String }]
+        }]
+    },
+    // 附件列表
+    attachments: [{
+        filename: { type: String, required: true }, // 原始文件名
+        storedFilename: { type: String, required: true }, // 存儲的文件名
+        url: { type: String, required: true }, // 文件訪問 URL
+        size: { type: Number, required: true }, // 文件大小（字節）
+        mimeType: { type: String, required: true }, // MIME 類型
+        uploadedAt: { type: Date, default: Date.now } // 上傳時間
+    }]
 });
 
 // 在保存之前更新 modified_at 字段

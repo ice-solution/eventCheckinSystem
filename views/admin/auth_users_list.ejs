@@ -1,0 +1,52 @@
+<%- include ("components/header") %>
+<%- include ("components/menu", { eventId: '' }) %>
+<%- include("components/responsive_layout_style") %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+<div id="right-panel" class="right-panel">
+    <%- include ("components/rightpanel_header", { backUrl: '/events/list' }) %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title"><%= t('auth_users.title') %></strong>
+                            <a href="/auth/users/add" class="btn btn-sm btn-primary float-right"><i class="fa fa-plus"></i> <%= t('auth_users.addUser') %></a>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted"><%= t('auth_users.adminNote') %></p>
+                            <table class="table table-bordered table-striped">
+                                <thead>
+                                    <tr>
+                                        <th><%= t('auth_users.username') %></th>
+                                        <th><%= t('auth_users.role') %></th>
+                                        <th><%= t('auth_users.allowedEventsCount') %></th>
+                                        <th><%= t('auth_users.actions') %></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (users && users.length) { %>
+                                        <% users.forEach(u => { %>
+                                            <tr>
+                                                <td><%= u.username %></td>
+                                                <td><%= u.role || 'user' %></td>
+                                                <td><%= (u.allowedEvents && u.allowedEvents.length) || 0 %></td>
+                                                <td>
+                                                    <a href="/auth/users/<%= u._id %>/edit" class="btn btn-sm btn-info"><%= t('auth_users.setPermissions') %></a>
+                                                </td>
+                                            </tr>
+                                        <% }); %>
+                                    <% } else { %>
+                                        <tr><td colspan="4" class="text-center"><%= t('auth_users.noUsers') %></td></tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<%- include ("components/footer") %>

@@ -1,34 +1,34 @@
 <%- include ("components/header") %>
 <%- include ("components/menu", {eventId: ''})  %>
+<%- include("components/responsive_layout_style") %>
 <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
 <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
 <link rel="stylesheet" href="/admin/assets/css/style.css">
 <div id="right-panel" class="right-panel">
-    <%- include ("components/rightpanel_header") %>
+    <%- include ("components/rightpanel_header", { backUrl: '/events/list' }) %>
     <div class="content">
         <div class="animated fadeIn">
             <div class="row">
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <strong class="card-title">Create New Event</strong>
+                            <strong class="card-title"><%= t('create_event.title') %></strong>
                         </div>
                         <div class="card-body">
                             <form id="createEventForm">
                                 <div class="form-group">
-                                    <label for="name">Event Name</label>
+                                    <label for="name"><%= t('create_event.eventName') %></label>
                                     <input type="text" class="form-control" id="name" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="from">Event Start Time</label>
+                                    <label for="from"><%= t('create_event.startTime') %></label>
                                     <input type="datetime-local" class="form-control" id="from" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="to">Event End Time</label>
+                                    <label for="to"><%= t('create_event.endTime') %></label>
                                     <input type="datetime-local" class="form-control" id="to" required>
                                 </div>
-                                <button type="submit" class="btn btn-primary">Create Event</button>
-                                <a href="/admin" class="btn btn-secondary">Back to Admin</a>
+                                <button type="submit" class="btn btn-primary"><%= t('create_event.submit') %></button>
                             </form>
                             <div id="alertContainer" class="mt-3"></div>
                         </div>
@@ -39,54 +39,76 @@
     </div>
 </div>
 
-<%- include ("components/footer") %>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    $(document).ready(function() {
-        $('#createEventForm').on('submit', function(e) {
-            e.preventDefault(); // 防止表單默認提交
+(function() {
+    var successMsg = <%- JSON.stringify(t('create_event.successMsg')) %>;
+    var errorMsg = <%- JSON.stringify(t('create_event.errorMsg')) %>;
+    var timeRangeError = <%- JSON.stringify(lang === 'en' ? 'End time must be after start time.' : '結束時間必須晚於開始時間。') %>;
 
-            const newEvent = {
-                name: $('#name').val(),
-                from: $('#from').val(),
-                to: $('#to').val()
-            };
+    function escapeHtml(str) {
+        return String(str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
 
-            // 發送 AJAX 請求創建事件
-            $.ajax({
-                url: '/events/create', // 假設您有一個事件創建的路由
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(newEvent),
-                success: function(response) {
-                    // 顯示成功的 alert
-                    const alertHtml = `
-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            Event created successfully! Redirecting...
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                    `;
-                    $('#alertContainer').append(alertHtml);
-                    // 自動跳轉到事件列表頁面
-                    setTimeout(() => {
+    function showAlert(type, message) {
+        var container = document.getElementById('alertContainer');
+        if (!container) return;
+        container.innerHTML =
+            '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+            escapeHtml(message) +
+            '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+            '<span aria-hidden="true">&times;</span></button></div>';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var form = document.getElementById('createEventForm');
+        if (!form) return;
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            var nameInput = document.getElementById('name');
+            var fromInput = document.getElementById('from');
+            var toInput = document.getElementById('to');
+            var submitBtn = form.querySelector('button[type="submit"]');
+
+            var name = (nameInput && nameInput.value || '').trim();
+            var from = fromInput ? fromInput.value : '';
+            var to = toInput ? toInput.value : '';
+
+            if (!name || !from || !to) {
+                showAlert('danger', errorMsg);
+                return;
+            }
+            if (new Date(from).getTime() >= new Date(to).getTime()) {
+                showAlert('danger', timeRangeError);
+                return;
+            }
+
+            if (submitBtn) submitBtn.disabled = true;
+
+            fetch('/events/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name, from: from, to: to }),
+                credentials: 'same-origin'
+            }).then(function(res) {
+                return res.json().then(function(data) {
+                    if (!res.ok) throw new Error((data && data.message) || errorMsg);
+                    showAlert('success', successMsg);
+                    setTimeout(function() {
                         window.location.href = '/events/list';
                     }, 1500);
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error creating event:', error);
-                    const alertHtml = `
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            Failed to create event. Please try again later.
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                    `;
-                    $('#alertContainer').append(alertHtml);
-                }
+                });
+            }).catch(function(err) {
+                showAlert('danger', err.message || errorMsg);
+                if (submitBtn) submitBtn.disabled = false;
             });
         });
     });
+})();
 </script>
+<%- include ("components/footer") %>

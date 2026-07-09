@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="<%= typeof lang !== 'undefined' ? lang : 'zh-Hant' %>">
 <head>
     <meta charset="UTF-8">
-    <title>QR 碼</title>
+    <title><%= t('points_pages.qrcodeTitle') %></title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.qrcode/1.0/jquery.qrcode.min.js"></script>
     <style>
@@ -19,7 +19,7 @@
             text-align: center;
         }
         img {
-            max-width: 300px; /* 限制 QR 碼的最大寬度 */
+            max-width: 300px;
             height: auto;
         }
     </style>
@@ -27,13 +27,13 @@
 <body>
 
     <div id="qrcode">
-        <h1>掃描 QR 碼 拿到點數</h1>
+        <h1><%= t('points_pages.qrcodeHeading') %></h1>
         <div id="qrcodeImage"></div>
     </div>
 
     <script>
         $(document).ready(function() {
-            const qrCodeData = "<%= eventId %>,<%= pointId %>"; // 格式為 eventId,pointId
+            const qrCodeData = "<%= eventId %>,<%= pointId %>";
             $('#qrcodeImage').qrcode({
                 text: qrCodeData,
                 width: 256,

@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>掃瞄加分</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f5f5f5;
+        }
+        .header-bar {
+            background: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .header-bar h3 {
+            margin: 0;
+            font-size: 20px;
+            color: #333;
+        }
+        .header-bar .user-name {
+            color: #007bff;
+            font-weight: bold;
+        }
+        .header-bar .logout-btn {
+            padding: 6px 12px;
+            background: #dc3545;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .header-bar .logout-btn:hover {
+            background: #c82333;
+        }
+        .scanner-container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .scanner-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .scanner-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+            text-align: center;
+        }
+        #reader {
+            width: 100% !important;
+            max-width: 500px;
+            margin: 0 auto !important;
+            text-align: center !important;
+        }
+        #reader > div {
+            margin: 0 auto !important;
+            text-align: center !important;
+            display: inline-block !important;
+        }
+        #reader video,
+        #reader canvas,
+        #reader img {
+            margin: 0 auto !important;
+            display: block !important;
+            max-width: 100% !important;
+        }
+        #reader__dashboard,
+        #reader__camera_selection,
+        #reader__scan_region {
+            margin: 0 auto !important;
+            text-align: center !important;
+        }
+        .user-info {
+            display: none;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .user-info.show {
+            display: block;
+        }
+        .user-info h3 {
+            margin-top: 0;
+            color: #28a745;
+        }
+        .user-detail {
+            margin: 10px 0;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+        }
+        .user-detail strong {
+            color: #666;
+            margin-right: 10px;
+        }
+        .points-input-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: #fff3cd;
+            border-radius: 8px;
+            border: 2px solid #ffc107;
+        }
+        .points-input-section h4 {
+            margin-top: 0;
+            color: #856404;
+        }
+        .points-input-section input {
+            width: 100%;
+            padding: 10px;
+            font-size: 18px;
+            border: 2px solid #ffc107;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .points-input-section button {
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .points-input-section button:hover {
+            background: #218838;
+        }
+        .points-input-section button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .btn-scan {
+            padding: 12px 30px;
+            font-size: 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 5px;
+            display: block;
+            width: 200px;
+            margin: 20px auto;
+        }
+        .btn-scan:hover {
+            background: #0056b3;
+        }
+        .btn-scan:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .btn-stop {
+            background: #dc3545;
+        }
+        .btn-stop:hover {
+            background: #c82333;
+        }
+        .success-message {
+            margin-top: 15px;
+            padding: 10px;
+            background: #d4edda;
+            color: #155724;
+            border-radius: 4px;
+            display: none;
+        }
+        .error-message {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8d7da;
+            color: #721c24;
+            border-radius: 4px;
+            display: none;
+        }
+        .success-message.show,
+        .error-message.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="header-bar">
+        <h3>掃瞄加分系統 - <span class="user-name"><%= userName %></span></h3>
+        <a href="#" class="logout-btn" id="logoutBtn">登出</a>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <div class="scanner-container">
+            <div class="scanner-section">
+                <h2 class="scanner-title">掃瞄用戶 QR Code 添加積分</h2>
+                
+                <div style="text-align: center; margin: 20px 0;">
+                    <button id="startScanBtn" class="btn-scan">打開鏡頭掃描</button>
+                    <button id="stopScanBtn" class="btn-scan btn-stop" style="display: none;">停止掃描</button>
+                </div>
+                
+                <div id="reader" style="display: none;"></div>
+                
+                <div id="errorMessage" class="error-message"></div>
+            </div>
+
+            <div id="userInfo" class="user-info">
+                <h3>用戶信息</h3>
+                <div class="user-detail">
+                    <strong>姓名：</strong><span id="userName"></span>
+                </div>
+                <div class="user-detail">
+                    <strong>公司：</strong><span id="userCompany"></span>
+                </div>
+                <div class="user-detail">
+                    <strong>桌號：</strong><span id="userTable"></span>
+                </div>
+                <div class="user-detail">
+                    <strong>當前積分：</strong><span id="userCurrentPoints" style="color: #28a745; font-weight: bold; font-size: 18px;"></span>
+                </div>
+
+                <div class="points-input-section">
+                    <h4>添加積分</h4>
+                    <label for="pointsInput">積分數值：</label>
+                    <input type="number" id="pointsInput" min="1" value="1" placeholder="輸入積分">
+                    <button id="addPointsBtn">添加積分</button>
+                    <div id="successMessage" class="success-message"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script>
+    const eventId = '<%= eventId %>';
+    const html5QrCode = new Html5Qrcode("reader");
+    let scanning = false;
+    let currentUserId = null;
+
+    const startScanBtn = document.getElementById('startScanBtn');
+    const stopScanBtn = document.getElementById('stopScanBtn');
+    const readerDiv = document.getElementById('reader');
+    const userInfoDiv = document.getElementById('userInfo');
+    const errorMessageDiv = document.getElementById('errorMessage');
+    const successMessageDiv = document.getElementById('successMessage');
+    const addPointsBtn = document.getElementById('addPointsBtn');
+    const pointsInput = document.getElementById('pointsInput');
+
+    function showError(message) {
+        errorMessageDiv.textContent = message;
+        errorMessageDiv.classList.add('show');
+        setTimeout(() => {
+            errorMessageDiv.classList.remove('show');
+        }, 5000);
+    }
+
+    function showSuccess(message) {
+        successMessageDiv.textContent = message;
+        successMessageDiv.classList.add('show');
+        setTimeout(() => {
+            successMessageDiv.classList.remove('show');
+        }, 3000);
+    }
+
+    async function startScanner() {
+        if (scanning) return;
+        
+        try {
+            startScanBtn.disabled = true;
+            readerDiv.style.display = 'block';
+            
+            await html5QrCode.start(
+                { facingMode: "environment" },
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 }
+                },
+                (decodedText, decodedResult) => {
+                    handleQRCodeScan(decodedText);
+                },
+                (errorMessage) => {
+                    // 掃描錯誤時不顯示，因為會一直觸發
+                }
+            );
+            
+            scanning = true;
+            startScanBtn.style.display = 'none';
+            stopScanBtn.style.display = 'block';
+        } catch (error) {
+            console.error('Error starting scanner:', error);
+            showError('無法啟動掃描器：' + error.message);
+            startScanBtn.disabled = false;
+            readerDiv.style.display = 'none';
+        }
+    }
+
+    async function stopScanner() {
+        if (!scanning) return;
+        
+        try {
+            await html5QrCode.stop();
+            scanning = false;
+            startScanBtn.style.display = 'block';
+            stopScanBtn.style.display = 'none';
+            readerDiv.style.display = 'none';
+            startScanBtn.disabled = false;
+        } catch (error) {
+            console.error('Error stopping scanner:', error);
+        }
+    }
+
+    function handleQRCodeScan(decodedText) {
+        if (!scanning) return;
+        
+        // QR Code 格式通常是: userId 或 eventId,userId
+        let userId = decodedText;
+        if (decodedText.includes(',')) {
+            const parts = decodedText.split(',');
+            userId = parts[parts.length - 1]; // 取最後一部分作為 userId
+        }
+        
+        // 停止掃描
+        stopScanner();
+        
+        // 獲取用戶信息
+        fetch(`/events/${eventId}/users/${userId}`)
+            .then(response => response.json())
+            .then(user => {
+                if (user && user._id) {
+                    currentUserId = user._id;
+                    document.getElementById('userName').textContent = user.name || '-';
+                    document.getElementById('userCompany').textContent = user.company || '-';
+                    document.getElementById('userTable').textContent = user.table || '-';
+                    document.getElementById('userCurrentPoints').textContent = user.point || 0;
+                    userInfoDiv.classList.add('show');
+                    pointsInput.value = 1;
+                } else {
+                    showError('找不到該用戶');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching user:', error);
+                showError('獲取用戶信息失敗');
+            });
+    }
+
+    startScanBtn.addEventListener('click', startScanner);
+    stopScanBtn.addEventListener('click', stopScanner);
+
+    addPointsBtn.addEventListener('click', async () => {
+        if (!currentUserId) {
+            showError('請先掃描用戶 QR Code');
+            return;
+        }
+
+        const points = parseInt(pointsInput.value);
+        if (!points || points <= 0) {
+            showError('請輸入有效的積分數值（必須大於0）');
+            return;
+        }
+
+        addPointsBtn.disabled = true;
+        addPointsBtn.textContent = '處理中...';
+
+        try {
+            const response = await fetch(`/events/${eventId}/attendee/scan/add-points`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    userId: currentUserId,
+                    points: points
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showSuccess(`成功添加 ${points} 積分！用戶當前積分：${data.user.currentPoints}`);
+                document.getElementById('userCurrentPoints').textContent = data.user.currentPoints;
+                pointsInput.value = 1;
+                currentUserId = null;
+                userInfoDiv.classList.remove('show');
+            } else {
+                showError(data.message || '添加積分失敗');
+            }
+        } catch (error) {
+            console.error('Error adding points:', error);
+            showError('添加積分時發生錯誤：' + error.message);
+        } finally {
+            addPointsBtn.disabled = false;
+            addPointsBtn.textContent = '添加積分';
+        }
+    });
+
+    // 登出
+    document.getElementById('logoutBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        if (confirm('確定要登出嗎？')) {
+            // 清除 session
+            fetch(`/events/${eventId}/attendee/logout`, { method: 'POST' })
+                .then(() => {
+                    window.location.href = `/events/${eventId}/attendee`;
+                })
+                .catch(() => {
+                    window.location.href = `/events/${eventId}/attendee`;
+                });
+        }
+    });
+
+    // 頁面卸載時停止掃描
+    window.addEventListener('beforeunload', async () => {
+        await stopScanner();
+    });
+</script>
+
+</body>
+</html>
+

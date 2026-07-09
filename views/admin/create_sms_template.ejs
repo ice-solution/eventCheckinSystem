@@ -1,0 +1,93 @@
+<%- include ("components/header") %>
+<%- include ("components/menu", {eventId: eventId }) %>
+<%- include("components/responsive_layout_style") %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+<div id="right-panel" class="right-panel">
+    <%- include ("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title"><%= t('sms_template_form.createTitle') %></strong>
+                        </div>
+                        <div class="card-body">
+                            <form id="smsTemplateForm">
+                                <div class="form-group">
+                                    <label for="type"><%= t('sms_template_form.typeLabel') %></label>
+                                    <select class="form-control" id="type" required>
+                                        <option value="welcome"><%= t('sms_template_form.typeWelcome') %></option>
+                                        <option value="confirmation"><%= t('sms_template_form.typeConfirmation') %></option>
+                                        <option value="reminder"><%= t('sms_template_form.typeReminder') %></option>
+                                        <option value="thankYou"><%= t('sms_template_form.typeThankYou') %></option>
+                                        <option value="invitation"><%= t('sms_template_form.typeInvitation') %></option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="content"><%= t('sms_template_form.contentLabel') %></label>
+                                    <textarea class="form-control" id="content" rows="10" required placeholder="..."></textarea>
+                                    <small class="form-text text-muted">
+                                        <strong><%= t('sms_template_form.variablesLabel') %>:</strong><br>
+                                        {{user.name}}, {{user.email}}, {{user.company}}, {{user.phone}}, {{user.phone_code}}, {{user.table}}, {{user.role}}<br>
+                                        <% if (formConfig && formConfig.sections) {
+                                            const formFields = [];
+                                            formConfig.sections.forEach(s => { if (s.visible && s.fields) s.fields.forEach(f => { if (f.visible) formFields.push('{{user.' + f.fieldName + '}}'); }); });
+                                            if (formFields.length) { %><br><%= formFields.join(', ') %><% } %>
+                                        <% } %>
+                                        <br>{{event.name}}, {{loginUrl}}, {{confirmUrl}}, {{qrCodeUrl}}
+                                    </small>
+                                </div>
+                                <div class="form-group">
+                                    <div class="alert alert-info">
+                                        <strong><%= t('sms_template_form.exampleLabel') %>:</strong><br>
+                                        <%= t('sms_template_form.typeWelcome') %> {{user.name}} — {{event.name}} {{loginUrl}}
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary"><%= t('sms_template_form.saveBtn') %></button>
+                                <a href="/events/<%= eventId %>/smsTemplate" class="btn btn-secondary"><%= t('sms_template_form.backBtn') %></a>
+                            </form>
+                            <div id="alertContainer" class="mt-3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include ("./components/footer") %>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#smsTemplateForm').on('submit', function(e) {
+            e.preventDefault();
+            const formData = { type: $('#type').val(), content: $('#content').val() };
+            $.ajax({
+                url: '/events/<%= eventId %>/smsTemplate',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(formData),
+                success: function() {
+                    const alertHtml = `
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <%= t("sms_template_form.createSuccess") %>
+                            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+                        </div>`;
+                    $('#alertContainer').html(alertHtml);
+                    setTimeout(() => { window.location.href = '/events/<%= eventId %>/smsTemplate'; }, 1500);
+                },
+                error: function(error) {
+                    const errorMsg = error.responseJSON?.message || '<%= t("sms_template_form.createFailed") %>';
+                    const alertHtml = `
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            ${errorMsg}
+                            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+                        </div>`;
+                    $('#alertContainer').html(alertHtml);
+                }
+            });
+        });
+    });
+</script>

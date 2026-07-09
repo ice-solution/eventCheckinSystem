@@ -1,0 +1,351 @@
+<%- include ("components/header") %>
+<%- include ("components/menu", { eventId: event._id }) %>
+<%- include("components/responsive_layout_style") %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+<style>
+    .attachment-item {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        background-color: #fff;
+        transition: box-shadow 0.2s;
+    }
+    .attachment-item:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .url-container {
+        margin-top: 8px;
+    }
+    .url-input {
+        background-color: #f8f9fa;
+        cursor: text;
+    }
+    .url-input:focus {
+        background-color: #fff;
+        border-color: #007bff;
+    }
+    .attachment-icon {
+        font-size: 2rem;
+        color: #007bff;
+        margin-right: 15px;
+    }
+    .attachment-info {
+        flex: 1;
+    }
+    .attachment-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    .file-size {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    .upload-area {
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        padding: 40px;
+        text-align: center;
+        background-color: #f8f9fa;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    .upload-area:hover {
+        border-color: #007bff;
+        background-color: #e7f3ff;
+    }
+    .upload-area.dragover {
+        border-color: #007bff;
+        background-color: #e7f3ff;
+    }
+    #fileInput {
+        display: none;
+    }
+</style>
+
+<div id="right-panel" class="right-panel">
+    <%- include ("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div id="alertContainer"></div>
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong class="card-title"><%= t('attachments.title') %></strong>
+                                </div>
+                                <div>
+                                    <button type="button" class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                                        <i class="fas fa-upload"></i> <%= t('attachments.uploadBtn') %>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <!-- Upload Area -->
+                            <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                                <i class="fas fa-cloud-upload-alt" style="font-size: 3rem; color: #007bff; margin-bottom: 15px;"></i>
+                                <h5><%= t('attachments.clickOrDragHint') %></h5>
+                                <p class="text-muted"><%= t('attachments.maxSize') %></p>
+                                <input type="file" id="fileInput" multiple>
+                            </div>
+
+                            <!-- Attachments List -->
+                            <div id="attachmentsList" class="mt-4">
+                                <h5><%= t('attachments.listTitle') %></h5>
+                                <div id="attachmentsContainer">
+                                    <!-- Attachments will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include ("components/footer") %>
+<script>
+    const eventId = '<%= event._id %>';
+
+    const _AT = {
+        noAttachments: '<%= t("attachments.noAttachments") %>',
+        copyBtn: '<%= t("attachments.copyBtn") %>',
+        downloadBtn: '<%= t("attachments.downloadBtn") %>',
+        deleteBtn: '<%= t("attachments.deleteBtn") %>',
+        deleteConfirm: '<%= t("attachments.deleteConfirm") %>',
+        urlCopied: '<%= t("attachments.urlCopied") %>',
+        loadFailed: '<%= t("attachments.loadFailed") %>',
+        uploadFailed: '<%= t("attachments.uploadFailed") %>',
+        uploadSuccessTpl: '<%= t("attachments.uploadSuccess") %>',
+        fileSizeExceededTpl: '<%= t("attachments.fileSizeExceeded") %>',
+        deleteSuccess: '<%= t("attachments.deleteSuccess") %>',
+        deleteFailed: '<%= t("attachments.deleteFailed") %>',
+        uploading: '<%= t("attachments.uploading") %>'
+    };
+
+    $(document).ready(function() {
+        loadAttachments();
+
+        $('#fileInput').on('change', function(e) {
+            const files = e.target.files;
+            if (files.length > 0) {
+                uploadFiles(files);
+            }
+        });
+
+        const uploadArea = document.getElementById('uploadArea');
+
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                uploadFiles(files);
+            }
+        });
+    });
+
+    function loadAttachments() {
+        $.ajax({
+            url: `/events/${eventId}/attachments/api`,
+            type: 'GET',
+            success: function(response) {
+                if (response.success && response.attachments) {
+                    renderAttachments(response.attachments);
+                } else {
+                    $('#attachmentsContainer').html(`<p class="text-muted">${_AT.noAttachments}</p>`);
+                }
+            },
+            error: function(xhr) {
+                console.error('Error loading attachments:', xhr);
+                showAlert('danger', _AT.loadFailed);
+            }
+        });
+    }
+
+    function renderAttachments(attachments) {
+        if (attachments.length === 0) {
+            $('#attachmentsContainer').html(`<p class="text-muted">${_AT.noAttachments}</p>`);
+            return;
+        }
+
+        let html = '';
+        attachments.forEach(function(attachment) {
+            const fileIcon = getFileIcon(attachment.mimeType);
+            const fileSize = formatFileSize(attachment.size);
+            const uploadDate = new Date(attachment.uploadedAt).toLocaleString('zh-HK');
+            const fullUrl = window.location.origin + attachment.url;
+
+            html += `
+                <div class="attachment-item" data-attachment-id="${attachment._id}">
+                    <div class="d-flex align-items-center">
+                        <div class="attachment-icon">
+                            <i class="${fileIcon}"></i>
+                        </div>
+                        <div class="attachment-info flex-grow-1">
+                            <h6 class="mb-1">${attachment.filename}</h6>
+                            <p class="mb-1 file-size">
+                                <span>${fileSize}</span> •
+                                <span>${uploadDate}</span>
+                            </p>
+                            <div class="url-container d-flex align-items-center mt-2">
+                                <label class="mb-0 mr-2" style="font-weight: 500; min-width: 50px;">URL:</label>
+                                <input type="text" class="form-control form-control-sm url-input" value="${fullUrl}" readonly style="flex: 1; font-family: monospace; font-size: 0.85rem;">
+                                <button type="button" class="btn btn-sm btn-outline-secondary ml-2" onclick="copyUrl('${fullUrl}')" title="${_AT.copyBtn}">
+                                    <i class="fas fa-copy"></i> ${_AT.copyBtn}
+                                </button>
+                            </div>
+                        </div>
+                        <div class="attachment-actions ml-3">
+                            <a href="${attachment.url}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-download"></i> ${_AT.downloadBtn}
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteAttachment('${attachment._id}')">
+                                <i class="fas fa-trash"></i> ${_AT.deleteBtn}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        $('#attachmentsContainer').html(html);
+    }
+
+    function copyUrl(url) {
+        const input = document.createElement('input');
+        input.value = url;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        showAlert('success', _AT.urlCopied);
+    }
+
+    function uploadFiles(files) {
+        Array.from(files).forEach(function(file) {
+            if (file.size > 10 * 1024 * 1024) {
+                showAlert('danger', _AT.fileSizeExceededTpl.replace('{name}', file.name));
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const uploadBtn = $('<button class="btn btn-sm btn-secondary" disabled>')
+                .html(`<i class="fas fa-spinner fa-spin"></i> ${_AT.uploading}${file.name}`);
+            $('#attachmentsContainer').prepend($('<div class="attachment-item">').append(uploadBtn));
+
+            $.ajax({
+                url: `/events/${eventId}/attachments`,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        showAlert('success', _AT.uploadSuccessTpl.replace('{name}', file.name));
+                        loadAttachments();
+                    } else {
+                        showAlert('danger', response.message || _AT.uploadFailed);
+                    }
+                },
+                error: function(xhr) {
+                    const errorMsg = xhr.responseJSON && xhr.responseJSON.message
+                        ? xhr.responseJSON.message
+                        : _AT.uploadFailed;
+                    showAlert('danger', errorMsg);
+                },
+                complete: function() {
+                    uploadBtn.closest('.attachment-item').remove();
+                }
+            });
+        });
+
+        $('#fileInput').val('');
+    }
+
+    function deleteAttachment(attachmentId) {
+        if (!confirm(_AT.deleteConfirm)) {
+            return;
+        }
+
+        $.ajax({
+            url: `/events/${eventId}/attachments/${attachmentId}`,
+            type: 'DELETE',
+            success: function(response) {
+                if (response.success) {
+                    showAlert('success', _AT.deleteSuccess);
+                    loadAttachments();
+                } else {
+                    showAlert('danger', response.message || _AT.deleteFailed);
+                }
+            },
+            error: function(xhr) {
+                const errorMsg = xhr.responseJSON && xhr.responseJSON.message
+                    ? xhr.responseJSON.message
+                    : _AT.deleteFailed;
+                showAlert('danger', errorMsg);
+            }
+        });
+    }
+
+    function getFileIcon(mimeType) {
+        if (mimeType.startsWith('image/')) {
+            return 'fas fa-file-image';
+        } else if (mimeType.startsWith('video/')) {
+            return 'fas fa-file-video';
+        } else if (mimeType.startsWith('audio/')) {
+            return 'fas fa-file-audio';
+        } else if (mimeType === 'application/pdf') {
+            return 'fas fa-file-pdf';
+        } else if (mimeType.includes('word') || mimeType.includes('document')) {
+            return 'fas fa-file-word';
+        } else if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) {
+            return 'fas fa-file-excel';
+        } else if (mimeType.includes('zip') || mimeType.includes('archive')) {
+            return 'fas fa-file-archive';
+        } else {
+            return 'fas fa-file';
+        }
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+
+    function showAlert(type, message) {
+        const alertHtml = `
+            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        `;
+        $('#alertContainer').html(alertHtml);
+        setTimeout(() => {
+            $('.alert').alert('close');
+        }, 3000);
+    }
+</script>

@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Event 登記</title>
+    <title><%= event && event.name ? event.name : 'Event' %> - 登記</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         body {
             background-color: #f8f9fa;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'A','Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         .container {
             max-width: 800px;
@@ -29,6 +29,25 @@
             color: #2c3e50;
             font-weight: 600;
             margin-bottom: 10px;
+            text-align: center;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            hyphens: auto;
+        }
+        .form-header .form-subheader {
+            color: #34495e;
+            font-size: 1.15rem;
+            font-weight: 500;
+            line-height: 1.4;
+            margin: 0 0 10px;
+            text-align: center;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+        .form-header #formSubtitle {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 0;
         }
         .form-section {
             margin-bottom: 30px;
@@ -80,7 +99,7 @@
         }
         .form-label {
             flex: 0 0 200px;
-            font-weight: 500;
+            font-weight: 600;
             color: #2c3e50;
             padding-right: 20px;
             text-align: right;
@@ -88,6 +107,59 @@
         .form-input {
             flex: 1;
             max-width: 400px;
+        }
+        /* radio / checkbox：題目在上、選項在下，題目由左側起全寬顯示 */
+        .form-row.form-row-stacked {
+            flex-direction: column;
+            align-items: stretch;
+            --form-label-col: 200px;
+            --form-label-gap: 20px;
+            --form-content-offset: calc(var(--form-label-col) + var(--form-label-gap));
+        }
+        .form-row.form-row-stacked .form-label {
+            flex: none;
+            width: 100%;
+            max-width: none;
+            margin-left: 0;
+            text-align: left;
+            padding-right: 0;
+            margin-bottom: 10px;
+            line-height: 1.5;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+        /* 選項區維持與一般 input 相同起點 */
+        .form-row.form-row-stacked .form-input {
+            width: calc(100% - var(--form-content-offset));
+            max-width: none;
+            margin-left: var(--form-content-offset);
+        }
+        .radio-group,
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .radio-group .form-check,
+        .checkbox-group .form-check {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding-left: 0;
+            margin: 0;
+            min-height: auto;
+        }
+        /* stacked 選項沿用一般 flex 排版（起點由 .form-input offset 控制） */
+        .radio-group .form-check-input,
+        .checkbox-group .form-check-input {
+            position: static;
+            margin: 0.2rem 0 0 0;
+            flex-shrink: 0;
+        }
+        .radio-group .form-check-label,
+        .checkbox-group .form-check-label {
+            line-height: 1.5;
+            padding-left: 0;
         }
         .required {
             color: #e74c3c;
@@ -139,7 +211,118 @@
             border-radius: 5px;
             margin-top: 20px;
         }
+        .terms-header {
+            display: flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 16px;
+        }
+        .terms-header .section-title {
+            margin-bottom: 0;
+        }
+        .terms-open-link {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #67595E;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        .terms-open-link:hover {
+            color: #2980b9;
+        }
+        .terms-agree-row.form-check {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            text-align: left;
+            padding-left: 0 !important;
+            margin-left: 0;
+            margin-bottom: 0;
+        }
+        .terms-agree-row .form-check-input {
+            position: static;
+            margin-left: 0;
+            margin-top: 0.2rem;
+            flex-shrink: 0;
+        }
+        .terms-agree-row .form-check-label {
+            padding-left: 0;
+            margin-left: 0;
+            line-height: 1.5;
+        }
+        .terms-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 2000;
+            background: rgba(0, 0, 0, 0.55);
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .terms-overlay.is-open {
+            display: flex;
+        }
+        .terms-modal {
+            background: #fff;
+            width: 100%;
+            max-width: 720px;
+            max-height: 85vh;
+            border-radius: 10px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .terms-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .terms-modal-header h4 {
+            margin: 0;
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        .terms-modal-close {
+            border: none;
+            background: transparent;
+            font-size: 1.75rem;
+            line-height: 1;
+            color: #6c757d;
+            cursor: pointer;
+            padding: 0 4px;
+        }
+        .terms-modal-close:hover {
+            color: #2c3e50;
+        }
+        .terms-modal-body {
+            margin: 16px 20px 20px;
+            padding: 16px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            overflow-y: auto;
+            max-height: calc(85vh - 120px);
+            color: #2c3e50;
+            line-height: 1.6;
+        }
+        .terms-modal-body p {
+            margin-bottom: 0.75rem;
+        }
+        .terms-modal-body ul,
+        .terms-modal-body ol {
+            margin-bottom: 0.75rem;
+            padding-left: 1.25rem;
+        }
         @media (max-width: 768px) {
+            .form-header h1 {
+                font-size: 100%;
+            }
             .form-row {
                 flex-direction: column;
                 align-items: flex-start;
@@ -155,6 +338,65 @@
                 width: 100%;
                 max-width: none;
             }
+            .form-row.form-row-stacked .form-input {
+                margin-left: 0;
+                width: 100%;
+                max-width: none;
+            }
+            /* responsive：按鈕縮小約 30% */
+            .btn {
+                padding: 8px 20px;
+                min-width: 84px;
+                font-size: 0.85rem;
+                margin: 0 6px;
+            }
+        }
+        .ticket-category-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .ticket-category-btn {
+            border: 1px solid #ced4da;
+            background: #fff;
+            color: #333;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .ticket-category-btn.active {
+            background: #E8B4B8;
+            border-color: #E8B4B8;
+            color: #fff;
+        }
+        .ticket-select-block {
+            margin-bottom: 20px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f3f4;
+        }
+        .ticket-select-block .form-row {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .ticket-highlight-row {
+            display: none;
+            width: 100%;
+            margin-top: 8px;
+        }
+        .ticket-highlight-row.is-visible {
+            display: block;
+        }
+        .ticket-highlight-text {
+            width: 100%;
+            max-width: none;
+            margin: 0;
+            padding: 0;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #5a6268;
+            white-space: pre-wrap;
         }
     </style>
 </head>
@@ -164,8 +406,8 @@
         <div id="carouselExampleCaptions" class="carousel slide" data-ride="carousel">
             <div class="carousel-inner">
                 <div class="carousel-item active">
-                    <img src="/exvent/<%= event_id %>.jpg" class="d-block w-100" alt="第一張圖片" 
-                         onerror="this.src='/exvent/banner.jpg'">
+                    <img src="<%= typeof eventBannerSrc !== 'undefined' ? eventBannerSrc : '/exvent/' + event_id + '.jpg' %>" class="d-block w-100" alt="第一張圖片" 
+                         onerror="this.onerror=null;this.src='<%= typeof fallbackBannerSrc !== 'undefined' ? fallbackBannerSrc : '/exvent/banner.jpg' %>'">
                     <div class="carousel-caption d-none d-md-block">
                         
                     </div>
@@ -174,42 +416,71 @@
         </div>
         
         <!-- 語言切換 -->
+        <% const languageSwitcherEnabled = !formConfig || formConfig.languageSwitcherEnabled !== false; %>
+        <% if (languageSwitcherEnabled) { %>
         <div class="language-switcher" style="text-align: right; margin-top: 40px; margin-bottom: 30px;">
             <div class="btn-group" role="group">
                 <button type="button" class="btn btn-outline-primary" id="langZhBtn" onclick="switchLanguage('zh')">中文</button>
                 <button type="button" class="btn btn-outline-primary" id="langEnBtn" onclick="switchLanguage('en')">English</button>
             </div>
         </div>
+        <% } %>
 
+        <%
+            const regSubHeader = (formConfig && formConfig.registerSubHeader) ? formConfig.registerSubHeader : { zh: '', en: '' };
+            const regSubtitle = (formConfig && formConfig.registerSubtitle) ? formConfig.registerSubtitle : {
+                zh: '請填寫以下資料完成活動報名',
+                en: 'Please fill in the following information to complete event registration'
+            };
+            const headerInitLang = (formConfig && formConfig.defaultLanguage) ? formConfig.defaultLanguage : 'zh';
+            const initSubHeader = headerInitLang === 'en'
+                ? ((regSubHeader.en || regSubHeader.zh || '').trim())
+                : ((regSubHeader.zh || regSubHeader.en || '').trim());
+            const initSubtitle = headerInitLang === 'en'
+                ? (regSubtitle.en || regSubtitle.zh || 'Please fill in the following information to complete event registration')
+                : (regSubtitle.zh || regSubtitle.en || '請填寫以下資料完成活動報名');
+        %>
         <div class="form-header">
             <br><br>
-            <h1 id="formTitle">立即登記！</h1>
-            <p class="text-muted" id="formSubtitle">請填寫以下資料完成活動報名</p>
+            <h1 id="formTitle"><%= event && event.name ? event.name : 'Event' %></h1>
+            <p id="formSubHeader" class="form-subheader"<%= initSubHeader ? '' : ' style="display:none;"' %>><%= initSubHeader %></p>
+            <p class="text-muted" id="formSubtitle"><%= initSubtitle %></p>
         </div>
 
         <form id="userForm" method="POST">
             <% if (formConfig && formConfig.sections && formConfig.sections.length > 0) { %>
-                <% formConfig.sections.forEach((section, sectionIndex) => { %>
+                <% 
+                // 根據 order 排序 sections
+                const sortedSections = formConfig.sections.slice().sort((a, b) => {
+                    const orderA = a.order || 0;
+                    const orderB = b.order || 0;
+                    return orderA - orderB;
+                });
+                %>
+                <% sortedSections.forEach((section, sectionIndex) => { %>
                     <% if (section.visible) { %>
                         <div class="form-section">
                             <h3 class="section-title" data-zh="<%= section.sectionTitle && section.sectionTitle.zh ? section.sectionTitle.zh : section.sectionTitle %>" data-en="<%= section.sectionTitle && section.sectionTitle.en ? section.sectionTitle.en : '' %>">
                                 <%= section.sectionTitle && section.sectionTitle.zh ? section.sectionTitle.zh : (typeof section.sectionTitle === 'string' ? section.sectionTitle : '') %>
                             </h3>
-                            <% if (sectionIndex === 0) { %>
-                                <div class="form-note">
-                                    <strong class="note-text" data-zh="注意：" data-en="Note: ">注意：</strong>
-                                    <span class="note-content" data-zh="聯絡人可在付款完成後登入編輯參加者資料。所有參加者資料必須在付款前填寫完成。" data-en="Contact person can login to edit participant information after payment completion. All participant information must be completed before payment.">聯絡人可在付款完成後登入編輯參加者資料。所有參加者資料必須在付款前填寫完成。</span>
-                                </div>
-                                <div class="form-note">
-                                    <strong class="required-note" data-zh="（* 為必填欄位）" data-en="(* Required fields)">（* 為必填欄位）</strong>
-                                </div>
-                            <% } %>
                             
                             <% if (section.fields && section.fields.length > 0) { %>
-                                <% section.fields.forEach((field, fieldIndex) => { %>
-                                    <% if (field.visible) { %>
-                                        <div class="form-row">
-                                            <label class="form-label field-label" for="<%= field.fieldName %>" 
+                                <% 
+                                // 根據 order 排序 fields
+                                const sortedFields = section.fields.slice().sort((a, b) => {
+                                    const orderA = a.order || 0;
+                                    const orderB = b.order || 0;
+                                    return orderA - orderB;
+                                });
+                                %>
+                                <% sortedFields.forEach((field, fieldIndex) => { %>
+                                    <% const fieldDisplayed = field.display !== undefined ? field.display : field.visible !== false; %>
+                                    <% if (fieldDisplayed) { %>
+                                        <% var _selectHasOther = (field.type === 'select' && field.options && field.options.some(function (o) { return o && o.isOther; })); %>
+                                        <% var _fieldControlId = (field.type === 'select' && _selectHasOther) ? (field.fieldName + '_sel') : field.fieldName; %>
+                                        <% var _isChoiceField = field.type === 'radio' || field.type === 'checkbox'; %>
+                                        <div class="form-row<%= _isChoiceField ? ' form-row-stacked' : '' %>">
+                                            <label class="form-label field-label" for="<%= _fieldControlId %>" 
                                                    data-zh="<%= field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '') %>" 
                                                    data-en="<%= field.label && field.label.en ? field.label.en : '' %>">
                                                 <%= field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '') %>
@@ -220,16 +491,118 @@
                                             <div class="form-input">
                                                 <!-- Debug: field.type = <%= field.type %>, has options = <%= field.options ? 'yes' : 'no' %> -->
                                                 <% if (field.type === 'select' && field.options) { %>
-                                                    <select class="form-control" id="<%= field.fieldName %>" name="<%= field.fieldName %>" <%= field.required ? 'required' : '' %>>
-                                                        <option value="" class="select-placeholder" data-zh="--- 請選擇 ---" data-en="--- Please select ---">--- 請選擇 ---</option>
-                                                        <% field.options.forEach((option) => { %>
-                                                            <option value="<%= option.value %>" 
-                                                                    data-zh="<%= option.label && option.label.zh ? option.label.zh : option.label %>" 
-                                                                    data-en="<%= option.label && option.label.en ? option.label.en : '' %>">
-                                                                <%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>
-                                                            </option>
+                                                    <% if (_selectHasOther) { %>
+                                                        <select class="form-control js-select-maybe-other" id="<%= field.fieldName %>_sel"
+                                                                data-select-other-base="<%= field.fieldName %>"
+                                                                <%= field.required ? 'required' : '' %>>
+                                                            <option value="" class="select-placeholder" data-zh="--- 請選擇 ---" data-en="--- Please select ---">--- 請選擇 ---</option>
+                                                            <% field.options.forEach((option) => { %>
+                                                                <option value="<%= option.value %>"
+                                                                        data-is-other="<%= option.isOther ? '1' : '' %>"
+                                                                        data-zh="<%= option.label && option.label.zh ? option.label.zh : option.label %>" 
+                                                                        data-en="<%= option.label && option.label.en ? option.label.en : '' %>">
+                                                                    <%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>
+                                                                </option>
+                                                            <% }); %>
+                                                        </select>
+                                                        <input type="text" class="form-control mt-2 d-none js-select-other-text"
+                                                               id="<%= field.fieldName %>_other"
+                                                               data-placeholder-zh="請填寫"
+                                                               data-placeholder-en="Please specify"
+                                                               autocomplete="off">
+                                                        <input type="hidden" name="<%= field.fieldName %>" id="<%= field.fieldName %>_hidden" value="">
+                                                    <% } else { %>
+                                                        <select class="form-control" id="<%= field.fieldName %>" name="<%= field.fieldName %>" <%= field.required ? 'required' : '' %>>
+                                                            <option value="" class="select-placeholder" data-zh="--- 請選擇 ---" data-en="--- Please select ---">--- 請選擇 ---</option>
+                                                            <% field.options.forEach((option) => { %>
+                                                                <option value="<%= option.value %>" 
+                                                                        data-zh="<%= option.label && option.label.zh ? option.label.zh : option.label %>" 
+                                                                        data-en="<%= option.label && option.label.en ? option.label.en : '' %>">
+                                                                    <%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>
+                                                                </option>
+                                                            <% }); %>
+                                                        </select>
+                                                    <% } %>
+                                                <% } else if (field.type === 'checkbox' && field.options) { %>
+                                                    <div class="checkbox-group" id="<%= field.fieldName %>-group">
+                                                        <% field.options.forEach((option, optionIndex) => { %>
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="checkbox" 
+                                                                       id="<%= field.fieldName %>_<%= optionIndex %>" 
+                                                                       name="<%= field.fieldName %>[]" 
+                                                                       value="<%= option.value %>"
+                                                                       data-zh="<%= option.label && option.label.zh ? option.label.zh : option.label %>" 
+                                                                       data-en="<%= option.label && option.label.en ? option.label.en : '' %>"
+                                                                       <%= field.required ? 'data-required="true"' : '' %>>
+                                                                <label class="form-check-label" for="<%= field.fieldName %>_<%= optionIndex %>"
+                                                                       data-zh="<%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>" 
+                                                                       data-en="<%= option.label && option.label.en ? option.label.en : '' %>">
+                                                                    <%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>
+                                                                </label>
+                                                            </div>
                                                         <% }); %>
-                                                    </select>
+                                                    </div>
+                                                    <% if (field.required) { %>
+                                                        <script>
+                                                            // 驗證至少選擇一個 checkbox
+                                                            (function() {
+                                                                const checkboxes = document.querySelectorAll('#<%= field.fieldName %>-group input[type="checkbox"]');
+                                                                const group = document.getElementById('<%= field.fieldName %>-group');
+                                                                
+                                                                function validateCheckboxGroup() {
+                                                                    const checked = Array.from(checkboxes).some(cb => cb.checked);
+                                                                    const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh';
+                                                                    const fieldLabelZh = '<%= field.label && field.label.zh ? field.label.zh : (typeof field.label === "string" ? field.label : "") %>';
+                                                                    const fieldLabelEn = '<%= field.label && field.label.en ? field.label.en : "" %>';
+                                                                    
+                                                                    if (!checked) {
+                                                                        if (currentLang === 'en' && fieldLabelEn) {
+                                                                            group.setCustomValidity('Please select at least one option for ' + fieldLabelEn + '.');
+                                                                        } else {
+                                                                            group.setCustomValidity(fieldLabelZh + ' 為必填欄位');
+                                                                        }
+                                                                    } else {
+                                                                        group.setCustomValidity('');
+                                                                    }
+                                                                }
+                                                                
+                                                                checkboxes.forEach(cb => {
+                                                                    cb.addEventListener('change', validateCheckboxGroup);
+                                                                });
+                                                                
+                                                                // 表單提交時驗證
+                                                                const form = document.getElementById('userForm');
+                                                                if (form) {
+                                                                    form.addEventListener('submit', function(e) {
+                                                                        validateCheckboxGroup();
+                                                                        if (!group.checkValidity()) {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                        }
+                                                                    });
+                                                                }
+                                                            })();
+                                                        </script>
+                                                    <% } %>
+                                                <% } else if (field.type === 'radio' && field.options) { %>
+                                                    <div class="radio-group" id="<%= field.fieldName %>-group">
+                                                        <% field.options.forEach((option, optionIndex) => { %>
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="radio" 
+                                                                       id="<%= field.fieldName %>_<%= optionIndex %>" 
+                                                                       name="<%= field.fieldName %>" 
+                                                                       value="<%= option.value %>"
+                                                                       data-zh="<%= option.label && option.label.zh ? option.label.zh : option.label %>" 
+                                                                       data-en="<%= option.label && option.label.en ? option.label.en : '' %>"
+                                                                       <%= field.required ? 'required' : '' %>>
+                                                                <label class="form-check-label" for="<%= field.fieldName %>_<%= optionIndex %>"
+                                                                       data-zh="<%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>" 
+                                                                       data-en="<%= option.label && option.label.en ? option.label.en : '' %>">
+                                                                    <%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>
+                                                                </label>
+                                                            </div>
+                                                        <% }); %>
+                                                    </div>
                                                 <% } else if (field.type === 'textarea') { %>
                                                     <textarea class="form-control" id="<%= field.fieldName %>" name="<%= field.fieldName %>" 
                                                               placeholder="<%= field.placeholder && field.placeholder.zh ? field.placeholder.zh : (typeof field.placeholder === 'string' ? field.placeholder : '') %>" 
@@ -255,12 +628,6 @@
                 <!-- 預設表單結構（如果沒有配置） -->
                 <div class="form-section">
                     <h3>聯絡人資料</h3>
-                    <div class="form-note">
-                        <strong>注意：</strong>聯絡人可在付款完成後登入編輯參加者資料。所有參加者資料必須在付款前填寫完成。
-                    </div>
-                    <div class="form-note">
-                        <strong>（* 為必填欄位）</strong>
-                    </div>
 
                     <!-- 預設表單字段將在這裡顯示（如果沒有動態配置） -->
                     <div class="form-row">
@@ -296,32 +663,127 @@
             <% } %>
 
             <!-- 票券選擇（如果適用） -->
-            <% if (paymentTickets && paymentTickets.length > 0) { %>
-                <div class="form-section">
-                    <h3>票券選擇</h3>
-                    <div class="form-row">
-                        <label class="form-label" for="ticketId">
-                            選擇票券 <span class="required">*</span>
+            <% if (paymentTickets && paymentTickets.length > 0) {
+                const ptUi = (formConfig && formConfig.paymentTicketUi) ? formConfig.paymentTicketUi : {};
+                const ptSectionZh = (ptUi.sectionTitle && ptUi.sectionTitle.zh) ? ptUi.sectionTitle.zh : '票券選擇';
+                const ptSectionEn = (ptUi.sectionTitle && ptUi.sectionTitle.en) ? ptUi.sectionTitle.en : 'Ticket Selection';
+                const ptCatLabelZh = (ptUi.categoryLabel && ptUi.categoryLabel.zh) ? ptUi.categoryLabel.zh : '選擇類別';
+                const ptCatLabelEn = (ptUi.categoryLabel && ptUi.categoryLabel.en) ? ptUi.categoryLabel.en : 'Select Category';
+                const ptTicketLabelZh = (ptUi.ticketLabel && ptUi.ticketLabel.zh) ? ptUi.ticketLabel.zh : '選擇票券';
+                const ptTicketLabelEn = (ptUi.ticketLabel && ptUi.ticketLabel.en) ? ptUi.ticketLabel.en : 'Select Ticket';
+            %>
+                <div class="form-section" id="paymentTicketSection">
+                    <h3 class="section-title lang-text" id="ticketSectionTitle"
+                        data-zh="<%= ptSectionZh %>" data-en="<%= ptSectionEn %>"><%= ptSectionZh %></h3>
+
+                    <% if (ticketsUseCategories) { %>
+                    <div class="form-row" id="ticketCategoryRow">
+                        <label class="form-label field-label lang-text" id="ticketCategoryLabel"
+                               data-zh="<%= ptCatLabelZh %>" data-en="<%= ptCatLabelEn %>">
+                            <%= ptCatLabelZh %> <span class="required">*</span>
                         </label>
                         <div class="form-input">
-                            <select class="form-control" id="ticketId" name="ticketId" required>
-                                <option value="">--- 請選擇票券 ---</option>
-                                <% paymentTickets.forEach(function(ticket) { 
-                                    const now = new Date();
-                                    const ticketTime = ticket.datetime ? new Date(ticket.datetime) : null;
-                                    if (!ticketTime || ticketTime >= now) { %>
-                                        <option value="<%= ticket._id %>"><%= ticket.title %> - $<%= ticket.price %></option>
-                                <%  } 
-                                }); %>
-                            </select>
+                            <div id="ticketCategoryButtons" class="ticket-category-buttons" role="group"></div>
+                            <input type="hidden" id="ticketCategory" name="ticketCategory" value="">
+                        </div>
+                    </div>
+                    <% } %>
+
+                    <div class="ticket-select-block" id="ticketSelectBlock" <%= ticketsUseCategories ? 'style="display:none;"' : '' %>>
+                        <div class="form-row" id="ticketSelectRow">
+                            <label class="form-label field-label lang-text" for="ticketId" id="ticketSelectLabel"
+                                   data-zh="<%= ptTicketLabelZh %>" data-en="<%= ptTicketLabelEn %>">
+                                <%= ptTicketLabelZh %> <span class="required">*</span>
+                            </label>
+                            <div class="form-input">
+                                <select class="form-control" id="ticketId" name="ticketId" <%= ticketsUseCategories ? '' : 'required' %>>
+                                    <option value="" class="lang-text" data-zh="--- 請選擇票券 ---" data-en="--- Please select a ticket ---">--- 請選擇票券 ---</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="ticketHighlightRow" class="ticket-highlight-row" aria-live="polite">
+                            <div id="ticketHighlightText" class="ticket-highlight-text"></div>
                         </div>
                     </div>
                 </div>
+                <script type="application/json" id="paymentTicketsDataJson"><%- JSON.stringify(paymentTickets) %></script>
+                <script type="application/json" id="paymentTicketUiJson"><%- JSON.stringify(ptUi) %></script>
+                <script type="application/json" id="ticketsUseCategoriesJson"><%- JSON.stringify(!!ticketsUseCategories) %></script>
+            <% } %>
+
+            <!-- Terms & Conditions（需同意才可提交） -->
+            <% if (formConfig && formConfig.terms && formConfig.terms.enabled) { %>
+                <div class="form-section terms-section">
+                    <div class="terms-header">
+                        <h3 class="section-title" data-zh="條款與細則" data-en="Terms & Conditions">條款與細則</h3>
+                        <a href="#" class="terms-open-link lang-text" id="termsOpenLink" role="button"
+                           data-zh="(條款)" data-en="(terms)">(terms)</a>
+                    </div>
+                    <div class="form-check terms-agree-row">
+                        <input class="form-check-input" type="checkbox" id="termsAgree" required>
+                        <label class="form-check-label"
+                               for="termsAgree"
+                               data-zh="<%= (formConfig.terms.label && formConfig.terms.label.zh ? formConfig.terms.label.zh : '') %>"
+                               data-en="<%= (formConfig.terms.label && formConfig.terms.label.en ? formConfig.terms.label.en : '') %>"><%= (formConfig.terms.label && formConfig.terms.label.zh ? formConfig.terms.label.zh : '') %></label>
+                    </div>
+                </div>
+
+                <div id="termsOverlay" class="terms-overlay" aria-hidden="true">
+                    <div class="terms-modal" role="dialog" aria-modal="true" aria-labelledby="termsModalTitle">
+                        <div class="terms-modal-header">
+                            <h4 id="termsModalTitle" class="lang-text" data-zh="條款與細則" data-en="Terms & Conditions">Terms & Conditions</h4>
+                            <button type="button" class="terms-modal-close" id="termsModalClose" aria-label="Close">&times;</button>
+                        </div>
+                        <div class="terms-modal-body" id="termsContent"></div>
+                    </div>
+                </div>
+                <script type="application/json" id="termsContentJson"><%- JSON.stringify({
+                    zh: (formConfig.terms.content && formConfig.terms.content.zh) ? formConfig.terms.content.zh : '',
+                    en: (formConfig.terms.content && formConfig.terms.content.en) ? formConfig.terms.content.en : ''
+                }) %></script>
+            <% } %>
+
+            <!-- Agreement（非必填，但會記錄勾選狀態） -->
+            <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
+                <div class="form-section agreement-section">
+                    <div class="terms-header">
+                        <h3 class="section-title" data-zh="協議" data-en="Agreement">協議</h3>
+                        <a href="#" class="terms-open-link lang-text" id="agreementOpenLink" role="button"
+                           data-zh="(協議)" data-en="(agreement)">(agreement)</a>
+                    </div>
+                    <div class="form-check terms-agree-row">
+                        <input class="form-check-input" type="checkbox" id="agreementAgree" name="agreementAgreed" value="true">
+                        <label class="form-check-label"
+                               for="agreementAgree"
+                               data-zh="<%= (formConfig.agreement.label && formConfig.agreement.label.zh ? formConfig.agreement.label.zh : '') %>"
+                               data-en="<%= (formConfig.agreement.label && formConfig.agreement.label.en ? formConfig.agreement.label.en : '') %>"><%= (formConfig.agreement.label && formConfig.agreement.label.zh ? formConfig.agreement.label.zh : '') %></label>
+                    </div>
+                </div>
+
+                <div id="agreementOverlay" class="terms-overlay" aria-hidden="true">
+                    <div class="terms-modal" role="dialog" aria-modal="true" aria-labelledby="agreementModalTitle">
+                        <div class="terms-modal-header">
+                            <h4 id="agreementModalTitle" class="lang-text" data-zh="協議" data-en="Agreement">Agreement</h4>
+                            <button type="button" class="terms-modal-close" id="agreementModalClose" aria-label="Close">&times;</button>
+                        </div>
+                        <div class="terms-modal-body" id="agreementContent"></div>
+                    </div>
+                </div>
+                <script type="application/json" id="agreementContentJson"><%- JSON.stringify({
+                    zh: (formConfig.agreement.content && formConfig.agreement.content.zh) ? formConfig.agreement.content.zh : '',
+                    en: (formConfig.agreement.content && formConfig.agreement.content.en) ? formConfig.agreement.content.en : ''
+                }) %></script>
             <% } %>
 
             <div class="btn-container">
-                <button type="button" class="btn btn-secondary" onclick="history.back()">返回</button>
-                <button type="submit" class="btn btn-primary">下一步</button>
+                <% const regBtnUi = (formConfig && formConfig.paymentTicketUi && formConfig.paymentTicketUi.buttons) ? formConfig.paymentTicketUi.buttons : {}; %>
+                <button type="button" class="btn btn-secondary lang-text" id="registerBackBtn"
+                        data-zh="<%= (regBtnUi.back && regBtnUi.back.zh) ? regBtnUi.back.zh : '返回' %>"
+                        data-en="<%= (regBtnUi.back && regBtnUi.back.en) ? regBtnUi.back.en : 'Back' %>"
+                        onclick="history.back()"><%= (regBtnUi.back && regBtnUi.back.zh) ? regBtnUi.back.zh : '返回' %></button>
+                <button type="submit" class="btn btn-primary lang-text" id="registerNextBtn"
+                        data-zh="<%= (regBtnUi.next && regBtnUi.next.zh) ? regBtnUi.next.zh : '下一步' %>"
+                        data-en="<%= (regBtnUi.next && regBtnUi.next.en) ? regBtnUi.next.en : 'Next' %>"><%= (regBtnUi.next && regBtnUi.next.zh) ? regBtnUi.next.zh : '下一步' %></button>
             </div>
         </form>
         
@@ -333,16 +795,296 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
-        // 語言設置
-        let currentLanguage = '<%= formConfig.defaultLanguage || "zh" %>';
+        // 從 URL 參數獲取語言
+        function getLanguageFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const lang = urlParams.get('lang');
+            // 如果 URL 中有 lang 參數，且為 'zh' 或 'en'，則使用該語言
+            if (lang === 'zh' || lang === 'en') {
+                return lang;
+            }
+            return null;
+        }
+        
+        // 語言設置：優先使用 URL 參數，否則使用默認語言
+        const languageSwitcherEnabled = <%- JSON.stringify(!formConfig || formConfig.languageSwitcherEnabled !== false) %>;
+        const urlLanguage = languageSwitcherEnabled ? getLanguageFromURL() : null;
+        let currentLanguage = urlLanguage || '<%= formConfig.defaultLanguage || "zh" %>';
+        const formConfigEventName = <%- JSON.stringify(formConfig && formConfig.eventDisplayName ? formConfig.eventDisplayName : { zh: '', en: '' }) %>;
+        const formConfigRegisterSubHeader = <%- JSON.stringify(formConfig && formConfig.registerSubHeader ? formConfig.registerSubHeader : { zh: '', en: '' }) %>;
+        const formConfigRegisterSubtitle = <%- JSON.stringify(formConfig && formConfig.registerSubtitle ? formConfig.registerSubtitle : { zh: '請填寫以下資料完成活動報名', en: 'Please fill in the following information to complete event registration' }) %>;
+        const fallbackEventName = <%- JSON.stringify(event && event.name ? event.name : 'Event') %>;
+        function getBilingualFormText(obj, lang, fallbackZh, fallbackEn) {
+            const zh = (obj && obj.zh) ? String(obj.zh).trim() : '';
+            const en = (obj && obj.en) ? String(obj.en).trim() : '';
+            if (lang === 'en') return en || zh || fallbackEn || fallbackZh || '';
+            return zh || en || fallbackZh || fallbackEn || '';
+        }
+        function getHeaderEventName(lang) {
+            return getBilingualFormText(formConfigEventName, lang, '', '') || fallbackEventName;
+        }
+        function getRegisterSubHeader(lang) {
+            return getBilingualFormText(formConfigRegisterSubHeader, lang, '', '');
+        }
+        function getRegisterSubtitle(lang) {
+            return getBilingualFormText(
+                formConfigRegisterSubtitle,
+                lang,
+                '請填寫以下資料完成活動報名',
+                'Please fill in the following information to complete event registration'
+            );
+        }
+        function updateRegisterHeaderText() {
+            $('#formTitle').text(getHeaderEventName(currentLanguage));
+            const sub = getRegisterSubHeader(currentLanguage);
+            if (sub) {
+                $('#formSubHeader').text(sub).show();
+            } else {
+                $('#formSubHeader').hide().empty();
+            }
+            $('#formSubtitle').text(getRegisterSubtitle(currentLanguage));
+        }
+        const termsContentByLang = (function() {
+            const el = document.getElementById('termsContentJson');
+            if (!el) return { zh: '', en: '' };
+            try { return JSON.parse(el.textContent); } catch (_) { return { zh: '', en: '' }; }
+        })();
+        const agreementContentByLang = (function() {
+            const el = document.getElementById('agreementContentJson');
+            if (!el) return { zh: '', en: '' };
+            try { return JSON.parse(el.textContent); } catch (_) { return { zh: '', en: '' }; }
+        })();
+
+        // --- 付費票券：分類按鈕、票券下拉、Highlight ---
+        const paymentTicketsData = (function() {
+            const el = document.getElementById('paymentTicketsDataJson');
+            if (!el) return [];
+            try { return JSON.parse(el.textContent); } catch (_) { return []; }
+        })();
+        const paymentTicketUi = (function() {
+            const el = document.getElementById('paymentTicketUiJson');
+            if (!el) return {};
+            try { return JSON.parse(el.textContent); } catch (_) { return {}; }
+        })();
+        const ticketsUseCategories = (function() {
+            const el = document.getElementById('ticketsUseCategoriesJson');
+            if (!el) return false;
+            try { return !!JSON.parse(el.textContent); } catch (_) { return false; }
+        })();
+        let selectedTicketCategory = '';
+
+        function isTicketInRange(ticket) {
+            const now = new Date();
+            const from = ticket.datetimeFrom ? new Date(ticket.datetimeFrom) : null;
+            const to = ticket.datetimeTo ? new Date(ticket.datetimeTo) : (ticket.datetime ? new Date(ticket.datetime) : null);
+            if (from && now < from) return false;
+            if (to && now > to) return false;
+            return true;
+        }
+
+        function getTicketCategoryKey(ticket) {
+            return ticket && ticket.category != null ? String(ticket.category).trim() : '';
+        }
+
+        function getCategoryButtonLabel(key) {
+            if (key === '') {
+                const def = paymentTicketUi.defaultCategoryLabel || {};
+                return currentLanguage === 'en'
+                    ? (def.en || def.zh || 'Other')
+                    : (def.zh || def.en || '其他');
+            }
+            const buttons = paymentTicketUi.categoryButtons || [];
+            const found = buttons.find(b => b && String(b.key).trim() === key);
+            if (found && found.label) {
+                return currentLanguage === 'en'
+                    ? (found.label.en || found.label.zh || key)
+                    : (found.label.zh || found.label.en || key);
+            }
+            return key;
+        }
+
+        function getTicketOptionLabel(ticket) {
+            const t = ticket.title || {};
+            const zh = t.zh || '';
+            const en = t.en || zh;
+            const name = currentLanguage === 'en' ? (en || zh) : (zh || en);
+            const price = ticket.price != null ? ticket.price : '';
+            if (name) return name + ' - $' + price;
+            return currentLanguage === 'en' ? ('Ticket - $' + price) : ('票券 - $' + price);
+        }
+
+        function getDistinctCategoryKeys() {
+            const keys = [];
+            const seen = new Set();
+            let hasEmpty = false;
+            paymentTicketsData.forEach(function(ticket) {
+                if (!isTicketInRange(ticket)) return;
+                const key = getTicketCategoryKey(ticket);
+                if (!key) {
+                    hasEmpty = true;
+                    return;
+                }
+                if (seen.has(key)) return;
+                seen.add(key);
+                keys.push(key);
+            });
+            if (hasEmpty) keys.push('');
+            return keys;
+        }
+
+        function updateTicketSectionHighlight() {
+            const $hl = $('#ticketHighlightText');
+            const $hlRow = $('#ticketHighlightRow');
+            const $block = $('#ticketSelectBlock');
+            if (!$hl.length || !$hlRow.length) return;
+            if (!$block.length || $block.is(':hidden')) {
+                $hlRow.removeClass('is-visible');
+                $hl.empty();
+                return;
+            }
+            const ht = paymentTicketUi.highlightText || {};
+            const text = currentLanguage === 'en'
+                ? (ht.en || ht.zh || '')
+                : (ht.zh || ht.en || '');
+            if (!String(text).trim()) {
+                $hlRow.removeClass('is-visible');
+                $hl.empty();
+                return;
+            }
+            $hl.text(text);
+            $hlRow.addClass('is-visible');
+        }
+
+        function rebuildTicketSelect() {
+            const $sel = $('#ticketId');
+            if (!$sel.length) return;
+            const placeholderZh = '--- 請選擇票券 ---';
+            const placeholderEn = '--- Please select a ticket ---';
+            const ph = currentLanguage === 'en' ? placeholderEn : placeholderZh;
+            $sel.empty().append($('<option>', { value: '', text: ph, 'data-zh': placeholderZh, 'data-en': placeholderEn }));
+
+            paymentTicketsData.forEach(function(ticket) {
+                if (!isTicketInRange(ticket)) return;
+                if (ticketsUseCategories && selectedTicketCategory !== getTicketCategoryKey(ticket)) return;
+                const t = ticket.title || {};
+                const optZh = (t.zh ? t.zh : '票券') + ' - $' + ticket.price;
+                const optEn = ((t.en || t.zh) ? (t.en || t.zh) : 'Ticket') + ' - $' + ticket.price;
+                $sel.append($('<option>', {
+                    value: ticket._id,
+                    text: getTicketOptionLabel(ticket),
+                    'data-zh': optZh,
+                    'data-en': optEn
+                }));
+            });
+            updateTicketSectionHighlight();
+        }
+
+        function renderCategoryButtons() {
+            const $wrap = $('#ticketCategoryButtons');
+            if (!$wrap.length) return;
+            $wrap.empty();
+            getDistinctCategoryKeys().forEach(function(key) {
+                const $btn = $('<button>', {
+                    type: 'button',
+                    class: 'ticket-category-btn',
+                    text: getCategoryButtonLabel(key),
+                    'data-category': key
+                });
+                if (key === selectedTicketCategory) $btn.addClass('active');
+                $wrap.append($btn);
+            });
+        }
+
+        function initPaymentTickets() {
+            if (!paymentTicketsData.length) return;
+            if (ticketsUseCategories) {
+                renderCategoryButtons();
+                $('#ticketCategoryButtons').on('click', '.ticket-category-btn', function() {
+                    selectedTicketCategory = $(this).data('category');
+                    $('#ticketCategory').val(selectedTicketCategory);
+                    $('.ticket-category-btn').removeClass('active');
+                    $(this).addClass('active');
+                    $('#ticketSelectBlock').show();
+                    $('#ticketId').prop('required', true).val('');
+                    rebuildTicketSelect();
+                    updateTicketSectionHighlight();
+                });
+            } else {
+                rebuildTicketSelect();
+            }
+            updateTicketSectionHighlight();
+        }
+
+        function refreshPaymentTicketUi() {
+            if (!paymentTicketsData.length) return;
+            if (ticketsUseCategories) renderCategoryButtons();
+            rebuildTicketSelect();
+            updateTicketSectionHighlight();
+        }
+
+        /** 是否為區塊級 HTML（p/div/ul 等），此類內容直接渲染 */
+        function termsLooksLikeBlockHtml(s) {
+            return /<\s*\/?\s*(p|div|ul|ol|li|h[1-6]|table|tbody|tr|td|th|blockquote|section|article|br)\b/i.test(s);
+        }
+
+        /** 純文字或簡單 HTML：保留換行；完整 HTML 區塊則原樣輸出 */
+        function formatTermsContent(raw) {
+            const s = String(raw || '');
+            if (!s.trim()) return '';
+            if (termsLooksLikeBlockHtml(s)) {
+                return s;
+            }
+            const normalized = s.replace(/\r\n/g, '\n');
+            if (/<[a-z][\s\S]*?>/i.test(normalized)) {
+                return normalized.replace(/\n/g, '<br>');
+            }
+            const div = document.createElement('div');
+            div.textContent = normalized;
+            return div.innerHTML.replace(/\n/g, '<br>');
+        }
+
+        function renderTermsContentHtml() {
+            const $termsContent = $('#termsContent');
+            if (!$termsContent.length) return;
+            const raw = currentLanguage === 'en'
+                ? (termsContentByLang.en || termsContentByLang.zh || '')
+                : (termsContentByLang.zh || termsContentByLang.en || '');
+            $termsContent.html(formatTermsContent(raw));
+        }
+
+        function renderAgreementContentHtml() {
+            const $content = $('#agreementContent');
+            if (!$content.length) return;
+            const raw = currentLanguage === 'en'
+                ? (agreementContentByLang.en || agreementContentByLang.zh || '')
+                : (agreementContentByLang.zh || agreementContentByLang.en || '');
+            $content.html(formatTermsContent(raw));
+        }
         
         // 初始化語言按鈕狀態
         $(document).ready(function() {
             updateLanguageButtons();
-            // 如果默認語言不是中文，直接更新頁面語言
-            if (currentLanguage !== 'zh') {
-                updatePageLanguage();
-            }
+            initPaymentTickets();
+            // 總是更新頁面語言（確保初始狀態正確）
+            updatePageLanguage();
+            
+            // 頁面載入後，清除所有有效字段的驗證訊息
+            setTimeout(function() {
+                $('input[required], textarea[required], select[required]').each(function() {
+                    const field = this;
+                    const $field = $(field);
+                    const fieldType = $field.attr('type');
+                    
+                    if (fieldType === 'checkbox' || fieldType === 'radio') {
+                        return;
+                    }
+                    
+                    // 如果字段有效，清除驗證訊息
+                    if (field.validity.valid) {
+                        field.setCustomValidity('');
+                    }
+                });
+            }, 100);
         });
 
         // 切換語言
@@ -357,20 +1099,14 @@
 
         // 更新語言按鈕狀態
         function updateLanguageButtons() {
+            if (!languageSwitcherEnabled) return;
             $('#langZhBtn').toggleClass('active', currentLanguage === 'zh');
             $('#langEnBtn').toggleClass('active', currentLanguage === 'en');
         }
 
         // 更新頁面語言
         function updatePageLanguage() {
-            // 更新標題和副標題
-            if (currentLanguage === 'zh') {
-                $('#formTitle').text('立即登記！');
-                $('#formSubtitle').text('請填寫以下資料完成活動報名');
-            } else {
-                $('#formTitle').text('Register Now!');
-                $('#formSubtitle').text('Please fill in the following information to complete event registration');
-            }
+            updateRegisterHeaderText();
 
             // 更新區塊標題
             $('.section-title').each(function() {
@@ -385,17 +1121,41 @@
 
             // 更新字段標籤
             $('.field-label').each(function() {
-                const zhText = $(this).data('zh');
-                const enText = $(this).data('en');
+                const $label = $(this);
+                const zhText = $label.data('zh');
+                const enText = $label.data('en');
+                // 檢查原始 HTML 中是否包含 required span，或檢查對應的輸入字段是否有 required 屬性
+                const fieldId = $label.attr('for');
+                const hasRequired = $label.find('.required').length > 0 || 
+                                   (fieldId && $(`#${fieldId}`).attr('required') !== undefined);
+                
                 if (currentLanguage === 'zh' && zhText) {
-                    $(this).text(zhText + ($(this).find('.required').length ? ' *' : ''));
+                    if (hasRequired) {
+                        $label.html(zhText + ' <span class="required">*</span>');
+                    } else {
+                        $label.text(zhText);
+                    }
                 } else if (currentLanguage === 'en' && enText) {
-                    $(this).text(enText + ($(this).find('.required').length ? ' *' : ''));
+                    if (hasRequired) {
+                        $label.html(enText + ' <span class="required">*</span>');
+                    } else {
+                        $label.text(enText);
+                    }
                 }
             });
 
             // 更新佔位符文本
             $('input, textarea').each(function() {
+                const zhPlaceholder = $(this).data('placeholder-zh');
+                const enPlaceholder = $(this).data('placeholder-en');
+                if (currentLanguage === 'zh' && zhPlaceholder) {
+                    $(this).attr('placeholder', zhPlaceholder);
+                } else if (currentLanguage === 'en' && enPlaceholder) {
+                    $(this).attr('placeholder', enPlaceholder);
+                }
+            });
+            // select「其他」自填欄位佔位符
+            $('.js-select-other-text').each(function() {
                 const zhPlaceholder = $(this).data('placeholder-zh');
                 const enPlaceholder = $(this).data('placeholder-en');
                 if (currentLanguage === 'zh' && zhPlaceholder) {
@@ -416,8 +1176,25 @@
                 }
             });
 
-            // 更新提示文本
-            $('.note-text').each(function() {
+            // 更新 checkbox 和 radio 選項標籤
+            $('.form-check-label').each(function() {
+                const $label = $(this);
+                const zhText = $label.data('zh');
+                const enText = $label.data('en');
+                if (currentLanguage === 'zh' && zhText) {
+                    $label.text(zhText);
+                } else if (currentLanguage === 'en' && enText) {
+                    $label.text(enText);
+                }
+            });
+
+            // 更新 T&C 內容（支援 HTML）
+            renderTermsContentHtml();
+            renderAgreementContentHtml();
+            if (typeof refreshPaymentTicketUi === 'function') refreshPaymentTicketUi();
+
+            // 更新按鈕文字（返回、下一步等）
+            $('.lang-text').each(function() {
                 const zhText = $(this).data('zh');
                 const enText = $(this).data('en');
                 if (currentLanguage === 'zh' && zhText) {
@@ -427,26 +1204,174 @@
                 }
             });
 
-            $('.note-content').each(function() {
-                const zhText = $(this).data('zh');
-                const enText = $(this).data('en');
-                if (currentLanguage === 'zh' && zhText) {
-                    $(this).text(zhText);
-                } else if (currentLanguage === 'en' && enText) {
-                    $(this).text(enText);
+            // 設置驗證訊息的函數（只在驗證失敗時調用）
+            function setValidationMessage(field) {
+                const $field = $(field);
+                const fieldType = $field.attr('type');
+                
+                // 如果是 checkbox 或 radio，跳過（它們有特殊的驗證邏輯）
+                if (fieldType === 'checkbox' || fieldType === 'radio') {
+                    return;
                 }
-            });
+                
+                // 根據語言設置驗證訊息
+                if (currentLanguage === 'zh') {
+                    if (field.validity.valueMissing) {
+                        field.setCustomValidity('請填寫這個欄位。');
+                    } else if (fieldType === 'email' && field.validity.typeMismatch) {
+                        field.setCustomValidity('請輸入有效的電子郵件地址。');
+                    } else {
+                        field.setCustomValidity('請填寫這個欄位。');
+                    }
+                } else {
+                    if (field.validity.valueMissing) {
+                        field.setCustomValidity('Please fill in this field.');
+                    } else if (fieldType === 'email' && field.validity.typeMismatch) {
+                        field.setCustomValidity('Please enter a valid email address.');
+                    } else {
+                        field.setCustomValidity('Please fill in this field.');
+                    }
+                }
+            }
 
-            $('.required-note').each(function() {
-                const zhText = $(this).data('zh');
-                const enText = $(this).data('en');
-                if (currentLanguage === 'zh' && zhText) {
-                    $(this).text(zhText);
-                } else if (currentLanguage === 'en' && enText) {
-                    $(this).text(enText);
+            // 為所有必填字段設置驗證訊息處理
+            $('input[required], textarea[required], select[required]').each(function() {
+                const field = this;
+                const $field = $(field);
+                const fieldType = $field.attr('type');
+                
+                // 跳過 checkbox 和 radio（它們有特殊的驗證邏輯）
+                if (fieldType === 'checkbox' || fieldType === 'radio') {
+                    return;
                 }
+                
+                // 監聽輸入事件，清除驗證訊息（如果字段有效）
+                $(field).on('input', function() {
+                    // 立即清除驗證訊息，讓瀏覽器重新驗證
+                    this.setCustomValidity('');
+                    // 如果字段有效，確保保持清除狀態
+                    if (this.validity.valid) {
+                        this.setCustomValidity('');
+                    }
+                });
+                
+                // 監聽改變事件，清除驗證訊息（如果字段有效）
+                $(field).on('change', function() {
+                    // 立即清除驗證訊息
+                    this.setCustomValidity('');
+                    if (this.validity.valid) {
+                        this.setCustomValidity('');
+                    }
+                });
+                
+                // 在驗證失敗時設置訊息
+                $(field).on('invalid', function(e) {
+                    // 只在字段確實無效時設置訊息
+                    if (!this.validity.valid) {
+                        setValidationMessage(this);
+                    }
+                });
             });
+            
+            // 在語言切換後，更新所有字段的驗證訊息（只在字段無效時）
+            const originalUpdatePageLanguage = updatePageLanguage;
+            updatePageLanguage = function() {
+                originalUpdatePageLanguage.call(this);
+                
+                // 更新所有無效字段的驗證訊息（只在字段已經有自定義驗證訊息時才更新）
+                $('input[required], textarea[required], select[required]').each(function() {
+                    const field = this;
+                    const $field = $(field);
+                    const fieldType = $field.attr('type');
+                    
+                    if (fieldType === 'checkbox' || fieldType === 'radio') {
+                        return;
+                    }
+                    
+                    // 如果字段有效，清除所有驗證訊息
+                    if (field.validity.valid) {
+                        field.setCustomValidity('');
+                    } else {
+                        // 只有當字段確實無效且已經有驗證訊息時才更新（避免在頁面載入時設置）
+                        // 檢查字段是否有值，如果有值但無效，才更新訊息
+                        if (field.value && field.value.trim() !== '') {
+                            // 字段有值但驗證失敗（如 email 格式錯誤），更新訊息
+                            setValidationMessage(field);
+                        } else {
+                            // 字段為空，但只在已經觸發過驗證時才設置訊息
+                            // 這裡不設置，讓瀏覽器在實際驗證時才設置
+                        }
+                    }
+                });
+            };
+
         }
+
+        function initOverlayAndValidation(opts) {
+            const overlay = document.getElementById(opts.overlayId);
+            const openLink = document.getElementById(opts.openLinkId);
+            const closeBtn = document.getElementById(opts.closeBtnId);
+            const agreeEl = document.getElementById(opts.agreeId);
+
+            function openOverlay(e) {
+                if (e) e.preventDefault();
+                if (!overlay) return;
+                overlay.classList.add('is-open');
+                overlay.setAttribute('aria-hidden', 'false');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeOverlay() {
+                if (!overlay) return;
+                overlay.classList.remove('is-open');
+                overlay.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+            }
+
+            if (openLink) openLink.addEventListener('click', openOverlay);
+            if (closeBtn) closeBtn.addEventListener('click', closeOverlay);
+            if (overlay) {
+                overlay.addEventListener('click', function(e) {
+                    if (e.target === overlay) closeOverlay();
+                });
+            }
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && overlay && overlay.classList.contains('is-open')) {
+                    closeOverlay();
+                }
+            });
+
+            if (agreeEl && !opts.optionalAgree) {
+                agreeEl.addEventListener('change', function() {
+                    this.setCustomValidity('');
+                });
+                agreeEl.addEventListener('invalid', function() {
+                    const msg = currentLanguage === 'zh'
+                        ? (opts.invalidMsgZh || '請先閱讀並勾選同意，才可提交。')
+                        : (opts.invalidMsgEn || 'Please agree before submitting.');
+                    this.setCustomValidity(msg);
+                });
+            }
+        }
+
+        // Terms & Conditions
+        initOverlayAndValidation({
+            overlayId: 'termsOverlay',
+            openLinkId: 'termsOpenLink',
+            closeBtnId: 'termsModalClose',
+            agreeId: 'termsAgree',
+            invalidMsgZh: '請先閱讀並勾選同意條款，才可提交。',
+            invalidMsgEn: 'Please agree to the terms before submitting.'
+        });
+
+        // Agreement（非必填，僅彈層；勾選狀態於 submit 時寫入 agreementAgreed）
+        initOverlayAndValidation({
+            overlayId: 'agreementOverlay',
+            openLinkId: 'agreementOpenLink',
+            closeBtnId: 'agreementModalClose',
+            agreeId: 'agreementAgree',
+            optionalAgree: true
+        });
 
         // stripe public key
         const STRIPE_PK = '<%= process.env.STRIPE_PK || "" %>';
@@ -455,22 +1380,107 @@
             stripe = Stripe(STRIPE_PK);
         }
 
+        // FormConfig：select 勾選「其他可自填」時，以隱藏欄位送出用戶輸入文字
+        function syncSelectWithOther(selectEl) {
+            if (!selectEl || !selectEl.getAttribute('data-select-other-base')) return;
+            var base = selectEl.getAttribute('data-select-other-base');
+            var hidden = document.getElementById(base + '_hidden');
+            var other = document.getElementById(base + '_other');
+            if (!hidden || !other) return;
+            var opt = selectEl.options[selectEl.selectedIndex];
+            var isOther = opt && opt.getAttribute('data-is-other') === '1';
+            if (isOther) {
+                $(other).removeClass('d-none');
+                if (selectEl.hasAttribute('required')) {
+                    other.setAttribute('required', 'required');
+                } else {
+                    other.removeAttribute('required');
+                }
+                hidden.value = (other.value || '').trim();
+            } else {
+                $(other).addClass('d-none');
+                other.removeAttribute('required');
+                other.value = '';
+                other.setCustomValidity('');
+                hidden.value = selectEl.value || '';
+            }
+        }
+        $(document).on('change', '.js-select-maybe-other', function() {
+            syncSelectWithOther(this);
+        });
+        $(document).on('input', '.js-select-other-text', function() {
+            var id = this.id;
+            if (id && id.indexOf('_other') !== -1) {
+                var base = id.replace(/_other$/, '');
+                var sel = document.getElementById(base + '_sel');
+                if (sel) syncSelectWithOther(sel);
+            }
+        });
+        $(function() {
+            $('.js-select-maybe-other').each(function() { syncSelectWithOther(this); });
+        });
+
         $('#userForm').on('submit', function(e) {
             e.preventDefault(); // 防止表單默認提交
+            $('.js-select-maybe-other').each(function() { syncSelectWithOther(this); });
+            var formEl = document.getElementById('userForm');
+            $('.js-select-other-text').each(function() {
+                if (!$(this).hasClass('d-none') && this.hasAttribute('required') && !((this.value || '').trim())) {
+                    this.setCustomValidity(currentLanguage === 'zh' ? '請填寫這個欄位。' : 'Please fill in this field.');
+                } else {
+                    this.setCustomValidity('');
+                }
+            });
+            if (ticketsUseCategories && paymentTicketsData.length) {
+                if ($('#ticketCategoryButtons').length && !$('#ticketCategoryButtons .active').length) {
+                    alert(currentLanguage === 'zh' ? '請先選擇票券類別。' : 'Please select a ticket category first.');
+                    return;
+                }
+                if (!$('#ticketId').val()) {
+                    alert(currentLanguage === 'zh' ? '請選擇票券。' : 'Please select a ticket.');
+                    return;
+                }
+            }
+            if (formEl && !formEl.checkValidity()) {
+                formEl.reportValidity();
+                return;
+            }
             const ticketId = $('#ticketId').val();
             
             // 動態收集所有表單字段
             const newUser = {};
             $('#userForm').find('input, select, textarea').each(function() {
                 const fieldName = $(this).attr('name');
-                if (fieldName && fieldName !== 'ticketId') {
-                    newUser[fieldName] = $(this).val();
+                if (!fieldName || fieldName === 'ticketId' || fieldName === 'agreementAgreed') return;
+                const type = (this.type || '').toLowerCase();
+                if (type === 'checkbox') {
+                    if (!this.checked) return;
+                    if (fieldName.endsWith('[]')) {
+                        const key = fieldName.slice(0, -2);
+                        if (!Array.isArray(newUser[key])) newUser[key] = [];
+                        newUser[key].push($(this).val());
+                    } else {
+                        newUser[fieldName] = $(this).val();
+                    }
+                    return;
                 }
+                if (type === 'radio') {
+                    if (this.checked) newUser[fieldName] = $(this).val();
+                    return;
+                }
+                newUser[fieldName] = $(this).val();
             });
+            const agreementEl = document.getElementById('agreementAgree');
+            if (agreementEl) {
+                newUser.agreementAgreed = agreementEl.checked;
+                newUser.agreementRecordedAt = new Date().toISOString();
+            }
             newUser.ticketId = ticketId;
             if (ticketId) {
-                // Stripe checkout
+                // Wonder Payment checkout（沿用舊 API 路徑）
 
+                newUser.lang = currentLanguage;
+                
                 $.ajax({
                     type: 'POST',
                     url: '/web/<%= event_id %>/stripe-checkout',
@@ -489,13 +1499,14 @@
                     }
                 });
             } else {
-                // 無票券，直接註冊
+                // 無票券：公開免費報名（/web 路由，iframe 可用，不需 CORS）
                 $.ajax({
                     type: 'POST',
-                    url: '/events/<%= event_id %>/users',
+                    url: '/web/<%= event_id %>/register',
                     data: newUser,
                     success: function(response) {
-                        window.location.href = `/web/<%= event_id %>/register/success`;
+                        const langParam = currentLanguage !== 'zh' ? '?lang=' + currentLanguage : '';
+                        window.location.href = `/web/<%= event_id %>/register/success${langParam}`;
                     },
                     error: function(error) {
                         var errMsg = error.responseJSON.message;

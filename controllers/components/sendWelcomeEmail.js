@@ -15,7 +15,9 @@ const transporter = nodemailer.createTransport({
 const sendWelcomeEmail = async (event, user) => {
     try {
         // 生成 QR 碼 URL
-        const qrCodeUrl = `${process.env.domain}qrcode?userId=${user._id}`; // 替換為您的 QR 碼內容
+        const raw = (process.env.DOMAIN || process.env.domain || 'http://localhost:3377').toString().trim().replace(/\/+$/, '');
+        const base = raw.startsWith('http://') || raw.startsWith('https://') ? raw : `https://${raw}`;
+        const qrCodeUrl = `${base}/qrcode?userId=${user._id}`;
         // console.log(user._id);
         
         // console.log(qrCodeDataUrl);

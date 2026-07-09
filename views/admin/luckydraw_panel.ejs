@@ -1,0 +1,426 @@
+<%- include("components/header") %>
+<%- include("components/menu", { eventId: eventId }) %>
+<%- include("components/responsive_layout_style") %>
+
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+
+<style>
+    .control-panel-container { padding: 20px; }
+    .control-card { border-radius: 8px; padding: 20px; background-color: #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+    .section-title { font-size: 18px; font-weight: bold; margin-bottom: 12px; }
+    .form-group label { font-weight: 600; }
+    .winner-list { max-height: 350px; overflow-y: auto; padding: 0; margin: 0; list-style: none; }
+    .winner-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid #eee; font-size: 14px; }
+    .winner-main { display: flex; flex-direction: column; }
+    .winner-name { font-weight: 600; }
+    .winner-meta { font-size: 12px; color: #666; }
+    .connection-toast { position: fixed; top: 80px; right: 20px; z-index: 2000; padding: 8px 14px; border-radius: 4px; font-size: 13px; color: #fff; background-color: rgba(220,53,69,0.9); opacity: 0; pointer-events: none; transition: opacity 0.2s ease-in-out; }
+    .connection-toast.show { opacity: 1; }
+    .connection-toast.success { background-color: rgba(40,167,69,0.9); }
+    .connection-toast.warning { background-color: rgba(255,193,7,0.9); }
+    @media (max-width: 992px) { .control-panel-container { padding: 10px; } }
+</style>
+
+<div id="right-panel" class="right-panel">
+    <%- include("components/rightpanel_header") %>
+
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row control-panel-container">
+                <div class="col-lg-7 col-md-12 mb-3">
+                    <div class="card control-card">
+                        <div class="section-title"><%= t('luckydraw_panel.drawControl') %></div>
+                        <div class="form-group">
+                            <label for="prizeSelect"><%= t('luckydraw_panel.selectPrize') %></label>
+                            <div class="mb-2" id="prizeImageContainer" style="display:none; text-align:center;">
+                                <img id="prizeImage" src="" alt="" style="max-width: 200px; max-height: 150px; border-radius: 8px; border: 2px solid #eee;">
+                            </div>
+                            <select id="prizeSelect" class="form-control" required>
+                                <option value=""><%= t('luckydraw_panel.selectPrizeDefault') %></option>
+                                <% prizes.forEach(prize => { %>
+                                    <% if (prize.unit > 0) { %>
+                                        <option value="<%= prize._id %>"
+                                                data-name="<%= prize.name %>"
+                                                data-image="<%= prize.pictureUrl || prize.picture || '' %>"
+                                                data-remaining="<%= prize.unit %>">
+                                            <%= prize.name %> (<%= t('luckydraw_panel.remaining') %>: <%= prize.unit %>)
+                                        </option>
+                                    <% } %>
+                                <% }); %>
+                            </select>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-4">
+                                <label for="drawCount"><%= t('luckydraw_panel.drawCount') %></label>
+                                <input type="number" id="drawCount" class="form-control" min="1" value="1">
+                            </div>
+                        </div>
+
+                        <div class="form-group mt-3">
+                            <button id="btn-draw-once" class="btn btn-primary btn-block mb-2"><%= t('luckydraw_panel.drawOne') %></button>
+                            <button id="btn-draw-multi" class="btn btn-success btn-block mb-2"><%= t('luckydraw_panel.drawMulti') %></button>
+                            <button id="btn-cancel-last" class="btn btn-warning btn-block mb-2"><%= t('luckydraw_panel.cancelLast') %></button>
+                            <button id="btn-reset-winner-order" type="button" class="btn btn-outline-secondary btn-block mb-2"><%= t('luckydraw_panel.resetWinnerNo') %></button>
+                            <small class="text-muted d-block"><%= t('luckydraw_panel.resetWinnerNote') %></small>
+                        </div>
+
+                        <hr>
+
+                        <div class="section-title"><%= t('luckydraw_panel.manualWinner') %></div>
+                        <div class="form-group">
+                            <label for="manualWinnerSelect"><%= t('luckydraw_panel.selectParticipant') %></label>
+                            <select id="manualWinnerSelect" class="form-control">
+                                <option value=""><%= t('luckydraw_panel.selectParticipantDefault') %></option>
+                                <% availablePeople.forEach(person => { %>
+                                    <option value="<%= person._id %>">
+                                        <%= person.company || '' %>
+                                        <% if (person.table) { %> | <%= t('luckydraw_panel.tableLabel') %>: <%= person.table %> <% } %>
+                                        | <%= person.name %>
+                                    </option>
+                                <% }); %>
+                            </select>
+                        </div>
+                        <button id="btn-set-manual-winner" class="btn btn-info btn-block"><%= t('luckydraw_panel.setAsWinner') %></button>
+                    </div>
+                </div>
+
+                <div class="col-lg-5 col-md-12 mb-3">
+                    <div class="card control-card">
+                        <div class="section-title"><%= t('luckydraw_panel.sessionWinners') %></div>
+                        <ul id="winnerList" class="winner-list"></ul>
+                        <small class="text-muted d-block mt-2"><%= t('luckydraw_panel.sessionNote') %></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="controllerToast" class="connection-toast"></div>
+<%- include("components/footer") %>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const allPeople = <%- JSON.stringify(availablePeople) %>;
+    const allPrizes = <%- JSON.stringify(prizes) %>;
+    const eventId = '<%= eventId %>';
+    const _REMAINING_LABEL = '<%= t("luckydraw_panel.remaining") %>';
+    const _TABLE_LABEL = '<%= t("luckydraw_panel.tableLabel") %>';
+
+    let availablePeople = [...allPeople];
+    const sessionWinners = [];
+
+    const prizeSelect = document.getElementById('prizeSelect');
+    const prizeImage = document.getElementById('prizeImage');
+    const prizeImageContainer = document.getElementById('prizeImageContainer');
+    const drawCountInput = document.getElementById('drawCount');
+    const winnerList = document.getElementById('winnerList');
+    const manualWinnerSelect = document.getElementById('manualWinnerSelect');
+
+    const HEARTBEAT_INTERVAL_MS = 15000;
+    const HEARTBEAT_TIMEOUT_MS = 25000;
+    let socket = io();
+    let lastHeartbeatAckAt = Date.now();
+    let heartbeatTimer = null;
+    let heartbeatCheckTimer = null;
+
+    function joinLuckydrawRoom() { socket.emit('join_luckydraw', { eventId, type: 'panel' }); }
+
+    function startHeartbeat() {
+        lastHeartbeatAckAt = Date.now();
+        if (heartbeatTimer) clearInterval(heartbeatTimer);
+        if (heartbeatCheckTimer) clearInterval(heartbeatCheckTimer);
+        heartbeatTimer = setInterval(() => { if (socket.connected) socket.emit('luckydraw:heartbeat'); }, HEARTBEAT_INTERVAL_MS);
+        heartbeatCheckTimer = setInterval(() => {
+            if (Date.now() - lastHeartbeatAckAt > HEARTBEAT_TIMEOUT_MS && socket.connected) {
+                socket.disconnect(); socket.connect();
+            }
+        }, 5000);
+    }
+
+    function stopHeartbeat() {
+        if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+        if (heartbeatCheckTimer) { clearInterval(heartbeatCheckTimer); heartbeatCheckTimer = null; }
+    }
+
+    socket.on('connect', () => { joinLuckydrawRoom(); startHeartbeat(); });
+    socket.on('luckydraw:heartbeat_ack', () => { lastHeartbeatAckAt = Date.now(); });
+    socket.on('disconnect', stopHeartbeat);
+    socket.on('connect_error', stopHeartbeat);
+    if (socket.connected) { joinLuckydrawRoom(); startHeartbeat(); }
+
+    const controllerToast = document.getElementById('controllerToast');
+    let toastTimer = null;
+
+    function showControllerToast(message, type) {
+        controllerToast.textContent = message;
+        controllerToast.classList.remove('success', 'warning');
+        if (type === 'success') controllerToast.classList.add('success');
+        if (type === 'warning') controllerToast.classList.add('warning');
+        controllerToast.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { controllerToast.classList.remove('show'); }, 2000);
+    }
+
+    function updatePrizePreview() {
+        const selectedOption = prizeSelect.options[prizeSelect.selectedIndex];
+        if (!selectedOption || !selectedOption.value) { prizeImageContainer.style.display = 'none'; return; }
+        const imagePath = selectedOption.dataset.image;
+        if (imagePath && imagePath.trim() !== '') {
+            prizeImage.src = imagePath;
+            prizeImageContainer.style.display = 'block';
+        } else {
+            prizeImageContainer.style.display = 'none';
+        }
+    }
+
+    function sendPrizeSelection() {
+        const selectedOption = prizeSelect.options[prizeSelect.selectedIndex];
+        if (selectedOption && selectedOption.value) {
+            socket.emit('luckydraw_panel_prize_selected', {
+                eventId,
+                prizeName: selectedOption.dataset.name || selectedOption.text.split('(')[0].trim(),
+                prizeImage: selectedOption.dataset.image || ''
+            });
+        } else {
+            socket.emit('luckydraw_panel_prize_selected', { eventId, prizeName: null, prizeImage: null });
+        }
+    }
+
+    prizeSelect.addEventListener('change', () => { updatePrizePreview(); sendPrizeSelection(); });
+
+    function emitDrawCount() {
+        const count = Math.max(1, parseInt(drawCountInput.value || '1', 10));
+        drawCountInput.value = count;
+        socket.emit('luckydraw_panel_draw_count', { eventId, drawCount: count });
+    }
+    drawCountInput.addEventListener('blur', emitDrawCount);
+    drawCountInput.addEventListener('change', emitDrawCount);
+    let drawCountDebounceTimer = null;
+    drawCountInput.addEventListener('input', () => {
+        if (drawCountDebounceTimer) clearTimeout(drawCountDebounceTimer);
+        drawCountDebounceTimer = setTimeout(() => { drawCountDebounceTimer = null; emitDrawCount(); }, 400);
+    });
+
+    document.addEventListener('DOMContentLoaded', () => { updatePrizePreview(); setTimeout(sendPrizeSelection, 500); });
+
+    async function cancelWinner(winner) {
+        if (!confirm(t('luckydraw_panel.confirmCancelWinner').replace('{name}', winner.name))) return;
+        try {
+            const res = await fetch(`/events/${eventId}/luckydraw`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ _id: winner._id })
+            });
+            if (!res.ok) {
+                alert(t('luckydraw_panel.cancelWinnerFailed') + await res.text());
+                return;
+            }
+            const index = sessionWinners.findIndex(w => String(w._id) === String(winner._id));
+            if (index !== -1) { sessionWinners.splice(index, 1); renderWinnerList(); }
+
+            if (winner.prizeId) {
+                const option = Array.from(prizeSelect.options).find(o => o.value === winner.prizeId);
+                if (option) {
+                    const currentRemaining = parseInt(option.dataset.remaining || '0', 10);
+                    updatePrizeOptionText(option, currentRemaining + 1);
+                } else {
+                    const prize = allPrizes.find(p => String(p._id) === String(winner.prizeId));
+                    const newOption = document.createElement('option');
+                    newOption.value = winner.prizeId;
+                    newOption.dataset.name = winner.prizeName || prize?.name || '';
+                    newOption.dataset.image = prize?.pictureUrl || prize?.picture || '';
+                    newOption.dataset.remaining = '1';
+                    newOption.text = `${winner.prizeName || prize?.name || ''} (${_REMAINING_LABEL}: 1)`;
+                    if (prizeSelect.options.length > 1) prizeSelect.insertBefore(newOption, prizeSelect.options[1]);
+                    else prizeSelect.appendChild(newOption);
+                }
+            }
+
+            availablePeople.push({ _id: winner._id, name: winner.name, company: winner.company, table: winner.table });
+            const manualOption = document.createElement('option');
+            manualOption.value = winner._id;
+            manualOption.text = `${winner.company || ''}${winner.table ? ' | ' + _TABLE_LABEL + ': ' + winner.table : ''} | ${winner.name}`;
+            manualWinnerSelect.appendChild(manualOption);
+        } catch (err) {
+            alert(t('luckydraw_panel.cancelWinnerError'));
+        }
+    }
+
+    function renderWinnerList() {
+        winnerList.innerHTML = '';
+        sessionWinners.forEach((w) => {
+            const li = document.createElement('li');
+            li.className = 'winner-item';
+            li.dataset.id = w._id;
+            li.style.cursor = 'pointer';
+            li.style.userSelect = 'none';
+            li.title = t('luckydraw_panel.confirmCancelWinner').replace('{name}', w.name);
+            const orderNumber = w.order || '';
+            li.innerHTML = `
+                <div class="winner-main">
+                    <span class="winner-name">${orderNumber ? orderNumber + '. ' : ''}${w.name}</span>
+                    <span class="winner-meta">
+                        ${w.company || ''} ${w.table ? ' | ' + _TABLE_LABEL + ': ' + w.table : ''} ${w.prizeName ? ' | 🎁 ' + w.prizeName : ''}
+                    </span>
+                </div>`;
+            li.addEventListener('click', () => cancelWinner(w));
+            li.addEventListener('mouseenter', () => { li.style.backgroundColor = '#f8f9fa'; });
+            li.addEventListener('mouseleave', () => { li.style.backgroundColor = ''; });
+            winnerList.appendChild(li);
+        });
+    }
+
+    socket.on('connect', () => { showControllerToast(t('luckydraw_panel.connectedToast'), 'success'); });
+    socket.on('disconnect', () => { showControllerToast(t('luckydraw_panel.disconnectedToast'), 'warning'); });
+    socket.on('luckydraw:controller_status', ({ status }) => {
+        if (status === 'online') showControllerToast(t('luckydraw_panel.controllerReady'), 'success');
+        else if (status === 'offline') showControllerToast(t('luckydraw_panel.controllerOffline'), 'warning');
+    });
+
+    function pickRandomPerson() {
+        if (availablePeople.length === 0) { alert(t('luckydraw_panel.noPeople')); return null; }
+        const idx = Math.floor(Math.random() * availablePeople.length);
+        return availablePeople.splice(idx, 1)[0];
+    }
+
+    function getSelectedPrize() {
+        if (!prizeSelect.value) { alert(t('luckydraw_panel.noPrizeSelected')); return null; }
+        const option = prizeSelect.options[prizeSelect.selectedIndex];
+        const remaining = parseInt(option.dataset.remaining || '0', 10);
+        if (isNaN(remaining) || remaining <= 0) { alert(t('luckydraw_panel.outOfStock')); return null; }
+        return { prizeId: option.value, prizeName: option.dataset.name || '', remaining, option };
+    }
+
+    function updatePrizeOptionText(option, newRemaining) {
+        if (newRemaining <= 0) {
+            option.remove();
+            if (prizeSelect.options.length > 0) prizeSelect.selectedIndex = 0;
+        } else {
+            option.dataset.remaining = newRemaining;
+            option.text = `${option.dataset.name || option.text.split('(')[0].trim()} (${_REMAINING_LABEL}: ${newRemaining})`;
+        }
+    }
+
+    async function confirmWinner(person) {
+        const prizeInfo = getSelectedPrize();
+        if (!prizeInfo) return;
+        const payload = { _id: person._id, name: person.name, company: person.company, table: person.table, prizeId: prizeInfo.prizeId };
+        try {
+            const res = await fetch(`/events/${eventId}/luckydraw`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) { alert(t('luckydraw_panel.addWinnerFailed') + await res.text()); return; }
+            const data = await res.json();
+            sessionWinners.push({ ...data.winner, prizeName: prizeInfo.prizeName });
+            renderWinnerList();
+            updatePrizeOptionText(prizeInfo.option, prizeInfo.remaining - 1);
+        } catch (err) {
+            alert(t('luckydraw_panel.addWinnerError'));
+        }
+    }
+
+    document.getElementById('btn-draw-once').addEventListener('click', async () => {
+        socket.emit('luckydraw_panel_start', { eventId });
+        const person = pickRandomPerson();
+        if (!person) return;
+        await confirmWinner(person);
+    });
+
+    document.getElementById('btn-draw-multi').addEventListener('click', async () => {
+        const prizeInfo = getSelectedPrize();
+        if (!prizeInfo) return;
+        const count = Math.max(1, parseInt(drawCountInput.value || '1', 10));
+        if (prizeInfo.remaining <= 0) { alert(t('luckydraw_panel.outOfStock')); return; }
+        if (count > prizeInfo.remaining) { alert(t('luckydraw_panel.insufficientStock').replace('{n}', prizeInfo.remaining)); return; }
+        if (availablePeople.length < count) { alert(t('luckydraw_panel.insufficientPeople').replace('{n}', availablePeople.length)); return; }
+        socket.emit('luckydraw_panel_start', { eventId });
+        try {
+            const res = await fetch(`/events/${eventId}/luckydraw/batch`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ count, prizeId: prizeInfo.prizeId })
+            });
+            if (!res.ok) { alert(t('luckydraw_panel.batchDrawFailed') + await res.text()); return; }
+            const data = await res.json();
+            if (data.winners && Array.isArray(data.winners)) {
+                data.winners.forEach(winner => {
+                    const index = availablePeople.findIndex(p => String(p._id) === String(winner._id));
+                    if (index !== -1) availablePeople.splice(index, 1);
+                    sessionWinners.push({ ...winner, prizeName: prizeInfo.prizeName });
+                });
+            }
+            renderWinnerList();
+            updatePrizeOptionText(prizeInfo.option, prizeInfo.remaining - data.actualCount);
+        } catch (err) {
+            alert(t('luckydraw_panel.batchDrawError') + err.message);
+        }
+    });
+
+    document.getElementById('btn-cancel-last').addEventListener('click', async () => {
+        if (sessionWinners.length === 0) { alert(t('luckydraw_panel.cancelLastNoWinner')); return; }
+        const lastWinner = sessionWinners[sessionWinners.length - 1];
+        if (!confirm(t('luckydraw_panel.confirmCancelWinner').replace('{name}', lastWinner.name))) return;
+        try {
+            const res = await fetch(`/events/${eventId}/luckydraw`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ _id: lastWinner._id })
+            });
+            if (!res.ok) { alert(t('luckydraw_panel.cancelWinnerFailed') + await res.text()); return; }
+            sessionWinners.pop();
+            renderWinnerList();
+            if (lastWinner.prizeId) {
+                const option = Array.from(prizeSelect.options).find(o => o.value === lastWinner.prizeId);
+                if (option) {
+                    updatePrizeOptionText(option, parseInt(option.dataset.remaining || '0', 10) + 1);
+                } else {
+                    const prize = allPrizes.find(p => String(p._id) === String(lastWinner.prizeId));
+                    const newOption = document.createElement('option');
+                    newOption.value = lastWinner.prizeId;
+                    newOption.dataset.name = lastWinner.prizeName || prize?.name || '';
+                    newOption.dataset.image = prize?.pictureUrl || prize?.picture || '';
+                    newOption.dataset.remaining = '1';
+                    newOption.text = `${lastWinner.prizeName || prize?.name || ''} (${_REMAINING_LABEL}: 1)`;
+                    if (prizeSelect.options.length > 1) prizeSelect.insertBefore(newOption, prizeSelect.options[1]);
+                    else prizeSelect.appendChild(newOption);
+                }
+            }
+            availablePeople.push({ _id: lastWinner._id, name: lastWinner.name, company: lastWinner.company, table: lastWinner.table });
+        } catch (err) {
+            alert(t('luckydraw_panel.cancelWinnerError'));
+        }
+    });
+
+    document.getElementById('btn-reset-winner-order').addEventListener('click', async () => {
+        if (!confirm(t('luckydraw_panel.resetOrderConfirm'))) return;
+        try {
+            const res = await fetch(`/events/${eventId}/luckydraw/reset-winner-order`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) { alert(t('luckydraw_panel.resetOrderFailed') + (data.message || res.statusText)); return; }
+            showControllerToast(t('luckydraw_panel.resetOrderSuccess').replace('{n}', data.nextWinnerOrder), 'success');
+            alert(t('luckydraw_panel.resetSuccess').replace('{max}', data.maxLuckydrawOrder).replace('{next}', data.nextWinnerOrder));
+        } catch (err) {
+            alert(t('luckydraw_panel.resetOrderError'));
+        }
+    });
+
+    document.getElementById('btn-set-manual-winner').addEventListener('click', async () => {
+        const selectedId = manualWinnerSelect.value;
+        if (!selectedId) { alert(t('luckydraw_panel.noParticipantSelected')); return; }
+        const index = availablePeople.findIndex(p => String(p._id) === String(selectedId));
+        if (index === -1) { alert(t('luckydraw_panel.participantNotFound')); return; }
+        socket.emit('luckydraw_panel_start', { eventId });
+        const person = availablePeople.splice(index, 1)[0];
+        await confirmWinner(person);
+        manualWinnerSelect.value = '';
+    });
+</script>

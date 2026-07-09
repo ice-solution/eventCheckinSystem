@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="<%= typeof lang !== 'undefined' ? lang : 'zh-Hant' %>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Banner 管理 - <%= event.name %></title>
+    <title><%= t('banner_management.title') %> - <%= event.name %></title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
@@ -102,13 +102,13 @@
     <div class="container">
         <div class="back-btn">
             <a href="/events/<%= event._id %>" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> 返回事件管理
+                <i class="fas fa-arrow-left"></i> <%= t('banner_management.backBtn') %>
             </a>
         </div>
 
         <div class="page-header">
-            <h1><i class="fas fa-image"></i> Banner 管理</h1>
-            <p class="text-muted">管理活動註冊頁面的橫幅圖片</p>
+            <h1><i class="fas fa-image"></i> <%= t('banner_management.heading') %></h1>
+            <p class="text-muted"><%= t('banner_management.subtitle') %></p>
         </div>
 
         <% if (message) { %>
@@ -130,65 +130,65 @@
         <% } %>
 
         <div class="info-box">
-            <h5><i class="fas fa-info-circle"></i> 使用說明</h5>
+            <h5><i class="fas fa-info-circle"></i> <%= t('banner_management.infoTitle') %></h5>
             <ul class="mb-0">
-                <li>支援的圖片格式：PNG、JPG、JPEG</li>
-                <li>最大文件大小：5MB</li>
-                <li>建議尺寸：寬度至少 1200px，高度建議 300-400px</li>
-                <li>上傳新圖片會自動替換現有的 banner</li>
+                <li><%= t('banner_management.info1') %></li>
+                <li><%= t('banner_management.info2') %></li>
+                <li><%= t('banner_management.info3') %></li>
+                <li><%= t('banner_management.info4') %></li>
             </ul>
         </div>
 
         <% if (currentBanner) { %>
             <div class="banner-preview">
-                <h4><i class="fas fa-eye"></i> 當前 Banner 預覽</h4>
+                <h4><i class="fas fa-eye"></i> <%= t('banner_management.currentPreviewTitle') %></h4>
                 <img src="<%= currentBanner %>" alt="Current Banner" class="img-fluid">
                 <div class="mt-3">
-                    <form action="/events/<%= event._id %>/banner/delete" method="POST" 
-                          onsubmit="return confirm('確定要刪除當前的 banner 嗎？')" style="display: inline;">
+                    <form action="/events/<%= event._id %>/banner/delete" method="POST"
+                          onsubmit="return confirm('<%= t('banner_management.deleteBannerConfirm') %>')" style="display: inline;">
                         <button type="submit" class="btn btn-danger">
-                            <i class="fas fa-trash"></i> 刪除 Banner
+                            <i class="fas fa-trash"></i> <%= t('banner_management.deleteBannerBtn') %>
                         </button>
                     </form>
                 </div>
             </div>
         <% } else { %>
             <div class="banner-preview">
-                <h4><i class="fas fa-exclamation-triangle"></i> 目前沒有 Banner</h4>
-                <p class="text-muted">請上傳一張圖片作為活動註冊頁面的 banner</p>
+                <h4><i class="fas fa-exclamation-triangle"></i> <%= t('banner_management.noBannerTitle') %></h4>
+                <p class="text-muted"><%= t('banner_management.noBannerHint') %></p>
             </div>
         <% } %>
 
         <div class="upload-section">
-            <h4><i class="fas fa-upload"></i> 上傳新 Banner</h4>
+            <h4><i class="fas fa-upload"></i> <%= t('banner_management.uploadTitle') %></h4>
             <form action="/events/<%= event._id %>/banner/upload" method="POST" enctype="multipart/form-data" id="uploadForm">
                 <div class="file-upload" id="fileUpload">
                     <div class="upload-icon">
                         <i class="fas fa-cloud-upload-alt"></i>
                     </div>
-                    <h5>點擊選擇文件或拖拽圖片到此處</h5>
-                    <p class="text-muted">支援 PNG、JPG、JPEG 格式，最大 5MB</p>
+                    <h5><%= t('banner_management.uploadHint') %></h5>
+                    <p class="text-muted"><%= t('banner_management.uploadFormatHint') %></p>
                     <input type="file" name="banner" id="bannerFile" class="file-input" accept="image/png,image/jpeg,image/jpg" required>
                     <button type="button" class="btn btn-outline-primary" id="selectFileBtn">
-                        <i class="fas fa-folder-open"></i> 選擇文件
+                        <i class="fas fa-folder-open"></i> <%= t('banner_management.selectFileBtn') %>
                     </button>
                 </div>
-                
+
                 <div id="fileInfo" class="mt-3" style="display: none;">
                     <div class="alert alert-info">
-                        <i class="fas fa-file-image"></i> 
-                        <strong>已選擇文件：</strong> <span id="fileName"></span>
+                        <i class="fas fa-file-image"></i>
+                        <strong><%= t('banner_management.selectedFileLabel') %></strong> <span id="fileName"></span>
                         <br>
-                        <strong>文件大小：</strong> <span id="fileSize"></span>
+                        <strong><%= t('banner_management.fileSizeLabel') %></strong> <span id="fileSize"></span>
                     </div>
                 </div>
 
                 <div class="text-center mt-4">
                     <button type="submit" class="btn btn-primary" id="uploadBtn" disabled>
-                        <i class="fas fa-upload"></i> 上傳 Banner
+                        <i class="fas fa-upload"></i> <%= t('banner_management.uploadBtn') %>
                     </button>
                     <button type="reset" class="btn btn-secondary" onclick="resetForm()">
-                        <i class="fas fa-undo"></i> 重置
+                        <i class="fas fa-undo"></i> <%= t('banner_management.resetBtn') %>
                     </button>
                 </div>
             </form>
@@ -198,134 +198,117 @@
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    
+
     <script>
-        // 等待 DOM 完全載入後再執行
+        const _BM = {
+            typeAlert: '<%= t("banner_management.typeAlert") %>',
+            sizeAlert: '<%= t("banner_management.sizeAlert") %>',
+            noFileAlert: '<%= t("banner_management.noFileAlert") %>',
+            uploadingBtn: '<i class="fas fa-spinner fa-spin"></i> <%= t("banner_management.uploadingBtn") %>'
+        };
+
         document.addEventListener('DOMContentLoaded', function() {
-            // 首先聲明所有需要的 DOM 元素
             const fileUpload = document.getElementById('fileUpload');
             const selectFileBtn = document.getElementById('selectFileBtn');
             const bannerFile = document.getElementById('bannerFile');
-        
-        // 防止重複觸發的標記
-        let isSelectingFile = false;
-        
-        // 統一的文件選擇函數
-        function selectFile() {
-            if (isSelectingFile) return;
-            isSelectingFile = true;
-            bannerFile.click();
-            setTimeout(() => {
-                isSelectingFile = false;
-            }, 100);
-        }
-        
-        // 文件選擇處理
-        bannerFile.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                // 檢查文件類型
-                const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
-                if (!allowedTypes.includes(file.type)) {
-                    alert('只允許上傳 PNG 或 JPG 格式的圖片！');
-                    resetForm();
-                    return;
+
+            let isSelectingFile = false;
+
+            function selectFile() {
+                if (isSelectingFile) return;
+                isSelectingFile = true;
+                bannerFile.click();
+                setTimeout(() => { isSelectingFile = false; }, 100);
+            }
+
+            bannerFile.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+                    if (!allowedTypes.includes(file.type)) {
+                        alert(_BM.typeAlert);
+                        resetForm();
+                        return;
+                    }
+
+                    const maxSize = 5 * 1024 * 1024;
+                    if (file.size > maxSize) {
+                        alert(_BM.sizeAlert);
+                        resetForm();
+                        return;
+                    }
+
+                    document.getElementById('fileName').textContent = file.name;
+                    document.getElementById('fileSize').textContent = formatFileSize(file.size);
+                    document.getElementById('fileInfo').style.display = 'block';
+                    document.getElementById('uploadBtn').disabled = false;
+
+                    fileUpload.style.borderColor = '#28a745';
+                    fileUpload.style.backgroundColor = '#d4edda';
                 }
-                
-                // 檢查文件大小 (5MB)
-                const maxSize = 5 * 1024 * 1024;
-                if (file.size > maxSize) {
-                    alert('文件大小不能超過 5MB！');
-                    resetForm();
-                    return;
-                }
-                
-                // 顯示文件信息
-                document.getElementById('fileName').textContent = file.name;
-                document.getElementById('fileSize').textContent = formatFileSize(file.size);
-                document.getElementById('fileInfo').style.display = 'block';
-                document.getElementById('uploadBtn').disabled = false;
-                
-                // 更新上傳區域樣式
-                fileUpload.style.borderColor = '#28a745';
-                fileUpload.style.backgroundColor = '#d4edda';
-            }
-        });
-        
-        // 拖拽上傳功能
-        
-        fileUpload.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            this.classList.add('dragover');
-        });
-        
-        fileUpload.addEventListener('dragleave', function(e) {
-            e.preventDefault();
-            this.classList.remove('dragover');
-        });
-        
-        fileUpload.addEventListener('drop', function(e) {
-            e.preventDefault();
-            this.classList.remove('dragover');
-            
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                bannerFile.files = files;
-                bannerFile.dispatchEvent(new Event('change'));
-            }
-        });
-        
-        // 點擊選擇文件按鈕觸發文件選擇
-        selectFileBtn.addEventListener('click', function(e) {
-            e.stopPropagation(); // 防止事件冒泡
-            selectFile();
-        });
-        
-        // 點擊上傳區域觸發文件選擇（但排除按鈕區域）
-        fileUpload.addEventListener('click', function(e) {
-            // 如果點擊的是按鈕或其子元素，不觸發文件選擇
-            if (e.target.closest('#selectFileBtn')) {
-                return;
-            }
-            selectFile();
-        });
-        
-        // 格式化文件大小
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-        
-        // 重置表單
-        function resetForm() {
-            document.getElementById('uploadForm').reset();
-            document.getElementById('fileInfo').style.display = 'none';
-            document.getElementById('uploadBtn').disabled = true;
-            fileUpload.style.borderColor = '#007bff';
-            fileUpload.style.backgroundColor = 'white';
-        }
-        
-        // 表單提交處理
-        document.getElementById('uploadForm').addEventListener('submit', function(e) {
-            const file = bannerFile.files[0];
-            if (!file) {
+            });
+
+            fileUpload.addEventListener('dragover', function(e) {
                 e.preventDefault();
-                alert('請選擇要上傳的圖片文件！');
-                return;
+                this.classList.add('dragover');
+            });
+
+            fileUpload.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+            });
+
+            fileUpload.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    bannerFile.files = files;
+                    bannerFile.dispatchEvent(new Event('change'));
+                }
+            });
+
+            selectFileBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                selectFile();
+            });
+
+            fileUpload.addEventListener('click', function(e) {
+                if (e.target.closest('#selectFileBtn')) return;
+                selectFile();
+            });
+
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
             }
-            
-            // 顯示上傳中狀態
-            const uploadBtn = document.getElementById('uploadBtn');
-            uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上傳中...';
-            uploadBtn.disabled = true;
-            
-            // 防止重複提交
-            const form = this;
-            form.removeEventListener('submit', arguments.callee);
-        });
+
+            window.resetForm = function() {
+                document.getElementById('uploadForm').reset();
+                document.getElementById('fileInfo').style.display = 'none';
+                document.getElementById('uploadBtn').disabled = true;
+                fileUpload.style.borderColor = '#007bff';
+                fileUpload.style.backgroundColor = 'white';
+            };
+
+            document.getElementById('uploadForm').addEventListener('submit', function(e) {
+                const file = bannerFile.files[0];
+                if (!file) {
+                    e.preventDefault();
+                    alert(_BM.noFileAlert);
+                    return;
+                }
+
+                const uploadBtn = document.getElementById('uploadBtn');
+                uploadBtn.innerHTML = _BM.uploadingBtn;
+                uploadBtn.disabled = true;
+
+                const form = this;
+                form.removeEventListener('submit', arguments.callee);
+            });
         });
     </script>
 </body>

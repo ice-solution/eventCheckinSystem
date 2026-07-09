@@ -1,7 +1,7 @@
 <%- include("components/header") %>
 <%- include("components/menu", { eventId: eventId }) %>
+<%- include("components/responsive_layout_style") %>
 <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
-<link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
 <link rel="stylesheet" href="/admin/assets/css/style.css">
 
 <div id="right-panel" class="right-panel">
@@ -12,31 +12,48 @@
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <strong class="card-title">抽獎設定</strong>
+                            <strong class="card-title"><%= t('luckydraw_setting.title') %></strong>
                         </div>
                         <div class="card-body">
                             <form id="uploadForm" enctype="multipart/form-data" action="/events/<%= eventId %>/luckydraw_setting/upload-background" method="POST">
                                 <div class="form-group">
-                                    <label for="backgroundImage">上傳背景圖片 (僅限 .jpg 格式):</label>
+                                    <label for="backgroundImage"><%= t('luckydraw_setting.uploadLabel') %></label>
                                     <input type="file" id="backgroundImage" name="backgroundImage" accept=".jpg, .jpeg" required>
                                 </div>
-                                <button type="submit" class="btn btn-primary">上傳</button>
+                                <button type="submit" class="btn btn-primary"><i class="fa fa-upload mr-1"></i><%= t('luckydraw_setting.uploadBtn') %></button>
                             </form>
+                        </div>
+                    </div>
+
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <strong class="card-title"><%= t('luckydraw_setting.awardPasswordTitle') %></strong>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small"><%= t('luckydraw_setting.awardPasswordDesc') %> (<code>/events/<%= eventId %>/luckydraw/award</code>)</p>
+                            <% if (typeof awardPasswordSet !== 'undefined' && awardPasswordSet) { %>
+                                <p class="text-success small mb-2"><%= t('luckydraw_setting.passwordSet') %></p>
+                            <% } %>
+                            <div class="form-group">
+                                <label for="awardPassword"><%= t('luckydraw_setting.passwordLabel') %></label>
+                                <input type="password" id="awardPassword" class="form-control" placeholder="<%= t('luckydraw_setting.noPasswordPlaceholder') %>" autocomplete="new-password">
+                            </div>
+                            <button type="button" id="saveAwardPasswordBtn" class="btn btn-primary"><i class="fa fa-save mr-1"></i><%= t('common.save') %></button>
+                            <span id="awardPasswordMsg" class="ml-2 small"></span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 預覽區域 -->
             <div class="row">
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <strong class="card-title">背景圖片預覽</strong>
+                            <strong class="card-title"><%= t('luckydraw_setting.previewTitle') %></strong>
                         </div>
                         <div class="card-body text-center">
-                            <img id="backgroundPreview" src="/luckydraw/img/<%= eventId %>.jpg" alt="背景圖片預覽" style="max-width: 100%; height: auto;">
-                            <div id="noImageMessage" style="display: none;">還沒有背景圖片</div>
+                            <img id="backgroundPreview" src="/luckydraw/img/<%= eventId %>.jpg" alt="Background preview" style="max-width: 100%; height: auto;">
+                            <div id="noImageMessage" style="display: none;"><%= t('luckydraw_setting.noImage') %></div>
                         </div>
                     </div>
                 </div>
@@ -46,32 +63,35 @@
 </div>
 
 <%- include("components/footer") %>
-<script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
-<script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
-<script src="/admin/assets/js/lib/data-table/dataTables.buttons.min.js"></script>
-<script src="/admin/assets/js/lib/data-table/buttons.bootstrap.min.js"></script>
-<script src="/admin/assets/js/lib/data-table/jszip.min.js"></script>
-<script src="/admin/assets/js/lib/data-table/vfs_fonts.js"></script>
-<script src="/admin/assets/js/lib/data-table/buttons.html5.min.js"></script>
-<script src="/admin/assets/js/lib/data-table/buttons.print.min.js"></script>
-<script src="/admin/assets/js/lib/data-table/buttons.colVis.min.js"></script>
-<script src="/admin/assets/js/init/datatables-init.js"></script>
-
 <script>
     window.onload = function() {
-        // 檢查圖片是否存在
         const img = document.getElementById('backgroundPreview');
         const noImageMessage = document.getElementById('noImageMessage');
-
-        img.onload = function() {
-            // 圖片加載成功，隱藏提示信息
-            noImageMessage.style.display = 'none';
-        };
-
-        img.onerror = function() {
-            // 圖片加載失敗，顯示提示信息
-            img.style.display = 'none'; // 隱藏圖片
-            noImageMessage.style.display = 'block'; // 顯示提示信息
-        };
+        img.onload = function() { noImageMessage.style.display = 'none'; };
+        img.onerror = function() { img.style.display = 'none'; noImageMessage.style.display = 'block'; };
     };
+
+    document.getElementById('saveAwardPasswordBtn').addEventListener('click', function() {
+        const eventId = '<%= eventId %>';
+        const password = document.getElementById('awardPassword').value.trim();
+        const btn = this;
+        const msg = document.getElementById('awardPasswordMsg');
+        btn.disabled = true;
+        msg.textContent = '';
+        fetch('/events/' + eventId + '/luckydraw_setting/award-password', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: password })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            msg.textContent = password ? '<%= t("luckydraw_setting.saved") %>' : '<%= t("luckydraw_setting.savedNoPassword") %>';
+            msg.className = 'ml-2 small text-success';
+        })
+        .catch(function() {
+            msg.textContent = '<%= t("luckydraw_setting.saveFailed") %>';
+            msg.className = 'ml-2 small text-danger';
+        })
+        .finally(function() { btn.disabled = false; });
+    });
 </script>

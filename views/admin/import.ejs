@@ -1,48 +1,63 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
-    <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
-    <link rel="stylesheet" href="/admin/assets/css/style.css">
-    <title>Import Users</title>
-</head>
-<body>
-    <%- include("components/header") %>
-    <%- include("components/menu", { eventId: event._id }) %>
-    
-    <div id="right-panel" class="right-panel">
-        <%- include("components/rightpanel_header") %>
-        <div class="content">
-            <div class="animated fadeIn">
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <strong class="card-title">Import Users</strong>
-                            </div>
-                            <div class="card-body">
-                                <form action="/events/<%= event._id %>/import" method="POST" enctype="multipart/form-data">
-                                    <div class="form-group">
-                                        <label for="fileInput">Select xlsx File:</label>
-                                        <input type="file" class="form-control" id="fileInput" name="file" accept=".xlsx" required>
+<%- include("components/header") %>
+<%- include("components/menu", { eventId: event._id }) %>
+<%- include("components/responsive_layout_style") %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+
+<div id="right-panel" class="right-panel">
+    <%- include("components/rightpanel_header", { backUrl: '/events/' + event._id }) %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title"><%= t('import_users.title') %></strong>
+                        </div>
+                        <div class="card-body">
+                            <p style="word-break:break-word;"><%- t('import_users.desc') %></p>
+                            <p class="text-muted mb-3" style="word-break:break-word;"><%- t('import_users.importRule') %></p>
+
+                            <% if (importFields && importFields.length > 0) { %>
+                                <div class="mb-4">
+                                    <h6 class="text-muted text-uppercase mb-2" style="font-size:11px; letter-spacing:.08em;"><%= t('import_users.requiredColumns') %></h6>
+                                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                                        <% importFields.forEach(field => { %>
+                                            <span style="display:inline-flex; align-items:center; gap:5px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px; padding:4px 10px; font-size:13px;">
+                                                <strong style="color:#334155;"><%= field.label %></strong>
+                                                <code style="font-size:11px; color:#64748b; background:transparent; padding:0;"><%= field.fieldName %></code>
+                                            </span>
+                                        <% }); %>
                                     </div>
-                                    <button type="submit" class="btn btn-primary">Import</button>
-                                    <a href="/events/<%= event._id%>" class="btn btn-secondary">Return to User List</a>
-                                    <a href="/sample_user.xlsx" class="btn btn-info">Download Sample File</a>
-                                </form>
-                            </div>
+                                </div>
+                            <% } else { %>
+                                <div class="alert alert-warning" style="word-break:break-word;"><%= t('import_users.noFields') %></div>
+                            <% } %>
+
+                            <form action="/events/<%= event._id %>/import" method="POST" enctype="multipart/form-data">
+                                <div class="form-group">
+                                    <label for="fileInput"><%= t('import_users.fileInput') %></label>
+                                    <input type="file" class="form-control" id="fileInput" name="file" accept=".xlsx" <%= (importFields && importFields.length > 0) ? 'required' : 'disabled' %>>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
+                                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                        <% if (importFields && importFields.length > 0) { %>
+                                            <a href="/events/<%= event._id %>/import/export-current" class="btn btn-info"><i class="fas fa-download"></i> <%= t('import_users.downloadCurrent') %></a>
+                                            <a href="/events/<%= event._id %>/import/sample" class="btn btn-info"><i class="fas fa-download"></i> <%= t('import_users.downloadSample') %></a>
+                                        <% } else { %>
+                                            <span class="btn btn-info disabled" aria-disabled="true"><i class="fas fa-download"></i> <%= t('import_users.downloadCurrent') %></span>
+                                            <span class="btn btn-info disabled" aria-disabled="true"><i class="fas fa-download"></i> <%= t('import_users.downloadSample') %></span>
+                                        <% } %>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary" <%= (importFields && importFields.length > 0) ? '' : 'disabled' %>><i class="fas fa-upload"></i> <%= t('import_users.importBtn') %></button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <%- include("components/footer") %>
-    <script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
-    <script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
-    <script src="/admin/assets/js/init/datatables-init.js"></script>
-</body>
-</html>
+<%- include("components/footer") %>

@@ -1,0 +1,37 @@
+<%- include ("components/header") %>
+<%- include ("components/menu", { eventId: '' }) %>
+<%- include("components/responsive_layout_style") %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+<div id="right-panel" class="right-panel">
+    <%- include ("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title"><%= t('auth_user_add.title') %></strong>
+                        </div>
+                        <div class="card-body">
+                            <form action="/auth/users/add" method="POST" class="form-horizontal">
+                                <div class="form-group">
+                                    <label for="username"><%= t('auth_user_add.usernameLabel') %></label>
+                                    <input type="text" class="form-control" id="username" name="username" required placeholder="<%= t('auth_user_add.usernamePlaceholder') %>">
+                                </div>
+                                <div class="form-group">
+                                    <label for="password"><%= t('auth_user_add.passwordLabel') %></label>
+                                    <input type="password" class="form-control" id="password" name="password" required>
+                                </div>
+                                <p class="text-muted"><%= t('auth_user_add.note') %></p>
+                                <button type="submit" class="btn btn-primary"><%= t('auth_user_add.createBtn') %></button>
+                                <a href="/auth/users" class="btn btn-secondary"><%= t('common.cancel') %></a>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<%- include ("components/footer") %>

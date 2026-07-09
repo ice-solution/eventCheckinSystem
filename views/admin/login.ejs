@@ -20,20 +20,38 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.2.0/css/flag-icon.min.css">
     <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
     <link rel="stylesheet" href="/admin/assets/css/style.css">
+    <link rel="stylesheet" href="/admin/assets/css/style.css">
+    <link rel="stylesheet" href="/admin/assets/css/theme-brand.css">
+    <link rel="stylesheet" href="/admin/assets/css/phoebe-theme.css">
 
-    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,600,700,800' rel='stylesheet' type='text/css'>
+    <link href='https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap' rel='stylesheet' type='text/css'>
     <style>
-        .bg-blue{
-            
-            background-color: #E8B4B8;
-            
-            background-blend-mode: lighten;
-            /* background-image: url('/admin/img/admin_bg.jpg'); */
+        body, input, button, label {
+            font-family: 'Inter', 'Open Sans', sans-serif !important;
+        }
+        .bg-blue {
+            background: linear-gradient(160deg, #E8B4B8 0%, #EED6D3 45%, #A49393 100%);
             background-repeat: no-repeat;
             background-size: cover;
+            min-height: 100vh;
         }
-        .container{
-            
+        .login-form .btn-primary,
+        .login-form .btn-success {
+            background: #E8B4B8 !important;
+            border-color: #E8B4B8 !important;
+            color: #5B4A43 !important;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+        .login-form .btn-primary:hover,
+        .login-form .btn-success:hover {
+            background: #67595E !important;
+            border-color: #67595E !important;
+            color: #fff !important;
+        }
+        .login-content {
+            border-radius: 16px !important;
+            overflow: hidden;
         }
     </style>
     <!-- <script type="text/javascript" src="https://cdn.jsdelivr.net/html5shiv/3.7.3/html5shiv.min.js"></script> -->
@@ -45,28 +63,30 @@
             <div class="login-content">
                 <div class="login-logo">
                     <a href="/login">
-                        <!-- <img class="align-content" src="/admin/img/logo.png" alt=""> -->
+                        <img class="align-content" src="/admin/img/ba_logo.png" alt="" style="max-height:80px; object-fit:contain;">
                     </a>
                 </div>
                 <div class="login-form">
                     <form id="loginForm">
                         <div class="form-group">
-                            <label>Username</label>
-                            <input type="text" class="form-control" id="username" placeholder="username">
+                            <label><%= t('common.username') %></label>
+                            <input type="text" class="form-control" id="username" placeholder="<%= t('common.username') %>">
                         </div>
                         <div class="form-group">
-                            <label>Password</label>
-                            <input type="password" class="form-control" id="password" placeholder="Password">
+                            <label><%= t('common.password') %></label>
+                            <input type="password" class="form-control" id="password" placeholder="<%= t('common.password') %>">
                         </div>
-                        <button type="submit" class="btn btn-success btn-flat m-b-30 m-t-30">Sign in</button>
+                        <button type="submit" class="btn btn-success btn-flat m-b-30 m-t-30"><%= t('login.signInBtn') %></button>
                     </form>
                 </div>
             </div>
+            <div id="alertContainer" style="margin-top:12px;"></div>
         </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
+        const _loginFailedMsg = '<%= t("login.loginFailed") %>';
         $(document).ready(function() {
             $('#loginForm').on('submit', function(e) {
                 e.preventDefault();
@@ -79,18 +99,22 @@
                     contentType: 'application/json',
                     data: JSON.stringify({ username, password }),
                     success: function(response) {
-                        window.location.href = '/'; // 登入成功後重定向到首頁
+                        window.location.href = '/'; // Redirect to home after login
                     },
                     error: function(xhr) {
                         const alertHtml = `
                             <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                Login failed. Please check your username and password.
+                                ${_loginFailedMsg}
                                 <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                                     <span aria-hidden="true">&times;</span>
                                 </button>
                             </div>
                         `;
-                        $('#alertContainer').append(alertHtml);
+                        const $alert = $(alertHtml);
+                        $('#alertContainer').append($alert);
+                        setTimeout(function() {
+                            $alert.alert('close');
+                        }, 4000);
                     }
                 });
             });

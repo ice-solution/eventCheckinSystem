@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TinyMCE 圖片 URL 測試</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .url-display {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            word-break: break-all;
+        }
+        .btn {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
+    <script src="https://cdn.tiny.cloud/1/0o0ixrpieipnq3fsu3kbsdu9e627qg468y6lpup3gmhx8lz7/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
+</head>
+<body>
+    <h1>TinyMCE 圖片 URL 測試</h1>
+    
+    <div class="test-section">
+        <h2>1. TinyMCE 編輯器</h2>
+        <p>在編輯器中插入圖片，然後檢查 URL 是否為完整的絕對路徑：</p>
+        <textarea id="content" rows="10" style="width: 100%;"></textarea>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. 測試按鈕</h2>
+        <button class="btn" onclick="insertBannerImage()">插入 Banner 圖片</button>
+        <button class="btn" onclick="insertQRCodeImage()">插入 QR Code 圖片</button>
+        <button class="btn" onclick="insertUploadedImage()">插入上傳的圖片</button>
+        <button class="btn" onclick="getContent()">獲取內容</button>
+        <button class="btn" onclick="checkImageUrls()">檢查圖片 URL</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. 內容顯示</h2>
+        <div id="contentDisplay"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. 圖片 URL 分析</h2>
+        <div id="urlAnalysis"></div>
+    </div>
+
+    <script>
+        tinymce.init({
+            selector: '#content',
+            plugins: 'image code link',
+            toolbar: 'undo redo | fontselect | styleselect | bold italic | alignleft aligncenter alignright | image link | code',
+            font_formats: '標楷體=DFKai-SB,BiauKai,AR PL UKai TW;微軟正黑體=Microsoft JhengHei,微軟正黑體;新細明體=PMingLiU,新細明體;細明體=MingLiU,細明體;Arial=arial,helvetica,sans-serif;Comic Sans MS=comic sans ms,sans-serif;Courier New=courier new,courier;Georgia=georgia,palatino;Helvetica=helvetica;Impact=impact,chicago;Symbol=symbol;Tahoma=tahoma,arial,helvetica,sans-serif;Terminal=terminal,monaco;Times New Roman=times new roman,times;Trebuchet MS=trebuchet ms,geneva;Verdana=verdana,geneva;Webdings=webdings;Wingdings=wingdings,zapf dingbats',
+            font_family_formats: '標楷體=DFKai-SB,BiauKai,AR PL UKai TW;微軟正黑體=Microsoft JhengHei,微軟正黑體;新細明體=PMingLiU,新細明體;細明體=MingLiU,細明體;Arial=arial,helvetica,sans-serif;Comic Sans MS=comic sans ms,sans-serif;Courier New=courier new,courier;Georgia=georgia,palatino;Helvetica=helvetica;Impact=impact,chicago;Symbol=symbol;Tahoma=tahoma,arial,helvetica,sans-serif;Terminal=terminal,monaco;Times New Roman=times new roman,times;Trebuchet MS=trebuchet ms,geneva;Verdana=verdana,geneva;Webdings=webdings;Wingdings=wingdings,zapf dingbats',
+            content_css: '/admin/assets/css/tinymce-custom-fonts.css',
+            content_style: 'body { font-family: Arial, sans-serif; } * { font-family: inherit; }',
+            images_upload_url: '/emailTemplate/upload',
+            automatic_uploads: true,
+            convert_urls: true,
+            relative_urls: false,
+            remove_script_host: false,
+            document_base_url: window.location.origin,
+            file_picker_types: 'image',
+            file_picker_callback: function (callback, value, meta) {
+                if (meta.filetype === 'image') {
+                    var input = document.createElement('input');
+                    input.setAttribute('type', 'file');
+                    input.setAttribute('accept', 'image/*');
+                    input.onchange = function () {
+                        var file = this.files[0];
+                        var reader = new FileReader();
+                        reader.onload = function () {
+                            callback(reader.result, { alt: file.name });
+                        };
+                        reader.readAsDataURL(file);
+                    };
+                    input.click();
+                }
+            },
+            image_advtab: true,
+            image_dimensions: true,
+            image_class_list: [
+                {title: 'Responsive', value: 'img-fluid'}
+            ],
+            urlconverter_callback: function(url, node, on_save, name) {
+                console.log('URL Converter called:', url);
+                // 檢查是否為 banner 相關的圖片
+                if (url && (url.includes('banner') || url.includes('exvent'))) {
+                    console.log('Banner image detected, converting to absolute URL');
+                    // 對 banner 圖片使用絕對 URL
+                    if (url.indexOf('http') !== 0 && url.indexOf('//') !== 0) {
+                        if (url.indexOf('/') === 0) {
+                            return window.location.origin + url;
+                        } else {
+                            return window.location.origin + '/' + url;
+                        }
+                    }
+                } else {
+                    console.log('Non-banner image, keeping relative URL');
+                }
+                // 其他圖片（如 QR code）保持相對路徑
+                return url;
+            }
+        });
+        
+        function insertBannerImage() {
+            const bannerImageUrl = '/exvent/banner.jpg';
+            tinymce.get('content').insertContent(`<img src="${bannerImageUrl}" alt="Banner 圖片" style="max-width: 300px;">`);
+        }
+        
+        function insertQRCodeImage() {
+            const qrCodeUrl = '/events/123/points/456'; // 模擬 QR code 路徑
+            tinymce.get('content').insertContent(`<img src="${qrCodeUrl}" alt="QR Code" style="max-width: 200px;">`);
+        }
+        
+        function insertUploadedImage() {
+            const uploadedImageUrl = '/uploads/email_template_images/test.jpg';
+            tinymce.get('content').insertContent(`<img src="${uploadedImageUrl}" alt="上傳的圖片" style="max-width: 300px;">`);
+        }
+        
+        function getContent() {
+            const content = tinymce.get('content').getContent();
+            document.getElementById('contentDisplay').innerHTML = content;
+        }
+        
+        function checkImageUrls() {
+            const content = tinymce.get('content').getContent();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(content, 'text/html');
+            const images = doc.querySelectorAll('img');
+            
+            let analysis = '<h3>圖片 URL 分析結果：</h3>';
+            
+            images.forEach((img, index) => {
+                const src = img.getAttribute('src');
+                const isAbsolute = src && (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('//'));
+                const isRelative = src && src.startsWith('/');
+                const isBanner = src && (src.includes('banner') || src.includes('exvent'));
+                const isQRCode = src && src.includes('points');
+                const isUploaded = src && src.includes('uploads');
+                
+                let imageType = '其他';
+                let shouldConvert = false;
+                
+                if (isBanner) {
+                    imageType = 'Banner 圖片';
+                    shouldConvert = true;
+                } else if (isQRCode) {
+                    imageType = 'QR Code 圖片';
+                    shouldConvert = false;
+                } else if (isUploaded) {
+                    imageType = '上傳的圖片';
+                    shouldConvert = false;
+                }
+                
+                analysis += `<div class="url-display">
+                    <strong>圖片 ${index + 1}:</strong><br>
+                    <strong>URL:</strong> ${src}<br>
+                    <strong>類型:</strong> ${imageType}<br>
+                    <strong>路徑類型:</strong> ${isAbsolute ? '絕對路徑' : isRelative ? '相對路徑' : '其他'}<br>
+                    <strong>轉換策略:</strong> <span style="color: ${shouldConvert ? 'blue' : 'green'}">${shouldConvert ? '🔄 轉換為絕對 URL' : '📌 保持相對路徑'}</span><br>
+                    <strong>狀態:</strong> <span style="color: ${isAbsolute ? 'green' : shouldConvert ? 'orange' : 'green'}">${isAbsolute ? '✅ 完整 URL' : shouldConvert ? '⚠️ 需要轉換' : '✅ 相對路徑（正確）'}</span>
+                </div>`;
+            });
+            
+            if (images.length === 0) {
+                analysis += '<p>沒有找到圖片</p>';
+            }
+            
+            document.getElementById('urlAnalysis').innerHTML = analysis;
+        }
+        
+        // 頁面載入完成後初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('TinyMCE 測試頁面已載入');
+            console.log('當前域名:', window.location.origin);
+        });
+    </script>
+</body>
+</html>

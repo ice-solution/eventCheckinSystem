@@ -1,10 +1,20 @@
 const EmailTemplate = require("../model/EmailTemplate")
+const Event = require("../model/Event")
+const Transaction = require("../model/Transaction")
+const {
+  replaceTemplateVariables,
+  buildEmailTemplateAdditionalVars,
+  resolveEventUser,
+} = require("../utils/replaceTemplateVariables")
 
 const sendGrid = require("../utils/sendGrid")
 const ses = require("../utils/ses")
 const EmailRecord = require("../model/EmailRecord")
+const emailTracking = require("../utils/emailTracking")
 
 const {sampleHtmlTemplate} = require("../template/sample");
+const { getBuiltinEmailTemplateSeed } = require("../utils/emailTemplateDefaults");
+const { isInvoiceEmailEnabled } = require("../utils/featureFlags");
 
 // 刪除電子郵件模板
 exports.deleteEmailTemplate = async (req, res) => {
@@ -49,6 +59,173 @@ exports.renderEmailTemplateList = async (req, res) => {
   }
 }
 
+// 獲取指定類型的郵件模板列表 (API)
+exports.getEmailTemplatesByType = async (req, res) => {
+  try {
+    const { eventId } = req.params
+    const { type } = req.query // 郵件類型：welcome, invitation, knowledge, reminder
+    
+    if (!type) {
+      return res.status(400).json({ message: "Email type is required" })
+    }
+    
+    // 查詢該事件和全局的指定類型模板
+    const query = {
+      type: type,
+      $or: [
+        { eventId: eventId },
+        { eventId: null } // 全局模板
+      ]
+    }
+    
+    const emailTemplates = await EmailTemplate.find(query)
+      .sort({ eventId: 1, createdAt: -1 }) // 先顯示事件特定模板，再顯示全局模板，按創建時間倒序
+      .select('_id subject type eventId') // 只返回需要的字段
+    
+    res.json(emailTemplates)
+  } catch (error) {
+    console.error("Error fetching email templates by type:", error)
+    res.status(500).json({ message: "Error fetching email templates" })
+  }
+}
+
+/**
+ * 公開預覽 Email Template HTML（不需登入）
+ * GET /emailTemplate/preview/:id
+ */
+exports.renderEmailTemplatePreview = async (req, res) => {
+  const { id } = req.params
+  const userId = (req.query.userId || req.query.user_id || "").trim()
+  const eventIdQuery = (req.query.eventId || req.query.event_id || "").trim()
+  const transactionId = (req.query.transactionId || req.query.transaction_id || "").trim()
+
+  try {
+    const template = await EmailTemplate.findById(id)
+    if (!template) {
+      return res.status(404).render("pages/email_template_preview", {
+        notFound: true,
+        subject: "",
+        content: "",
+        variablesResolved: false,
+        previewHint: "",
+      })
+    }
+
+    const eventId = eventIdQuery || (template.eventId ? String(template.eventId) : "")
+    let event = null
+    let user = null
+    let previewHint = ""
+
+    if (eventId) {
+      event = await Event.findById(eventId)
+    }
+
+    if (userId && event) {
+      if (event.users && event.users.id) {
+        user = event.users.id(userId)
+      }
+      if (!user && event.users) {
+        user = event.users.find((u) => String(u._id) === userId)
+      }
+      if (!user) {
+        previewHint = "找不到此 userId，顯示原始模板（含 {{}} 佔位符）"
+      }
+    } else if (userId && !event) {
+      previewHint = "請同時提供 eventId（或使用已綁定活動的模板）"
+    } else if (!userId) {
+      previewHint = "未提供 userId；發票／付款憑證信將嘗試用最新訂單資料預覽"
+    }
+
+    let content = template.content || ""
+    let subject = template.subject || ""
+    let variablesResolved = false
+
+    const needsTransaction = template.type === "invoice" || template.type === "payment_receipt"
+    let transaction = null
+    if (transactionId) {
+      transaction = await Transaction.findById(transactionId)
+      if (!transaction) previewHint = "找不到 transactionId，無法替換訂單欄位"
+    } else if (needsTransaction && eventId) {
+      const txQuery = { eventId }
+      if (user && user.email) txQuery.userEmail = user.email
+      transaction = await Transaction.findOne(txQuery).sort({ createdAt: -1 })
+      if (transaction) {
+        previewHint = `預覽使用最新訂單 ${transaction._id}（可加 ?transactionId= 指定其他訂單）`
+      }
+    }
+
+    if (!user && transaction && transaction.userEmail) {
+      if (event && event.users) {
+        user = event.users.find((u) => u.email && u.email === transaction.userEmail)
+      }
+      if (!user) {
+        user = { name: transaction.userName || "Guest", email: transaction.userEmail }
+      }
+    }
+
+    if (!user && event && event.users && event.users.length && !needsTransaction) {
+      user = event.users.find((u) => u.email) || event.users[0]
+      if (!userId) previewHint = "未指定 userId，使用活動內第一位賓客作預覽範例"
+    }
+
+    if (user && event) {
+      const userObj = resolveEventUser(event, user)
+      const baseUrl = getPublicBaseUrl(req)
+      const additionalVars = buildEmailTemplateAdditionalVars({
+        baseUrl,
+        user: userObj,
+        event,
+        emailTemplateId: template._id,
+        transaction,
+      })
+
+      content = replaceTemplateVariables(content, userObj, event, additionalVars)
+      subject = replaceTemplateVariables(subject, userObj, event, additionalVars)
+      variablesResolved = true
+      if (!transaction && needsTransaction) {
+        previewHint = (previewHint ? previewHint + "；" : "") + "此活動尚無訂單，{{transaction.*}} / {{invoice.*}} 無法替換"
+        variablesResolved = false
+      }
+    } else if (needsTransaction && event && transaction) {
+      const userObj = {
+        name: transaction.userName || "Preview Guest",
+        email: transaction.userEmail || "guest@example.com",
+      }
+      const baseUrl = getPublicBaseUrl(req)
+      const additionalVars = buildEmailTemplateAdditionalVars({
+        baseUrl,
+        user: userObj,
+        event,
+        emailTemplateId: template._id,
+        transaction,
+      })
+      content = replaceTemplateVariables(content, userObj, event, additionalVars)
+      subject = replaceTemplateVariables(subject, userObj, event, additionalVars)
+      variablesResolved = true
+      previewHint = `依訂單 ${transaction._id} 預覽；請加 ?userId= 以對應真實賓客欄位`
+    } else if (!event) {
+      previewHint = "請加 ?eventId=活動_id（全域模板必填）才能替換變數"
+    }
+
+    try {
+      content = require("../utils/embedEmailFonts").embedKaitiFontInEmail(content)
+    } catch (fontErr) {
+      console.warn("embedKaitiFontInEmail skipped:", fontErr.message)
+    }
+
+    res.render("pages/email_template_preview", {
+      notFound: false,
+      subject,
+      content,
+      variablesResolved,
+      previewHint,
+    })
+  } catch (error) {
+    console.error("Error rendering email template preview:", error)
+    res.status(500).send("獲取郵件模板預覽時出現錯誤")
+  }
+}
+
 exports.renderEmailTemplateDetail = async (req, res) => {
   const { eventId, id } = req.params
 
@@ -58,10 +235,33 @@ exports.renderEmailTemplateDetail = async (req, res) => {
       (await EmailRecord.find({ emailTemplate: id }).sort({
         created_at: -1,
       })) || []
+    
+    // 計算統計數據
+    const stats = {
+      total: emailRecords.length,
+      sent: emailRecords.filter(r => r.status === 'sent' || r.status === 'delivered' || r.status === '成功').length,
+      failed: emailRecords.filter(r => r.status === 'failed' || r.status === '失敗').length,
+      opened: emailRecords.filter(r => r.opened_at).length,
+      clicked: emailRecords.filter(r => r.clicked_at).length,
+      openRate: 0,
+      clickRate: 0,
+      clickToOpenRate: 0
+    };
+    
+    const sentCount = stats.sent;
+    if (sentCount > 0) {
+      stats.openRate = ((stats.opened / sentCount) * 100).toFixed(2);
+      stats.clickRate = ((stats.clicked / sentCount) * 100).toFixed(2);
+    }
+    
+    if (stats.opened > 0) {
+      stats.clickToOpenRate = ((stats.clicked / stats.opened) * 100).toFixed(2);
+    }
+    
     if (!template) {
       return res.status(404).send("電子郵件模板未找到！")
     }
-    res.render("admin/email_template_detail", { template, emailRecords, eventId })
+    res.render("admin/email_template_detail", { template, emailRecords, eventId, stats, invoiceEmailEnabled: isInvoiceEmailEnabled() })
   } catch (error) {
     console.error("Error fetching email template:", error)
     res.status(500).send("獲取電子郵件模板時出現錯誤！")
@@ -81,9 +281,55 @@ exports.renderCreateEmailTemplatePage = async (req, res) => {
   }
 }
 
+/**
+ * 建立模板時載入種子內容：優先活動模板 → 全域模板 → 內建預設
+ * GET /events/:eventId/emailTemplate/seed?type=payment_receipt
+ * GET /emailTemplate/seed?type=payment_receipt
+ */
+exports.getEmailTemplateSeed = async (req, res) => {
+  try {
+    const eventId = req.params.eventId || null
+    const type = (req.query.type || "").trim()
+    if (!type) {
+      return res.status(400).json({ message: "type is required" })
+    }
+    if (type === "invoice" && !isInvoiceEmailEnabled()) {
+      return res.status(400).json({ message: "發票郵件功能已停用" })
+    }
+
+    let tpl = null
+    if (eventId) {
+      tpl = await EmailTemplate.findOne({ eventId, type }).sort({ modified_at: -1 })
+    }
+    if (!tpl) {
+      tpl = await EmailTemplate.findOne({ eventId: null, type }).sort({ modified_at: -1 })
+    }
+    if (tpl) {
+      return res.json({
+        subject: tpl.subject,
+        content: tpl.content,
+        source: tpl.eventId && eventId && String(tpl.eventId) === String(eventId) ? "event" : "global",
+      })
+    }
+
+    const builtin = getBuiltinEmailTemplateSeed(type)
+    if (builtin) {
+      return res.json({ subject: builtin.subject, content: builtin.content, source: "builtin" })
+    }
+
+    return res.json({ subject: "", content: sampleHtmlTemplate, source: "sample" })
+  } catch (error) {
+    console.error("Error getEmailTemplateSeed:", error)
+    res.status(500).json({ message: "Error loading template seed" })
+  }
+}
+
 exports.updateEmailTemplate = async (req, res) => {
   const { id } = req.params
   const { subject, type, content } = req.body
+  if (type === "invoice" && !isInvoiceEmailEnabled()) {
+    return res.status(400).send("發票郵件功能已停用")
+  }
   try {
     const updatedTemplate = await EmailTemplate.findByIdAndUpdate(
       id,
@@ -103,23 +349,37 @@ exports.updateEmailTemplate = async (req, res) => {
 }
 
 exports.createEmailTemplate = async (req, res) => {
-  const { eventId, subject, type, content } = req.body
+  const { eventId: paramEventId } = req.params
+  const { eventId: bodyEventId, subject, type, content } = req.body
+  const eventId = paramEventId || bodyEventId
+
+  console.log('[EmailTemplate Create] paramEventId:', paramEventId, 'bodyEventId:', bodyEventId, 'final eventId:', eventId)
+
+  const templateType = type || 'welcome'
+  if (templateType === 'invoice' && !isInvoiceEmailEnabled()) {
+    return res.status(400).send('發票郵件功能已停用')
+  }
 
   const insertBody = {
     subject,
-    type: type || 'welcome',
+    type: templateType,
     content,
   }
 
   if (eventId) {
     insertBody.eventId = eventId
+    console.log('[EmailTemplate Create] eventId added to insertBody:', insertBody.eventId)
+  } else {
+    console.log('[EmailTemplate Create] WARNING: No eventId provided!')
   }
 
   try {
     // 創建新的電子郵件模板
     const newTemplate = new EmailTemplate(insertBody)
+    console.log('[EmailTemplate Create] Saving template:', newTemplate._id, 'with eventId:', newTemplate.eventId)
 
     await newTemplate.save()
+    console.log('[EmailTemplate Create] Template saved successfully with eventId:', newTemplate.eventId)
     res.status(201).send("電子郵件模板創建成功！")
   } catch (error) {
     console.error("Error creating email template:", error)
@@ -143,48 +403,67 @@ exports.sendEmailById = async (req, res) => {
       const subject = template.subject
       const body = template.content
 
-      // send email
+      // send email with tracking
       console.log("send my template");
       const results = await Promise.all(
-        to.map((email) => {
-          // send email
-          return ses.sendEmail(email, subject, body)
+        to.map(async (email) => {
+          try {
+            // 創建郵件記錄並獲取追蹤 ID
+            const trackingId = await emailTracking.createEmailRecord({
+              recipient: email,
+              subject: subject,
+              emailTemplateId: id,
+              eventId: null,
+              userId: null
+            });
+            
+            // 嵌入標楷體字型到郵件 HTML（如果使用了標楷體）
+            let trackedBody = body;
+            trackedBody = require('../utils/embedEmailFonts').embedKaitiFontInEmail(trackedBody);
+            
+            // 添加追蹤到郵件內容
+            if (trackingId) {
+              trackedBody = emailTracking.addTrackingToEmail(trackedBody, trackingId);
+            }
+            
+            // 發送郵件
+            const result = await ses.sendEmail(email, subject, trackedBody);
+            
+            // 更新郵件記錄狀態
+            if (trackingId && result && result.MessageId) {
+              await emailTracking.updateEmailRecordStatus(trackingId, 'sent', result.MessageId);
+            } else if (trackingId && result instanceof Error) {
+              await emailTracking.updateEmailRecordStatus(trackingId, 'failed');
+            }
+            
+            return result;
+          } catch (error) {
+            console.error(`Error sending email to ${email}:`, error);
+            return error;
+          }
         })
       )
 
-      // save email record with status
-      /**
-       * Result sent:  {
-          '$metadata': {
-            httpStatusCode: 200,
-            requestId: '7696f044-eb19-417d-a3ec-c9352343f23e',
-            extendedRequestId: undefined,
-            cfId: undefined,
-            attempts: 1,
-            totalRetryDelay: 0
-          },
-          MessageId: '010e019827c73c33-d88e5f97-b23e-494b-ac16-deda3d99c0c8-000000'
-        }
-       */
+      // 記錄發送結果（用於向後兼容，實際記錄已在上面創建）
       const emailRecords = results.map((result, index) => {
         if (result instanceof Error) {
-          return new EmailRecord({
+          return {
             recipient: to[index],
             emailTemplate: id,
             status: "失敗",
             errorLog: result.message,
             created_at: Date.now(),
-          })
-        }else{
-          return new EmailRecord({
+          }
+        } else {
+          return {
             recipient: to[index],
             emailTemplate: id,
             status: "成功",
             created_at: Date.now(),
-          })
+          }
         }
       })
-      await EmailRecord.insertMany(emailRecords)
+      // 注意：實際的 EmailRecord 已經在上面創建，這裡只是為了向後兼容
 
       return res.status(200).send("電子郵件發送成功！")
     } catch (error) {
@@ -193,6 +472,20 @@ exports.sendEmailById = async (req, res) => {
     }
   }
   return res.status(400).send("請提供有效的收件人電子郵件地址！")
+}
+
+function getPublicBaseUrl(req) {
+  if (process.env.DOMAIN) {
+    const configured = process.env.DOMAIN.trim();
+    return configured.endsWith('/') ? configured.slice(0, -1) : configured;
+  }
+
+  const forwardedProto = req.headers['x-forwarded-proto'];
+  const forwardedHost = req.headers['x-forwarded-host'] || req.headers['x-forwarded-server'];
+  const protocol = forwardedProto ? forwardedProto.split(',')[0].trim() : req.protocol;
+  const host = forwardedHost ? forwardedHost.split(',')[0].trim() : req.get('host');
+
+  return `${protocol}://${host}`;
 }
 
 exports.uploadEmailTemplateImage = async (req, res) => {
@@ -204,11 +497,9 @@ exports.uploadEmailTemplateImage = async (req, res) => {
     if (!req.file) {
       return res.status(400).send("請選擇一個圖片文件！")
     }
-    
-    // 構建完整的絕對 URL
-    const protocol = req.protocol;
-    const host = req.get('host');
-    const imageUrl = `${protocol}://${host}/uploads/email_template_images/${req.file.filename}`;
+  
+    const baseUrl = getPublicBaseUrl(req);
+    const imageUrl = `${baseUrl}/uploads/email_template_images/${req.file.filename}`;
     
     res.status(200).json({ location: imageUrl })
   })

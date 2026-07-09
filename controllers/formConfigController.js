@@ -1,13 +1,31 @@
 const FormConfig = require('../model/FormConfig');
 const Event = require('../model/Event');
+const { normalizePaymentTicketUi } = require('../utils/paymentTicket');
+
+/** Mongoose document → plain object（供 migrate / render 使用） */
+function toPlainFormConfig(formConfig) {
+    if (!formConfig) return formConfig;
+    if (typeof formConfig.toObject === 'function') {
+        return formConfig.toObject({ minimize: false });
+    }
+    if (typeof formConfig.toJSON === 'function') {
+        return formConfig.toJSON();
+    }
+    return { ...formConfig };
+}
 
 // 數據遷移函數：將舊格式轉換為新格式
 const migrateFormConfig = (formConfig) => {
-    if (!formConfig || !formConfig.sections) return formConfig;
+    if (!formConfig) return formConfig;
+
+    const src = toPlainFormConfig(formConfig);
+    if (!src.sections || !Array.isArray(src.sections)) {
+        return applyFormConfigMetaDefaults(src);
+    }
+
+    const migratedConfig = { ...src };
     
-    const migratedConfig = { ...formConfig };
-    
-    migratedConfig.sections = formConfig.sections.map(section => {
+    migratedConfig.sections = src.sections.map(section => {
         const migratedSection = { ...section };
         
         // 遷移 sectionTitle
@@ -55,6 +73,13 @@ const migrateFormConfig = (formConfig) => {
                 }
                 
                 // 遷移 options
+                if (migratedField.display === undefined) {
+                    migratedField.display = field.visible !== false;
+                }
+                if (migratedField.visible === undefined) {
+                    migratedField.visible = migratedField.display !== false;
+                }
+                
                 if (field.options) {
                     migratedField.options = field.options.map(option => {
                         const migratedOption = { ...option };
@@ -70,6 +95,9 @@ const migrateFormConfig = (formConfig) => {
                                 en: option.value || ''
                             };
                         }
+                        if (migratedOption.isOther === undefined) {
+                            migratedOption.isOther = false;
+                        }
                         
                         return migratedOption;
                     });
@@ -82,17 +110,140 @@ const migrateFormConfig = (formConfig) => {
         return migratedSection;
     });
     
+    return applyFormConfigMetaDefaults(migratedConfig);
+};
+
+function applyFormConfigMetaDefaults(migratedConfig) {
     // 確保有 defaultLanguage
     if (!migratedConfig.defaultLanguage) {
         migratedConfig.defaultLanguage = 'zh';
     }
+    if (typeof migratedConfig.languageSwitcherEnabled !== 'boolean') {
+        migratedConfig.languageSwitcherEnabled = true;
+    }
+
+    // 確保有 eventDisplayName
+    if (!migratedConfig.eventDisplayName || typeof migratedConfig.eventDisplayName !== 'object') {
+        migratedConfig.eventDisplayName = { zh: '', en: '' };
+    } else {
+        migratedConfig.eventDisplayName.zh = migratedConfig.eventDisplayName.zh || '';
+        migratedConfig.eventDisplayName.en = migratedConfig.eventDisplayName.en || '';
+    }
+
+    if (!migratedConfig.registerSubHeader || typeof migratedConfig.registerSubHeader !== 'object') {
+        migratedConfig.registerSubHeader = { zh: '', en: '' };
+    } else {
+        migratedConfig.registerSubHeader.zh = migratedConfig.registerSubHeader.zh || '';
+        migratedConfig.registerSubHeader.en = migratedConfig.registerSubHeader.en || '';
+    }
+    if (!migratedConfig.registerSubtitle || typeof migratedConfig.registerSubtitle !== 'object') {
+        migratedConfig.registerSubtitle = {
+            zh: '請填寫以下資料完成活動報名',
+            en: 'Please fill in the following information to complete event registration'
+        };
+    } else {
+        migratedConfig.registerSubtitle.zh = migratedConfig.registerSubtitle.zh || '請填寫以下資料完成活動報名';
+        migratedConfig.registerSubtitle.en = migratedConfig.registerSubtitle.en || 'Please fill in the following information to complete event registration';
+    }
+
+    // 確保有 terms 設定
+    if (!migratedConfig.terms || typeof migratedConfig.terms !== 'object') {
+        migratedConfig.terms = {
+            enabled: false,
+            label: {
+                zh: '本人已閱讀並同意上述須知，確認繼續預約及積分扣款程序。',
+                en: 'I have read and agree to the terms above, and confirm to proceed.'
+            },
+            content: { zh: '', en: '' }
+        };
+    } else {
+        migratedConfig.terms.enabled = !!migratedConfig.terms.enabled;
+        if (!migratedConfig.terms.label || typeof migratedConfig.terms.label !== 'object') {
+            migratedConfig.terms.label = {
+                zh: '本人已閱讀並同意上述須知，確認繼續預約及積分扣款程序。',
+                en: 'I have read and agree to the terms above, and confirm to proceed.'
+            };
+        } else {
+            migratedConfig.terms.label.zh = migratedConfig.terms.label.zh || '本人已閱讀並同意上述須知，確認繼續預約及積分扣款程序。';
+            migratedConfig.terms.label.en = migratedConfig.terms.label.en || 'I have read and agree to the terms above, and confirm to proceed.';
+        }
+        if (!migratedConfig.terms.content || typeof migratedConfig.terms.content !== 'object') {
+            migratedConfig.terms.content = { zh: '', en: '' };
+        } else {
+            migratedConfig.terms.content.zh = migratedConfig.terms.content.zh || '';
+            migratedConfig.terms.content.en = migratedConfig.terms.content.en || '';
+        }
+    }
+
+    // 確保有 agreement 設定
+    if (!migratedConfig.agreement || typeof migratedConfig.agreement !== 'object') {
+        migratedConfig.agreement = {
+            enabled: false,
+            label: {
+                zh: '本人已閱讀並同意上述協議內容。',
+                en: 'I have read and agree to the agreement above.'
+            },
+            content: { zh: '', en: '' }
+        };
+    } else {
+        migratedConfig.agreement.enabled = !!migratedConfig.agreement.enabled;
+        if (!migratedConfig.agreement.label || typeof migratedConfig.agreement.label !== 'object') {
+            migratedConfig.agreement.label = {
+                zh: '本人已閱讀並同意上述協議內容。',
+                en: 'I have read and agree to the agreement above.'
+            };
+        } else {
+            migratedConfig.agreement.label.zh = migratedConfig.agreement.label.zh || '本人已閱讀並同意上述協議內容。';
+            migratedConfig.agreement.label.en = migratedConfig.agreement.label.en || 'I have read and agree to the agreement above.';
+        }
+        if (!migratedConfig.agreement.content || typeof migratedConfig.agreement.content !== 'object') {
+            migratedConfig.agreement.content = { zh: '', en: '' };
+        } else {
+            migratedConfig.agreement.content.zh = migratedConfig.agreement.content.zh || '';
+            migratedConfig.agreement.content.en = migratedConfig.agreement.content.en || '';
+        }
+    }
+
+    migratedConfig.paymentTicketUi = normalizePaymentTicketUi(migratedConfig.paymentTicketUi);
     
     return migratedConfig;
+}
+
+/** 供 EJS / API 使用：plain object + 預設欄位 */
+exports.getFormConfigForRender = (formConfigDoc) => {
+    if (!formConfigDoc) return null;
+    return migrateFormConfig(formConfigDoc);
 };
 
 // 預設表單配置
 exports.getDefaultFormConfig = () => ({
     defaultLanguage: 'zh',
+    languageSwitcherEnabled: true,
+    registerPageEnabled: true,
+    registerClosedMessage: '',
+    eventDisplayName: { zh: '', en: '' },
+    registerSubHeader: { zh: '', en: '' },
+    registerSubtitle: {
+        zh: '請填寫以下資料完成活動報名',
+        en: 'Please fill in the following information to complete event registration'
+    },
+    terms: {
+        enabled: false,
+        label: {
+            zh: '本人已閱讀並同意上述須知，確認繼續預約及積分扣款程序。',
+            en: 'I have read and agree to the terms above, and confirm to proceed.'
+        },
+        content: { zh: '', en: '' }
+    },
+    agreement: {
+        enabled: false,
+        label: {
+            zh: '本人已閱讀並同意上述協議內容。',
+            en: 'I have read and agree to the agreement above.'
+        },
+        content: { zh: '', en: '' }
+    },
+    paymentTicketUi: normalizePaymentTicketUi(),
     sections: [
         {
             sectionName: 'contact_info',
@@ -111,6 +262,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'email',
                     required: true,
+                    display: true,
                     visible: true,
                     placeholder: {
                         zh: '例如：peterwong@abccompany.com',
@@ -126,6 +278,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'text',
                     required: true,
+                    display: true,
                     visible: true,
                     placeholder: {
                         zh: '例如：王小明',
@@ -141,6 +294,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'select',
                     required: true,
+                    display: true,
                     visible: true,
                     order: 3,
                     options: [
@@ -164,6 +318,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'tel',
                     required: true,
+                    display: true,
                     visible: true,
                     placeholder: {
                         zh: '例如：區號 - 電話號碼',
@@ -179,6 +334,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'select',
                     required: true,
+                    display: true,
                     visible: true,
                     order: 5,
                     options: [
@@ -197,6 +353,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'text',
                     required: true,
+                    display: true,
                     visible: true,
                     placeholder: {
                         zh: '例如：ABC 公司',
@@ -212,6 +369,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'text',
                     required: true,
+                    display: true,
                     visible: true,
                     placeholder: {
                         zh: '例如：資深經理',
@@ -227,6 +385,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'select',
                     required: false,
+                    display: true,
                     visible: true,
                     order: 8,
                     options: [
@@ -246,6 +405,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'select',
                     required: false,
+                    display: true,
                     visible: true,
                     order: 9,
                     options: [
@@ -264,6 +424,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'select',
                     required: false,
+                    display: true,
                     visible: true,
                     order: 10,
                     options: [
@@ -281,6 +442,7 @@ exports.getDefaultFormConfig = () => ({
                     },
                     type: 'textarea',
                     required: false,
+                    display: true,
                     visible: true,
                     placeholder: {
                         zh: '請輸入任何特殊需求或備註',
@@ -337,7 +499,7 @@ exports.getFormConfig = async (req, res) => {
 exports.updateFormConfig = async (req, res) => {
     try {
         const { eventId } = req.params;
-        const { sections, defaultLanguage } = req.body;
+        const { sections, defaultLanguage, languageSwitcherEnabled, registerPageEnabled, registerClosedMessage, terms, agreement, eventDisplayName, registerSubHeader, registerSubtitle, paymentTicketUi } = req.body;
         
         // 驗證事件是否存在
         const event = await Event.findById(eventId);
@@ -352,10 +514,42 @@ exports.updateFormConfig = async (req, res) => {
         
         if (formConfig) {
             // 更新現有配置，先進行數據遷移
-            const migratedSections = migrateFormConfig({ sections }).sections;
+            const migratedSections = migrateFormConfig({ sections: sections || formConfig.sections }).sections;
             formConfig.sections = migratedSections;
             if (defaultLanguage) {
                 formConfig.defaultLanguage = defaultLanguage;
+            }
+            if ('languageSwitcherEnabled' in req.body) {
+                formConfig.languageSwitcherEnabled = languageSwitcherEnabled === true;
+            }
+            if (typeof registerPageEnabled === 'boolean') {
+                formConfig.registerPageEnabled = registerPageEnabled;
+            }
+            if (typeof registerClosedMessage === 'string') {
+                formConfig.registerClosedMessage = registerClosedMessage;
+            }
+            if (eventDisplayName && typeof eventDisplayName === 'object') {
+                const migrated = migrateFormConfig({ sections: formConfig.sections, eventDisplayName });
+                formConfig.eventDisplayName = migrated.eventDisplayName;
+            }
+            if (registerSubHeader && typeof registerSubHeader === 'object') {
+                const migrated = migrateFormConfig({ sections: formConfig.sections, registerSubHeader });
+                formConfig.registerSubHeader = migrated.registerSubHeader;
+            }
+            if (registerSubtitle && typeof registerSubtitle === 'object') {
+                const migrated = migrateFormConfig({ sections: formConfig.sections, registerSubtitle });
+                formConfig.registerSubtitle = migrated.registerSubtitle;
+            }
+            if (terms && typeof terms === 'object') {
+                const migrated = migrateFormConfig({ sections: formConfig.sections, terms });
+                formConfig.terms = migrated.terms;
+            }
+            if (agreement && typeof agreement === 'object') {
+                const migrated = migrateFormConfig({ sections: formConfig.sections, agreement });
+                formConfig.agreement = migrated.agreement;
+            }
+            if (paymentTicketUi && typeof paymentTicketUi === 'object') {
+                formConfig.paymentTicketUi = normalizePaymentTicketUi(paymentTicketUi);
             }
             await formConfig.save();
         } else {
@@ -364,7 +558,28 @@ exports.updateFormConfig = async (req, res) => {
             formConfig = new FormConfig({
                 eventId: eventId,
                 sections: sections || defaultConfig.sections,
-                defaultLanguage: defaultLanguage || defaultConfig.defaultLanguage
+                defaultLanguage: defaultLanguage || defaultConfig.defaultLanguage,
+                languageSwitcherEnabled: typeof languageSwitcherEnabled === 'boolean' ? languageSwitcherEnabled : defaultConfig.languageSwitcherEnabled,
+                registerPageEnabled: typeof registerPageEnabled === 'boolean' ? registerPageEnabled : defaultConfig.registerPageEnabled,
+                registerClosedMessage: typeof registerClosedMessage === 'string' ? registerClosedMessage : (defaultConfig.registerClosedMessage || ''),
+                eventDisplayName: eventDisplayName && typeof eventDisplayName === 'object'
+                    ? migrateFormConfig({ sections: (sections || defaultConfig.sections), eventDisplayName }).eventDisplayName
+                    : defaultConfig.eventDisplayName,
+                registerSubHeader: registerSubHeader && typeof registerSubHeader === 'object'
+                    ? migrateFormConfig({ sections: (sections || defaultConfig.sections), registerSubHeader }).registerSubHeader
+                    : defaultConfig.registerSubHeader,
+                registerSubtitle: registerSubtitle && typeof registerSubtitle === 'object'
+                    ? migrateFormConfig({ sections: (sections || defaultConfig.sections), registerSubtitle }).registerSubtitle
+                    : defaultConfig.registerSubtitle,
+                terms: terms && typeof terms === 'object'
+                    ? migrateFormConfig({ sections: (sections || defaultConfig.sections), terms }).terms
+                    : defaultConfig.terms,
+                agreement: agreement && typeof agreement === 'object'
+                    ? migrateFormConfig({ sections: (sections || defaultConfig.sections), agreement }).agreement
+                    : defaultConfig.agreement,
+                paymentTicketUi: paymentTicketUi && typeof paymentTicketUi === 'object'
+                    ? normalizePaymentTicketUi(paymentTicketUi)
+                    : defaultConfig.paymentTicketUi
             });
             await formConfig.save();
         }
@@ -433,10 +648,16 @@ exports.renderFormConfigPage = async (req, res) => {
             });
             await formConfig.save();
         }
+
+        const formConfigForView = exports.getFormConfigForRender(formConfig);
         
+        const { getCurrentBannerPreviewUrl } = require('../utils/bannerCache');
+        const currentBanner = getCurrentBannerPreviewUrl(eventId);
+
         res.render('admin/form_config', { 
             event: event, 
-            formConfig: formConfig 
+            formConfig: formConfigForView,
+            currentBanner
         });
         
     } catch (error) {
@@ -452,6 +673,7 @@ module.exports = {
     renderFormConfigPage: exports.renderFormConfigPage,
     resetToDefault: exports.resetToDefault,
     getDefaultFormConfig: exports.getDefaultFormConfig,
+    getFormConfigForRender: exports.getFormConfigForRender,
     migrateFormConfig
 };
 

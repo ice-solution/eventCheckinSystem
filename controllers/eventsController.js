@@ -9,52 +9,300 @@ const sendGrid = require("../utils/sendGrid");
 const ses = require("../utils/ses");
 const path = require('path');
 const User = require('../model/User'); // 假設您有一個 User 模型
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const Transaction = require('../model/Transaction');
+const wonderPayment = require('../utils/wonderPayment');
 const ExcelJS = require('exceljs');
 const { getWelcomeEmailTemplate } = require('../template/welcomeEmail'); // 引入歡迎郵件模板
 const emailTemplate = require('./emailTemplateController');
 const EmailTemplate = require('../model/EmailTemplate'); // 引入 EmailTemplate 模型
+const SmsTemplate = require('../model/SmsTemplate'); // 引入 SmsTemplate 模型
+const twilioSms = require('../utils/plivo'); // 引入 Twilio SMS 發送工具（文件名保持不變以保持兼容性）
+const emailTracking = require('../utils/emailTracking'); // 引入郵件追蹤工具
+const EmailRecord = require('../model/EmailRecord'); // 引入 EmailRecord 模型
 const multer = require('multer');
 const fs = require('fs');
+const { getSocket } = require('../socket'); // 引入 socket 以發送實時更新
+const { embedKaitiFontInEmail } = require('../utils/embedEmailFonts'); // 引入字型嵌入功能
+const { replaceTemplateVariables, buildEmailTemplateAdditionalVars, flattenForTemplate } = require('../utils/replaceTemplateVariables');
+const { isInvoiceEmailEnabled } = require('../utils/featureFlags');
+const { normalizeAgreementAgreed, formatAgreementAgreedLabel, agreementAgreedSortOrder } = require('../utils/agreementFields');
+const { resolveUserDisplayName, ensureUserNameField } = require('../utils/userDisplayName');
+
+/** 取得對外 base URL（依 DOMAIN/domain，缺協議時自動補 https://） */
+function getPublicBaseUrl() {
+    const raw = (process.env.DOMAIN || process.env.domain || 'http://localhost:3377').toString().trim().replace(/\/+$/, '');
+    return raw.startsWith('http://') || raw.startsWith('https://') ? raw : `https://${raw}`;
+}
+
+/** 將獎品圖片路徑轉為絕對 URL（相對路徑補上 getPublicBaseUrl()） */
+function getPrizePictureUrl(picture) {
+    if (!picture || typeof picture !== 'string' || !picture.trim()) return '';
+    const p = picture.trim();
+    if (p.startsWith('http://') || p.startsWith('https://')) return p;
+    const base = getPublicBaseUrl();
+    return p.startsWith('/') ? base + p : base + '/' + p;
+}
+
+/** 查詢活動或全域郵件模板（eventId 優先，其次 eventId: null） */
+async function findEmailTemplateForEvent(eventId, type) {
+    const eventTemplate = await EmailTemplate.findOne({ eventId, type });
+    if (eventTemplate) return eventTemplate;
+    return EmailTemplate.findOne({ eventId: null, type });
+}
+
+/** 發票 email 預設內容（建立訂單後發送） */
+function getDefaultInvoiceEmailContent(transaction, event) {
+    const t = transaction;
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family: sans-serif;">
+<h2>訂單／發票</h2>
+<p>您好 {{user.name}}，</p>
+<p>感謝您報名活動「{{event.name}}」。</p>
+<p>以下為您的訂單資料，請完成付款。</p>
+<table border="1" cellpadding="8" style="border-collapse:collapse;">
+<tr><td>訂單編號</td><td>{{transaction._id}}</td></tr>
+<tr><td>票券／項目</td><td>{{transaction.ticketTitle}}</td></tr>
+<tr><td>金額</td><td>{{transaction.ticketPrice}} {{invoice.currency}}</td></tr>
+<tr><td>狀態</td><td>{{transaction.status}}</td></tr>
+</table>
+<p>此為系統自動發送，請勿直接回覆。</p>
+</body></html>`;
+}
+
+/** 付款憑證 email 預設內容（webhook 付款完成後發送） */
+function getDefaultPaymentReceiptEmailContent(transaction, event) {
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family: sans-serif;">
+<h2>付款憑證</h2>
+<p>您好 {{user.name}}，</p>
+<p>您的款項已收訖，感謝您報名「{{event.name}}」。</p>
+<table border="1" cellpadding="8" style="border-collapse:collapse;">
+<tr><td>訂單編號</td><td>{{transaction._id}}</td></tr>
+<tr><td>票券／項目</td><td>{{transaction.ticketTitle}}</td></tr>
+<tr><td>已付金額</td><td>{{invoice.paid_total}} {{invoice.currency}}</td></tr>
+<tr><td>發票／單號</td><td>{{invoice.number}}</td></tr>
+<tr><td>狀態</td><td>{{invoice.state}}</td></tr>
+</table>
+<p>此為系統自動發送，請勿直接回覆。</p>
+</body></html>`;
+}
+
+/** 從 event.users 以 email 找 userId（供郵件記錄） */
+function findEventUserIdByEmail(eventDoc, email) {
+    if (!eventDoc || !email || !Array.isArray(eventDoc.users)) return null;
+    const normalized = String(email).trim().toLowerCase();
+    const user = eventDoc.users.find(u => u.email && String(u.email).trim().toLowerCase() === normalized);
+    return user && user._id ? String(user._id) : null;
+}
+
+/** 發送郵件並寫入 EmailRecord（invoice / payment_receipt 等） */
+async function sendEmailWithRecord({ recipient, subject, messageBody, emailTemplate, eventId, userId }) {
+    let body = embedKaitiFontInEmail(messageBody);
+    const trackingId = await emailTracking.createEmailRecord({
+        recipient,
+        subject,
+        emailTemplateId: emailTemplate ? emailTemplate._id : null,
+        eventId,
+        userId: userId || null,
+    });
+    if (trackingId) {
+        body = emailTracking.addTrackingToEmail(body, trackingId);
+    }
+    const result = await ses.sendEmail(recipient, subject, body);
+    if (trackingId) {
+        if (result && result.MessageId) {
+            await emailTracking.updateEmailRecordStatus(trackingId, 'sent', result.MessageId);
+        } else if (result instanceof Error) {
+            await emailTracking.updateEmailRecordStatus(trackingId, 'failed');
+        } else {
+            await emailTracking.updateEmailRecordStatus(trackingId, 'sent');
+        }
+    }
+    return result;
+}
+
+/** 發送發票 email（建立訂單後，寄給登記者） */
+async function sendInvoiceEmail(transaction, event, emailTemplateId = null) {
+    const email = transaction.userEmail;
+    if (!email || !email.trim()) return;
+    try {
+        const eventDoc = typeof event.populate === 'function' ? event : await Event.findById(transaction.eventId);
+        if (!eventDoc) return;
+        let emailTemplate = emailTemplateId ? await EmailTemplate.findById(emailTemplateId) : null;
+        if (!emailTemplate) emailTemplate = await EmailTemplate.findOne({ eventId: eventDoc._id, type: 'invoice' });
+        if (!emailTemplate) emailTemplate = await EmailTemplate.findOne({ eventId: null, type: 'invoice' });
+        const userLike = { name: transaction.userName || '', email: transaction.userEmail || '' };
+        const invoiceData = transaction.transactionData && Object.keys(transaction.transactionData).length > 0
+            ? transaction.transactionData
+            : { currency: 'HKD', number: String(transaction._id), state: transaction.status || 'pending' };
+        const additionalVars = {
+            ...flattenForTemplate(transaction.toObject ? transaction.toObject() : transaction, 'transaction'),
+            ...flattenForTemplate(invoiceData, 'invoice'),
+            ...buildEmailTemplateAdditionalVars({
+                user: userLike,
+                event: eventDoc,
+                emailTemplateId: emailTemplate ? emailTemplate._id : null,
+                transaction,
+            }),
+        };
+        const subject = emailTemplate ? emailTemplate.subject : '您的訂單／發票 - ' + (eventDoc.name || '');
+        let messageBody = emailTemplate
+            ? replaceTemplateVariables(emailTemplate.content, userLike, eventDoc, additionalVars)
+            : getDefaultInvoiceEmailContent(transaction, eventDoc);
+        messageBody = replaceTemplateVariables(messageBody, userLike, eventDoc, additionalVars);
+        const userId = findEventUserIdByEmail(eventDoc, email);
+        await sendEmailWithRecord({
+            recipient: email,
+            subject,
+            messageBody,
+            emailTemplate,
+            eventId: eventDoc._id,
+            userId,
+        });
+        console.log('[Invoice Email] Sent to:', email);
+    } catch (err) {
+        console.error('[Invoice Email] Error:', err);
+        throw err;
+    }
+}
+
+/** 發送付款憑證 email（webhook 付款完成後，寄給登記者） */
+async function sendPaymentReceiptEmail(transaction, event, user, emailTemplateId = null) {
+    const email = (user && user.email) || transaction.userEmail;
+    if (!email || !email.trim()) return;
+    try {
+        const eventDoc = typeof event.populate === 'function' ? event : await Event.findById(transaction.eventId);
+        if (!eventDoc) return;
+        let emailTemplate = emailTemplateId ? await EmailTemplate.findById(emailTemplateId) : null;
+        if (!emailTemplate) emailTemplate = await EmailTemplate.findOne({ eventId: eventDoc._id, type: 'payment_receipt' });
+        if (!emailTemplate) emailTemplate = await EmailTemplate.findOne({ eventId: null, type: 'payment_receipt' });
+        const userLike = user ? (user.toObject ? user.toObject() : user) : { name: transaction.userName || '', email: transaction.userEmail || '' };
+        const invoiceData = transaction.transactionData && Object.keys(transaction.transactionData).length > 0
+            ? transaction.transactionData
+            : { paid_total: transaction.ticketPrice, currency: 'HKD', number: transaction.stripeSessionId || transaction._id, state: transaction.status || 'paid' };
+        const additionalVars = {
+            ...flattenForTemplate(transaction.toObject ? transaction.toObject() : transaction, 'transaction'),
+            ...flattenForTemplate(invoiceData, 'invoice'),
+            ...buildEmailTemplateAdditionalVars({
+                user: userLike,
+                event: eventDoc,
+                emailTemplateId: emailTemplate ? emailTemplate._id : null,
+                transaction,
+            }),
+        };
+        const subject = emailTemplate ? emailTemplate.subject : '付款憑證 - ' + (eventDoc.name || '');
+        let messageBody = emailTemplate
+            ? replaceTemplateVariables(emailTemplate.content, userLike, eventDoc, additionalVars)
+            : getDefaultPaymentReceiptEmailContent(transaction, eventDoc);
+        messageBody = replaceTemplateVariables(messageBody, userLike, eventDoc, additionalVars);
+        const userId = (userLike._id && String(userLike._id)) || findEventUserIdByEmail(eventDoc, email);
+        await sendEmailWithRecord({
+            recipient: email,
+            subject,
+            messageBody,
+            emailTemplate,
+            eventId: eventDoc._id,
+            userId,
+        });
+        console.log('[Payment Receipt Email] Sent to:', email);
+    } catch (err) {
+        console.error('[Payment Receipt Email] Error:', err);
+        throw err;
+    }
+}
+
+/** 建立活動後，非 admin 建立者須寫入 allowedEvents / eventPermissions，否則列表與後台皆看不到 */
+async function grantCreatorEventAccess(authId, eventId, sessionUser) {
+    const permission = require('../middleware/permission');
+    const allFuncKeys = [...new Set(permission.getEventFunctionList().map((f) => f.key))];
+    const auth = await Auth.findById(authId);
+    if (!auth) return;
+
+    const eidStr = String(eventId);
+    if (!auth.allowedEvents.some((id) => String(id) === eidStr)) {
+        auth.allowedEvents.push(eventId);
+    }
+
+    const perms = auth.eventPermissions || [];
+    let entry = perms.find((p) => p.eventId && String(p.eventId) === eidStr);
+    if (!entry) {
+        auth.eventPermissions.push({ eventId, functions: allFuncKeys });
+    } else {
+        entry.functions = allFuncKeys;
+    }
+    auth.markModified('eventPermissions');
+    await auth.save();
+
+    if (sessionUser) {
+        sessionUser.allowedEvents = sessionUser.allowedEvents || [];
+        if (!sessionUser.allowedEvents.includes(eidStr)) {
+            sessionUser.allowedEvents.push(eidStr);
+        }
+        sessionUser.eventPermissions = sessionUser.eventPermissions || [];
+        if (!sessionUser.eventPermissions.some((p) => p.eventId === eidStr)) {
+            sessionUser.eventPermissions.push({ eventId: eidStr, functions: allFuncKeys });
+        }
+    }
+}
 
 // 創建事件
 exports.createEvent = async (req, res) => {
-    const { name, from, to } = req.body;
+    const { name, from, to } = req.body || {};
 
     try {
-        // 檢查是否有用戶數據
         if (!req.session || !req.session.user || !req.session.user._id) {
             return res.status(401).json({ message: '未授權：請先登入' });
         }
 
+        const trimmedName = name != null ? String(name).trim() : '';
+        if (!trimmedName || !from || !to) {
+            return res.status(400).json({ message: '請填寫活動名稱與開始／結束時間' });
+        }
+
+        const fromDate = new Date(from);
+        const toDate = new Date(to);
+        if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+            return res.status(400).json({ message: '活動時間格式無效' });
+        }
+        if (fromDate.getTime() >= toDate.getTime()) {
+            return res.status(400).json({ message: '結束時間必須晚於開始時間' });
+        }
+
+        const sessionUser = req.session.user;
         const newEvent = new Event({
-            name,
-            from,
-            to,
-            owner: req.session.user._id, // 使用 session 中的用戶 ID 作為擁有者
-            created_at: Date.now(), // 設置創建時間
-            modified_at: Date.now(), // 設置修改時間
-            
+            name: trimmedName,
+            from: fromDate,
+            to: toDate,
+            owner: sessionUser._id,
+            created_at: new Date(),
+            modified_at: new Date(),
         });
 
-        await newEvent.save(); // 保存事件
-        res.status(201).json(newEvent); // 返回創建的事件
+        await newEvent.save();
+
+        if (sessionUser.role !== 'admin') {
+            await grantCreatorEventAccess(sessionUser._id, newEvent._id, sessionUser);
+        }
+
+        res.status(201).json(newEvent);
     } catch (error) {
         console.error('Error creating event:', error);
-        res.status(500).json({ message: 'Error creating event' });
+        res.status(500).json({ message: error.message || '建立活動失敗' });
     }
 };
 
 // 獲取用戶的事件
 exports.getUserEvents = async (req, res) => {
     try {
-        // 檢查是否有用戶數據
         if (!req.session || !req.session.user || !req.session.user._id) {
             return res.status(401).json({ message: '未授權：請先登入' });
         }
-        
-        const events = await Event.find({ owner: req.session.user._id }); // 根據擁有者查詢事件
+        const user = req.session.user;
+        let events;
+        if (user.role === 'admin') {
+            events = await Event.find({}).sort({ created_at: -1 });
+        } else {
+            const allowed = (user.allowedEvents || []).filter(Boolean);
+            events = allowed.length ? await Event.find({ _id: { $in: allowed } }) : [];
+        }
         res.status(200).json(events);
     } catch (error) {
         console.error('Error fetching events:', error);
@@ -67,7 +315,11 @@ exports.getEventUsersByEventID = async (req, res) => {
     const { eventId } = req.params; // 從請求參數中獲取事件 ID
     
     try {
-        const event = await Event.findById(eventId).populate('users'); // 根據事件 ID 查詢事件並填充用戶信息
+        if (!mongoose.Types.ObjectId.isValid(eventId)) {
+            return res.redirect('/events/list');
+        }
+
+        const event = await Event.findById(eventId);
         if (!event) {
             return res.status(404).json({ message: 'Event not found' });
         }
@@ -108,7 +360,16 @@ exports.getEventUsersByEventID = async (req, res) => {
             }
         }
         
-        res.render('admin/users', { event, formConfig }); // 渲染用戶頁面，傳遞事件信息和表單配置
+        const eventForView = event.toObject ? event.toObject() : event;
+        if (eventForView.PaymentTickets && eventForView.PaymentTickets.length) {
+            eventForView.PaymentTickets = normalizeTicketsForView(eventForView.PaymentTickets);
+        }
+        res.render('admin/users', {
+            event: eventForView,
+            formConfig,
+            formatAgreementAgreedLabel,
+            agreementAgreedSortOrder,
+        });
     } catch (error) {
         console.error('Error fetching event:', error);
         res.status(500).json({ message: 'Error fetching event' });
@@ -132,53 +393,280 @@ exports.fetchUsersByEvent = async (req, res) => {
 
 
 // 向事件中添加用戶
+/**
+ * 公開免費報名（iframe / 前台，不需登入）
+ * POST /web/:event_id/register
+ */
+exports.publicRegister = async (req, res) => {
+    const { event_id } = req.params;
+    const userData = req.body || {};
+
+    if (userData.ticketId) {
+        return res.status(400).json({ message: '此登記入口僅支援免費報名，請勿選擇付費票券。' });
+    }
+
+    try {
+        const event = await Event.findById(event_id);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        const FormConfig = require('../model/FormConfig');
+        const formConfig = await FormConfig.findOne({ eventId: event_id });
+        if (formConfig && formConfig.registerPageEnabled === false) {
+            const msg = (formConfig.registerClosedMessage && String(formConfig.registerClosedMessage).trim())
+                || 'Registration is currently closed.';
+            return res.status(403).json({ message: msg });
+        }
+
+        req.params.eventId = event_id;
+        return exports.addUserToEvent(req, res);
+    } catch (error) {
+        console.error('Error in publicRegister:', error);
+        return res.status(500).json({ message: '伺服器錯誤', error: error.message });
+    }
+};
+
 exports.addUserToEvent = async (req, res) => {
     const { eventId } = req.params; // 獲取事件 ID
-    const { email, name, company, table, phone, role, saluation, industry, transport, meal, remarks, isCheckIn } = req.body; // 獲取用戶資料
+    const userData = ensureUserNameField(req.body || {}); // 獲取用戶資料（包括所有動態字段）
 
     try {
         const event = await Event.findById(eventId); // 查找事件
         if (!event) {
             return res.status(404).json({ message: 'Event not found' });
         }
-        // 創建新的用戶
+        
+        // 創建新的用戶對象，動態包含所有傳入的字段
         const newUser = {
-            email,
-            name,
-            table,
-            company,
-            phone,
-            role, // 添加角色
-            saluation, // 添加稱謂
-            industry, // 添加行業
-            transport, // 添加交通方式
-            meal, // 添加餐飲選擇
-            remarks, // 添加備註
-            isCheckIn // 默認為未登記進場
+            create_at: new Date(),
+            modified_at: new Date(),
+            isCheckIn: userData.isCheckIn || false // 默認為未登記進場
         };
+        
+        // 確保必填字段 name 有值（支援 lastname + surname 等動態欄位）
+        const resolvedName = resolveUserDisplayName(userData);
+        if (resolvedName) {
+            newUser.name = resolvedName;
+        } else if (!userData.name || userData.name === '' || userData.name === null) {
+            newUser.name = userData.email || userData.company || '未提供姓名';
+        }
+        
+        // 動態添加所有傳入的字段（包括 formConfig 中定義的動態字段）
+        // 排除 MongoDB 內部字段和已處理的字段
+        const excludedFields = ['_id', '__v', 'create_at', 'modified_at'];
+        
+        Object.keys(userData).forEach(key => {
+            // 跳過排除的字段
+            if (excludedFields.includes(key)) {
+                return;
+            }
+            
+            // 處理 checkbox 字段（數組類型）
+            if (Array.isArray(userData[key])) {
+                newUser[key] = userData[key];
+            }
+            // 添加字段值（包括空字符串和 null，但不包括 undefined）
+            else if (userData[key] !== undefined) {
+                if (key === 'agreementAgreed') {
+                    newUser[key] = normalizeAgreementAgreed(userData[key]);
+                } else {
+                    newUser[key] = userData[key];
+                }
+            }
+        });
 
         // 將用戶添加到事件中
         event.users.push(newUser); // 將用戶添加到事件中
+        
+        // 標記整個 users 數組為已修改，確保動態字段被保存
+        event.markModified('users');
+        
         await event.save(); // 保存事件
 
         // 獲取新用戶的 _id
         const savedUser = event.users[event.users.length - 1]; // 獲取剛剛添加的用戶
         newUser._id = savedUser._id; // 將 _id 添加到 newUser 對象中
 
-        // 發送郵件
-        if(newUser.role !== 'guest'){
-            await this.sendEmail(newUser, event); // 傳遞 newUser（現在包含 _id）和事件
+        // 根據設置決定是否發送歡迎消息（email/sms/both）
+        if(newUser.role !== 'guest' && event.emailSettings && event.emailSettings.sendWelcomeEmail){
+            await exports.sendWelcomeMessage(newUser, event); // 根據設置發送 email/sms/both
         }
-        res.status(201).json({ attendee: newUser }); // 返回新用戶資料
+
+        // 返回新用戶資料（包含 _id），保持向後兼容
+        const responseData = { 
+            _id: savedUser._id,
+            ...newUser
+        };
+        res.status(201).json(responseData); // 返回新用戶資料
     } catch (error) {
         console.error('Error adding user:', error);
-        res.status(500).json({ message: '伺服器錯誤' });
+        res.status(500).json({ message: '伺服器錯誤', error: error.message });
+    }
+};
+
+// 發送 SMS
+exports.sendSMS = async (user, event, type = 'welcome') => {
+    try {
+        if (!user.phone) {
+            console.log('User does not have a phone number, skipping SMS');
+            return;
+        }
+
+        // 生成 QR 碼 URL
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
+        const loginUrl = `${getPublicBaseUrl()}/events/${event._id}/login`;
+        
+        // 查找對應事件的 SMS 模板
+        let smsTemplate = await SmsTemplate.findOne({ 
+            eventId: event._id, 
+            type: type 
+        });
+        
+        // 如果沒有找到模板，使用默認的 SMS 模板
+        if (!smsTemplate) {
+            smsTemplate = await SmsTemplate.findOne({ 
+                eventId: null, 
+                type: type 
+            });
+        }
+        
+        let messageBody = '';
+        
+        // 如果找到了 SMS 模板，使用模板的內容
+        if (smsTemplate && smsTemplate.content) {
+            // 使用動態替換函數，支持所有 user 字段
+            messageBody = replaceTemplateVariables(smsTemplate.content, user, event, {
+                qrCodeUrl: qrCodeUrl,
+                loginUrl: loginUrl
+            });
+        } else {
+            // 使用默認模板
+            messageBody = `歡迎 ${user.name || ''} 參加 ${event.name}！您的登入連結：${loginUrl}`;
+        }
+        
+        // 發送 SMS
+        // 組合電話號碼：phone_code + phone（如果都有）
+        let phoneNumber = '';
+        if (user.phone_code && user.phone) {
+            // 移除 phone_code 中可能存在的 + 號
+            const phoneCode = user.phone_code.startsWith('+') ? user.phone_code : `+${user.phone_code}`;
+            phoneNumber = `${phoneCode}${user.phone}`;
+        } else if (user.phone) {
+            // 如果只有 phone，確保有 + 號
+            phoneNumber = user.phone.startsWith('+') ? user.phone : `+${user.phone}`;
+        } else {
+            throw new Error('User phone number is missing');
+        }
+        
+        await twilioSms.sendSMS(phoneNumber, messageBody);
+        console.log('SMS sent successfully to:', phoneNumber);
+        
+    } catch (error) {
+        console.error('Error sending SMS:', error);
+        throw error;
+    }
+}
+
+// 批量發送 SMS
+exports.sendBulkSMS = async (req, res) => {
+    const { eventId } = req.params;
+    const { roles, templateId, userIds, sendToSelectedOnly } = req.body;
+
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        // 獲取 SMS 模板
+        const smsTemplate = await SmsTemplate.findById(templateId);
+        if (!smsTemplate) {
+            return res.status(404).json({ message: 'SMS template not found' });
+        }
+
+        // 過濾用戶
+        let targetUsers = [];
+        if (sendToSelectedOnly && userIds && userIds.length > 0) {
+            // 只發送給選中的用戶
+            targetUsers = event.users.filter(user => userIds.includes(user._id.toString()));
+        } else {
+            // 根據角色過濾
+            if (roles && roles.length > 0 && !roles.includes('')) {
+                targetUsers = event.users.filter(user => {
+                    const userRole = user.role || '';
+                    return roles.includes(userRole);
+                });
+            } else {
+                // 發送給所有用戶
+                targetUsers = event.users;
+            }
+        }
+
+        // 過濾有電話號碼的用戶
+        targetUsers = targetUsers.filter(user => user.phone);
+
+        if (targetUsers.length === 0) {
+            return res.status(400).json({ message: '沒有符合條件的用戶或用戶沒有電話號碼' });
+        }
+
+        // 生成消息內容
+        const loginUrl = `${getPublicBaseUrl()}/events/${event._id}/login`;
+
+        const results = [];
+        let successCount = 0;
+        let failCount = 0;
+
+        // 發送 SMS
+        for (const user of targetUsers) {
+            try {
+                // 生成 QR 碼 URL
+                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
+                
+                // 使用動態替換函數，支持所有 user 字段
+                let messageBody = replaceTemplateVariables(smsTemplate.content, user, event, {
+                    qrCodeUrl: qrCodeUrl,
+                    loginUrl: loginUrl
+                });
+
+                // 組合電話號碼
+                let phoneNumber = '';
+                if (user.phone_code && user.phone) {
+                    const phoneCode = user.phone_code.startsWith('+') ? user.phone_code : `+${user.phone_code}`;
+                    phoneNumber = `${phoneCode}${user.phone}`;
+                } else if (user.phone) {
+                    phoneNumber = user.phone.startsWith('+') ? user.phone : `+${user.phone}`;
+                }
+
+                if (phoneNumber) {
+                    await twilioSms.sendSMS(phoneNumber, messageBody);
+                    successCount++;
+                    results.push({ userId: user._id, name: user.name, phone: phoneNumber, success: true });
+                } else {
+                    failCount++;
+                    results.push({ userId: user._id, name: user.name, phone: '', success: false, error: 'No phone number' });
+                }
+            } catch (error) {
+                failCount++;
+                results.push({ userId: user._id, name: user.name, phone: user.phone || '', success: false, error: error.message });
+            }
+        }
+
+        res.json({
+            message: `SMS 發送完成：成功 ${successCount} 條，失敗 ${failCount} 條`,
+            successCount,
+            failCount,
+            total: targetUsers.length,
+            results
+        });
+    } catch (error) {
+        console.error('Error sending bulk SMS:', error);
+        res.status(500).json({ message: '發送 SMS 時出現錯誤：' + error.message });
     }
 };
 
 exports.sendEmail = async (user, event) => {
     try {
-        // 生成 QR 碼
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
         
         // 查找對應事件的歡迎郵件模板
@@ -201,30 +689,223 @@ exports.sendEmail = async (user, event) => {
         // 如果找到了郵件模板，使用模板的內容
         if (emailTemplate) {
             subject = emailTemplate.subject;
-            messageBody = emailTemplate.content
-                .replace(/\{\{user\.name\}\}/g, user.name)
-                .replace(/\{\{user\.email\}\}/g, user.email)
-                .replace(/\{\{user\.company\}\}/g, user.company || '')
-                .replace(/\{\{event\.name\}\}/g, event.name)
-                .replace(/\{\{qrCodeUrl\}\}/g, qrCodeUrl);
+            const additionalVars = buildEmailTemplateAdditionalVars({
+                user,
+                event,
+                emailTemplateId: emailTemplate._id,
+            });
+            messageBody = replaceTemplateVariables(emailTemplate.content, user, event, additionalVars);
+        }
+        
+        // 創建郵件記錄並獲取追蹤 ID
+        const trackingId = await emailTracking.createEmailRecord({
+            recipient: user.email,
+            subject: subject,
+            emailTemplateId: emailTemplate ? emailTemplate._id : null,
+            eventId: event._id,
+            userId: user._id ? user._id.toString() : null
+        });
+        
+        // 嵌入標楷體字型到郵件 HTML（如果使用了標楷體）
+        messageBody = embedKaitiFontInEmail(messageBody);
+        
+        // 添加追蹤到郵件內容
+        if (trackingId) {
+            messageBody = emailTracking.addTrackingToEmail(messageBody, trackingId);
         }
         
         // 發送郵件
-        ses.sendEmail(user.email, subject, messageBody);
+        const result = await ses.sendEmail(user.email, subject, messageBody);
+        
+        // 更新郵件記錄狀態
+        if (trackingId && result && result.MessageId) {
+            await emailTracking.updateEmailRecordStatus(trackingId, 'sent', result.MessageId);
+        } else if (trackingId && result instanceof Error) {
+            await emailTracking.updateEmailRecordStatus(trackingId, 'failed');
+        }
         
     } catch (error) {
         console.error('Error sending welcome email:', error);
         // 如果出現錯誤，使用默認的歡迎郵件
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
-        const messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl);
-        ses.sendEmail(user.email, '歡迎加入我們的活動', messageBody);
+        let messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl);
+        messageBody = embedKaitiFontInEmail(messageBody);
+        try {
+            await ses.sendEmail(user.email, '歡迎加入我們的活動', messageBody);
+        } catch (sendError) {
+            console.error('Error sending fallback email:', sendError);
+        }
     }
 }
+
+// 發送歡迎消息（根據設置決定發送 email/sms/both）
+exports.sendWelcomeMessage = async (user, event) => {
+    try {
+        const method = event.emailSettings?.welcomeMessageMethod || 'email';
+        
+        if (method === 'email' || method === 'both') {
+            if (user.email) {
+                await exports.sendEmail(user, event);
+            } else {
+                console.log('User does not have email, skipping email');
+            }
+        }
+        
+        if (method === 'sms' || method === 'both') {
+            if (user.phone) {
+                await exports.sendSMS(user, event, 'welcome');
+            } else {
+                console.log('User does not have phone, skipping SMS');
+            }
+        }
+    } catch (error) {
+        console.error('Error sending welcome message:', error);
+        throw error;
+    }
+}
+
+// 重新發送郵件（支持多種類型）
+exports.resendEmail = async (req, res) => {
+    const { eventId, userId } = req.params;
+    const { emailType, emailTemplateId } = req.body; // welcome, confirmation, reminder, thankYou, emailTemplateId (可選)
+
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        const user = event.users.id(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (!user.email) {
+            return res.status(400).json({ message: 'User does not have an email address' });
+        }
+
+        const userData = typeof user.toObject === 'function' ? user.toObject() : user;
+        
+        // 根據 emailType 發送不同類型的郵件
+        const type = emailType || 'welcome';
+
+        if (type === 'payment_receipt') {
+            const transaction = await Transaction.findOne({
+                eventId,
+                userEmail: user.email,
+                status: 'paid',
+            }).sort({ updatedAt: -1 });
+            if (!transaction) {
+                return res.status(400).json({ message: '找不到此用戶的已付款訂單，無法重發付款憑證' });
+            }
+            await sendPaymentReceiptEmail(transaction, event, userData, emailTemplateId);
+        } else if (type === 'invoice') {
+            if (!isInvoiceEmailEnabled()) {
+                return res.status(400).json({ message: '發票郵件功能已停用' });
+            }
+            const transaction = await Transaction.findOne({
+                eventId,
+                userEmail: user.email,
+            }).sort({ createdAt: -1 });
+            if (!transaction) {
+                return res.status(400).json({ message: '找不到此用戶的訂單記錄，無法重發發票' });
+            }
+            await sendInvoiceEmail(transaction, event, emailTemplateId);
+        } else if (type === 'welcome') {
+            if (emailTemplateId) {
+                await exports.sendEmailByType(userData, event, type, emailTemplateId);
+            } else {
+                await exports.sendEmail(userData, event);
+            }
+        } else {
+            await exports.sendEmailByType(userData, event, type, emailTemplateId);
+        }
+
+        res.status(200).json({ message: `${type} email resent successfully` });
+    } catch (error) {
+        console.error('Error resending email:', error);
+        res.status(500).json({ message: 'Error resending email' });
+    }
+};
+
+// 根據類型發送郵件
+exports.sendEmailByType = async (user, event, type = 'welcome', emailTemplateId = null) => {
+    try {
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
+        
+        // 如果指定了模板 ID，使用指定的模板
+        let emailTemplate = null;
+        if (emailTemplateId) {
+            emailTemplate = await EmailTemplate.findById(emailTemplateId);
+            // 驗證模板類型是否匹配
+            if (emailTemplate && emailTemplate.type !== type) {
+                console.warn(`Template type mismatch: requested ${type}, but template is ${emailTemplate.type}`);
+            }
+        }
+        
+        // 如果沒有指定模板或找不到，查找對應類型的郵件模板
+        if (!emailTemplate) {
+            emailTemplate = await EmailTemplate.findOne({ 
+                eventId: event._id, 
+                type: type 
+            });
+        }
+        
+        // 如果沒有找到模板，使用默認模板
+        if (!emailTemplate) {
+            emailTemplate = await EmailTemplate.findOne({ 
+                eventId: null, 
+                type: type 
+            });
+        }
+        
+        let subject = '歡迎加入我們的活動';
+        let messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl); // 使用默認模板
+        
+        // 如果找到了郵件模板，使用模板的內容
+        if (emailTemplate) {
+            subject = emailTemplate.subject;
+            const additionalVars = buildEmailTemplateAdditionalVars({
+                user,
+                event,
+                emailTemplateId: emailTemplate._id,
+            });
+            messageBody = replaceTemplateVariables(emailTemplate.content, user, event, additionalVars);
+        }
+        
+        // 創建郵件記錄並獲取追蹤 ID
+        const trackingId = await emailTracking.createEmailRecord({
+            recipient: user.email,
+            subject: subject,
+            emailTemplateId: emailTemplate ? emailTemplate._id : null,
+            eventId: event._id,
+            userId: user._id ? user._id.toString() : null
+        });
+        
+        // 添加追蹤到郵件內容
+        if (trackingId) {
+            messageBody = emailTracking.addTrackingToEmail(messageBody, trackingId);
+        }
+        
+        // 發送郵件
+        const result = await ses.sendEmail(user.email, subject, messageBody);
+        
+        // 更新郵件記錄狀態
+        if (trackingId && result && result.MessageId) {
+            await emailTracking.updateEmailRecordStatus(trackingId, 'sent', result.MessageId);
+        } else if (trackingId && result instanceof Error) {
+            await emailTracking.updateEmailRecordStatus(trackingId, 'failed');
+        }
+        
+    } catch (error) {
+        console.error(`Error sending ${type} email:`, error);
+        throw error;
+    }
+};
 
 // 發送支付確認郵件
 exports.sendPaymentConfirmationEmail = async (user, event, transaction) => {
     try {
-        // 生成 QR 碼
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
         
         // 查找歡迎郵件模板
@@ -247,16 +928,17 @@ exports.sendPaymentConfirmationEmail = async (user, event, transaction) => {
         // 如果找到了郵件模板，使用模板的內容
         if (emailTemplate) {
             subject = emailTemplate.subject;
-            messageBody = emailTemplate.content
-                .replace(/\{\{user\.name\}\}/g, user.name)
-                .replace(/\{\{user\.email\}\}/g, user.email)
-                .replace(/\{\{user\.company\}\}/g, user.company || '')
-                .replace(/\{\{event\.name\}\}/g, event.name)
-                .replace(/\{\{qrCodeUrl\}\}/g, qrCodeUrl)
-                .replace(/\{\{transaction\.ticketTitle\}\}/g, transaction.ticketTitle || '')
-                .replace(/\{\{transaction\.ticketPrice\}\}/g, transaction.ticketPrice || '')
-                .replace(/\{\{transaction\.amount\}\}/g, transaction.ticketPrice || '');
+            const additionalVars = buildEmailTemplateAdditionalVars({
+                user,
+                event,
+                emailTemplateId: emailTemplate._id,
+                transaction,
+            });
+            messageBody = replaceTemplateVariables(emailTemplate.content, user, event, additionalVars);
         }
+        
+        // 嵌入標楷體字型到郵件 HTML（如果使用了標楷體）
+        messageBody = embedKaitiFontInEmail(messageBody);
         
         // 發送郵件
         await ses.sendEmail(user.email, subject, messageBody);
@@ -266,7 +948,8 @@ exports.sendPaymentConfirmationEmail = async (user, event, transaction) => {
         console.error('Error sending payment confirmation email:', error);
         // 如果出現錯誤，使用默認的歡迎郵件
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
-        const messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl);
+        let messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl);
+        messageBody = embedKaitiFontInEmail(messageBody);
         await ses.sendEmail(user.email, '歡迎加入我們的活動', messageBody);
     }
 }
@@ -382,16 +1065,75 @@ exports.renderCreateEventPage = async (req, res) => {
         res.status(500).json({ message: 'Error fetching events' });
     }
 };
-// 獲取當前用戶的事件並渲染事件列表視圖
-exports.renderEventsList = async (req, res) => {
+
+/** 後台：編輯活動名稱頁 */
+exports.renderEditEventNamePage = async (req, res) => {
     try {
-        // 檢查是否有用戶數據
         if (!req.session || !req.session.user || !req.session.user._id) {
             return res.redirect('/login');
         }
-        
-        const events = await Event.find({ owner: req.session.user._id }); // 根據擁有者查詢事件
-        res.render('admin/events_list', { events }); // 渲染事件列表視圖
+        const event = await Event.findById(req.params.eventId);
+        if (!event) {
+            return res.status(404).send('Event not found');
+        }
+        const user = req.session.user;
+        const isAdmin = user.role === 'admin';
+        const allowed = (user.allowedEvents || []).map(id => id && id.toString());
+        if (!isAdmin && !allowed.includes(req.params.eventId)) {
+            return res.status(403).send('No access to this event');
+        }
+        res.render('admin/edit_event_name', { eventId: req.params.eventId, eventName: event.name });
+    } catch (error) {
+        console.error('Error rendering edit event name page:', error);
+        res.status(500).send('Error loading page');
+    }
+};
+
+/** PATCH 僅更新活動名稱 */
+exports.updateEventName = async (req, res) => {
+    try {
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+        const { name } = req.body || {};
+        const trimmed = (name && String(name).trim()) || '';
+        if (!trimmed) {
+            return res.status(400).json({ message: 'Event name is required' });
+        }
+        const event = await Event.findById(req.params.eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+        const user = req.session.user;
+        const isAdmin = user.role === 'admin';
+        const allowed = (user.allowedEvents || []).map(id => id && id.toString());
+        if (!isAdmin && !allowed.includes(req.params.eventId)) {
+            return res.status(403).json({ message: 'No access to this event' });
+        }
+        event.name = trimmed;
+        event.modified_at = new Date();
+        await event.save();
+        res.status(200).json({ message: 'Event name updated', name: event.name });
+    } catch (error) {
+        console.error('Error updating event name:', error);
+        res.status(500).json({ message: 'Error updating event name' });
+    }
+};
+// 獲取當前用戶的事件並渲染事件列表視圖
+exports.renderEventsList = async (req, res) => {
+    try {
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.redirect('/login');
+        }
+        const user = req.session.user;
+        let events;
+        if (user.role === 'admin') {
+            events = await Event.find({}).sort({ created_at: -1 });
+        } else {
+            const allowed = (user.allowedEvents || []).filter(Boolean);
+            events = allowed.length ? await Event.find({ _id: { $in: allowed } }) : [];
+        }
+        res.render('admin/events_list', { events });
     } catch (error) {
         console.error('Error fetching events:', error);
         res.status(500).json({ message: 'Error fetching events' });
@@ -404,49 +1146,28 @@ exports.getUserById = async (req, res) => {
         // 查詢事件以確保存在
         const event = await Event.findById(eventId); // 根據事件 ID 查詢事件
         if (!event) {
-            return res.status(404).send('找不到該事件 ID'); // 如果事件不存在，返回 404 錯誤
+            return res.status(404).json({ message: 'Event not found' }); // 如果事件不存在，返回 404 錯誤
         }
 
         // 查找用戶
         const user = event.users.id(userId); // 使用 _id 查找用戶
         if (!user) {
-            return res.status(404).send('找不到該用戶'); // 如果用戶不存在，返回 404 錯誤
+            return res.status(404).json({ message: 'User not found' }); // 如果用戶不存在，返回 404 錯誤
         }
 
-        // 更新用戶的 isCheckIn 屬性
-        if (!user.isCheckIn && req.body.isCheckIn === true) {
-            user.isCheckIn = true;
-            user.checkInAt = new Date();
-            console.log('User check-in updated:', user.name, 'isCheckIn:', user.isCheckIn); // Debug log
-        } else if (req.body.isCheckIn === false) {
-            user.isCheckIn = false;
-            user.checkInAt = undefined;
-        }
-        await event.save(); // 保存事件以更新用戶資料
+        // GET 請求不應該修改數據，只返回用戶資料
+        // 使用 toObject() 確保所有字段都被序列化（包括動態字段）
+        const userObject = user.toObject ? user.toObject({ minimize: false }) : user;
 
-        res.status(200).json(user); // 返回更新後的用戶資料
+        res.status(200).json(userObject); // 返回用戶資料（JSON 格式）
     } catch (error) {
         console.error('Error fetching user:', error);
-        res.status(500).send('伺服器錯誤'); // 返回伺服器錯誤
+        res.status(500).json({ message: 'Server error' }); // 返回伺服器錯誤（JSON 格式）
     }
 };
 exports.updateUser = async (req, res) => {
     const { eventId, userId } = req.params; // 從請求參數中獲取事件 ID 和用戶的 _id
-    const { 
-        name, 
-        email,
-        phone_code, 
-        phone, 
-        company, 
-        table,
-        role,
-        saluation,
-        industry,
-        transport,
-        meal,
-        remarks,
-        isCheckIn 
-    } = req.body; // 從請求中獲取更新的用戶信息
+    const updateData = req.body; // 從請求中獲取更新的用戶信息
 
     try {
         // 查詢事件以確保存在
@@ -461,38 +1182,125 @@ exports.updateUser = async (req, res) => {
             return res.status(404).send('找不到該用戶'); // 如果用戶不存在，返回 404 錯誤
         }
         
-        // 更新用戶信息
-        if (typeof isCheckIn !== 'undefined') {
-            if (!user.isCheckIn && isCheckIn === true) {
+        // 處理 isCheckIn 特殊邏輯
+        let checkInUpdated = false;
+        if (typeof updateData.isCheckIn !== 'undefined') {
+            if (!user.isCheckIn && updateData.isCheckIn === true) {
                 user.isCheckIn = true;
                 user.checkInAt = new Date();
-            } else if (isCheckIn === false) {
+                checkInUpdated = true;
+            } else if (updateData.isCheckIn === false) {
                 user.isCheckIn = false;
                 user.checkInAt = undefined;
+                checkInUpdated = true;
             }
         }
         
-        // 更新所有欄位
-        if (name !== undefined) user.name = name;
-        if (email !== undefined) user.email = email;
-        if (phone_code !== undefined) user.phone_code = phone_code;
-        if (phone !== undefined) user.phone = phone;
-        if (company !== undefined) user.company = company;
-        if (table !== undefined) user.table = table;
-        if (role !== undefined) user.role = role;
-        if (saluation !== undefined) user.saluation = saluation;
-        if (industry !== undefined) user.industry = industry;
-        if (transport !== undefined) user.transport = transport;
-        if (meal !== undefined) user.meal = meal;
-        if (remarks !== undefined) user.remarks = remarks;
+        // 動態更新所有傳入的欄位（包括 formConfig 中定義的動態字段）
+        // 排除 MongoDB 內部字段和特殊處理的字段
+        const excludedFields = ['_id', '__v', 'isCheckIn', 'checkInAt', 'create_at', 'modified_at'];
         
-        user.modified_at = Date.now(); // 更新修改時間
-        await event.save(); // 保存事件以更新用戶資料
-
-        res.status(200).send(user); // 返回更新後的用戶資料
+        // 記錄更新前的字段值（用於調試）
+        const updatedFields = [];
+        
+        // 構建更新對象，用於直接更新 MongoDB
+        const updateFields = {};
+        
+        // 獲取用戶索引（用於構建 MongoDB 更新路徑）
+        const userIndex = event.users.findIndex(u => u._id.toString() === userId.toString());
+        
+        // 如果 isCheckIn 被更新，需要加入到 updateFields 中
+        if (checkInUpdated && userIndex !== -1) {
+            updateFields[`users.${userIndex}.isCheckIn`] = user.isCheckIn;
+            if (user.checkInAt) {
+                updateFields[`users.${userIndex}.checkInAt`] = user.checkInAt;
+            } else {
+                updateFields[`users.${userIndex}.checkInAt`] = null;
+            }
+            console.log(`Updating isCheckIn: ${user.isCheckIn}, checkInAt: ${user.checkInAt}`);
+        }
+        
+        Object.keys(updateData).forEach(key => {
+            // 跳過排除的字段
+            if (excludedFields.includes(key)) {
+                return;
+            }
+            
+            // 更新字段值（包括 undefined 的情況，允許清空字段）
+            if (updateData[key] !== undefined) {
+                const oldValue = user[key];
+                // 直接設置字段值
+                user[key] = updateData[key];
+                // 構建 MongoDB 更新路徑
+                if (userIndex !== -1) {
+                    updateFields[`users.${userIndex}.${key}`] = updateData[key];
+                }
+                updatedFields.push({ key, oldValue, newValue: updateData[key] });
+                console.log(`Updating field "${key}": ${oldValue} -> ${updateData[key]}`);
+            }
+        });
+        
+        user.modified_at = new Date(); // 更新修改時間
+        if (userIndex !== -1) {
+            updateFields[`users.${userIndex}.modified_at`] = user.modified_at;
+        }
+        
+        // 標記整個文檔為已修改，確保 Mongoose 保存所有字段
+        user.markModified('modified_at');
+        if (checkInUpdated) {
+            user.markModified('isCheckIn');
+            if (user.checkInAt) {
+                user.markModified('checkInAt');
+            }
+        }
+        if (updatedFields.length > 0) {
+            // 標記每個更新的字段為已修改
+            updatedFields.forEach(field => {
+                user.markModified(field.key);
+            });
+        }
+        
+        // 關鍵：標記整個 users 數組為已修改，確保嵌套子文檔的動態字段被保存
+        event.markModified('users');
+        
+        // 調試：檢查更新後的用戶對象
+        const userBeforeSave = user.toObject ? user.toObject() : user;
+        console.log('User object before save:', JSON.stringify(userBeforeSave, null, 2));
+        console.log('Update fields for MongoDB:', updateFields);
+        
+        // 使用 findByIdAndUpdate 直接更新，避免 Mongoose 序列化問題
+        // 確保 isCheckIn 和 checkInAt 也被包含在更新中
+        if (Object.keys(updateFields).length > 0) {
+            await Event.findByIdAndUpdate(eventId, {
+                $set: updateFields,
+                $setOnInsert: { modified_at: new Date() }
+            }, { new: true });
+        } else {
+            await event.save(); // 如果沒有動態字段，使用正常保存
+        }
+        
+        // 重新從數據庫獲取事件，確保獲取最新數據
+        const refreshedEvent = await Event.findById(eventId);
+        if (!refreshedEvent) {
+            return res.status(404).send('找不到事件');
+        }
+        
+        const updatedUser = refreshedEvent.users.id(userId);
+        if (!updatedUser) {
+            return res.status(404).send('找不到更新後的用戶');
+        }
+        
+        // 使用 toObject() 確保所有字段都被序列化（包括動態字段）
+        // 使用 { minimize: false } 確保包含所有字段，即使是 undefined
+        const userObject = updatedUser.toObject ? updatedUser.toObject({ minimize: false }) : updatedUser;
+        
+        console.log('Updated user object after save:', JSON.stringify(userObject, null, 2));
+        console.log('Updated fields:', updatedFields);
+        
+        res.status(200).json(userObject); // 返回更新後的用戶資料（包含所有字段）
     } catch (error) {
         console.error('Error updating user:', error);
-        res.status(400).send('更新用戶時出現錯誤'); // 返回錯誤信息
+        res.status(400).json({ message: '更新用戶時出現錯誤', error: error.message }); // 返回錯誤信息
     }
 };
 exports.scanEventUsers = async (req, res) => {
@@ -505,7 +1313,42 @@ exports.scanEventUsers = async (req, res) => {
             return res.status(404).send('找不到該事件 ID'); // 如果事件不存在，返回 404 錯誤
         }
 
-        res.render('admin/scan_checkin', { event }); // 傳遞事件資料到 EJS 頁面
+        // 獲取表單配置
+        const FormConfig = require('../model/FormConfig');
+        let formConfig = await FormConfig.findOne({ eventId: eventId });
+        
+        // 如果沒有配置，使用預設配置
+        if (!formConfig) {
+            const formConfigController = require('./formConfigController');
+            const defaultConfig = formConfigController.getDefaultFormConfig();
+            formConfig = new FormConfig({
+                eventId: eventId,
+                ...defaultConfig
+            });
+            await formConfig.save();
+        } else {
+            // 檢查是否需要數據遷移
+            const formConfigController = require('./formConfigController');
+            const migratedConfig = formConfigController.migrateFormConfig(formConfig);
+            
+            // 只有在數據結構真正需要遷移時才保存
+            const needsMigration = !formConfig.defaultLanguage || 
+                                  (formConfig.sections && formConfig.sections.length > 0 && 
+                                   formConfig.sections[0].fields && formConfig.sections[0].fields.length > 0 &&
+                                   typeof formConfig.sections[0].fields[0].label === 'string');
+            
+            if (needsMigration && JSON.stringify(migratedConfig) !== JSON.stringify(formConfig)) {
+                const userDefaultLanguage = formConfig.defaultLanguage;
+                Object.assign(formConfig, migratedConfig);
+                if (userDefaultLanguage) {
+                    formConfig.defaultLanguage = userDefaultLanguage;
+                }
+                await formConfig.save();
+                console.log('FormConfig 數據已遷移，保留用戶設置的 defaultLanguage:', userDefaultLanguage);
+            }
+        }
+
+        res.render('admin/scan_checkin', { event, formConfig }); // 傳遞事件資料和表單配置到 EJS 頁面
     } catch (error) {
         console.log(error);
         res.status(500).send('伺服器錯誤');
@@ -518,13 +1361,43 @@ exports.getEventsUserById = async (req, res) => {
 };
 
 // 渲染用戶資料頁面
-exports.renderProfilePage = (req, res) => {
+exports.renderProfilePage = async (req, res) => {
     const { user } = req.session; // 從 session 中獲取用戶資料
     const eventId = req.params.eventId; // 獲取事件 ID
-    if (!user) {
+    if (!user || !user._id) {
         return res.redirect(`/events/${eventId}/login`); // 如果用戶未登入，重定向到登入頁面
     }
-    res.render('events/profile', { user, eventId }); // 渲染用戶資料頁面，並傳遞用戶資料和事件 ID
+    
+    try {
+        // 從數據庫重新獲取最新的用戶數據，確保積分等資料是最新的
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+        
+        const latestUser = event.users.id(user._id);
+        if (!latestUser) {
+            return res.redirect(`/events/${eventId}/login`); // 如果找不到用戶，重定向到登入頁面
+        }
+        
+        // 更新 session 中的用戶數據，保持登入狀態
+        req.session.user = {
+            _id: latestUser._id,
+            name: latestUser.name,
+            email: latestUser.email,
+            phone: latestUser.phone,
+            point: latestUser.point,
+            isCheckIn: latestUser.isCheckIn
+        };
+        
+        res.render('events/profile', { 
+            user: latestUser.toObject(), // 將 Mongoose 文檔轉換為普通對象
+            eventId 
+        }); // 渲染用戶資料頁面，並傳遞最新的用戶資料和事件 ID
+    } catch (error) {
+        console.error('Error rendering profile page:', error);
+        res.status(500).send('Error rendering profile page.');
+    }
 };
 
 // 添加參展商
@@ -636,7 +1509,7 @@ exports.renderCreateAttendeePage = async (req, res) => {
     }
 };
 
-// 渲染參展商列表頁面
+// 渲染參展商列表頁面（舊的 attendees 功能）
 exports.renderAttendeesListPage = async (req, res) => {
     const { eventId } = req.params; // 獲取事件 ID
     try {
@@ -644,10 +1517,550 @@ exports.renderAttendeesListPage = async (req, res) => {
         if (!event) {
             return res.status(404).json({ message: '找不到該事件' });
         }
-        res.render('admin/event_attendees_list', { eventId, attendees: event.attendees }); // 返回整個 attendees 列表
+        res.render('admin/event_attendees_list', { eventId, attendees: event.attendees || [] }); // 返回整個 attendees 列表
     } catch (error) {
         console.error('Error rendering attendees list page:', error);
         res.status(500).json({ message: '伺服器錯誤' });
+    }
+};
+
+// 渲染 Guest List 頁面（顯示預先準備的來賓列表，尚未註冊為 RSVP）
+exports.renderGuestListPage = async (req, res) => {
+    const { eventId } = req.params; // 獲取事件 ID
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+        res.render('admin/guest_list', { eventId, guests: event.guestList || [] }); // 返回 guestList 列表
+    } catch (error) {
+        console.error('Error rendering guest list page:', error);
+        res.status(500).json({ message: '伺服器錯誤' });
+    }
+};
+
+// 渲染 Guest 確認頁面（公開頁面，讓用戶確認資料並轉移到 RSVP）
+exports.renderGuestConfirmPage = async (req, res) => {
+    const { eventId, guestId } = req.params; // 獲取事件 ID 和來賓 ID
+    
+    // 檢查是否為特殊路由（不應該被當作 guestId 處理）
+    const reservedRoutes = ['email-records', 'transactions', 'report', 'emailTemplate', 'smsTemplate',
+                          'banner', 'scan-point-users', 'attendee', 'treasure-hunt', 'guest-list',
+                          'scan', 'import', 'luckydraw', 'points', 'attachments', 'profile', 'login',
+                          'payment-settings'];
+    
+    if (reservedRoutes.includes(guestId)) {
+        // 這是一個保留路由，不應該被當作 guestId 處理
+        return res.status(404).send('Page not found (頁面未找到)');
+    }
+    
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found (找不到活動)');
+        }
+
+        if (!event.guestList || event.guestList.length === 0) {
+            return res.status(404).send('Guest List is empty (來賓列表為空)');
+        }
+
+        const guest = event.guestList.id(guestId);
+        if (!guest) {
+            return res.status(404).send('Guest not found (找不到來賓資料)');
+        }
+
+        // 檢查是否已經在 RSVP 列表中
+        let alreadyInRSVP = false;
+        if (guest.email) {
+            const existingUser = event.users.find(u => u.email === guest.email);
+            if (existingUser) {
+                alreadyInRSVP = true;
+            }
+        }
+
+        res.render('guest_confirm', { 
+            eventId, 
+            guestId, 
+            guest: guest.toObject ? guest.toObject() : guest,
+            event: {
+                name: event.name || 'Event',
+                description: event.description || ''
+            },
+            alreadyInRSVP
+        });
+    } catch (error) {
+        console.error('Error rendering guest confirm page:', error);
+        res.status(500).render('error', { message: '伺服器錯誤 (Server Error)' });
+    }
+};
+
+// 添加來賓到 Guest List
+exports.addGuestToList = async (req, res) => {
+    const { eventId } = req.params;
+    const { name, email, company, phone } = req.body;
+
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        if (!name || !name.trim()) {
+            return res.status(400).json({ message: 'Name is required' });
+        }
+
+        // 檢查是否已存在（根據 email）
+        if (email && email.trim()) {
+            const existingGuest = event.guestList && event.guestList.find(g => g.email && g.email.toLowerCase() === email.toLowerCase());
+            if (existingGuest) {
+                return res.status(400).json({ message: 'Guest with this email already exists in Guest List' });
+            }
+        }
+
+        // 創建新的來賓（只包含必要字段）
+        const newGuest = {
+            name: name.trim(),
+            email: email ? email.trim() : '',
+            company: company ? company.trim() : '',
+            phone: phone ? phone.trim() : '',
+            create_at: new Date()
+        };
+
+        // 將來賓添加到 guestList
+        if (!event.guestList) {
+            event.guestList = [];
+        }
+        event.guestList.push(newGuest);
+        await event.save();
+
+        // 獲取新來賓的 _id
+        const savedGuest = event.guestList[event.guestList.length - 1];
+        newGuest._id = savedGuest._id;
+
+        res.status(201).json({ message: 'Guest added to list successfully', guest: newGuest });
+    } catch (error) {
+        console.error('Error adding guest to list:', error);
+        res.status(500).json({ message: '伺服器錯誤' });
+    }
+};
+
+// 更新 Guest List 中的來賓
+exports.updateGuestInList = async (req, res) => {
+    const { eventId, guestId } = req.params;
+    const { name, email, company, phone, role } = req.body;
+
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        if (!event.guestList) {
+            return res.status(404).json({ message: 'Guest List is empty' });
+        }
+
+        const guest = event.guestList.id(guestId);
+        if (!guest) {
+            return res.status(404).json({ message: 'Guest not found' });
+        }
+
+        // 檢查 email 是否已被其他來賓使用
+        if (email && email.trim()) {
+            const existingGuest = event.guestList.find(g => 
+                g._id.toString() !== guestId && 
+                g.email && 
+                g.email.toLowerCase() === email.toLowerCase()
+            );
+            if (existingGuest) {
+                return res.status(400).json({ message: 'Guest with this email already exists in Guest List' });
+            }
+        }
+
+        // 更新來賓資料
+        if (name) guest.name = name.trim();
+        if (email !== undefined) guest.email = email ? email.trim() : '';
+        if (company !== undefined) guest.company = company ? company.trim() : '';
+        if (phone !== undefined) guest.phone = phone ? phone.trim() : '';
+        if (role !== undefined) guest.role = role ? role.trim() : '';
+
+        await event.save();
+
+        res.status(200).json({ message: 'Guest updated successfully', guest: guest.toObject ? guest.toObject() : guest });
+    } catch (error) {
+        console.error('Error updating guest in list:', error);
+        res.status(500).json({ message: '伺服器錯誤' });
+    }
+};
+
+// 從 Guest List 刪除來賓
+exports.deleteGuestFromList = async (req, res) => {
+    const { eventId, guestId } = req.params;
+
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        if (!event.guestList) {
+            return res.status(404).json({ message: 'Guest List is empty' });
+        }
+
+        const guest = event.guestList.id(guestId);
+        if (!guest) {
+            return res.status(404).json({ message: 'Guest not found' });
+        }
+
+        event.guestList.pull(guestId);
+        await event.save();
+
+        res.status(200).json({ message: 'Guest deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting guest from list:', error);
+        res.status(500).json({ message: '伺服器錯誤' });
+    }
+};
+
+// 導入 Excel 到 Guest List
+exports.importGuestListFromExcel = async (req, res) => {
+    const { eventId } = req.params;
+
+    try {
+        // 確保 req.file 存在
+        if (!req.file) {
+            return res.status(400).json({ message: 'No file uploaded!' });
+        }
+
+        // 查詢事件以確保存在
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        // 解析 Excel 文件
+        const XLSX = require('xlsx');
+        const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+        if (!rows || rows.length === 0) {
+            return res.status(400).json({ message: 'Uploaded file is empty.' });
+        }
+
+        // 第一行是標題行
+        const headerRow = rows[0].map(header => (header !== null && header !== undefined ? String(header).trim() : ''));
+        const headerIndexMap = new Map();
+        headerRow.forEach((header, index) => {
+            if (header && !headerIndexMap.has(header.toLowerCase())) {
+                headerIndexMap.set(header.toLowerCase(), index);
+            }
+        });
+
+        // 檢查必填欄位
+        const nameIndex = headerIndexMap.get('name');
+        if (nameIndex === undefined) {
+            return res.status(400).json({ message: 'Missing required column: Name' });
+        }
+
+        // 處理數據行
+        const dataRows = rows.slice(1).filter(row => {
+            return row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== '');
+        });
+
+        if (dataRows.length === 0) {
+            return res.status(400).json({ message: 'No data rows found in the uploaded file.' });
+        }
+
+        // 初始化 guestList
+        if (!event.guestList) {
+            event.guestList = [];
+        }
+
+        const now = new Date();
+        let importedCount = 0;
+        let skippedCount = 0;
+        const errors = [];
+
+        for (let i = 0; i < dataRows.length; i++) {
+            const row = dataRows[i];
+            const name = row[nameIndex] ? String(row[nameIndex]).trim() : '';
+            
+            if (!name) {
+                skippedCount++;
+                errors.push(`Row ${i + 2}: Name is required`);
+                continue;
+            }
+
+            const emailIndex = headerIndexMap.get('email');
+            const companyIndex = headerIndexMap.get('company');
+            const phoneIndex = headerIndexMap.get('phone');
+
+            const email = emailIndex !== undefined && row[emailIndex] ? String(row[emailIndex]).trim() : '';
+            const company = companyIndex !== undefined && row[companyIndex] ? String(row[companyIndex]).trim() : '';
+            const phone = phoneIndex !== undefined && row[phoneIndex] ? String(row[phoneIndex]).trim() : '';
+
+            // 檢查是否已存在（根據 email）
+            if (email) {
+                const existingGuest = event.guestList.find(g => g.email && g.email.toLowerCase() === email.toLowerCase());
+                if (existingGuest) {
+                    skippedCount++;
+                    errors.push(`Row ${i + 2}: Guest with email ${email} already exists`);
+                    continue;
+                }
+            }
+
+            // 創建新的來賓
+            const newGuest = {
+                name,
+                email,
+                company,
+                phone,
+                create_at: now
+            };
+
+            event.guestList.push(newGuest);
+            importedCount++;
+        }
+
+        await event.save();
+
+        res.status(201).json({ 
+            message: `Import completed. ${importedCount} guest(s) imported, ${skippedCount} skipped.`,
+            importedCount,
+            skippedCount,
+            errors: errors.length > 0 ? errors : undefined
+        });
+    } catch (error) {
+        console.error('Error importing guest list:', error);
+        res.status(500).json({ message: 'Error during import process: ' + error.message });
+    }
+};
+
+// 導出 Guest List 為 Excel
+exports.exportGuestList = async (req, res) => {
+    const { eventId } = req.params;
+    
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+        
+        const guests = event.guestList || [];
+        
+        if (guests.length === 0) {
+            return res.status(404).json({ message: 'Guest List is empty' });
+        }
+        
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Guest List');
+        
+        // 設置列標題
+        worksheet.columns = [
+            { header: 'Name', key: 'name', width: 25 },
+            { header: 'Email', key: 'email', width: 30 },
+            { header: 'Company', key: 'company', width: 25 },
+            { header: 'Phone', key: 'phone', width: 15 },
+            { header: 'Role', key: 'role', width: 15 },
+            { header: 'Created At', key: 'create_at', width: 20 }
+        ];
+        
+        // 添加數據行
+        guests.forEach(guest => {
+            worksheet.addRow({
+                name: guest.name || '',
+                email: guest.email || '',
+                company: guest.company || '',
+                phone: guest.phone || '',
+                role: guest.role || '',
+                create_at: guest.create_at ? new Date(guest.create_at).toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                }) : ''
+            });
+        });
+        
+        // 設置響應頭
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=guest_list_${eventId}_${Date.now()}.xlsx`);
+        
+        // 寫入並發送文件
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (error) {
+        console.error('Error exporting guest list:', error);
+        res.status(500).json({ message: 'Error exporting guest list' });
+    }
+};
+
+// 將 Guest List 中的來賓添加到 RSVP
+exports.addGuestToRSVP = async (req, res) => {
+    const { eventId, guestId } = req.params;
+
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        if (!event.guestList) {
+            return res.status(404).json({ message: 'Guest List is empty' });
+        }
+
+        const guest = event.guestList.id(guestId);
+        if (!guest) {
+            return res.status(404).json({ message: 'Guest not found' });
+        }
+
+        // 檢查 RSVP 列表中是否已存在（根據 email）
+        if (guest.email) {
+            const existingUser = event.users.find(u => u.email === guest.email);
+            if (existingUser) {
+                return res.status(400).json({ message: 'User with this email already exists in RSVP list' });
+            }
+        }
+
+        // 將來賓轉換為用戶對象
+        const guestData = guest.toObject ? guest.toObject() : guest;
+        delete guestData._id; // 移除原來的 _id，讓 MongoDB 生成新的
+
+        // 添加到 RSVP 列表
+        event.users.push(guestData);
+
+        // 從 Guest List 中移除
+        event.guestList.pull(guestId);
+
+        await event.save();
+
+        // 獲取新用戶的 _id
+        const newUser = event.users[event.users.length - 1];
+
+        // 根據設置決定是否發送歡迎消息
+        if (newUser.role !== 'guest' && event.emailSettings && event.emailSettings.sendWelcomeEmail) {
+            try {
+                await exports.sendWelcomeMessage(newUser, event);
+            } catch (emailError) {
+                console.error('Error sending welcome message:', emailError);
+                // 不阻止添加，只記錄錯誤
+            }
+        }
+
+        res.status(200).json({ message: 'Guest added to RSVP successfully', user: newUser });
+    } catch (error) {
+        console.error('Error adding guest to RSVP:', error);
+        res.status(500).json({ message: '伺服器錯誤' });
+    }
+};
+
+// 發送 SMS 給 Guest List
+exports.sendSmsToGuestList = async (req, res) => {
+    const { eventId } = req.params;
+    const { roles, templateId } = req.body;
+
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        if (!event.guestList || event.guestList.length === 0) {
+            return res.status(400).json({ message: 'Guest List is empty' });
+        }
+
+        // 獲取 SMS 模板
+        const smsTemplate = await SmsTemplate.findById(templateId);
+        if (!smsTemplate) {
+            return res.status(404).json({ message: 'SMS template not found' });
+        }
+
+        // 過濾 Guest List 中的來賓
+        let targetGuests = [];
+        if (roles && roles.length > 0 && !roles.includes('')) {
+            // 根據角色過濾
+            targetGuests = event.guestList.filter(guest => {
+                const guestRole = guest.role || '';
+                return roles.includes(guestRole);
+            });
+        } else {
+            // 發送給所有來賓
+            targetGuests = event.guestList;
+        }
+
+        // 過濾有電話號碼的來賓
+        targetGuests = targetGuests.filter(guest => guest.phone);
+
+        if (targetGuests.length === 0) {
+            return res.status(400).json({ message: '沒有符合條件的來賓或來賓沒有電話號碼' });
+        }
+
+        const results = [];
+        let successCount = 0;
+        let failCount = 0;
+
+        // 發送 SMS（使用 replaceTemplateVariables 支援 formConfig 欄位，與 email template 一致）
+        for (const guest of targetGuests) {
+            try {
+                // 根據 SMS 模板類型決定 loginUrl
+                let loginUrl;
+                if (smsTemplate.type === 'invitation') {
+                    // invitation 類型使用 /:eventId/:guestId/invitation
+                    loginUrl = `${getPublicBaseUrl()}/events/${event._id}/${guest._id}/invitation`;
+                } else {
+                    // 其他類型使用默認的 login URL
+                    loginUrl = `${getPublicBaseUrl()}/events/${event._id}/login`;
+                }
+                
+                // 生成確認頁面 URL 和 QR Code URL
+                const confirmUrl = `${getPublicBaseUrl()}/events/${event._id}/${guest._id}`;
+                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${guest._id}&size=250x250`;
+                
+                // 使用 replaceTemplateVariables 支援所有 user/guest 欄位（含 formConfig 自訂欄位）
+                const guestObj = guest.toObject ? guest.toObject() : guest;
+                let messageBody = replaceTemplateVariables(smsTemplate.content, guestObj, event, {
+                    loginUrl,
+                    confirmUrl,
+                    qrCodeUrl
+                });
+
+                // 組合電話號碼
+                let phoneNumber = '';
+                if (guest.phone_code && guest.phone) {
+                    const phoneCode = guest.phone_code.startsWith('+') ? guest.phone_code : `+${guest.phone_code}`;
+                    phoneNumber = `${phoneCode}${guest.phone}`;
+                } else if (guest.phone) {
+                    phoneNumber = guest.phone.startsWith('+') ? guest.phone : `+${guest.phone}`;
+                }
+
+                if (phoneNumber) {
+                    await twilioSms.sendSMS(phoneNumber, messageBody);
+                    successCount++;
+                    results.push({ guestId: guest._id, name: guest.name, phone: phoneNumber, success: true });
+                } else {
+                    failCount++;
+                    results.push({ guestId: guest._id, name: guest.name, phone: '', success: false, error: 'No phone number' });
+                }
+            } catch (error) {
+                failCount++;
+                results.push({ guestId: guest._id, name: guest.name, phone: guest.phone || '', success: false, error: error.message });
+            }
+        }
+
+        res.json({
+            message: `SMS 發送完成：成功 ${successCount} 條，失敗 ${failCount} 條`,
+            successCount,
+            failCount,
+            total: targetGuests.length,
+            results
+        });
+    } catch (error) {
+        console.error('Error sending SMS to guest list:', error);
+        res.status(500).json({ message: '發送 SMS 時出現錯誤：' + error.message });
     }
 };
 
@@ -956,6 +2369,8 @@ exports.updatePoint = async (req, res) => {
     }
 };
 
+// 舊的積分掃描器功能已移除，請使用掃瞄加分管理功能（/events/:eventId/scan-point-users）
+
 // 刪除中獎者
 exports.removeLuckydrawUser = async (req, res) => {
     const { _id } = req.body; // 獲取要刪除的中獎者 ID
@@ -988,9 +2403,23 @@ exports.removeLuckydrawUser = async (req, res) => {
             }
         }
 
-        // 刪除中獎者
+        // 刪除中獎者（order 號碼會保留，不會被重用）
+        // 注意：maxLuckydrawOrder 不會減少，確保被刪除的 order 不會被重用
+        const winnerId = winnerToDelete._id.toString();
+        const deletedOrder = winnerToDelete.order;
         event.winners.splice(winnerIndex, 1);
         await event.save(); // 保存更改
+        console.log(`[刪除中獎者] 已刪除 order ${deletedOrder} 的中獎者，當前最大 order: ${event.maxLuckydrawOrder}，order 號碼將保留不會重用`);
+
+        // 通過 socket 發送中獎者移除事件給顯示頁面
+        try {
+            const io = getSocket();
+            const room = `luckydraw:${req.params.eventId}`;
+            io.to(room).emit('luckydraw:winner_removed', { winnerId });
+        } catch (socketError) {
+            console.error('Error sending socket event:', socketError);
+            // Socket 錯誤不影響 HTTP 響應
+        }
 
         res.status(200).send({ message: 'Winner deleted successfully.' });
     } catch (error) {
@@ -998,6 +2427,119 @@ exports.removeLuckydrawUser = async (req, res) => {
         res.status(500).send('Error deleting winner.');
     }
 };
+
+// 刪除所有中獎記錄
+exports.removeAllLuckydrawUsers = async (req, res) => {
+    try {
+        const event = await Event.findById(req.params.eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+
+        // 獲取所有中獎者的獎品信息，以便還原獎品數量
+        const Prize = require('../model/Prize');
+        const prizeCounts = {};
+        
+        event.winners.forEach(winner => {
+            if (winner.prizeId) {
+                const prizeId = winner.prizeId.toString();
+                prizeCounts[prizeId] = (prizeCounts[prizeId] || 0) + 1;
+            }
+        });
+
+        // 還原所有獎品的數量
+        for (const [prizeId, count] of Object.entries(prizeCounts)) {
+            try {
+                const prize = await Prize.findById(prizeId);
+                if (prize) {
+                    prize.unit += count;
+                    await prize.save();
+                    console.log(`已還原獎品 ${prize.name} 的數量 ${count} 個，當前數量: ${prize.unit}`);
+                }
+            } catch (prizeError) {
+                console.error(`還原獎品 ${prizeId} 時發生錯誤:`, prizeError);
+            }
+        }
+
+        // 清空所有中獎記錄（但保留 maxLuckydrawOrder，確保 order 唯一性）
+        const deletedCount = event.winners.length;
+        event.winners = [];
+        await event.save();
+
+        // 通過 socket 發送所有中獎者移除事件給顯示頁面
+        try {
+            const io = getSocket();
+            const room = `luckydraw:${req.params.eventId}`;
+            // 發送清除所有中獎者的通知
+            io.to(room).emit('luckydraw:all_winners_removed', { eventId: req.params.eventId });
+        } catch (socketError) {
+            console.error('Error sending socket event:', socketError);
+            // Socket 錯誤不影響 HTTP 響應
+        }
+
+        console.log(`[刪除所有中獎記錄] 已刪除 ${deletedCount} 個中獎記錄，當前最大 order: ${event.maxLuckydrawOrder}`);
+        res.status(200).send({ message: `Successfully deleted ${deletedCount} winner(s).`, deletedCount });
+    } catch (error) {
+        console.error('Error deleting all winners:', error);
+        res.status(500).send('Error deleting all winners.');
+    }
+};
+
+/**
+ * 重置 Winner No 計數：將 maxLuckydrawOrder 設為「目前仍存在的 winners 中最大的 order」
+ * 下一筆抽獎會是 maxLuckydrawOrder + 1，因此刪除最後一筆（例如刪除 4）後重置，下一筆會再次得到 4。
+ */
+exports.resetLuckydrawWinnerOrder = async (req, res) => {
+    try {
+        const event = await Event.findById(req.params.eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found.' });
+        }
+        const orders = (event.winners || [])
+            .map(w => (w.order != null ? Number(w.order) : 0))
+            .filter(n => !isNaN(n) && n > 0);
+        const newMax = orders.length ? Math.max(...orders) : 0;
+        const previousMax = event.maxLuckydrawOrder || 0;
+        event.maxLuckydrawOrder = newMax;
+        event.modified_at = new Date();
+        await event.save();
+        const nextOrder = newMax + 1;
+        console.log(`[重置 Winner No] event=${req.params.eventId} previousMax=${previousMax} newMax=${newMax} nextOrder=${nextOrder}`);
+        res.status(200).json({
+            message: 'Winner order counter reset.',
+            maxLuckydrawOrder: newMax,
+            nextWinnerOrder: nextOrder,
+            previousMaxLuckydrawOrder: previousMax
+        });
+    } catch (error) {
+        console.error('Error resetting luckydraw winner order:', error);
+        res.status(500).json({ message: 'Error resetting winner order.' });
+    }
+};
+
+/**
+ * 組裝中獎者資料供 socket/前台：合併 event.user 的完整資料（FormConfig 欄位）與 winner 抽獎欄位
+ * @param {Object} winner - 中獎記錄 { _id, name, company, table, prizeId, prizeName, order, wonAt }
+ * @param {Object} [fullUser] - event.users 中對應的完整 user（含 FormConfig 動態欄位），可為 null
+ * @param {string} prizeImage - 獎品圖片 URL
+ * @returns {Object} 完整中獎者物件（_id/prizeId 為字串，含所有 user 欄位）
+ */
+function buildWinnerWithFullUserData(winner, fullUser, prizeImage) {
+    const userObj = fullUser
+        ? (typeof fullUser.toObject === 'function' ? fullUser.toObject() : { ...fullUser })
+        : {};
+    const base = { ...userObj };
+    base._id = String(winner._id);
+    base.name = winner.name != null ? winner.name : (userObj.name || '');
+    base.company = winner.company != null ? winner.company : (userObj.company || '');
+    base.table = winner.table != null ? winner.table : (userObj.table || '');
+    base.prizeId = String(winner.prizeId);
+    base.prizeName = winner.prizeName != null ? winner.prizeName : '';
+    base.prizeImage = prizeImage || '';
+    base.order = winner.order;
+    base.wonAt = winner.wonAt;
+    return base;
+}
 
 // 新增中獎者
 exports.addLuckydrawUser = async (req, res) => {
@@ -1030,29 +2572,147 @@ exports.addLuckydrawUser = async (req, res) => {
             return res.status(400).send('Prize is out of stock.');
         }
 
-        prize.unit -= 1;
         const prizeName = prize.name;
-        await prize.save();
+        // 先寫入中獎者再扣庫存，避免 event.save() 失敗時已扣庫存導致「畫面有件數但 API 回 out of stock」
+        const nextOrder = (event.maxLuckydrawOrder || 0) + 1;
+        console.log(`[單抽] 當前最大 order: ${event.maxLuckydrawOrder || 0}, 下一個 order: ${nextOrder}`);
 
-        // 創建 winner 對象，包含獎品信息
-        const winner = { 
-            _id, 
-            name, 
-            company, 
+        const winner = {
+            _id,
+            name,
+            company,
             table,
-            prizeId, 
+            prizeId,
             prizeName,
+            order: nextOrder,
             wonAt: new Date()
         };
 
-        // 將中獎者存儲在 event 的 winners 陣列中
         event.winners.push(winner);
-        await event.save(); // 保存更改
+        event.maxLuckydrawOrder = Math.max(event.maxLuckydrawOrder || 0, nextOrder);
+        await event.save();
+
+        prize.unit -= 1;
+        await prize.save();
+
+        // 通過 socket 發送中獎者添加事件給顯示頁面（含 FormConfig 完整資料）
+        try {
+            const io = getSocket();
+            const room = `luckydraw:${req.params.eventId}`;
+            const fullUser = event.users.find(u => u._id && u._id.equals(_id));
+            const winnerForSocket = buildWinnerWithFullUserData(winner, fullUser, getPrizePictureUrl(prize.picture)); // prizeImage URL
+            io.to(room).emit('luckydraw:winner_added', { winner: winnerForSocket });
+        } catch (socketError) {
+            console.error('Error sending socket event:', socketError);
+            // Socket 錯誤不影響 HTTP 響應
+        }
 
         res.status(201).send({ message: 'Winner added successfully.', winner });
     } catch (error) {
         console.error('Error adding winner:', error);
         res.status(500).send('Error adding winner.');
+    }
+};
+
+// 批量抽獎 API
+exports.batchDrawWinners = async (req, res) => {
+    const { count, prizeId } = req.body; // 獲取要抽取的數量和獎品ID
+    const { eventId } = req.params;
+    
+    try {
+        if (!count || count <= 0) {
+            return res.status(400).send('Invalid count. Count must be greater than 0.');
+        }
+
+        if (!prizeId) {
+            return res.status(400).send('Please select a prize.');
+        }
+
+        const event = await Event.findById(eventId).populate('users');
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+
+        // 獲取所有已經簽到且未中獎的用戶
+        const availablePeople = event.users.filter(user => 
+            user.isCheckIn === true && 
+            !event.winners.some(winner => winner._id && winner._id.equals(user._id))
+        );
+
+        if (availablePeople.length === 0) {
+            return res.status(400).send('No available people to draw.');
+        }
+
+        // 檢查獎品是否存在並獲取庫存
+        const Prize = require('../model/Prize');
+        const prize = await Prize.findById(prizeId);
+        if (!prize) {
+            return res.status(404).send('Prize not found.');
+        }
+
+        if (prize.unit <= 0) {
+            return res.status(400).send('Prize is out of stock.');
+        }
+
+        const actualCount = Math.min(count, prize.unit, availablePeople.length);
+
+        if (actualCount <= 0) {
+            return res.status(400).send('Cannot draw any winners. Not enough prize stock or available people.');
+        }
+
+        const shuffled = [...availablePeople];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+
+        const selectedWinners = shuffled.slice(0, actualCount);
+        const prizeName = prize.name;
+        let nextOrder = (event.maxLuckydrawOrder || 0) + 1;
+        console.log(`[批量抽] 當前最大 order: ${event.maxLuckydrawOrder || 0}, 下一個 order: ${nextOrder}`);
+
+        const winners = selectedWinners.map((user, index) => ({
+            _id: user._id,
+            name: user.name || '',
+            company: user.company || '',
+            table: user.table || '',
+            prizeId: prizeId,
+            prizeName: prizeName,
+            order: nextOrder + index,
+            wonAt: new Date()
+        }));
+
+        event.winners.push(...winners);
+        const lastOrder = nextOrder + actualCount - 1;
+        event.maxLuckydrawOrder = Math.max(event.maxLuckydrawOrder || 0, lastOrder);
+        await event.save();
+
+        prize.unit -= actualCount;
+        await prize.save();
+
+        // 通過 socket 發送中獎者添加事件給顯示頁面（含 FormConfig 完整資料）
+        try {
+            const io = getSocket();
+            const room = `luckydraw:${eventId}`;
+            winners.forEach((winner, index) => {
+                const fullUser = selectedWinners[index]; // 對應的完整 user（含 FormConfig 欄位）
+                const winnerForSocket = buildWinnerWithFullUserData(winner, fullUser, getPrizePictureUrl(prize.picture)); // prizeImage URL
+                io.to(room).emit('luckydraw:winner_added', { winner: winnerForSocket });
+            });
+        } catch (socketError) {
+            console.error('Error sending socket event:', socketError);
+            // Socket 錯誤不影響 HTTP 響應
+        }
+
+        res.status(201).send({ 
+            message: `Successfully drew ${actualCount} winner(s).`, 
+            winners,
+            actualCount,
+            requestedCount: count
+        });
+    } catch (error) {
+        console.error('Error batch drawing winners:', error);
+        res.status(500).send('Error batch drawing winners.');
     }
 };
 
@@ -1084,6 +2744,877 @@ exports.renderLuckydrawPage = async (req, res) => {
     }
 };
 
+// 渲染抽獎控制面板頁面（iPad）
+exports.renderLuckydrawPanelPage = async (req, res) => {
+    const { eventId } = req.params; // 獲取 eventId
+    try {
+        const event = await Event.findById(eventId).populate('users'); // 獲取事件並填充用戶和中獎者
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+
+        // 獲取獎品列表
+        const Prize = require('../model/Prize');
+        const prizes = await Prize.find({ eventId });
+        const baseUrl = getPublicBaseUrl();
+        // 為每個獎品加上絕對 URL 的 picture，供前台 data-image 與 socket 使用
+        const prizesWithPictureUrl = prizes.map(p => {
+            const doc = p.toObject ? p.toObject() : { ...p };
+            doc.pictureUrl = getPrizePictureUrl(p.picture);
+            return doc;
+        });
+
+        // 獲取所有已經簽到且未中獎的用戶
+        const availablePeople = event.users.filter(user => 
+            user.isCheckIn === true && !event.winners.some(winner => winner._id && winner._id.equals(user._id)) // 確保 winner._id 存在
+        );
+
+        res.render('admin/luckydraw_panel', { eventId, availablePeople, prizes: prizesWithPictureUrl, baseUrl }); // 傳遞獎品（含 pictureUrl）與 baseUrl
+    } catch (error) {
+        console.error('Error rendering luckydraw panel page:', error);
+        res.status(500).send('Error rendering luckydraw panel page.');
+    }
+};
+
+// ========== 掃瞄加分功能 ==========
+
+// 生成6位數字 PIN 碼
+function generatePIN() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// 渲染掃瞄加分用戶管理頁面
+exports.renderScanPointUsersPage = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+        
+        // 獲取完整域名
+        const domain = (process.env.DOMAIN || process.env.domain || `${req.protocol}://${req.get('host')}`).toString().trim().replace(/\/+$/, '');
+        const baseUrl = domain.startsWith('http://') || domain.startsWith('https://') ? domain : `https://${domain}`;
+        const loginUrl = `${baseUrl}/events/${eventId}/attendee`;
+        
+        res.render('admin/scan_point_users', { 
+            eventId, 
+            scanPointUsers: event.scanPointUsers || [],
+            loginUrl: loginUrl
+        });
+    } catch (error) {
+        console.error('Error rendering scan point users page:', error);
+        res.status(500).send('Error rendering scan point users page.');
+    }
+};
+
+// 創建掃瞄加分用戶
+exports.createScanPointUser = async (req, res) => {
+    const { eventId } = req.params;
+    const { name } = req.body;
+    
+    try {
+        if (!name || !name.trim()) {
+            return res.status(400).json({ success: false, message: '請提供用戶名稱' });
+        }
+        
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ success: false, message: '找不到該事件' });
+        }
+        
+        // 檢查名稱是否已存在
+        const existingUser = event.scanPointUsers.find(user => user.name === name.trim());
+        if (existingUser) {
+            return res.status(400).json({ success: false, message: '該用戶名稱已存在' });
+        }
+        
+        // 生成唯一的 PIN 碼
+        let pin = generatePIN();
+        let attempts = 0;
+        while (event.scanPointUsers.find(user => user.pin === pin) && attempts < 10) {
+            pin = generatePIN();
+            attempts++;
+        }
+        
+        if (attempts >= 10) {
+            return res.status(500).json({ success: false, message: '無法生成唯一的 PIN 碼，請重試' });
+        }
+        
+        // 創建新用戶
+        const newUser = {
+            name: name.trim(),
+            pin: pin,
+            created_at: new Date(),
+            modified_at: new Date()
+        };
+        
+        event.scanPointUsers.push(newUser);
+        await event.save();
+        
+        res.status(200).json({ 
+            success: true, 
+            message: '用戶創建成功',
+            user: newUser
+        });
+    } catch (error) {
+        console.error('Error creating scan point user:', error);
+        res.status(500).json({ success: false, message: '創建用戶時發生錯誤' });
+    }
+};
+
+// 刪除掃瞄加分用戶
+exports.deleteScanPointUser = async (req, res) => {
+    const { eventId, userId } = req.params;
+    
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ success: false, message: '找不到該事件' });
+        }
+        
+        const userIndex = event.scanPointUsers.findIndex(user => user._id.toString() === userId);
+        if (userIndex === -1) {
+            return res.status(404).json({ success: false, message: '找不到該用戶' });
+        }
+        
+        event.scanPointUsers.splice(userIndex, 1);
+        await event.save();
+        
+        res.status(200).json({ success: true, message: '用戶刪除成功' });
+    } catch (error) {
+        console.error('Error deleting scan point user:', error);
+        res.status(500).json({ success: false, message: '刪除用戶時發生錯誤' });
+    }
+};
+
+// 重新生成 PIN 碼
+exports.regeneratePIN = async (req, res) => {
+    const { eventId, userId } = req.params;
+    
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ success: false, message: '找不到該事件' });
+        }
+        
+        const user = event.scanPointUsers.id(userId);
+        if (!user) {
+            return res.status(404).json({ success: false, message: '找不到該用戶' });
+        }
+        
+        // 生成新的 PIN 碼
+        let pin = generatePIN();
+        let attempts = 0;
+        while (event.scanPointUsers.find(u => u._id.toString() !== userId && u.pin === pin) && attempts < 10) {
+            pin = generatePIN();
+            attempts++;
+        }
+        
+        if (attempts >= 10) {
+            return res.status(500).json({ success: false, message: '無法生成唯一的 PIN 碼，請重試' });
+        }
+        
+        user.pin = pin;
+        user.modified_at = new Date();
+        await event.save();
+        
+        res.status(200).json({ 
+            success: true, 
+            message: 'PIN 碼重新生成成功',
+            pin: pin
+        });
+    } catch (error) {
+        console.error('Error regenerating PIN:', error);
+        res.status(500).json({ success: false, message: '重新生成 PIN 碼時發生錯誤' });
+    }
+};
+
+// 渲染掃瞄加分登入頁面
+exports.renderScanPointLoginPage = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+        res.render('events/scan_point_login', { eventId });
+    } catch (error) {
+        console.error('Error rendering scan point login page:', error);
+        res.status(500).send('Error rendering scan point login page.');
+    }
+};
+
+// 掃瞄加分 PIN 登入
+exports.scanPointLogin = async (req, res) => {
+    const { eventId } = req.params;
+    const { pin } = req.body;
+    
+    try {
+        if (!pin || pin.length !== 6 || !/^\d+$/.test(pin)) {
+            return res.status(400).json({ success: false, message: '請提供6位數字 PIN 碼' });
+        }
+        
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ success: false, message: '找不到該事件' });
+        }
+        
+        const user = event.scanPointUsers.find(u => u.pin === pin);
+        if (!user) {
+            return res.status(401).json({ success: false, message: 'PIN 碼錯誤' });
+        }
+        
+        // 將用戶信息存入 session
+        req.session.scanPointUser = {
+            _id: user._id.toString(),
+            name: user.name,
+            eventId: eventId
+        };
+        
+        res.status(200).json({ 
+            success: true, 
+            message: '登入成功',
+            user: {
+                _id: user._id.toString(),
+                name: user.name
+            }
+        });
+    } catch (error) {
+        console.error('Error during scan point login:', error);
+        res.status(500).json({ success: false, message: '登入時發生錯誤' });
+    }
+};
+
+// 渲染掃瞄加分頁面
+exports.renderScanPointScanPage = async (req, res) => {
+    const { eventId } = req.params;
+    
+    try {
+        // 檢查 session
+        if (!req.session.scanPointUser || req.session.scanPointUser.eventId !== eventId) {
+            return res.redirect(`/events/${eventId}/attendee`);
+        }
+        
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+        
+        res.render('events/scan_point_scan', { 
+            eventId, 
+            userName: req.session.scanPointUser.name 
+        });
+    } catch (error) {
+        console.error('Error rendering scan point scan page:', error);
+        res.status(500).send('Error rendering scan point scan page.');
+    }
+};
+
+// 通過掃瞄添加分數
+exports.addPointsByScan = async (req, res) => {
+    const { eventId } = req.params;
+    const { userId, points } = req.body;
+    
+    try {
+        // 檢查 session
+        if (!req.session.scanPointUser || req.session.scanPointUser.eventId !== eventId) {
+            return res.status(401).json({ success: false, message: '未登入或登入已過期' });
+        }
+        
+        if (!userId || !points || points <= 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: '請提供有效的用戶ID和積分數值（必須大於0）' 
+            });
+        }
+        
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ 
+                success: false, 
+                message: '找不到該事件' 
+            });
+        }
+        
+        // 查找用戶
+        const user = event.users.id(userId);
+        if (!user) {
+            return res.status(404).json({ 
+                success: false, 
+                message: '找不到該用戶' 
+            });
+        }
+        
+        // 添加積分
+        const previousPoints = user.point || 0;
+        user.point = previousPoints + parseInt(points);
+        
+        await event.save();
+        
+        res.status(200).json({ 
+            success: true, 
+            message: '積分添加成功',
+            user: {
+                _id: user._id,
+                name: user.name,
+                company: user.company,
+                table: user.table,
+                previousPoints: previousPoints,
+                addedPoints: parseInt(points),
+                currentPoints: user.point
+            }
+        });
+    } catch (error) {
+        console.error('Error adding points by scan:', error);
+        res.status(500).json({ success: false, message: '添加積分時發生錯誤' });
+    }
+};
+
+// ========== Treasure Hunt 功能 ==========
+
+// 渲染 Treasure Hunt 管理頁面
+exports.renderTreasureHuntPage = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+        
+        // 獲取完整域名
+        const domain = (process.env.DOMAIN || process.env.domain || `${req.protocol}://${req.get('host')}`).toString().trim().replace(/\/+$/, '');
+        const baseUrl = domain.startsWith('http://') || domain.startsWith('https://') ? domain : `https://${domain}`;
+        
+        res.render('admin/treasure_hunt', { 
+            eventId, 
+            treasureHuntItems: event.treasureHuntItems || [],
+            baseUrl: baseUrl
+        });
+    } catch (error) {
+        console.error('Error rendering treasure hunt page:', error);
+        res.status(500).send('Error rendering treasure hunt page.');
+    }
+};
+
+// 創建 Treasure Hunt 項目
+exports.createTreasureHuntItem = async (req, res) => {
+    const { eventId } = req.params;
+    const { name, points, description } = req.body;
+    
+    try {
+        if (!name || !name.trim()) {
+            return res.status(400).json({ success: false, message: '請提供項目名稱' });
+        }
+        
+        if (!points || points <= 0) {
+            return res.status(400).json({ success: false, message: '請提供有效的積分數值（必須大於0）' });
+        }
+        
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ success: false, message: '找不到該事件' });
+        }
+        
+        // 生成唯一的 QR Code 數據（格式：treasure:eventId:itemId）
+        // 由於 itemId 還不存在，我們先使用時間戳作為臨時 ID
+        const tempId = Date.now().toString();
+        const qrCodeData = `treasure:${eventId}:${tempId}`;
+        
+        // 生成 QR Code 圖片
+        const QRCode = require('qrcode');
+        const qrCodeImage = await QRCode.toDataURL(qrCodeData);
+        
+        // 創建新項目
+        const newItem = {
+            name: name.trim(),
+            points: parseInt(points),
+            qrCodeData: qrCodeData,
+            qrCodeImage: qrCodeImage,
+            description: description || '',
+            created_at: new Date(),
+            modified_at: new Date()
+        };
+        
+        event.treasureHuntItems.push(newItem);
+        await event.save();
+        
+        // 獲取保存後的項目（包含真實的 _id）
+        const savedItem = event.treasureHuntItems[event.treasureHuntItems.length - 1];
+        
+        // 更新 QR Code 數據和圖片，使用真實的 _id
+        const finalQrCodeData = `treasure:${eventId}:${savedItem._id}`;
+        const finalQrCodeImage = await QRCode.toDataURL(finalQrCodeData);
+        
+        savedItem.qrCodeData = finalQrCodeData;
+        savedItem.qrCodeImage = finalQrCodeImage;
+        await event.save();
+        
+        res.status(200).json({ 
+            success: true, 
+            message: 'Treasure Hunt 項目創建成功',
+            item: {
+                _id: savedItem._id,
+                name: savedItem.name,
+                points: savedItem.points,
+                qrCodeData: savedItem.qrCodeData,
+                qrCodeImage: savedItem.qrCodeImage,
+                description: savedItem.description
+            }
+        });
+    } catch (error) {
+        console.error('Error creating treasure hunt item:', error);
+        res.status(500).json({ success: false, message: '創建項目時發生錯誤' });
+    }
+};
+
+// 更新 Treasure Hunt 項目
+exports.updateTreasureHuntItem = async (req, res) => {
+    const { eventId, itemId } = req.params;
+    const { name, points, description } = req.body;
+    
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ success: false, message: '找不到該事件' });
+        }
+        
+        const item = event.treasureHuntItems.id(itemId);
+        if (!item) {
+            return res.status(404).json({ success: false, message: '找不到該項目' });
+        }
+        
+        if (name !== undefined) item.name = name.trim();
+        if (points !== undefined && points > 0) item.points = parseInt(points);
+        if (description !== undefined) item.description = description || '';
+        item.modified_at = new Date();
+        
+        await event.save();
+        
+        res.status(200).json({ 
+            success: true, 
+            message: '項目更新成功',
+            item: item
+        });
+    } catch (error) {
+        console.error('Error updating treasure hunt item:', error);
+        res.status(500).json({ success: false, message: '更新項目時發生錯誤' });
+    }
+};
+
+// 刪除 Treasure Hunt 項目
+exports.deleteTreasureHuntItem = async (req, res) => {
+    const { eventId, itemId } = req.params;
+    
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ success: false, message: '找不到該事件' });
+        }
+        
+        const item = event.treasureHuntItems.id(itemId);
+        if (!item) {
+            return res.status(404).json({ success: false, message: '找不到該項目' });
+        }
+        
+        event.treasureHuntItems.pull(itemId);
+        await event.save();
+        
+        res.status(200).json({ success: true, message: '項目刪除成功' });
+    } catch (error) {
+        console.error('Error deleting treasure hunt item:', error);
+        res.status(500).json({ success: false, message: '刪除項目時發生錯誤' });
+    }
+};
+
+// 上傳附件
+exports.uploadAttachment = async (req, res) => {
+    const { eventId } = req.params;
+    const fs = require('fs');
+    const path = require('path');
+    
+    try {
+        if (!req.file) {
+            return res.status(400).json({ 
+                success: false, 
+                message: '沒有上傳文件' 
+            });
+        }
+        
+        const event = await Event.findById(eventId);
+        if (!event) {
+            // 如果事件不存在，刪除已上傳的文件
+            const filePath = req.file.path;
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+            return res.status(404).json({ 
+                success: false, 
+                message: '找不到該事件' 
+            });
+        }
+        
+        // 構建文件 URL
+        const fileUrl = `/events/attachments/${req.file.filename}`;
+        
+        // 創建附件對象
+        const attachment = {
+            filename: req.file.originalname,
+            storedFilename: req.file.filename,
+            url: fileUrl,
+            size: req.file.size,
+            mimeType: req.file.mimetype,
+            uploadedAt: new Date()
+        };
+        
+        // 添加到事件的 attachments 數組
+        if (!event.attachments) {
+            event.attachments = [];
+        }
+        event.attachments.push(attachment);
+        await event.save();
+        
+        res.status(200).json({
+            success: true,
+            message: '文件上傳成功',
+            attachment: attachment
+        });
+    } catch (error) {
+        console.error('Error uploading attachment:', error);
+        
+        // 如果出錯，刪除已上傳的文件
+        if (req.file && req.file.path) {
+            const fs = require('fs');
+            if (fs.existsSync(req.file.path)) {
+                fs.unlinkSync(req.file.path);
+            }
+        }
+        
+        res.status(500).json({ 
+            success: false, 
+            message: '上傳文件時發生錯誤',
+            error: error.message 
+        });
+    }
+};
+
+// 渲染附件管理頁面
+exports.renderAttachmentsPage = async (req, res) => {
+    const { eventId } = req.params;
+    
+    try {
+        // 檢查認證
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.redirect('/login');
+        }
+        
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found');
+        }
+        
+        res.render('admin/attachments', { 
+            event: event,
+            eventId: eventId
+        });
+    } catch (error) {
+        console.error('Error rendering attachments page:', error);
+        res.status(500).send('Error rendering attachments page.');
+    }
+};
+
+// 獲取附件列表
+exports.getAttachments = async (req, res) => {
+    const { eventId } = req.params;
+    
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ 
+                success: false, 
+                message: '找不到該事件' 
+            });
+        }
+        
+        res.status(200).json({
+            success: true,
+            attachments: event.attachments || []
+        });
+    } catch (error) {
+        console.error('Error getting attachments:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '獲取附件列表時發生錯誤' 
+        });
+    }
+};
+
+// 刪除附件
+exports.deleteAttachment = async (req, res) => {
+    const { eventId, attachmentId } = req.params;
+    const fs = require('fs');
+    const path = require('path');
+    
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ 
+                success: false, 
+                message: '找不到該事件' 
+            });
+        }
+        
+        const attachment = event.attachments.id(attachmentId);
+        if (!attachment) {
+            return res.status(404).json({ 
+                success: false, 
+                message: '找不到該附件' 
+            });
+        }
+        
+        // 刪除物理文件
+        const filePath = path.join('public/events/attachments', attachment.storedFilename);
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+        
+        // 從數據庫中刪除附件記錄
+        event.attachments.pull(attachmentId);
+        await event.save();
+        
+        res.status(200).json({
+            success: true,
+            message: '附件刪除成功'
+        });
+    } catch (error) {
+        console.error('Error deleting attachment:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '刪除附件時發生錯誤' 
+        });
+    }
+}; async (req, res) => {
+    const { eventId, itemId } = req.params;
+    
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ success: false, message: '找不到該事件' });
+        }
+        
+        const itemIndex = event.treasureHuntItems.findIndex(item => item._id.toString() === itemId);
+        if (itemIndex === -1) {
+            return res.status(404).json({ success: false, message: '找不到該項目' });
+        }
+        
+        event.treasureHuntItems.splice(itemIndex, 1);
+        await event.save();
+        
+        res.status(200).json({ success: true, message: '項目刪除成功' });
+    } catch (error) {
+        console.error('Error deleting treasure hunt item:', error);
+        res.status(500).json({ success: false, message: '刪除項目時發生錯誤' });
+    }
+};
+
+// 渲染用戶 Treasure Hunt 掃描頁面
+exports.renderTreasureHuntScanPage = async (req, res) => {
+    const { eventId } = req.params;
+    
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+        
+        // 嘗試從 session 獲取用戶 ID（如果用戶已登入）
+        // 也可以從 URL 參數獲取
+        let userId = req.query.userId;
+        if (!userId && req.session.user && req.session.user._id) {
+            userId = req.session.user._id.toString();
+        }
+        
+        // 獲取用戶的掃描歷史記錄
+        let scanHistory = [];
+        if (userId) {
+            const user = event.users.id(userId);
+            if (user && user.scannedTreasureItems && user.scannedTreasureItems.length > 0) {
+                // 根據已掃描的項目 ID 查找對應的項目信息
+                scanHistory = user.scannedTreasureItems.map(itemId => {
+                    const item = event.treasureHuntItems.id(itemId);
+                    if (item) {
+                        return {
+                            itemId: itemId.toString(),
+                            name: item.name,
+                            points: item.points
+                        };
+                    }
+                    return null;
+                }).filter(item => item !== null); // 過濾掉找不到的項目
+            }
+        }
+        
+        res.render('events/treasure_hunt_scan', { 
+            eventId,
+            userId: userId || null,
+            scanHistory: scanHistory || [],
+            userPoints: userId ? (event.users.id(userId)?.point || 0) : 0
+        });
+    } catch (error) {
+        console.error('Error rendering treasure hunt scan page:', error);
+        res.status(500).send('Error rendering treasure hunt scan page.');
+    }
+};
+
+// 掃描 Treasure Hunt QR Code 並添加積分
+exports.scanTreasureHuntQRCode = async (req, res) => {
+    const { eventId } = req.params;
+    const { qrCodeData, userId } = req.body;
+    
+    try {
+        if (!qrCodeData) {
+            return res.status(400).json({ success: false, message: '請提供 QR Code 數據' });
+        }
+        
+        if (!userId) {
+            return res.status(400).json({ success: false, message: '請提供用戶 ID' });
+        }
+        
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ success: false, message: '找不到該事件' });
+        }
+        
+        // 解析 QR Code 數據（格式：treasure:eventId:itemId）
+        const parts = qrCodeData.split(':');
+        // 將 eventId 轉換為字符串進行比較，確保匹配
+        const eventIdStr = String(eventId);
+        if (parts.length !== 3 || parts[0] !== 'treasure' || parts[1] !== eventIdStr) {
+            return res.status(400).json({ 
+                success: false, 
+                message: `無效的 QR Code。期望事件 ID: ${eventIdStr}，實際: ${parts[1]}` 
+            });
+        }
+        
+        const itemId = parts[2];
+        const item = event.treasureHuntItems.id(itemId);
+        if (!item) {
+            return res.status(404).json({ success: false, message: '找不到該 Treasure Hunt 項目' });
+        }
+        
+        // 查找用戶
+        const user = event.users.id(userId);
+        if (!user) {
+            return res.status(404).json({ success: false, message: '找不到該用戶' });
+        }
+        
+        // 檢查用戶是否已經掃描過這個 QR Code
+        // 初始化 scannedTreasureItems 陣列（如果不存在）
+        if (!user.scannedTreasureItems) {
+            user.scannedTreasureItems = [];
+        }
+        
+        // 檢查是否已經掃描過
+        const itemObjectId = new mongoose.Types.ObjectId(itemId);
+        const alreadyScanned = user.scannedTreasureItems.some(id => id.equals(itemObjectId));
+        
+        if (alreadyScanned) {
+            return res.status(400).json({ 
+                success: false, 
+                message: '您已經掃描過這個 QR Code 了！' 
+            });
+        }
+        
+        // 添加積分
+        const previousPoints = user.point || 0;
+        user.point = previousPoints + item.points;
+        
+        // 記錄已掃描的項目
+        user.scannedTreasureItems.push(itemObjectId);
+        
+        await event.save();
+        
+        res.status(200).json({ 
+            success: true, 
+            message: `成功獲得 ${item.points} 積分！`,
+            item: {
+                name: item.name,
+                points: item.points
+            },
+            user: {
+                _id: user._id,
+                name: user.name,
+                previousPoints: previousPoints,
+                addedPoints: item.points,
+                currentPoints: user.point
+            }
+        });
+    } catch (error) {
+        console.error('Error scanning treasure hunt QR code:', error);
+        res.status(500).json({ success: false, message: '掃描時發生錯誤' });
+    }
+};
+
+/** 從 FormConfig 收集可選欄位（fieldName + 顯示標籤） */
+function collectFormConfigFields(formConfig) {
+    const out = [];
+    if (!formConfig || !Array.isArray(formConfig.sections)) return out;
+    const seen = new Set();
+    for (const sec of formConfig.sections) {
+        if (!sec || !sec.fields || sec.visible === false) continue;
+        for (const f of sec.fields) {
+            if (!f || f.visible === false || !f.fieldName) continue;
+            if (seen.has(f.fieldName)) continue;
+            seen.add(f.fieldName);
+            const label = (f.label && f.label.zh) || (f.label && f.label.en) || f.fieldName;
+            out.push({ fieldName: f.fieldName, label });
+        }
+    }
+    return out;
+}
+
+/** 依 winner._id 在 event.users 找完整 user（含 FormConfig 動態欄位） */
+function findEventUserByWinnerId(event, winnerId) {
+    const id = winnerId && winnerId.toString();
+    if (!id || !event.users || !event.users.length) return null;
+    return event.users.find(u => u && u._id && u._id.toString() === id) || null;
+}
+
+/** 取值：優先 user，再 winner；陣列轉字串 */
+function getWinnerFieldValue(winner, user, fieldName) {
+    const u = user && typeof user.toObject === 'function' ? user.toObject() : user;
+    const w = winner && typeof winner.toObject === 'function' ? winner.toObject() : winner;
+    let v = u && u[fieldName];
+    if (v == null || v === '') v = w && w[fieldName];
+    if (v == null || v === '') return '–';
+    if (Array.isArray(v)) return v.join(', ');
+    if (typeof v === 'object') return JSON.stringify(v);
+    return String(v);
+}
+
+const DEFAULT_LUCKYDRAW_LIST_FIELDS = ['name', 'company', 'table'];
+
+/** 組裝 List/Award/Export 用：欄位定義 + 每列儲存格 */
+function buildLuckydrawListRows(event, fieldNames) {
+    const names = Array.isArray(fieldNames) && fieldNames.length > 0 ? fieldNames : DEFAULT_LUCKYDRAW_LIST_FIELDS;
+    const columnDefs = names.map(fieldName => ({ fieldName, label: fieldName }));
+    const rows = (event.winners || []).map(winner => {
+        const user = findEventUserByWinnerId(event, winner._id);
+        const cells = names.map(fieldName => ({
+            fieldName,
+            value: getWinnerFieldValue(winner, user, fieldName)
+        }));
+        return {
+            order: winner.order || 0,
+            _id: winner._id,
+            prizeName: winner.prizeName || '–',
+            wonAt: winner.wonAt,
+            cells
+        };
+    });
+    return { columnDefs, rows };
+}
+
 // 渲染管理中獎者頁面
 exports.renderAdminLuckydrawPage = async (req, res) => {
     const { eventId } = req.params; // 獲取 eventId
@@ -1093,25 +3624,213 @@ exports.renderAdminLuckydrawPage = async (req, res) => {
             return res.status(404).send('Event not found.');
         }
 
-        // 獲取中獎者列表，並添加次序
-        const winners = event.winners.map((winner, index) => ({
-            order: index + 1, // 次序從 1 開始
-            _id: winner._id,
-            name: winner.name,
-            company: winner.company,
-            table: winner.table,
-            prizeName: winner.prizeName,
-            wonAt: winner.wonAt
+        const FormConfig = require('../model/FormConfig');
+        let formConfig = await FormConfig.findOne({ eventId });
+        const formFieldOptions = collectFormConfigFields(formConfig);
+
+        const savedFieldNames = Array.isArray(event.luckydrawListFieldNames) ? event.luckydrawListFieldNames : [];
+        const fieldNames = savedFieldNames.length > 0 ? savedFieldNames : DEFAULT_LUCKYDRAW_LIST_FIELDS;
+        // 若已存的是舊預設且 formConfig 有其他欄位，仍用已存順序；column label 從 formFieldOptions 補上
+        const labelByName = {};
+        formFieldOptions.forEach(o => { labelByName[o.fieldName] = o.label; });
+        DEFAULT_LUCKYDRAW_LIST_FIELDS.forEach(f => {
+            if (!labelByName[f]) {
+                if (f === 'name') labelByName[f] = '姓名';
+                else if (f === 'company') labelByName[f] = '公司';
+                else if (f === 'table') labelByName[f] = '桌號';
+                else labelByName[f] = f;
+            }
+        });
+        const { rows } = buildLuckydrawListRows(event, fieldNames);
+        const columnDefs = fieldNames.map(fieldName => ({
+            fieldName,
+            label: labelByName[fieldName] || fieldName
         }));
 
-        // 添加調試日誌
-        console.log('Winners data:', winners);
-
-        // 渲染 admin/luckydraw.ejs 頁面，並傳遞中獎者
-        res.render('admin/luckydraw', { winners, eventId });
+        res.render('admin/luckydraw', {
+            winners: rows,
+            eventId,
+            maxLuckydrawOrder: event.maxLuckydrawOrder || 0,
+            formFieldOptions,
+            luckydrawListFieldNames: fieldNames,
+            columnDefs
+        });
     } catch (error) {
         console.error('Error rendering admin luckydraw page:', error);
         res.status(500).send('Error rendering admin luckydraw page.');
+    }
+};
+
+/** PATCH 儲存 Luckydraw List/Award 要顯示的 FormConfig 欄位 */
+exports.updateLuckydrawListColumns = async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        const { fieldNames } = req.body || {};
+        if (!Array.isArray(fieldNames)) {
+            return res.status(400).json({ message: 'fieldNames must be an array' });
+        }
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).json({ message: 'Event not found.' });
+        const cleaned = fieldNames.map(f => String(f).trim()).filter(Boolean);
+        if (cleaned.length === 0) {
+            return res.status(400).json({ message: 'At least one field is required' });
+        }
+        event.luckydrawListFieldNames = cleaned;
+        await event.save();
+        res.status(200).json({ message: 'Updated', luckydrawListFieldNames: cleaned });
+    } catch (error) {
+        console.error('updateLuckydrawListColumns error:', error);
+        res.status(500).json({ message: 'Error saving columns' });
+    }
+};
+
+// 外部顯示用：抽獎中獎名單頁（無後台 layout）；若已設定 luckydrawAwardPassword 則需先輸入密碼
+exports.renderLuckydrawAwardPage = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+        const awardPassword = (event.luckydrawAwardPassword || '').trim();
+        const requirePassword = awardPassword.length > 0;
+        const unlocked = (req.session.luckydrawAwardUnlocked || {})[eventId] === true;
+
+        if (requirePassword && !unlocked) {
+            return res.render('events/luckydraw_award_gate', {
+                eventId,
+                eventName: event.name || 'Lucky Draw',
+                error: (req.query.error === '1' ? '密碼錯誤，請重試。' : null)
+            });
+        }
+
+        const savedFieldNames = Array.isArray(event.luckydrawListFieldNames) ? event.luckydrawListFieldNames : [];
+        const fieldNames = savedFieldNames.length > 0 ? savedFieldNames : DEFAULT_LUCKYDRAW_LIST_FIELDS;
+        const FormConfig = require('../model/FormConfig');
+        const formConfig = await FormConfig.findOne({ eventId });
+        const formFieldOptions = collectFormConfigFields(formConfig);
+        const labelByName = {};
+        formFieldOptions.forEach(o => { labelByName[o.fieldName] = o.label; });
+        DEFAULT_LUCKYDRAW_LIST_FIELDS.forEach(f => {
+            if (!labelByName[f]) {
+                if (f === 'name') labelByName[f] = '姓名';
+                else if (f === 'company') labelByName[f] = '公司';
+                else if (f === 'table') labelByName[f] = '桌號';
+                else labelByName[f] = f;
+            }
+        });
+        const { rows } = buildLuckydrawListRows(event, fieldNames);
+        const columnDefs = fieldNames.map(fieldName => ({
+            fieldName,
+            label: labelByName[fieldName] || fieldName
+        }));
+        const winners = rows.sort((a, b) => (a.order || 0) - (b.order || 0));
+        res.render('events/luckydraw_award', {
+            eventId,
+            eventName: event.name || 'Lucky Draw',
+            winners,
+            columnDefs
+        });
+    } catch (error) {
+        console.error('Error rendering luckydraw award page:', error);
+        res.status(500).send('Error loading award list.');
+    }
+};
+
+// POST：驗證中獎名單頁密碼並解鎖（寫入 session 後重導向回 award 頁）
+exports.unlockLuckydrawAwardPage = async (req, res) => {
+    const { eventId } = req.params;
+    const { password } = req.body || {};
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found.' });
+        }
+        const expected = (event.luckydrawAwardPassword || '').trim();
+        if (expected.length === 0) {
+            if (!req.session.luckydrawAwardUnlocked) req.session.luckydrawAwardUnlocked = {};
+            req.session.luckydrawAwardUnlocked[eventId] = true;
+            return res.redirect(`/events/${eventId}/luckydraw/award`);
+        }
+        const submitted = (password || '').trim();
+        if (submitted !== expected) {
+            return res.redirect(`/events/${eventId}/luckydraw/award?error=1`);
+        }
+        if (!req.session.luckydrawAwardUnlocked) req.session.luckydrawAwardUnlocked = {};
+        req.session.luckydrawAwardUnlocked[eventId] = true;
+        return res.redirect(`/events/${eventId}/luckydraw/award`);
+    } catch (err) {
+        console.error('unlockLuckydrawAwardPage error:', err);
+        return res.status(500).redirect(`/events/${eventId}/luckydraw/award?error=1`);
+    }
+};
+
+// 匯出中獎者列表為 Excel
+exports.exportLuckydrawList = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found.');
+        }
+
+        const savedFieldNames = Array.isArray(event.luckydrawListFieldNames) ? event.luckydrawListFieldNames : [];
+        const fieldNames = savedFieldNames.length > 0 ? savedFieldNames : DEFAULT_LUCKYDRAW_LIST_FIELDS;
+        const FormConfig = require('../model/FormConfig');
+        const formConfig = await FormConfig.findOne({ eventId });
+        const formFieldOptions = collectFormConfigFields(formConfig);
+        const labelByName = {};
+        formFieldOptions.forEach(o => { labelByName[o.fieldName] = o.label; });
+        DEFAULT_LUCKYDRAW_LIST_FIELDS.forEach(f => {
+            if (!labelByName[f]) {
+                if (f === 'name') labelByName[f] = '姓名';
+                else if (f === 'company') labelByName[f] = '公司';
+                else if (f === 'table') labelByName[f] = '桌號';
+                else labelByName[f] = f;
+            }
+        });
+        const { rows } = buildLuckydrawListRows(event, fieldNames);
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('中獎者列表');
+
+        const headers = [{ header: '次序', key: 'order', width: 10 }];
+        fieldNames.forEach(fn => {
+            headers.push({ header: labelByName[fn] || fn, key: 'f_' + fn, width: 18 });
+        });
+        headers.push(
+            { header: '獎品', key: 'prizeName', width: 25 },
+            { header: '中獎時間', key: 'wonAt', width: 20 }
+        );
+        worksheet.columns = headers;
+
+        rows.forEach((row) => {
+            const obj = {
+                order: row.order,
+                prizeName: row.prizeName || '',
+                wonAt: row.wonAt ? new Date(row.wonAt).toLocaleString('zh-TW', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                }) : ''
+            };
+            (row.cells || []).forEach(c => {
+                const v = c.value === '–' ? '' : c.value;
+                obj['f_' + c.fieldName] = v;
+            });
+            worksheet.addRow(obj);
+        });
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=luckydraw_list_${eventId}.xlsx`);
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (error) {
+        console.error('Error exporting luckydraw list:', error);
+        res.status(500).send('匯出中獎者列表失敗');
     }
 };
 
@@ -1132,9 +3851,33 @@ exports.renderQRCodeLoginPage = async (req, res) => {
         res.status(500).send('Error rendering QR code login page.');
     }
 };
-exports.renderLuckydrawSetting = (req, res) => {
+exports.renderLuckydrawSetting = async (req, res) => {
     const eventId = req.params.eventId;
-    res.render('admin/luckydraw_setting', { eventId }); // 渲染 luckydraw_setting.ejs
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).send('Event not found');
+        const awardPasswordSet = !!(event.luckydrawAwardPassword && event.luckydrawAwardPassword.trim());
+        res.render('admin/luckydraw_setting', { eventId, awardPasswordSet });
+    } catch (err) {
+        console.error('renderLuckydrawSetting error:', err);
+        res.status(500).send('Error loading setting');
+    }
+};
+
+/** PATCH 儲存中獎名單頁密碼（LuckyDraw Setting 設定）；空字串表示取消密碼 */
+exports.updateLuckydrawAwardPassword = async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        const { password } = req.body || {};
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).json({ message: 'Event not found.' });
+        event.luckydrawAwardPassword = typeof password === 'string' ? password.trim() : '';
+        await event.save();
+        res.status(200).json({ message: 'Saved', awardPasswordSet: !!event.luckydrawAwardPassword });
+    } catch (err) {
+        console.error('updateLuckydrawAwardPassword error:', err);
+        res.status(500).json({ message: 'Error saving' });
+    }
 };
 // 上傳背景圖片的控制器函數
 exports.uploadBackground = (req, res) => {
@@ -1175,6 +3918,48 @@ exports.renderEmailHtml = async (req, res) => {
     }
 };
 
+const XLSX = require('xlsx');
+const {
+    normalizeTicketTitle,
+    normalizePaymentTicketForSave,
+    normalizeTicketsForView,
+    PAYMENT_TICKET_XLSX_COLUMNS,
+    ticketToXlsxRow,
+    mergePaymentTicketsFromImportRows,
+    isFreePaymentTicketPrice,
+} = require('../utils/paymentTicket');
+
+function getPaymentTicketTitle(ticket, lang = 'zh') {
+    if (!ticket) return lang === 'en' ? 'Ticket' : '票券';
+    const t = normalizeTicketTitle(ticket.title);
+    if (lang === 'en') return t.en || t.zh || 'Ticket';
+    return t.zh || t.en || '票券';
+}
+
+/** FormConfig.eventDisplayName（留空則 fallback event.name），供 Wonder note 等對客顯示 */
+function getEventDisplayName(event, formConfig, lang = 'zh') {
+    const edn = formConfig && formConfig.eventDisplayName;
+    const zh = edn && edn.zh ? String(edn.zh).trim() : '';
+    const en = edn && edn.en ? String(edn.en).trim() : '';
+    const fallback = event && event.name ? String(event.name).trim() : '';
+    const isEn = lang && String(lang).toLowerCase().startsWith('en');
+    if (isEn) return en || zh || fallback || 'Event';
+    return zh || en || fallback || 'Event';
+}
+
+function isPaymentTicketInRange(ticket, now = new Date()) {
+    if (!ticket) return false;
+    const from = ticket.datetimeFrom ? new Date(ticket.datetimeFrom) : null;
+    const to = ticket.datetimeTo ? new Date(ticket.datetimeTo) : (ticket.datetime ? new Date(ticket.datetime) : null);
+    if (from && now < from) return false;
+    if (to && now > to) return false;
+    return true;
+}
+
+function normalizePaymentTicket(ticket) {
+    return normalizePaymentTicketForSave(ticket);
+}
+
 // 更新付費活動設定
 exports.updatePaymentEvent = async (req, res) => {
     const { eventId } = req.params;
@@ -1185,197 +3970,506 @@ exports.updatePaymentEvent = async (req, res) => {
             return res.status(404).json({ message: 'Event not found' });
         }
         if (typeof isPaymentEvent !== 'undefined') event.isPaymentEvent = isPaymentEvent;
-        if (Array.isArray(PaymentTickets)) event.PaymentTickets = PaymentTickets;
+        if (Array.isArray(PaymentTickets)) {
+            event.PaymentTickets = PaymentTickets.map(normalizePaymentTicket);
+        }
+        event.markModified('PaymentTickets');
         await event.save();
-        res.status(200).json({ message: 'Payment event updated', event });
+        const ticketsForClient = normalizeTicketsForView(event.PaymentTickets);
+        res.status(200).json({ message: 'Payment event updated', PaymentTickets: ticketsForClient });
     } catch (error) {
         console.error('Error updating payment event:', error);
         res.status(500).json({ message: 'Error updating payment event' });
     }
 };
 
-// Stripe Checkout
+/** 匯出付費票券為 Excel（含 _id） */
+exports.exportPaymentTickets = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+        const rows = (event.PaymentTickets || []).map(ticketToXlsxRow);
+        const worksheet = XLSX.utils.json_to_sheet(rows, { header: PAYMENT_TICKET_XLSX_COLUMNS });
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'PaymentTickets');
+        const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+        const safeName = String(event.name || 'event').replace(/[^\w\u4e00-\u9fff-]+/g, '_').slice(0, 40);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=payment_tickets_${safeName}_${eventId}.xlsx`);
+        res.send(buffer);
+    } catch (error) {
+        console.error('Error exporting payment tickets:', error);
+        res.status(500).json({ message: '匯出票券失敗' });
+    }
+};
+
+/** 從 Excel 匯入付費票券（相同 _id 則更新取代） */
+exports.importPaymentTickets = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        if (!req.file || !req.file.buffer) {
+            return res.status(400).json({ message: '請上傳 Excel 檔案' });
+        }
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        const workbook = XLSX.read(req.file.buffer, { type: 'buffer', cellDates: true });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+        if (!rows.length) {
+            return res.status(400).json({ message: '檔案沒有資料列' });
+        }
+
+        const { tickets, updated, created, errors } = mergePaymentTicketsFromImportRows(event.PaymentTickets, rows);
+        event.PaymentTickets = tickets;
+        if (tickets.length > 0) {
+            event.isPaymentEvent = true;
+        }
+        event.markModified('PaymentTickets');
+        await event.save();
+
+        res.status(200).json({
+            message: `匯入完成：更新 ${updated} 張、新增 ${created} 張`,
+            updated,
+            created,
+            errors: errors.length ? errors : undefined,
+            PaymentTickets: normalizeTicketsForView(event.PaymentTickets),
+            isPaymentEvent: event.isPaymentEvent,
+        });
+    } catch (error) {
+        console.error('Error importing payment tickets:', error);
+        res.status(500).json({ message: error.message || '匯入票券失敗' });
+    }
+};
+
+// 渲染 Payment Settings 獨立頁面
+exports.renderPaymentSettings = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.redirect('/login');
+        }
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found');
+        }
+        const eventForView = event.toObject ? event.toObject() : event;
+        eventForView.PaymentTickets = normalizeTicketsForView(event.PaymentTickets);
+        res.render('admin/payment_settings', { event: eventForView, eventId });
+    } catch (error) {
+        console.error('Error rendering payment settings page:', error);
+        res.status(500).send('Error rendering payment settings page.');
+    }
+};
+
+// 更新電郵設置
+exports.updateEmailSettings = async (req, res) => {
+    const { eventId } = req.params;
+    const { emailSettings } = req.body;
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+        if (emailSettings) {
+            // 如果 emailSettings 不存在，初始化它
+            if (!event.emailSettings) {
+                event.emailSettings = {
+                    sendWelcomeEmail: false,
+                    sendConfirmationEmail: false,
+                    sendReminderEmail: false,
+                    sendThankYouEmail: false,
+                    welcomeMessageMethod: 'email'
+                };
+            }
+            // 更新設置
+            if (typeof emailSettings.sendWelcomeEmail !== 'undefined') {
+                event.emailSettings.sendWelcomeEmail = emailSettings.sendWelcomeEmail;
+            }
+            if (typeof emailSettings.sendConfirmationEmail !== 'undefined') {
+                event.emailSettings.sendConfirmationEmail = emailSettings.sendConfirmationEmail;
+            }
+            if (typeof emailSettings.sendReminderEmail !== 'undefined') {
+                event.emailSettings.sendReminderEmail = emailSettings.sendReminderEmail;
+            }
+            if (typeof emailSettings.sendThankYouEmail !== 'undefined') {
+                event.emailSettings.sendThankYouEmail = emailSettings.sendThankYouEmail;
+            }
+            if (typeof emailSettings.welcomeMessageMethod !== 'undefined') {
+                event.emailSettings.welcomeMessageMethod = emailSettings.welcomeMessageMethod;
+            }
+        }
+        await event.save();
+        res.status(200).json({ message: 'Email settings updated', event });
+    } catch (error) {
+        console.error('Error updating email settings:', error);
+        res.status(500).json({ message: 'Error updating email settings' });
+    }
+};
+
+/** 依 .env PAYMENT_GATEWAY 回傳 'stripe' 或 'wonder'（預設 wonder） */
+function getPaymentGateway() {
+    const v = (process.env.PAYMENT_GATEWAY || 'wonder').toString().trim().toLowerCase();
+    return v === 'stripe' ? 'stripe' : 'wonder';
+}
+
+/** $0 票券：視作免費登記（不經付款閘道、不標記 paid） */
+async function completeFreePaymentTicketRegistration(event, ticket, userFormData, lang) {
+    const now = new Date();
+    const ticketTitleDisplay = getPaymentTicketTitle(ticket, lang);
+    const excludedFields = ['_id', '__v', 'create_at', 'modified_at'];
+    const newUser = {
+        create_at: now,
+        modified_at: now,
+        isCheckIn: false,
+        ticketId: ticket._id,
+        ticketTitle: ticketTitleDisplay,
+    };
+
+    Object.keys(userFormData).forEach((key) => {
+        if (excludedFields.includes(key)) return;
+        const val = userFormData[key];
+        if (key === 'agreementAgreed') {
+            newUser[key] = normalizeAgreementAgreed(val);
+            return;
+        }
+        if (Array.isArray(val)) newUser[key] = val;
+        else if (val !== undefined) newUser[key] = val;
+    });
+
+    if (!newUser.name || newUser.name === '') {
+        newUser.name = resolveUserDisplayName(newUser) || newUser.email || newUser.company || '未提供姓名';
+    }
+
+    event.users.push(newUser);
+    event.markModified('users');
+    await event.save();
+
+    const savedUser = event.users[event.users.length - 1];
+    const userForEmail = { ...newUser, _id: savedUser._id };
+
+    if (userForEmail.role !== 'guest' && event.emailSettings && event.emailSettings.sendWelcomeEmail) {
+        try {
+            await exports.sendWelcomeMessage(userForEmail, event);
+        } catch (e) {
+            console.error('Free ticket welcome email error:', e);
+        }
+    }
+
+    if (isInvoiceEmailEnabled()) {
+        const transaction = await Transaction.create({
+            eventId: event._id,
+            userEmail: userForEmail.email || userFormData.email,
+            userName: resolveUserDisplayName(userForEmail) || userForEmail.name || resolveUserDisplayName(userFormData) || userFormData.email || '未提供姓名',
+            ticketId: ticket._id,
+            ticketTitle: ticketTitleDisplay,
+            ticketPrice: 0,
+            stripeSessionId: 'free',
+            paymentGateway: 'none',
+            status: 'free',
+            userFormData,
+            transactionData: { currency: 'HKD', paid_total: '0.00', state: 'free' },
+        });
+        try {
+            const invoiceTemplate = await findEmailTemplateForEvent(event._id, 'invoice');
+            await sendInvoiceEmail(transaction, event, invoiceTemplate ? invoiceTemplate._id : null);
+        } catch (e) {
+            console.error('Free ticket invoice email error:', e);
+        }
+    }
+
+    return userForEmail;
+}
+
+// 統一 Checkout 入口：依 PAYMENT_GATEWAY 選擇 Stripe 或 Wonder，前端不需改動
 exports.stripeCheckout = async (req, res) => {
     const { event_id } = req.params;
-    const { ticketId, email, name, company, phone_code, phone } = req.body;
+    const { ticketId, email, name, company, phone_code, phone, lang, ...restBody } = req.body || {};
+    const gateway = getPaymentGateway();
     try {
         const event = await Event.findById(event_id);
         if (!event) return res.status(404).json({ message: 'Event not found' });
         const ticket = event.PaymentTickets.id(ticketId);
         if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
-        // Ensure DOMAIN has proper scheme
-        const domain = process.env.DOMAIN || `${req.protocol}://${req.get('host')}`;
-        const baseUrl = domain.startsWith('http://') || domain.startsWith('https://') 
-            ? domain 
-            : `https://${domain}`;
-        
-        // Stripe session
-        const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card'],
-            customer_email: email,
-            line_items: [
-                {
-                    price_data: {
-                        currency: 'hkd',
-                        product_data: {
-                            name: ticket.title,
-                        },
-                        unit_amount: ticket.price * 100,
-                    },
-                    quantity: 1,
-                },
-            ],
-            mode: 'payment',
-            success_url: `${baseUrl}/web/${event_id}/register/success?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${baseUrl}/web/${event_id}/register/fail?session_id={CHECKOUT_SESSION_ID}`,
-            metadata: {
-                event_id,
-                ticketId,
-                name,
-                company,
-                phone_code,
-                phone
-            }
-        });
-        // 新增 Transaction
-        await Transaction.create({
+        if (!isPaymentTicketInRange(ticket)) {
+            return res.status(400).json({ message: '此票券目前不在可購買時段內' });
+        }
+
+        // 付款回調／重導向一律用 .env 的 DOMAIN，不用 req，避免從 localhost 發起時導回 localhost
+        const baseUrl = getPublicBaseUrl();
+
+        let userFormData = ensureUserNameField({ email, name, company, phone_code, phone, ...restBody });
+        delete userFormData.ticketId;
+        delete userFormData.lang;
+
+        const displayName = resolveUserDisplayName(userFormData) || email || '未提供姓名';
+
+        const langQuery = lang && lang !== 'zh' ? `&lang=${lang}` : '';
+        const ticketTitleDisplay = getPaymentTicketTitle(ticket, lang);
+
+        // 免費票券（$0）：視作免費登記，不建立付款交易、不導向 Wonder/Stripe
+        if (isFreePaymentTicketPrice(ticket.price)) {
+            await completeFreePaymentTicketRegistration(event, ticket, userFormData, lang);
+            const langOnlyQuery = lang && lang !== 'zh' ? `?lang=${lang}` : '';
+            const successUrl = `${baseUrl}/web/${event_id}/register/success${langOnlyQuery}`;
+            return res.json({ url: successUrl });
+        }
+
+        const transaction = await Transaction.create({
             eventId: event_id,
             userEmail: email,
-            userName: name,
+            userName: displayName,
             ticketId: ticket._id,
-            ticketTitle: ticket.title,
+            ticketTitle: ticketTitleDisplay,
             ticketPrice: ticket.price,
-            stripeSessionId: session.id,
-            status: 'pending'
+            stripeSessionId: 'pending',
+            paymentGateway: gateway,
+            status: 'pending',
+            userFormData
         });
+
+        if (gateway === 'wonder') {
+            const FormConfig = require('../model/FormConfig');
+            const formConfig = await FormConfig.findOne({ eventId: event_id });
+            const eventDisplayName = getEventDisplayName(event, formConfig, lang);
+            const callbackUrl = `${baseUrl}/web/webhook/wonder`;
+            const redirectUrl = `${baseUrl}/web/${event_id}/register/success?session_id=${transaction._id}${langQuery}`;
+            const { paymentUrl, orderId } = await wonderPayment.createOrder({
+                referenceNumber: transaction._id.toString(),
+                currency: 'HKD',
+                ticketTitle: ticketTitleDisplay,
+                amount: ticket.price,
+                callbackUrl,
+                redirectUrl,
+                note: `Event: ${eventDisplayName}, Ticket: ${ticketTitleDisplay}`
+            });
+            transaction.stripeSessionId = orderId || transaction._id.toString();
+            await transaction.save();
+            if (isInvoiceEmailEnabled()) {
+                const invoiceTemplate = await findEmailTemplateForEvent(event._id, 'invoice');
+                if (invoiceTemplate) {
+                    try { await sendInvoiceEmail(transaction, event, invoiceTemplate._id); } catch (e) { console.error('Invoice email error:', e); }
+                }
+            }
+            return res.json({ url: paymentUrl });
+        }
+
+        // gateway === 'stripe'
+        const Stripe = require('stripe');
+        const stripeSecret = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET;
+        if (!stripeSecret) {
+            await Transaction.findOneAndUpdate({ _id: transaction._id }, { status: 'failed' });
+            return res.status(500).json({ message: 'Stripe is not configured (STRIPE_SECRET_KEY)' });
+        }
+        const stripe = new Stripe(stripeSecret);
+        const successUrl = `${baseUrl}/web/${event_id}/register/success?session_id={CHECKOUT_SESSION_ID}${langQuery}`;
+        const cancelUrl = `${baseUrl}/web/${event_id}/register/fail?session_id={CHECKOUT_SESSION_ID}${langQuery}`;
+        const session = await stripe.checkout.sessions.create({
+            mode: 'payment',
+            payment_method_types: ['card'],
+            line_items: [{
+                price_data: {
+                    currency: (process.env.STRIPE_CURRENCY || 'hkd').toLowerCase(),
+                    product_data: { name: ticketTitleDisplay || 'Ticket' },
+                    unit_amount: Math.round(Number(ticket.price) * 100) // 轉為分
+                },
+                quantity: 1
+            }],
+            success_url: successUrl,
+            cancel_url: cancelUrl,
+            client_reference_id: transaction._id.toString(),
+            metadata: { transaction_id: transaction._id.toString(), event_id }
+        });
+        transaction.stripeSessionId = session.id;
+        await transaction.save();
+        if (isInvoiceEmailEnabled()) {
+            const invoiceTemplate = await findEmailTemplateForEvent(event._id, 'invoice');
+            if (invoiceTemplate) {
+                try { await sendInvoiceEmail(transaction, event, invoiceTemplate._id); } catch (e) { console.error('Invoice email error:', e); }
+            }
+        }
         res.json({ url: session.url });
     } catch (error) {
-        console.error('Stripe checkout error:', error);
-        res.status(500).json({ message: 'Stripe error' });
+        console.error(`${gateway} checkout error:`, error);
+        res.status(500).json({ message: error.message || 'Payment error' });
     }
 };
 
-// Stripe Webhook
-exports.stripeWebhook = async (req, res) => {
-    const sig = req.headers['stripe-signature'];
-    console.log('Webhook received:', {
-        type: req.body?.type,
-        timestamp: new Date().toISOString()
-    });
-    
-    let event;
-    
+// Wonder Payment 回調（取代 Stripe Webhook）
+exports.wonderWebhook = async (req, res) => {
+    const body = req.body || {};
+    const query = req.query || {};
+
+    // Webhook 呼叫紀錄：方便 server 上排查
+    console.log('\n[Wonder Webhook] ========== INCOMING REQUEST ==========');
+    console.log('[Wonder Webhook] Time:', new Date().toISOString());
+    console.log('[Wonder Webhook] Method:', req.method);
+    console.log('[Wonder Webhook] Path:', req.path || req.url);
+    console.log('[Wonder Webhook] Headers:', JSON.stringify(req.headers, null, 2));
+    console.log('[Wonder Webhook] Query:', JSON.stringify(query, null, 2));
+    console.log('[Wonder Webhook] Body:', typeof body === 'object' ? JSON.stringify(body, null, 2) : body);
+    console.log('[Wonder Webhook] =======================================\n');
+
+    // Wonder 回調格式：body 為 Invoice，reference_number 為我方訂單編號，state / correspondence_state 表示狀態
+    const referenceNumber = body.reference_number || query.reference_number;
+    const state = (body.state || '').toString().toLowerCase();
+    const correspondenceState = (body.correspondence_state || '').toString().toLowerCase();
+    const isPaid = state === 'completed' || correspondenceState === 'paid';
+
     try {
-        // Verify webhook signature
-        event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
-        console.log('Webhook verified successfully:', event.type);
+        let transaction = null;
+        if (referenceNumber) {
+            transaction = await Transaction.findOne({
+                $or: [
+                    { _id: referenceNumber },
+                    { stripeSessionId: referenceNumber }
+                ]
+            });
+        }
+        if (!transaction) {
+            console.log('[Wonder Webhook] Result: Transaction not found. reference_number=', referenceNumber);
+            return res.status(200).json({ received: true, warning: 'Transaction not found' });
+        }
+
+        // 一律寫回 webhook 完整 body 到 transactionData，並依 state 更新 status
+        const updatedTransaction = await Transaction.findOneAndUpdate(
+            { _id: transaction._id },
+            {
+                transactionData: body,
+                status: isPaid ? 'paid' : (state === 'cancelled' || state === 'voided' || state === 'failed' ? 'failed' : transaction.status),
+                updatedAt: new Date()
+            },
+            { new: true }
+        );
+
+        if (isPaid) {
+            await markTransactionPaidAndAddUser(transaction);
+            const eventDoc = await Event.findById(transaction.eventId);
+            if (eventDoc) {
+                try {
+                    await sendPaymentReceiptEmail(updatedTransaction, eventDoc, { email: updatedTransaction.userEmail, name: updatedTransaction.userName });
+                } catch (e) { console.error('[Wonder Webhook] Payment receipt email error:', e); }
+            }
+            console.log('[Wonder Webhook] Result: transaction marked paid, user added to event. Transaction _id:', transaction._id);
+        } else if (state === 'cancelled' || state === 'voided' || state === 'failed') {
+            console.log('[Wonder Webhook] Result: transaction marked failed. state=', state, 'Transaction _id:', transaction._id);
+        } else {
+            console.log('[Wonder Webhook] Result: transactionData saved. state=', state, 'correspondence_state=', correspondenceState);
+        }
+
+        return res.status(200).json({ received: true });
+    } catch (error) {
+        console.error('[Wonder Webhook] Error:', error);
+        return res.status(200).json({ received: true, error: error.message });
+    }
+};
+
+/** 共用：將 transaction 標為已付款並將 user 加入 event（Stripe / Wonder webhook 皆用） */
+async function markTransactionPaidAndAddUser(transaction) {
+    await Transaction.findOneAndUpdate(
+        { _id: transaction._id },
+        { status: 'paid', updatedAt: new Date() },
+        { new: true }
+    );
+    const eventDoc = await Event.findById(transaction.eventId);
+    if (!eventDoc) return;
+    const now = new Date();
+    const excludedFields = ['_id', '__v', 'create_at', 'modified_at'];
+    let newUser;
+    if (transaction.userFormData && typeof transaction.userFormData === 'object') {
+        newUser = {
+            create_at: now,
+            modified_at: now,
+            isCheckIn: false,
+            paymentStatus: 'paid',
+            role: 'guests'
+        };
+        Object.keys(transaction.userFormData).forEach(key => {
+            if (excludedFields.includes(key)) return;
+            const val = transaction.userFormData[key];
+            if (key === 'agreementAgreed') {
+                newUser[key] = normalizeAgreementAgreed(val);
+                return;
+            }
+            if (Array.isArray(val)) newUser[key] = val;
+            else if (val !== undefined) newUser[key] = val;
+        });
+        if (!newUser.name || newUser.name === '') {
+            newUser.name = resolveUserDisplayName(newUser) || newUser.email || newUser.company || transaction.userName || '未提供姓名';
+        }
+        if (!newUser.email) newUser.email = transaction.userEmail;
+    } else {
+        newUser = {
+            email: transaction.userEmail,
+            name: transaction.userName || '',
+            company: '',
+            phone_code: '',
+            phone: '',
+            paymentStatus: 'paid',
+            isCheckIn: false,
+            role: 'guests',
+            create_at: now,
+            modified_at: now
+        };
+    }
+    eventDoc.users.push(newUser);
+    await eventDoc.save();
+    const addedUser = eventDoc.users[eventDoc.users.length - 1];
+    if (addedUser && eventDoc.emailSettings && eventDoc.emailSettings.sendConfirmationEmail) {
+        try {
+            await exports.sendPaymentConfirmationEmail(addedUser, eventDoc, transaction);
+        } catch (e) {
+            console.error('Error sending payment confirmation email:', e);
+        }
+    }
+}
+
+// Stripe Webhook（需用 raw body 驗證簽名，路由在 app.js 以 express.raw 註冊）
+exports.stripeWebhook = async (req, res) => {
+    const stripeSecret = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET;
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || process.env.STRIPE_WH_SECRET;
+    if (!webhookSecret) {
+        console.error('Stripe webhook: STRIPE_WEBHOOK_SECRET not set');
+        return res.status(500).send('Webhook secret not configured');
+    }
+    const sig = req.headers['stripe-signature'];
+    if (!sig) return res.status(400).send('Missing stripe-signature');
+    let event;
+    try {
+        const Stripe = require('stripe');
+        const stripe = new Stripe(stripeSecret || '');
+        event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
     } catch (err) {
-        console.error('Webhook signature verification failed:', err.message);
+        console.error('Stripe webhook signature verification failed:', err.message);
         return res.status(400).send(`Webhook Error: ${err.message}`);
     }
-    
+    if (event.type !== 'checkout.session.completed') {
+        return res.status(200).json({ received: true });
+    }
+    const session = event.data.object;
+    const sessionId = session.id;
     try {
-        // Handle checkout.session.completed event
-        if (event.type === 'checkout.session.completed') {
-            const session = event.data.object;
-            console.log('Processing checkout.session.completed:', session.id);
-            
-            // Find and update transaction status
-            const transaction = await Transaction.findOneAndUpdate(
-                { stripeSessionId: session.id },
-                { 
-                    status: 'paid',
-                    updatedAt: new Date()
-                },
-                { new: true }
-            );
-            
-            if (!transaction) {
-                console.error('Transaction not found for session:', session.id);
-                return res.json({ received: true, warning: 'Transaction not found' });
-            }
-            
-            console.log('Transaction updated:', transaction._id);
-            
-            // Find the event
-            const eventDoc = await Event.findById(transaction.eventId);
-            if (!eventDoc) {
-                console.error('Event not found:', transaction.eventId);
-                return res.json({ received: true, warning: 'Event not found' });
-            }
-            
-            // Check if user already exists in event.users
-            const existingUser = eventDoc.users.find(u => u.email === transaction.userEmail);
-            if (existingUser) {
-                console.log('User already exists, updating payment status:', transaction.userEmail);
-                existingUser.paymentStatus = 'paid';
-                existingUser.modified_at = new Date();
-            } else {
-                console.log('Adding new user to event:', transaction.userEmail);
-                // Add user to event.users with all metadata
-                eventDoc.users.push({
-                    email: transaction.userEmail,
-                    name: transaction.userName || session.metadata.name,
-                    company: session.metadata.company || '',
-                    phone_code: session.metadata.phone_code || '',
-                    phone: session.metadata.phone || '',
-                    paymentStatus: 'paid',
-                    isCheckIn: false,
-                    role: 'guests',
-                    create_at: new Date(),
-                    modified_at: new Date()
-                });
-            }
-            
-            await eventDoc.save();
-            console.log('Event updated successfully:', eventDoc._id);
-            
-            // Send payment confirmation email
-            try {
-                const user = eventDoc.users.find(u => u.email === transaction.userEmail);
-                if (user) {
-                    await exports.sendPaymentConfirmationEmail(user, eventDoc, transaction);
-                    console.log('Payment confirmation email sent to:', transaction.userEmail);
-                }
-            } catch (emailError) {
-                console.error('Error sending payment confirmation email:', emailError);
-                // Don't fail the webhook if email fails
-            }
-            
-        } 
-        // Handle checkout.session.expired event
-        else if (event.type === 'checkout.session.expired') {
-            const session = event.data.object;
-            console.log('Processing checkout.session.expired:', session.id);
-            
-            await Transaction.findOneAndUpdate(
-                { stripeSessionId: session.id },
-                { 
-                    status: 'failed',
-                    updatedAt: new Date()
-                }
-            );
-            console.log('Transaction marked as failed (expired):', session.id);
+        const transaction = await Transaction.findOne({ stripeSessionId: sessionId });
+        if (!transaction) {
+            console.error('Stripe webhook: Transaction not found for session', sessionId);
+            return res.status(200).json({ received: true, warning: 'Transaction not found' });
         }
-        // Handle payment_intent.payment_failed event
-        else if (event.type === 'payment_intent.payment_failed') {
-            const paymentIntent = event.data.object;
-            console.log('Processing payment_intent.payment_failed:', paymentIntent.id);
-            
-            // Find transaction by payment intent if needed
-            // This depends on how you store payment intent ID
+        await markTransactionPaidAndAddUser(transaction);
+        const eventDoc = await Event.findById(transaction.eventId);
+        if (eventDoc) {
+            try { await sendPaymentReceiptEmail(transaction, eventDoc, { email: transaction.userEmail, name: transaction.userName }); } catch (e) { console.error('Stripe webhook receipt email error:', e); }
         }
-        // Log unhandled event types
-        else {
-            console.log('Unhandled event type:', event.type);
-        }
-        
-        res.json({ received: true, eventType: event.type });
-        
+        return res.status(200).json({ received: true });
     } catch (error) {
-        console.error('Error processing webhook:', error);
-        // Still return 200 to acknowledge receipt to Stripe
-        res.status(200).json({ received: true, error: error.message });
+        console.error('Stripe webhook error:', error);
+        return res.status(200).json({ received: true, error: error.message });
     }
 };
 
@@ -1409,53 +4503,182 @@ exports.renderTransactionRecords = async (req, res) => {
     }
 };
 
+function formatTransactionExportDate(date) {
+    if (!date) return '';
+    return new Date(date).toLocaleString('zh-HK', {
+        timeZone: 'Asia/Hong_Kong',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+    });
+}
+
+exports.exportTransactionRecords = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.status(401).send('Unauthorized');
+        }
+
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found');
+        }
+
+        const transactions = await Transaction.find({ eventId })
+            .sort({ createdAt: -1 })
+            .lean();
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Transactions');
+        worksheet.columns = [
+            { header: 'Transaction ID (交易 ID)', key: '_id', width: 26 },
+            { header: 'Date (日期)', key: 'createdAt', width: 22 },
+            { header: 'Updated At (更新時間)', key: 'updatedAt', width: 22 },
+            { header: 'User Name (用戶姓名)', key: 'userName', width: 20 },
+            { header: 'User Email (用戶電郵)', key: 'userEmail', width: 28 },
+            { header: 'Ticket Title (票券標題)', key: 'ticketTitle', width: 25 },
+            { header: 'Price HKD (價格)', key: 'ticketPrice', width: 14 },
+            { header: 'Status (狀態)', key: 'status', width: 12 },
+            { header: 'Payment Gateway (付款閘道)', key: 'paymentGateway', width: 18 },
+            { header: 'Session / Reference ID', key: 'stripeSessionId', width: 30 },
+            { header: 'Invoice Number (發票編號)', key: 'invoiceNumber', width: 22 },
+            { header: 'Invoice State (發票狀態)', key: 'invoiceState', width: 18 },
+            { header: 'Paid Total (實付金額)', key: 'paidTotal', width: 14 },
+            { header: 'Currency (幣種)', key: 'currency', width: 10 },
+        ];
+
+        worksheet.getRow(1).font = { bold: true };
+        worksheet.getRow(1).fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFE0E0E0' },
+        };
+
+        transactions.forEach((tx) => {
+            const td = tx.transactionData && typeof tx.transactionData === 'object' ? tx.transactionData : {};
+            worksheet.addRow({
+                _id: tx._id != null ? String(tx._id) : '',
+                createdAt: formatTransactionExportDate(tx.createdAt),
+                updatedAt: formatTransactionExportDate(tx.updatedAt),
+                userName: tx.userName || '',
+                userEmail: tx.userEmail || '',
+                ticketTitle: tx.ticketTitle || '',
+                ticketPrice: tx.ticketPrice != null ? tx.ticketPrice : '',
+                status: tx.status || '',
+                paymentGateway: tx.paymentGateway || '',
+                stripeSessionId: tx.stripeSessionId || '',
+                invoiceNumber: td.number || td.invoice_number || td.reference_number || '',
+                invoiceState: td.state || td.correspondence_state || '',
+                paidTotal: td.paid_total != null ? td.paid_total : '',
+                currency: td.currency || 'HKD',
+            });
+        });
+
+        const safeName = (event.name || 'event').replace(/[^\w\u4e00-\u9fff-]+/g, '_').slice(0, 50);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="${safeName}_transactions.xlsx"`);
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (error) {
+        console.error('Export transaction records error:', error);
+        res.status(500).send('Transaction export failed');
+    }
+};
+
 exports.outputReport = async (req, res) => {
     const { eventId } = req.params;
     try {
         const event = await Event.findById(eventId);
         if (!event) return res.status(404).send('Event not found');
         const users = event.users || [];
+
+        const FormConfig = require('../model/FormConfig');
+        let formConfig = await FormConfig.findOne({ eventId });
+
+        // Build columns: _id first, then formConfig fields (in order), then CheckInAt, then 已簽到 at the end
+        const columnDefs = [{ header: '_id', key: '_id', width: 26 }];
+        const fieldKeys = ['_id']; // key for each column, for building row data
+
+        if (formConfig && formConfig.sections && formConfig.sections.length > 0) {
+            const lang = formConfig.defaultLanguage || 'zh';
+            const sections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0));
+            sections.forEach(section => {
+                if (!section.visible || !section.fields) return;
+                const fields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0));
+                fields.forEach(field => {
+                    if (!field.visible) return;
+                    const header = (field.label && (field.label[lang] || field.label.zh || field.label.en)) || field.fieldName || '';
+                    columnDefs.push({ header, key: field.fieldName, width: Math.min(25, Math.max(10, (header && header.length) || 10)) });
+                    fieldKeys.push(field.fieldName);
+                });
+            });
+        } else {
+            // Fallback when no formConfig: default columns
+            const defaults = [
+                { header: 'Email', key: 'email', width: 25 },
+                { header: 'Name', key: 'name', width: 20 },
+                { header: 'Table', key: 'table', width: 10 },
+                { header: 'Company', key: 'company', width: 20 },
+                { header: 'Phone', key: 'phone', width: 15 },
+                { header: 'Role', key: 'role', width: 10 },
+                { header: 'Industry', key: 'industry', width: 15 }
+            ];
+            defaults.forEach(col => {
+                columnDefs.push(col);
+                fieldKeys.push(col.key);
+            });
+        }
+
+        // Append CheckInAt and 已簽到 at the end
+        columnDefs.push({ header: 'CheckInAt', key: 'checkInAt', width: 15 });
+        columnDefs.push({ header: '已簽到', key: 'isCheckIn', width: 10 });
+        fieldKeys.push('checkInAt', 'isCheckIn');
+
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Users');
-        worksheet.columns = [
-            { header: 'Email', key: 'email', width: 25 },
-            { header: 'Name', key: 'name', width: 20 },
-            { header: 'Table', key: 'table', width: 10 },
-            { header: 'Company', key: 'company', width: 20 },
-            { header: 'Phone', key: 'phone', width: 15 },
-            { header: 'Role', key: 'role', width: 10 },
-            { header: 'Industry', key: 'industry', width: 15 },
-            { header: 'CheckInAt', key: 'checkInAt', width: 15 },
-            { header: '已簽到', key: 'isCheckIn', width: 10 }
-        ];
+        worksheet.columns = columnDefs;
+
+        const checkInAtFormat = (date) => date ? new Date(date).toLocaleString('en-US', {
+            timeZone: 'Asia/Hong_Kong',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        }) : '';
+
         users.forEach(user => {
-            worksheet.addRow({
-                email: user.email,
-                name: user.name,
-                table: user.table,
-                company: user.company,
-                phone: user.phone,
-                role: user.role,
-                industry: user.industry,
-                checkInAt: user.checkInAt ? new Date(user.checkInAt).toLocaleString('zh-TW', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: false
-                }) : '',
-                isCheckIn: user.isCheckIn ? '✓' : ''
+            const userObj = user.toObject ? user.toObject() : user;
+            const row = {};
+            fieldKeys.forEach(key => {
+                if (key === '_id') {
+                    row[key] = userObj._id != null ? String(userObj._id) : '';
+                } else if (key === 'checkInAt') {
+                    row[key] = checkInAtFormat(userObj.checkInAt);
+                } else if (key === 'isCheckIn') {
+                    row[key] = userObj.isCheckIn ? '✓' : '';
+                } else {
+                    const val = userObj[key];
+                    row[key] = val !== undefined && val !== null ? (Array.isArray(val) ? val.join(', ') : String(val)) : '';
+                }
             });
+            worksheet.addRow(row);
         });
+
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', 'attachment; filename=event_users.xlsx');
         await workbook.xlsx.write(res);
         res.end();
     } catch (err) {
         console.error('Export report error:', err);
-        res.status(500).send('報表匯出失敗');
+        res.status(500).send('Report export failed');
     }
 };
 
@@ -1530,6 +4753,438 @@ exports.batchDeleteUsers = async (req, res) => {
     }
 };
 
+// Batch check in users
+exports.batchCheckInUsers = async (req, res) => {
+    const { eventId } = req.params;
+    
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+        
+        const now = new Date();
+        let checkedInCount = 0;
+        
+        // 將所有未 check in 的用戶設為 check in
+        event.users.forEach(user => {
+            if (!user.isCheckIn) {
+                user.isCheckIn = true;
+                user.checkInAt = now;
+                checkedInCount++;
+            }
+        });
+        
+        await event.save();
+        
+        res.status(200).json({ 
+            message: `Successfully checked in ${checkedInCount} users`,
+            checkedInCount: checkedInCount,
+            totalUsers: event.users.length
+        });
+        
+    } catch (error) {
+        console.error('Error batch checking in users:', error);
+        res.status(500).json({ message: 'Error batch checking in users' });
+    }
+};
+
+// Batch send emails
+exports.batchSendEmails = async (req, res) => {
+    const { eventId } = req.params;
+    const { userIds, emailType, emailTemplateId } = req.body; // userIds: 用戶ID數組, emailType: 郵件類型, emailTemplateId: 可選的模板ID
+
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+            return res.status(400).json({ message: 'User IDs are required' });
+        }
+
+        if (!emailType) {
+            return res.status(400).json({ message: 'Email type is required' });
+        }
+
+        const results = {
+            success: 0,
+            failed: 0,
+            skipped: 0,
+            errors: [],
+            details: [] // 詳細發送記錄
+        };
+
+        // 遍歷所有選中的用戶
+        for (const userId of userIds) {
+            try {
+                const user = event.users.id(userId);
+                if (!user) {
+                    results.skipped++;
+                    results.errors.push({ userId, error: 'User not found' });
+                    results.details.push({
+                        userId: userId,
+                        email: null,
+                        name: null,
+                        status: 'skipped',
+                        error: 'User not found'
+                    });
+                    continue;
+                }
+
+                if (!user.email) {
+                    results.skipped++;
+                    results.errors.push({ userId, error: 'User does not have an email address' });
+                    results.details.push({
+                        userId: userId,
+                        email: null,
+                        name: user.name || user.email || 'Unknown',
+                        status: 'skipped',
+                        error: 'User does not have an email address'
+                    });
+                    continue;
+                }
+
+                const userData = typeof user.toObject === 'function' ? user.toObject() : user;
+                
+                // 根據 emailType 發送不同類型的郵件
+                // 如果指定了模板 ID，使用 sendEmailByType 並傳入模板 ID
+                if (emailTemplateId) {
+                    await exports.sendEmailByType(userData, event, emailType, emailTemplateId);
+                } else if (emailType === 'welcome') {
+                    await exports.sendEmail(userData, event);
+                } else {
+                    await exports.sendEmailByType(userData, event, emailType);
+                }
+
+                results.success++;
+                results.details.push({
+                    userId: userId,
+                    email: user.email,
+                    name: user.name || user.email || 'Unknown',
+                    status: 'success',
+                    emailType: emailType
+                });
+            } catch (error) {
+                results.failed++;
+                results.errors.push({ userId, error: error.message });
+                const user = event.users.id(userId);
+                results.details.push({
+                    userId: userId,
+                    email: user ? (user.email || null) : null,
+                    name: user ? (user.name || user.email || 'Unknown') : 'Unknown',
+                    status: 'failed',
+                    error: error.message,
+                    emailType: emailType
+                });
+                console.error(`Error sending email to user ${userId}:`, error);
+            }
+        }
+
+        res.status(200).json({
+            message: `Batch email sending completed. Success: ${results.success}, Failed: ${results.failed}, Skipped: ${results.skipped}`,
+            results: results,
+            emailType: emailType
+        });
+    } catch (error) {
+        console.error('Error batch sending emails:', error);
+        res.status(500).json({ message: 'Error batch sending emails' });
+    }
+};
+
+// Get Email Record Details by Tracking ID
+exports.getEmailRecordDetails = async (req, res) => {
+    const { eventId, trackingId } = req.params;
+    try {
+        // Check authentication
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        // Find event to verify access
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        // Find email record by tracking ID
+        const emailRecord = await EmailRecord.findOne({ trackingId, eventId: eventId })
+            .populate('emailTemplate', 'subject type content')
+            .lean();
+
+        if (!emailRecord) {
+            return res.status(404).json({ message: 'Email record not found' });
+        }
+
+        // Get user information if userId exists
+        let userInfo = null;
+        let user = null;
+        if (emailRecord.userId) {
+            user = event.users.id(emailRecord.userId);
+            if (user) {
+                userInfo = {
+                    name: user.name || user.email || 'Unknown',
+                    email: user.email,
+                    company: user.company,
+                    phone: user.phone
+                };
+            }
+        }
+
+        // Reconstruct email HTML content (template with replaced variables)
+        let emailHtml = null;
+        if (emailRecord.emailTemplate && emailRecord.emailTemplate.content && user) {
+            try {
+                const userData = typeof user.toObject === 'function' ? user.toObject() : user;
+                const additionalVars = buildEmailTemplateAdditionalVars({
+                    user: userData,
+                    event,
+                    emailTemplateId: emailRecord.emailTemplate._id,
+                });
+                emailHtml = replaceTemplateVariables(emailRecord.emailTemplate.content, userData, event, additionalVars);
+                
+                // Add tracking pixel if trackingId exists (same as when sending)
+                if (trackingId) {
+                    const trackingPixelUrl = `${getPublicBaseUrl()}/track/email/${trackingId}/open.gif`;
+                    emailHtml = emailTracking.addTrackingToEmail(emailHtml, trackingId);
+                }
+            } catch (error) {
+                console.error('Error reconstructing email HTML:', error);
+                emailHtml = '<p>無法重建郵件內容</p>';
+            }
+        } else if (!emailRecord.emailTemplate && user) {
+            // Use default welcome email template
+            try {
+                const userData = typeof user.toObject === 'function' ? user.toObject() : user;
+                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
+                emailHtml = getWelcomeEmailTemplate(userData, event, qrCodeUrl);
+            } catch (error) {
+                console.error('Error generating default email HTML:', error);
+                emailHtml = '<p>無法生成默認郵件內容</p>';
+            }
+        }
+
+        res.json({
+            success: true,
+            record: {
+                ...emailRecord,
+                userInfo: userInfo,
+                emailHtml: emailHtml
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching email record details:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// Render Email Records Page
+exports.renderEmailRecords = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        // Check authentication
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.redirect('/login');
+        }
+
+        // Find event
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found');
+        }
+
+        // Find all email records for this event (確保 eventId 類型正確)
+        const mongoose = require('mongoose');
+        const eventObjectId = mongoose.Types.ObjectId.isValid(eventId) ? new mongoose.Types.ObjectId(eventId) : eventId;
+        
+        const emailRecords = await EmailRecord.find({ 
+            $or: [
+                { eventId: eventObjectId },
+                { eventId: eventId }
+            ]
+        })
+            .sort({ created_at: -1 })
+            .populate('emailTemplate', 'subject type')
+            .lean();
+
+        // Calculate statistics
+        const stats = {
+            total: emailRecords.length,
+            sent: emailRecords.filter(r => r.status === 'sent' || r.status === 'delivered').length,
+            failed: emailRecords.filter(r => r.status === 'failed').length,
+            pending: emailRecords.filter(r => r.status === 'pending').length,
+            opened: emailRecords.filter(r => r.opened_at).length,
+            clicked: emailRecords.filter(r => r.clicked_at).length
+        };
+
+        if (stats.sent > 0) {
+            stats.openRate = ((stats.opened / stats.sent) * 100).toFixed(2);
+            stats.clickRate = ((stats.clicked / stats.sent) * 100).toFixed(2);
+        } else {
+            stats.openRate = '0.00';
+            stats.clickRate = '0.00';
+        }
+
+        // 取得所有出現過的 email 類型（供 filter 使用）
+        const emailTypes = [...new Set(
+            emailRecords
+                .map(r => r.emailTemplate && r.emailTemplate.type ? r.emailTemplate.type : null)
+                .filter(t => t != null)
+        )].sort();
+
+        res.render('admin/email_records', {
+            event,
+            emailRecords,
+            stats,
+            eventId: eventId,
+            emailTypes
+        });
+    } catch (error) {
+        console.error('Error fetching email records:', error);
+        res.status(500).send('Server error');
+    }
+};
+
+// 導出 Email Records 為 Excel
+exports.exportEmailRecords = async (req, res) => {
+    const { eventId } = req.params;
+    
+    try {
+        // Check authentication
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        // Find event
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        // Find all email records for this event
+        const mongoose = require('mongoose');
+        const eventObjectId = mongoose.Types.ObjectId.isValid(eventId) ? new mongoose.Types.ObjectId(eventId) : eventId;
+        
+        const emailRecords = await EmailRecord.find({ 
+            $or: [
+                { eventId: eventObjectId },
+                { eventId: eventId }
+            ]
+        })
+            .sort({ created_at: -1 })
+            .populate('emailTemplate', 'subject type')
+            .lean();
+
+        if (emailRecords.length === 0) {
+            return res.status(404).json({ message: 'No email records found' });
+        }
+
+        // Create Excel workbook
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Email Records');
+
+        // Set column headers
+        worksheet.columns = [
+            { header: '發送時間 (Send Time)', key: 'created_at', width: 20 },
+            { header: '收件人 (Recipient)', key: 'recipient', width: 30 },
+            { header: '主題 (Subject)', key: 'subject', width: 40 },
+            { header: '郵件類型 (Email Type)', key: 'emailType', width: 20 },
+            { header: '狀態 (Status)', key: 'status', width: 15 },
+            { header: '已打開 (Opened)', key: 'opened', width: 15 },
+            { header: '打開次數 (Open Count)', key: 'opened_count', width: 15 },
+            { header: '首次打開時間 (First Opened)', key: 'opened_at', width: 20 },
+            { header: '已點擊 (Clicked)', key: 'clicked', width: 15 },
+            { header: '點擊次數 (Click Count)', key: 'clicked_count', width: 15 },
+            { header: '首次點擊時間 (First Clicked)', key: 'clicked_at', width: 20 },
+            { header: '已送達時間 (Delivered At)', key: 'delivered_at', width: 20 },
+            { header: 'Message ID', key: 'messageId', width: 40 },
+            { header: 'Tracking ID', key: 'trackingId', width: 35 },
+            { header: '錯誤訊息 (Error)', key: 'errorLog', width: 50 }
+        ];
+
+        // Style header row
+        worksheet.getRow(1).font = { bold: true };
+        worksheet.getRow(1).fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFE0E0E0' }
+        };
+
+        // Add data rows
+        emailRecords.forEach(record => {
+            const emailType = record.emailTemplate && record.emailTemplate.type ? record.emailTemplate.type : '-';
+            const opened = record.opened_at ? '是 (Yes)' : '否 (No)';
+            const clicked = record.clicked_at ? '是 (Yes)' : '否 (No)';
+            
+            worksheet.addRow({
+                created_at: record.created_at ? new Date(record.created_at).toLocaleString('zh-HK', {
+                    timeZone: 'Asia/Hong_Kong',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                }) : '-',
+                recipient: record.recipient || '-',
+                subject: record.subject || '-',
+                emailType: emailType,
+                status: record.status || 'pending',
+                opened: opened,
+                opened_count: record.opened_count || 0,
+                opened_at: record.opened_at ? new Date(record.opened_at).toLocaleString('zh-HK', {
+                    timeZone: 'Asia/Hong_Kong',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                }) : '-',
+                clicked: clicked,
+                clicked_count: record.clicked_count || 0,
+                clicked_at: record.clicked_at ? new Date(record.clicked_at).toLocaleString('zh-HK', {
+                    timeZone: 'Asia/Hong_Kong',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                }) : '-',
+                delivered_at: record.delivered_at ? new Date(record.delivered_at).toLocaleString('zh-HK', {
+                    timeZone: 'Asia/Hong_Kong',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                }) : '-',
+                messageId: record.messageId || '-',
+                trackingId: record.trackingId || '-',
+                errorLog: record.errorLog || '-'
+            });
+        });
+
+        // Set response headers
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=email_records_${eventId}_${Date.now()}.xlsx`);
+
+        // Write and send file
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (error) {
+        console.error('Error exporting email records:', error);
+        res.status(500).json({ message: 'Error exporting email records' });
+    }
+};
+
 // Banner 管理功能
 // 配置 multer 用於文件上傳
 const storage = multer.diskStorage({
@@ -1575,16 +5230,8 @@ exports.showBannerManagement = async (req, res) => {
             return res.status(404).send('Event not found');
         }
         
-        // 檢查當前 banner 是否存在（優先檢查 eventId 的 banner，如果沒有則檢查默認 banner）
-        const eventBannerPath = `public/exvent/${eventId}.jpg`;
-        const defaultBannerPath = 'public/exvent/banner.jpg';
-        
-        let currentBanner = null;
-        if (fs.existsSync(eventBannerPath)) {
-            currentBanner = `/exvent/${eventId}.jpg`;
-        } else if (fs.existsSync(defaultBannerPath)) {
-            currentBanner = '/exvent/banner.jpg';
-        }
+        const { getCurrentBannerPreviewUrl } = require('../utils/bannerCache');
+        const currentBanner = getCurrentBannerPreviewUrl(eventId);
         
         res.render('admin/banner_management', { 
             event, 
@@ -1651,41 +5298,149 @@ exports.deleteBanner = async (req, res) => {
         res.redirect(`/events/${eventId}/banner?error=刪除 banner 失敗：${error.message}`);
     }
 };
-// 重發歡迎電郵
-exports.resendWelcomeEmail = async (req, res) => {
+
+const FormConfig = require('../model/FormConfig');
+const formConfigController = require('./formConfigController');
+
+function buildSeatingFormFieldOptions(formConfigDoc) {
+    const migrated = formConfigController.migrateFormConfig(
+        formConfigDoc && typeof formConfigDoc.toObject === 'function' ? formConfigDoc.toObject() : formConfigDoc
+    );
+    const fieldMap = new Map();
+    if (migrated.sections) {
+        migrated.sections.forEach(section => {
+            if (!section || section.visible === false || !Array.isArray(section.fields)) return;
+            section.fields.forEach(field => {
+                if (!field || field.visible === false || !field.fieldName) return;
+                if (fieldMap.has(field.fieldName)) return;
+                let label = '';
+                if (typeof field.label === 'string') label = field.label;
+                else if (field.label && (field.label.zh || field.label.en)) {
+                    label = field.label.zh || field.label.en;
+                } else label = field.fieldName;
+                fieldMap.set(field.fieldName, { fieldName: field.fieldName, label });
+            });
+        });
+    }
+    const list = Array.from(fieldMap.values());
+    if (!list.find(f => f.fieldName === 'company')) {
+        list.unshift({ fieldName: 'company', label: '公司' });
+    }
+    return list;
+}
+
+/** 排桌設定頁 */
+exports.renderSeatingArrangementPage = async (req, res) => {
+    const { eventId } = req.params;
     try {
-        const { eventId, userId } = req.params;
-        
         const event = await Event.findById(eventId);
-        if (!event) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Event not found' 
-            });
+        if (!event) return res.status(404).send('Event not found');
+
+        let formConfig = await FormConfig.findOne({ eventId });
+        if (!formConfig) {
+            formConfig = new FormConfig({ eventId, ...formConfigController.getDefaultFormConfig() });
+            await formConfig.save();
         }
-        
-        // 查找用戶
-        const user = event.users.id(userId);
-        if (!user) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'User not found' 
-            });
+        const fieldOptions = buildSeatingFormFieldOptions(formConfig);
+
+        const users = (event.users || []).map(u => {
+            const o = u.toObject ? u.toObject({ minimize: false }) : u;
+            return {
+                _id: o._id.toString(),
+                name: o.name || '',
+                email: o.email || '',
+                company: o.company || '',
+                ...o
+            };
+        });
+
+        const seating = event.seatingArrangement
+            ? (event.seatingArrangement.toObject ? event.seatingArrangement.toObject() : event.seatingArrangement)
+            : { categoryFieldName: 'company', companionByUserId: {}, tables: [] };
+
+        res.render('admin/seating_arrangement', {
+            eventId,
+            eventName: event.name || '',
+            usersJson: JSON.stringify(users),
+            formFieldsJson: JSON.stringify(fieldOptions),
+            seatingJson: JSON.stringify(seating)
+        });
+    } catch (err) {
+        console.error('renderSeatingArrangementPage:', err);
+        res.status(500).send('載入排桌頁失敗');
+    }
+};
+
+exports.getSeatingArrangementApi = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        const event = await Event.findById(eventId).select('seatingArrangement users');
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+        const seating = event.seatingArrangement
+            ? (event.seatingArrangement.toObject ? event.seatingArrangement.toObject() : event.seatingArrangement)
+            : { categoryFieldName: 'company', companionByUserId: {}, tables: [] };
+        const users = (event.users || []).map(u => {
+            const o = u.toObject ? u.toObject({ minimize: false }) : u;
+            return { _id: o._id.toString(), name: o.name || '', email: o.email || '', company: o.company || '', ...o };
+        });
+        res.json({ seating, users });
+    } catch (err) {
+        console.error('getSeatingArrangementApi:', err);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+exports.saveSeatingArrangementApi = async (req, res) => {
+    const { eventId } = req.params;
+    const { categoryFieldName, companionByUserId, tables } = req.body || {};
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+
+        const userIdSet = new Set((event.users || []).map(u => u._id.toString()));
+        const safeCompanion = companionByUserId && typeof companionByUserId === 'object' ? companionByUserId : {};
+        const safeTables = Array.isArray(tables) ? tables : [];
+
+        const assigned = new Set();
+        for (let ti = 0; ti < safeTables.length; ti++) {
+            const t = safeTables[ti];
+            if (!t || !t.id) return res.status(400).json({ message: '每張桌必須有 id' });
+            const cap = Math.max(1, parseInt(t.capacity, 10) || 10);
+            const uids = Array.isArray(t.userIds) ? t.userIds : [];
+            let seats = 0;
+            for (let i = 0; i < uids.length; i++) {
+                const uid = String(uids[i]);
+                if (!userIdSet.has(uid)) {
+                    return res.status(400).json({ message: `無效的來賓 ID: ${uid}` });
+                }
+                if (assigned.has(uid)) {
+                    return res.status(400).json({ message: '同一位來賓不可重複分配到多桌' });
+                }
+                assigned.add(uid);
+                const c = Math.max(0, parseInt(safeCompanion[uid], 10) || 0);
+                seats += 1 + c;
+            }
+            if (seats > cap) {
+                return res.status(400).json({ message: `第 ${ti + 1} 桌人數（含攜眷）超過該桌上限 ${cap}` });
+            }
         }
-        
-        // 發送歡迎電郵
-        await exports.sendEmail(user, event);
-        
-        res.json({ 
-            success: true, 
-            message: '歡迎電郵已重新發送' 
-        });
-        
-    } catch (error) {
-        console.error('Error resending welcome email:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: '發送電郵失敗：' + error.message 
-        });
+
+        event.seatingArrangement = {
+            categoryFieldName: (categoryFieldName && String(categoryFieldName).trim()) || 'company',
+            companionByUserId: safeCompanion,
+            tables: safeTables.map(t => ({
+                id: String(t.id),
+                x: typeof t.x === 'number' ? t.x : parseFloat(t.x) || 48,
+                y: typeof t.y === 'number' ? t.y : parseFloat(t.y) || 48,
+                capacity: Math.max(1, parseInt(t.capacity, 10) || 10),
+                userIds: (Array.isArray(t.userIds) ? t.userIds : []).map(id => String(id))
+            }))
+        };
+        event.markModified('seatingArrangement');
+        await event.save();
+        res.json({ success: true });
+    } catch (err) {
+        console.error('saveSeatingArrangementApi:', err);
+        res.status(500).json({ message: err.message || 'Server error' });
     }
 };

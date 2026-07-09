@@ -1,9 +1,9 @@
 <%- include ("components/header") %>
 <%- include ("components/menu", {eventId: event._id}) %>
+<%- include("components/responsive_layout_style") %>
 <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
 <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
 <link rel="stylesheet" href="/admin/assets/css/style.css">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 <style>
     .form-section {
         border: 1px solid #dee2e6;
@@ -35,6 +35,20 @@
     .hidden-section {
         opacity: 0.3;
     }
+    .collapsible-card-header {
+        cursor: pointer;
+        user-select: none;
+    }
+    .collapsible-card-header:hover {
+        background-color: #e9ecef;
+    }
+    .collapsible-card-header .collapse-icon {
+        transition: transform 0.2s;
+        display: inline-block;
+    }
+    .collapsible-card-header[aria-expanded="true"] .collapse-icon {
+        transform: rotate(45deg);
+    }
 </style>
 <div id="right-panel" class="right-panel">
     <%- include ("components/rightpanel_header") %>
@@ -44,185 +58,571 @@
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <strong class="card-title">表單配置管理 - <%= event.name %></strong>
-                            <div class="btn-toolbar mb-2 mb-md-0" style="float: right;">
-                                <div class="btn-group me-2">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetToDefault()">
-                                        <i class="fas fa-undo"></i> 重置為預設
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-primary" onclick="saveConfig()">
-                                        <i class="fas fa-save"></i> 儲存配置
-                                    </button>
-                                </div>
+                            <strong class="card-title">Form Config - <%= event.name %></strong>
+                            <div class="d-flex flex-wrap mt-2" style="gap: 8px;">
+                                <button type="button" class="btn btn-sm btn-info" onclick="exportConfig()">
+                                    <i class="fas fa-upload"></i> <%= t('form_config.exportJson') %>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('importFileInput').click()">
+                                    <i class="fas fa-download"></i> <%= t('form_config.importJson') %>
+                                </button>
+                                <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="importConfig(event)">
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="resetToDefault()">
+                                    <i class="fas fa-undo"></i> <%= t('form_config.resetToDefault') %>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-primary" onclick="saveConfig()">
+                                    <i class="fas fa-save"></i> <%= t('form_config.saveConfig') %>
+                                </button>
                             </div>
                         </div>
                         <div class="card-body">
                             <!-- 事件信息 -->
                             <div class="alert alert-info">
                                 <h5><%= event.name %></h5>
-                                <p class="mb-0">配置此事件的註冊表單字段顯示設定</p>
+                                <p class="mb-0"><%= t('form_config.configureHint') %></p>
                             </div>
 
                             <!-- 語言設置 -->
                             <div class="card mb-3">
-                                <div class="card-header">
-                                    <h6>語言設置 (Language Settings)</h6>
+                                <div class="card-header collapsible-card-header" data-toggle="collapse" data-target="#collapseRegisterPage" aria-expanded="false">
+                                    <i class="fa fa-plus-circle collapse-icon mr-2 text-primary"></i><h6 class="d-inline mb-0"><%= t('form_config.cardRegisterPageTitle') %></h6>
                                 </div>
+                                <div id="collapseRegisterPage" class="collapse">
+                                <div class="card-body">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="registerPageEnabled" 
+                                               <%= (formConfig.registerPageEnabled !== false) ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="registerPageEnabled">
+                                            <%= t('form_config.registerPageEnabledLabel') %>
+                                        </label>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label"><%= t('form_config.closedMessageLabel') %></label>
+                                        <textarea class="form-control" id="registerClosedMessage" rows="4"
+                                                  placeholder="<%= t('form_config.closedMessagePlaceholder') %>"><%= (formConfig.registerClosedMessage || '') %></textarea>
+                                        <small class="text-muted"><%= t('form_config.closedMessageHint') %></small>
+                                    </div>
+                                </div>
+                                </div>
+                            </div>
+
+                            <!-- Event Banner Management（搬到 FormConfig） -->
+                            <div class="card mb-3">
+                                <div class="card-header collapsible-card-header" data-toggle="collapse" data-target="#collapseBanner" aria-expanded="false">
+                                    <i class="fa fa-plus-circle collapse-icon mr-2 text-primary"></i><h6 class="d-inline mb-0"><%= t('form_config.cardBannerTitle') %></h6>
+                                </div>
+                                <div id="collapseBanner" class="collapse">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-7">
+                                            <% if (currentBanner) { %>
+                                                <div class="mb-2">
+                                                    <img src="<%= currentBanner %>" alt="Current Banner" style="max-width: 100%; max-height: 220px; border-radius: 8px; border: 1px solid #dee2e6;">
+                                                </div>
+                                                <form action="/events/<%= event._id %>/banner/delete" method="POST"
+                                                      onsubmit="return confirm('<%= t('form_config.deleteBannerConfirm') %>')" style="display:inline;">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="fas fa-trash"></i> <%= t('form_config.deleteBanner') %>
+                                                    </button>
+                                                </form>
+                                            <% } else { %>
+                                                <p class="text-muted mb-2"><%= t('form_config.noBanner') %></p>
+                                            <% } %>
+                                        </div>
+                                        <div class="col-md-5">
+                                            <form action="/events/<%= event._id %>/banner/upload" method="POST" enctype="multipart/form-data">
+                                                <div class="mb-2">
+                                                    <label class="form-label"><%= t('form_config.uploadBannerLabel') %></label>
+                                                    <input type="file" name="banner" class="form-control" accept="image/png,image/jpeg,image/jpg" required>
+                                                </div>
+                                                <button type="submit" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-upload"></i> <%= t('form_config.upload') %>
+                                                </button>
+                                            </form>
+                                            <small class="text-muted d-block mt-2"><%= t('form_config.uploadBannerHint') %></small>
+                                        </div>
+                                    </div>
+                                </div>
+                                </div>
+                            </div>
+
+                            <!-- Register Header Event Name（可覆蓋 event.name） -->
+                            <div class="card mb-3">
+                                <div class="card-header collapsible-card-header" data-toggle="collapse" data-target="#collapseHeaderName" aria-expanded="false">
+                                    <i class="fa fa-plus-circle collapse-icon mr-2 text-primary"></i><h6 class="d-inline mb-0"><%= t('form_config.cardHeaderNameTitle') %></h6>
+                                </div>
+                                <div id="collapseHeaderName" class="collapse">
                                 <div class="card-body">
                                     <div class="row">
                                         <div class="col-md-6">
-                                            <label>默認語言 (Default Language)</label>
+                                            <label class="form-label"><%= t('form_config.eventNameZhLabel') %></label>
+                                            <input type="text" class="form-control" id="eventDisplayNameZh"
+                                                   value="<%= (formConfig.eventDisplayName && formConfig.eventDisplayName.zh) ? formConfig.eventDisplayName.zh : '' %>"
+                                                   placeholder="<%= t('form_config.eventNameZhPlaceholder') %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.eventNameEnLabel') %></label>
+                                            <input type="text" class="form-control" id="eventDisplayNameEn"
+                                                   value="<%= (formConfig.eventDisplayName && formConfig.eventDisplayName.en) ? formConfig.eventDisplayName.en : '' %>"
+                                                   placeholder="<%= t('form_config.eventNameEnPlaceholder') %>">
+                                        </div>
+                                    </div>
+                                    <small class="text-muted d-block mt-2"><%= t('form_config.eventNameHint') %></small>
+                                    <hr class="my-3">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.subHeaderZhLabel') %></label>
+                                            <input type="text" class="form-control" id="registerSubHeaderZh"
+                                                   value="<%= (formConfig.registerSubHeader && formConfig.registerSubHeader.zh) ? formConfig.registerSubHeader.zh : '' %>"
+                                                   placeholder="<%= t('form_config.subHeaderZhPlaceholder') %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.subHeaderEnLabel') %></label>
+                                            <input type="text" class="form-control" id="registerSubHeaderEn"
+                                                   value="<%= (formConfig.registerSubHeader && formConfig.registerSubHeader.en) ? formConfig.registerSubHeader.en : '' %>"
+                                                   placeholder="<%= t('form_config.subHeaderEnPlaceholder') %>">
+                                        </div>
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.subtitleZhLabel') %></label>
+                                            <input type="text" class="form-control" id="registerSubtitleZh"
+                                                   value="<%= (formConfig.registerSubtitle && formConfig.registerSubtitle.zh) ? formConfig.registerSubtitle.zh : '請填寫以下資料完成活動報名' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.subtitleEnLabel') %></label>
+                                            <input type="text" class="form-control" id="registerSubtitleEn"
+                                                   value="<%= (formConfig.registerSubtitle && formConfig.registerSubtitle.en) ? formConfig.registerSubtitle.en : 'Please fill in the following information to complete event registration' %>">
+                                        </div>
+                                    </div>
+                                    <small class="text-muted d-block mt-2"><%= t('form_config.subHeaderHint') %></small>
+                                </div>
+                                </div>
+                            </div>
+
+                            <!-- 條款 / T&C 設定 -->
+                            <div class="card mb-3">
+                                <div class="card-header collapsible-card-header" data-toggle="collapse" data-target="#collapseTerms" aria-expanded="false">
+                                    <i class="fa fa-plus-circle collapse-icon mr-2 text-primary"></i><h6 class="d-inline mb-0"><%= t('form_config.cardTermsTitle') %></h6>
+                                </div>
+                                <div id="collapseTerms" class="collapse">
+                                <div class="card-body">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="termsEnabled"
+                                               <%= (formConfig.terms && formConfig.terms.enabled) ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="termsEnabled">
+                                            <%= t('form_config.termsEnabledLabel') %>
+                                        </label>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.checkboxLabelZh') %></label>
+                                            <input type="text" class="form-control" id="termsLabelZh"
+                                                   value="<%= (formConfig.terms && formConfig.terms.label && formConfig.terms.label.zh) ? formConfig.terms.label.zh : '' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.checkboxLabelEn') %></label>
+                                            <input type="text" class="form-control" id="termsLabelEn"
+                                                   value="<%= (formConfig.terms && formConfig.terms.label && formConfig.terms.label.en) ? formConfig.terms.label.en : '' %>">
+                                        </div>
+                                    </div>
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.termsContentZhLabel') %></label>
+                                            <textarea class="form-control" id="termsContentZh" rows="6"
+                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (formConfig.terms && formConfig.terms.content && formConfig.terms.content.zh) ? formConfig.terms.content.zh : '' %></textarea>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.termsContentEnLabel') %></label>
+                                            <textarea class="form-control" id="termsContentEn" rows="6"
+                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (formConfig.terms && formConfig.terms.content && formConfig.terms.content.en) ? formConfig.terms.content.en : '' %></textarea>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted d-block mt-2"><%= t('form_config.termsHint') %></small>
+                                </div>
+                                </div>
+                            </div>
+
+                            <!-- Agreement（功能同 T&C） -->
+                            <div class="card mb-3">
+                                <div class="card-header collapsible-card-header" data-toggle="collapse" data-target="#collapseAgreement" aria-expanded="false">
+                                    <i class="fa fa-plus-circle collapse-icon mr-2 text-primary"></i><h6 class="d-inline mb-0"><%= t('form_config.cardAgreementTitle') %></h6>
+                                </div>
+                                <div id="collapseAgreement" class="collapse">
+                                <div class="card-body">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="agreementEnabled"
+                                               <%= (formConfig.agreement && formConfig.agreement.enabled) ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="agreementEnabled">
+                                            <%= t('form_config.agreementEnabledLabel') %>
+                                        </label>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.checkboxLabelZh') %></label>
+                                            <input type="text" class="form-control" id="agreementLabelZh"
+                                                   value="<%= (formConfig.agreement && formConfig.agreement.label && formConfig.agreement.label.zh) ? formConfig.agreement.label.zh : '' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.checkboxLabelEn') %></label>
+                                            <input type="text" class="form-control" id="agreementLabelEn"
+                                                   value="<%= (formConfig.agreement && formConfig.agreement.label && formConfig.agreement.label.en) ? formConfig.agreement.label.en : '' %>">
+                                        </div>
+                                    </div>
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.agreementContentZhLabel') %></label>
+                                            <textarea class="form-control" id="agreementContentZh" rows="6"
+                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (formConfig.agreement && formConfig.agreement.content && formConfig.agreement.content.zh) ? formConfig.agreement.content.zh : '' %></textarea>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.agreementContentEnLabel') %></label>
+                                            <textarea class="form-control" id="agreementContentEn" rows="6"
+                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (formConfig.agreement && formConfig.agreement.content && formConfig.agreement.content.en) ? formConfig.agreement.content.en : '' %></textarea>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted d-block mt-2"><%- t('form_config.agreementHint') %></small>
+                                </div>
+                                </div>
+                            </div>
+
+                            <!-- 付費票券 Register UI -->
+                            <div class="card mb-3">
+                                <div class="card-header collapsible-card-header" data-toggle="collapse" data-target="#collapsePaymentTicket" aria-expanded="false">
+                                    <i class="fa fa-plus-circle collapse-icon mr-2 text-primary"></i><h6 class="d-inline mb-0"><%= t('form_config.cardPaymentTicketTitle') %></h6>
+                                </div>
+                                <div id="collapsePaymentTicket" class="collapse">
+                                <div class="card-body">
+                                    <% const ptUi = (formConfig.paymentTicketUi) ? formConfig.paymentTicketUi : {}; %>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.ptSectionTitleZhLabel') %></label>
+                                            <input type="text" class="form-control" id="ptSectionTitleZh"
+                                                   value="<%= (ptUi.sectionTitle && ptUi.sectionTitle.zh) ? ptUi.sectionTitle.zh : '票券選擇' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.ptSectionTitleEnLabel') %></label>
+                                            <input type="text" class="form-control" id="ptSectionTitleEn"
+                                                   value="<%= (ptUi.sectionTitle && ptUi.sectionTitle.en) ? ptUi.sectionTitle.en : 'Ticket Selection' %>">
+                                        </div>
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.ptCategoryLabelZhLabel') %></label>
+                                            <input type="text" class="form-control" id="ptCategoryLabelZh"
+                                                   value="<%= (ptUi.categoryLabel && ptUi.categoryLabel.zh) ? ptUi.categoryLabel.zh : '選擇類別' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.ptCategoryLabelEnLabel') %></label>
+                                            <input type="text" class="form-control" id="ptCategoryLabelEn"
+                                                   value="<%= (ptUi.categoryLabel && ptUi.categoryLabel.en) ? ptUi.categoryLabel.en : 'Select Category' %>">
+                                        </div>
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.ptTicketLabelZhLabel') %></label>
+                                            <input type="text" class="form-control" id="ptTicketLabelZh"
+                                                   value="<%= (ptUi.ticketLabel && ptUi.ticketLabel.zh) ? ptUi.ticketLabel.zh : '選擇票券' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.ptTicketLabelEnLabel') %></label>
+                                            <input type="text" class="form-control" id="ptTicketLabelEn"
+                                                   value="<%= (ptUi.ticketLabel && ptUi.ticketLabel.en) ? ptUi.ticketLabel.en : 'Select Ticket' %>">
+                                        </div>
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.ptDefaultCategoryZhLabel') %></label>
+                                            <input type="text" class="form-control" id="ptDefaultCategoryZh"
+                                                   value="<%= (ptUi.defaultCategoryLabel && ptUi.defaultCategoryLabel.zh) ? ptUi.defaultCategoryLabel.zh : '其他' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.ptDefaultCategoryEnLabel') %></label>
+                                            <input type="text" class="form-control" id="ptDefaultCategoryEn"
+                                                   value="<%= (ptUi.defaultCategoryLabel && ptUi.defaultCategoryLabel.en) ? ptUi.defaultCategoryLabel.en : 'Other' %>">
+                                        </div>
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col-md-3">
+                                            <label class="form-label"><%= t('form_config.ptBackBtnZhLabel') %></label>
+                                            <input type="text" class="form-control" id="ptBackBtnZh"
+                                                   value="<%= (ptUi.buttons && ptUi.buttons.back && ptUi.buttons.back.zh) ? ptUi.buttons.back.zh : '返回' %>">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label"><%= t('form_config.ptBackBtnEnLabel') %></label>
+                                            <input type="text" class="form-control" id="ptBackBtnEn"
+                                                   value="<%= (ptUi.buttons && ptUi.buttons.back && ptUi.buttons.back.en) ? ptUi.buttons.back.en : 'Back' %>">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label"><%= t('form_config.ptNextBtnZhLabel') %></label>
+                                            <input type="text" class="form-control" id="ptNextBtnZh"
+                                                   value="<%= (ptUi.buttons && ptUi.buttons.next && ptUi.buttons.next.zh) ? ptUi.buttons.next.zh : '下一步' %>">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label"><%= t('form_config.ptNextBtnEnLabel') %></label>
+                                            <input type="text" class="form-control" id="ptNextBtnEn"
+                                                   value="<%= (ptUi.buttons && ptUi.buttons.next && ptUi.buttons.next.en) ? ptUi.buttons.next.en : 'Next' %>">
+                                        </div>
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.ptHighlightZhLabel') %></label>
+                                            <small class="text-muted d-block mb-1"><%= t('form_config.ptHighlightZhHint') %></small>
+                                            <textarea class="form-control" id="ptHighlightZh" rows="3"><%= (ptUi.highlightText && ptUi.highlightText.zh) ? ptUi.highlightText.zh : '' %></textarea>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.ptHighlightEnLabel') %></label>
+                                            <small class="text-muted d-block mb-1"><%= t('form_config.ptHighlightEnHint') %></small>
+                                            <textarea class="form-control" id="ptHighlightEn" rows="3"><%= (ptUi.highlightText && ptUi.highlightText.en) ? ptUi.highlightText.en : '' %></textarea>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <label class="form-label"><%= t('form_config.ptCategoryButtonsLabel') %></label>
+                                    <div id="ptCategoryButtonsList"></div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="ptAddCategoryBtn"><%= t('form_config.ptAddCategoryBtn') %></button>
+                                    <small class="text-muted d-block mt-2"><%= t('form_config.ptCategoryButtonsHint') %></small>
+                                </div>
+                                </div>
+                            </div>
+
+                            <!-- 語言設置 -->
+                            <div class="card mb-3">
+                                <div class="card-header collapsible-card-header" data-toggle="collapse" data-target="#collapseLanguage" aria-expanded="false">
+                                    <i class="fa fa-plus-circle collapse-icon mr-2 text-primary"></i><h6 class="d-inline mb-0"><%= t('form_config.cardLanguageTitle') %></h6>
+                                </div>
+                                <div id="collapseLanguage" class="collapse">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label><%= t('form_config.defaultLanguageLabel') %></label>
                                             <div class="btn-group" role="group">
                                                 <button type="button" class="btn btn-outline-success <%= formConfig.defaultLanguage === 'zh' ? 'active' : '' %>" id="defaultZhBtn" onclick="console.log('Zh button clicked'); updateDefaultLanguage('zh')">中文</button>
                                                 <button type="button" class="btn btn-outline-success <%= formConfig.defaultLanguage === 'en' ? 'active' : '' %>" id="defaultEnBtn" onclick="console.log('En button clicked'); updateDefaultLanguage('en')">English</button>
                                             </div>
+                                            <small class="text-muted d-block mt-1"><%= t('form_config.defaultLanguageHint') %></small>
                                         </div>
                                         <div class="col-md-6">
-                                            <label>當前語言 (Current Language)</label>
+                                            <label><%= t('form_config.currentLanguageLabel') %></label>
                                             <div class="btn-group" role="group">
                                                 <button type="button" class="btn btn-outline-primary active" id="langZhBtn" onclick="switchLanguage('zh')">中文</button>
                                                 <button type="button" class="btn btn-outline-primary" id="langEnBtn" onclick="switchLanguage('en')">English</button>
                                             </div>
                                         </div>
                                     </div>
+                                    <div class="form-check mt-3">
+                                        <input class="form-check-input" type="checkbox" id="languageSwitcherEnabled"
+                                               <%= (formConfig.languageSwitcherEnabled !== false) ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="languageSwitcherEnabled">
+                                            <%= t('form_config.languageSwitcherLabel') %>
+                                        </label>
+                                        <small class="text-muted d-block"><%= t('form_config.languageSwitcherHint') %></small>
+                                    </div>
+                                </div>
                                 </div>
                             </div>
 
                             <!-- 表單配置區域 -->
                             <div id="formConfigContainer">
                                 <% if (formConfig && formConfig.sections) { %>
-                                    <% formConfig.sections.forEach((section, sectionIndex) => { %>
-                                        <div class="form-section <%= section.visible ? '' : 'hidden-section' %>" data-section-index="<%= sectionIndex %>">
+                                    <%
+                                    const fcHeaderLang = (typeof lang !== 'undefined' && lang) ? lang : ((formConfig && formConfig.defaultLanguage) ? formConfig.defaultLanguage : 'zh');
+                                    function fcLangText(val, lang) {
+                                        if (val == null || val === '') return '';
+                                        if (typeof val === 'string') return val;
+                                        if (typeof val === 'object') {
+                                            if (lang === 'en') return (val.en || val.zh || '').trim();
+                                            return (val.zh || val.en || '').trim();
+                                        }
+                                        return String(val);
+                                    }
+                                    %>
+                                    <% 
+                                    // 根據 order Order sections
+                                    const sortedSections = formConfig.sections.slice().sort((a, b) => {
+                                        const orderA = a.order || 0;
+                                        const orderB = b.order || 0;
+                                        return orderA - orderB;
+                                    });
+                                    %>
+                                    <% sortedSections.forEach((section, sectionIndex) => { %>
+                                        <% 
+                                        // 找到原始索引
+                                        const originalSectionIndex = formConfig.sections.findIndex(s => s._id ? s._id.toString() === section._id.toString() : s.sectionName === section.sectionName);
+                                        const actualSectionIndex = originalSectionIndex >= 0 ? originalSectionIndex : sectionIndex;
+                                        %>
+                                        <div class="form-section <%= section.visible ? '' : 'hidden-section' %>" data-section-index="<%= actualSectionIndex %>">
                                             <div class="section-controls">
                                                 <div class="form-check form-switch">
                                                     <input class="form-check-input" type="checkbox" 
                                                            <%= section.visible ? 'checked' : '' %>
-                                                           onchange="toggleSection(<%= sectionIndex %>)">
+                                                           onchange="toggleSection(<%= actualSectionIndex %>)">
                                                     <label class="form-check-label">
-                                                        <strong><%= section.sectionTitle %></strong>
+                                                        <strong><%= fcLangText(section.sectionTitle, fcHeaderLang) || section.sectionName || '區塊' %></strong>
                                                     </label>
                                                 </div>
-                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSection(<%= sectionIndex %>)">
+                                                <div class="col-md-2">
+                                                    <label class="form-label"><%= t('form_config.sectionOrder') %></label>
+                                                    <input type="number" class="form-control form-control-sm"
+                                                           value="<%= section.order || 0 %>"
+                                                           onchange="updateSectionProperty(<%= actualSectionIndex %>, 'order', parseInt(this.value) || 0); updatePreview();">
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSection(<%= actualSectionIndex %>)">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </div>
                                             
                                             <% if (section.fields) { %>
-                                                <% section.fields.forEach((field, fieldIndex) => { %>
-                                                    <div class="field-item <%= field.visible ? '' : 'hidden-field' %>" data-field-index="<%= fieldIndex %>">
+                                                <% 
+                                                // 根據 order Order fields
+                                                const sortedFields = section.fields.slice().sort((a, b) => {
+                                                    const orderA = a.order || 0;
+                                                    const orderB = b.order || 0;
+                                                    return orderA - orderB;
+                                                });
+                                                %>
+                                                <% sortedFields.forEach((field, fieldIndex) => { %>
+                                                    <% 
+                                                    // 找到原始索引
+                                                    const originalFieldIndex = section.fields.findIndex(f => f._id ? f._id.toString() === field._id.toString() : f.fieldName === field.fieldName);
+                                                    const actualFieldIndex = originalFieldIndex >= 0 ? originalFieldIndex : fieldIndex;
+                                                    %>
+                                                    <% const fieldDisplayed = field.display !== undefined ? field.display : field.visible !== false; %>
+                                                    <div class="field-item <%= fieldDisplayed ? '' : 'hidden-field' %>" data-field-index="<%= actualFieldIndex %>">
                                                         <div class="field-controls">
                                                             <div class="form-check form-switch">
                                                                 <input class="form-check-input" type="checkbox" 
-                                                                       <%= field.visible ? 'checked' : '' %>
-                                                                       onchange="toggleField(<%= sectionIndex %>, <%= fieldIndex %>)">
+                                                                       <%= fieldDisplayed ? 'checked' : '' %>
+                                                                       onchange="toggleField(<%= actualSectionIndex %>, <%= actualFieldIndex %>)">
                                                                 <label class="form-check-label">
-                                                                    <strong><%= field.label %></strong>
+                                                                    <strong><%= fcLangText(field.label, fcHeaderLang) || field.fieldName || '欄位' %></strong>
                                                                     <% if (field.required) { %>
                                                                         <span class="text-danger">*</span>
                                                                     <% } %>
                                                                 </label>
                                                             </div>
-                                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeField(<%= sectionIndex %>, <%= fieldIndex %>)">
+                                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeField(<%= actualSectionIndex %>, <%= actualFieldIndex %>)">
                                                                 <i class="fas fa-trash"></i>
                                                             </button>
                                                         </div>
                                                         
                                                         <div class="row">
                                                             <div class="col-md-2">
-                                                                <label class="form-label">字段名稱</label>
-                                                                <input type="text" class="form-control form-control-sm" 
-                                                                       value="<%= field.fieldName %>" 
-                                                                       onchange="updateFieldProperty(<%= sectionIndex %>, <%= fieldIndex %>, 'fieldName', this.value)">
+                                                                <label class="form-label"><%= t('form_config.fieldName') %></label>
+                                                                <input type="text" class="form-control form-control-sm"
+                                                                       value="<%= field.fieldName %>"
+                                                                       onchange="updateFieldProperty(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'fieldName', this.value)">
                                                             </div>
                                                             <div class="col-md-2">
-                                                                <label class="form-label">中文標籤</label>
-                                                                <input type="text" class="form-control form-control-sm" 
-                                                                       value="<%= field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '') %>" 
-                                                                       onchange="updateFieldLabel(<%= sectionIndex %>, <%= fieldIndex %>, 'zh', this.value)">
+                                                                <label class="form-label"><%= t('form_config.labelZh') %></label>
+                                                                <input type="text" class="form-control form-control-sm"
+                                                                       value="<%= field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '') %>"
+                                                                       onchange="updateFieldLabel(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'zh', this.value)">
                                                             </div>
                                                             <div class="col-md-2">
-                                                                <label class="form-label">English Label</label>
-                                                                <input type="text" class="form-control form-control-sm" 
-                                                                       value="<%= field.label && field.label.en ? field.label.en : '' %>" 
-                                                                       onchange="updateFieldLabel(<%= sectionIndex %>, <%= fieldIndex %>, 'en', this.value)">
+                                                                <label class="form-label"><%= t('form_config.labelEn') %></label>
+                                                                <input type="text" class="form-control form-control-sm"
+                                                                       value="<%= field.label && field.label.en ? field.label.en : '' %>"
+                                                                       onchange="updateFieldLabel(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'en', this.value)">
                                                             </div>
                                                             <div class="col-md-2">
-                                                                <label class="form-label">字段類型</label>
-                                                                <select class="form-select form-select-sm" 
-                                                                        onchange="updateFieldProperty(<%= sectionIndex %>, <%= fieldIndex %>, 'type', this.value)">
-                                                                    <option value="text" <%= field.type === 'text' ? 'selected' : '' %>>文字</option>
-                                                                    <option value="email" <%= field.type === 'email' ? 'selected' : '' %>>電子郵件</option>
-                                                                    <option value="tel" <%= field.type === 'tel' ? 'selected' : '' %>>電話</option>
-                                                                    <option value="select" <%= field.type === 'select' ? 'selected' : '' %>>下拉選單</option>
-                                                                    <option value="textarea" <%= field.type === 'textarea' ? 'selected' : '' %>>多行文字</option>
+                                                                <label class="form-label"><%= t('form_config.fieldType') %></label>
+                                                                <select class="form-select form-select-sm"
+                                                                        onchange="updateFieldProperty(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'type', this.value)">
+                                                                    <option value="text" <%= field.type === 'text' ? 'selected' : '' %>>Text</option>
+                                                                    <option value="email" <%= field.type === 'email' ? 'selected' : '' %>>Email</option>
+                                                                    <option value="tel" <%= field.type === 'tel' ? 'selected' : '' %>>Phone</option>
+                                                                    <option value="select" <%= field.type === 'select' ? 'selected' : '' %>>Select</option>
+                                                                    <option value="textarea" <%= field.type === 'textarea' ? 'selected' : '' %>>Textarea</option>
+                                                                    <option value="checkbox" <%= field.type === 'checkbox' ? 'selected' : '' %>>Checkbox</option>
+                                                                    <option value="radio" <%= field.type === 'radio' ? 'selected' : '' %>>Radio</option>
                                                                 </select>
                                                             </div>
-                                                            <div class="col-md-2">
-                                                                <label class="form-label">必填</label>
+                                                            <div class="col-md-1">
+                                                                <label class="form-label"><%= t('form_config.required') %></label>
                                                                 <div class="form-check">
-                                                                    <input class="form-check-input" type="checkbox" 
+                                                                    <input class="form-check-input" type="checkbox"
                                                                            <%= field.required ? 'checked' : '' %>
-                                                                           onchange="updateFieldProperty(<%= sectionIndex %>, <%= fieldIndex %>, 'required', this.checked)">
+                                                                           onchange="updateFieldProperty(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'required', this.checked)">
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-1">
+                                                                <label class="form-label"><%= t('form_config.display') %></label>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="checkbox"
+                                                                           <%= fieldDisplayed ? 'checked' : '' %>
+                                                                           onchange="updateFieldDisplay(<%= actualSectionIndex %>, <%= actualFieldIndex %>, this.checked)">
                                                                 </div>
                                                             </div>
                                                             <div class="col-md-2">
-                                                                <label class="form-label">排序</label>
-                                                                <input type="number" class="form-control form-control-sm" 
-                                                                       value="<%= field.order %>" 
-                                                                       onchange="updateFieldProperty(<%= sectionIndex %>, <%= fieldIndex %>, 'order', parseInt(this.value))">
+                                                                <label class="form-label"><%= t('form_config.sectionOrder') %></label>
+                                                                <input type="number" class="form-control form-control-sm"
+                                                                       value="<%= field.order || 0 %>"
+                                                                       onchange="updateFieldProperty(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'order', parseInt(this.value) || 0); updatePreview();">
                                                             </div>
                                                         </div>
                                                         
                                                         <div class="row mt-2">
                                                             <div class="col-md-3">
-                                                                <label class="form-label">中文佔位符</label>
-                                                                <input type="text" class="form-control form-control-sm" 
-                                                                       value="<%= field.placeholder && field.placeholder.zh ? field.placeholder.zh : (typeof field.placeholder === 'string' ? field.placeholder : '') %>" 
-                                                                       onchange="updateFieldPlaceholder(<%= sectionIndex %>, <%= fieldIndex %>, 'zh', this.value)">
+                                                                <label class="form-label"><%= t('form_config.placeholderZh') %></label>
+                                                                <input type="text" class="form-control form-control-sm"
+                                                                       value="<%= field.placeholder && field.placeholder.zh ? field.placeholder.zh : (typeof field.placeholder === 'string' ? field.placeholder : '') %>"
+                                                                       onchange="updateFieldPlaceholder(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'zh', this.value)">
                                                             </div>
                                                             <div class="col-md-3">
-                                                                <label class="form-label">English Placeholder</label>
-                                                                <input type="text" class="form-control form-control-sm" 
-                                                                       value="<%= field.placeholder && field.placeholder.en ? field.placeholder.en : '' %>" 
-                                                                       onchange="updateFieldPlaceholder(<%= sectionIndex %>, <%= fieldIndex %>, 'en', this.value)">
+                                                                <label class="form-label"><%= t('form_config.placeholderEn') %></label>
+                                                                <input type="text" class="form-control form-control-sm"
+                                                                       value="<%= field.placeholder && field.placeholder.en ? field.placeholder.en : '' %>"
+                                                                       onchange="updateFieldPlaceholder(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'en', this.value)">
                                                             </div>
                                                         </div>
                                                         
-                                                        <% if (field.type === 'select' && field.options) { %>
+                                                        <% if ((field.type === 'select' || field.type === 'checkbox' || field.type === 'radio') && field.options) { %>
                                                             <div class="mt-2">
-                                                                <label class="form-label">選項設定</label>
-                                                                <div id="options-<%= sectionIndex %>-<%= fieldIndex %>">
+                                                                <label class="form-label"><%= t('form_config.optionsLabel') %></label>
+                                                                <div id="options-<%= actualSectionIndex %>-<%= actualFieldIndex %>">
                                                                     <% field.options.forEach((option, optionIndex) => { %>
-                                                                        <div class="row mb-2">
-                                                                            <div class="col-md-3">
-                                                                                <input type="text" class="form-control form-control-sm" 
-                                                                                       placeholder="選項值" value="<%= option.value %>"
-                                                                                       onchange="updateOption(<%= sectionIndex %>, <%= fieldIndex %>, <%= optionIndex %>, 'value', this.value)">
+                                                                        <div class="row mb-2 align-items-center">
+                                                                            <div class="col-md-2">
+                                                                                <input type="text" class="form-control form-control-sm"
+                                                                                       placeholder="<%= t('form_config.optionValuePh') %>" value="<%= option.value %>"
+                                                                                       onchange="updateOption(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>, 'value', this.value)">
                                                                             </div>
-                                                                            <div class="col-md-3">
-                                                                                <input type="text" class="form-control form-control-sm" 
-                                                                                       placeholder="中文標籤" 
+                                                                            <div class="col-md-2">
+                                                                                <input type="text" class="form-control form-control-sm"
+                                                                                       placeholder="<%= t('form_config.optionLabelZhPh') %>"
                                                                                        value="<%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>"
-                                                                                       onchange="updateOptionLabel(<%= sectionIndex %>, <%= fieldIndex %>, <%= optionIndex %>, 'zh', this.value)">
+                                                                                       onchange="updateOptionLabel(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>, 'zh', this.value)">
                                                                             </div>
-                                                                            <div class="col-md-3">
-                                                                                <input type="text" class="form-control form-control-sm" 
-                                                                                       placeholder="English Label" 
+                                                                            <div class="col-md-2">
+                                                                                <input type="text" class="form-control form-control-sm"
+                                                                                       placeholder="<%= t('form_config.optionLabelEnPh') %>"
                                                                                        value="<%= option.label && option.label.en ? option.label.en : '' %>"
-                                                                                       onchange="updateOptionLabel(<%= sectionIndex %>, <%= fieldIndex %>, <%= optionIndex %>, 'en', this.value)">
+                                                                                       onchange="updateOptionLabel(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>, 'en', this.value)">
                                                                             </div>
+                                                                            <% if (field.type === 'select') { %>
                                                                             <div class="col-md-3">
+                                                                                <div class="form-check mb-0">
+                                                                                    <input type="checkbox" class="form-check-input" id="opt-other-<%= actualSectionIndex %>-<%= actualFieldIndex %>-<%= optionIndex %>"
+                                                                                           <%= option.isOther ? 'checked' : '' %>
+                                                                                           onchange="updateOptionFlag(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>, 'isOther', this.checked)">
+                                                                                    <label class="form-check-label small" for="opt-other-<%= actualSectionIndex %>-<%= actualFieldIndex %>-<%= optionIndex %>"><%= t('form_config.optionIsOther') %></label>
+                                                                                </div>
+                                                                            </div>
+                                                                            <% } else { %>
+                                                                            <div class="col-md-3"></div>
+                                                                            <% } %>
+                                                                            <div class="col-md-3 text-end">
                                                                                 <button type="button" class="btn btn-outline-danger btn-sm" 
-                                                                                        onclick="removeOption(<%= sectionIndex %>, <%= fieldIndex %>, <%= optionIndex %>)">
+                                                                                        onclick="removeOption(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>)">
                                                                                     <i class="fas fa-trash"></i>
                                                                                 </button>
                                                                             </div>
                                                                         </div>
                                                                     <% }); %>
                                                                 </div>
-                                                                <button type="button" class="btn btn-sm btn-outline-primary" 
-                                                                        onclick="addOption(<%= sectionIndex %>, <%= fieldIndex %>)">
-                                                                    <i class="fas fa-plus"></i> 添加選項
+                                                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                                                        onclick="addOption(<%= actualSectionIndex %>, <%= actualFieldIndex %>)">
+                                                                    <i class="fas fa-plus"></i> <%= t('form_config.addOption') %>
                                                                 </button>
                                                             </div>
                                                         <% } %>
@@ -230,9 +630,9 @@
                                                 <% }); %>
                                             <% } %>
                                             
-                                            <button type="button" class="btn btn-sm btn-outline-primary mt-2" 
-                                                    onclick="addField(<%= sectionIndex %>)">
-                                                <i class="fas fa-plus"></i> 添加字段
+                                            <button type="button" class="btn btn-sm btn-outline-primary mt-2"
+                                                    onclick="addField(<%= actualSectionIndex %>)">
+                                                <i class="fas fa-plus"></i> <%= t('form_config.addField') %>
                                             </button>
                                         </div>
                                     <% }); %>
@@ -242,17 +642,17 @@
                             <!-- 添加新區塊按鈕 -->
                             <div class="text-center mt-4">
                                 <button type="button" class="btn btn-primary" onclick="addSection()">
-                                    <i class="fas fa-plus"></i> 添加新區塊
+                                    <i class="fas fa-plus"></i> <%= t('form_config.addSection') %>
                                 </button>
                             </div>
 
                             <!-- 預覽區域 -->
                             <div class="mt-4">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h5>表單預覽</h5>
+                                    <h5><%= t('form_config.previewTitle') %></h5>
                                     <div class="btn-group" role="group">
-                                        <button type="button" class="btn btn-outline-primary active" id="previewZhBtn" onclick="switchPreviewLanguage('zh')">中文預覽</button>
-                                        <button type="button" class="btn btn-outline-primary" id="previewEnBtn" onclick="switchPreviewLanguage('en')">English Preview</button>
+                                        <button type="button" class="btn btn-outline-primary active" id="previewZhBtn" onclick="switchPreviewLanguage('zh')"><%= t('form_config.previewZh') %></button>
+                                        <button type="button" class="btn btn-outline-primary" id="previewEnBtn" onclick="switchPreviewLanguage('en')"><%= t('form_config.previewEn') %></button>
                                     </div>
                                 </div>
                                 <div class="border p-3 bg-light">
@@ -260,6 +660,12 @@
                                         <!-- 預覽內容將在這裡動態生成 -->
                                     </div>
                                 </div>
+                            </div>
+
+                            <div class="d-flex justify-content-end mt-4">
+                                <button type="button" class="btn btn-primary" onclick="saveConfig()">
+                                    <i class="fas fa-save"></i> <%= t('form_config.saveConfig') %>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -318,9 +724,60 @@
 </style>
 
 <script>
+    // i18n strings for JS-generated HTML
+    const _t = {
+        ptCategoryKeyPh: '<%= t("form_config.ptCategoryKeyPh") %>',
+        ptCategoryLabelZhPh: '<%= t("form_config.ptCategoryLabelZhPh") %>',
+        ptCategoryLabelEnPh: '<%= t("form_config.ptCategoryLabelEnPh") %>',
+        ptCategoryDelete: '<%= t("form_config.ptCategoryDelete") %>'
+    };
+
+    // 可摺疊 card：展開/收合時切換 icon 旋轉
+    document.querySelectorAll('.collapsible-card-header').forEach(function(header) {
+        var target = document.querySelector(header.getAttribute('data-target'));
+        if (!target) return;
+        target.addEventListener('show.bs.collapse', function() {
+            header.setAttribute('aria-expanded', 'true');
+        });
+        target.addEventListener('hide.bs.collapse', function() {
+            header.setAttribute('aria-expanded', 'false');
+        });
+    });
+
     let formConfig = <%- JSON.stringify(formConfig) %>;
     const eventId = '<%= event._id %>';
     let currentLanguage = 'zh'; // 當前編輯語言
+
+    // 初始化 T&C 欄位（避免舊資料缺少）
+    if (!formConfig.terms) {
+        formConfig.terms = { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } };
+    }
+    if (!formConfig.agreement) {
+        formConfig.agreement = { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } };
+    }
+    if (!formConfig.eventDisplayName) {
+        formConfig.eventDisplayName = { zh: '', en: '' };
+    }
+    if (!formConfig.registerSubHeader) {
+        formConfig.registerSubHeader = { zh: '', en: '' };
+    }
+    if (!formConfig.registerSubtitle) {
+        formConfig.registerSubtitle = {
+            zh: '請填寫以下資料完成活動報名',
+            en: 'Please fill in the following information to complete event registration'
+        };
+    }
+    if (!formConfig.paymentTicketUi) {
+        formConfig.paymentTicketUi = {
+            sectionTitle: { zh: '票券選擇', en: 'Ticket Selection' },
+            categoryLabel: { zh: '選擇類別', en: 'Select Category' },
+            ticketLabel: { zh: '選擇票券', en: 'Select Ticket' },
+            defaultCategoryLabel: { zh: '其他', en: 'Other' },
+            buttons: { back: { zh: '返回', en: 'Back' }, next: { zh: '下一步', en: 'Next' } },
+            highlightText: { zh: '', en: '' },
+            categoryButtons: []
+        };
+    }
 
     // 切換語言
     function switchLanguage(lang) {
@@ -336,26 +793,19 @@
 
     // 顯示提示信息
     function showAlert(type, message) {
-        // 創建提示元素
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-        alertDiv.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        // 插入到頁面頂部
-        const container = document.querySelector('.card-body');
-        if (container) {
-            container.insertBefore(alertDiv, container.firstChild);
-            
-            // 3秒後自動消失
-            setTimeout(() => {
-                if (alertDiv.parentNode) {
-                    alertDiv.remove();
-                }
-            }, 3000);
-        }
+        const id = 'toast-' + Date.now();
+        const toast = document.createElement('div');
+        toast.id = id;
+        toast.setAttribute('role', 'alert');
+        toast.className = `alert alert-${type} alert-dismissible fade show`;
+        toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:99999;min-width:300px;max-width:520px;box-shadow:0 4px 16px rgba(0,0,0,0.15);border-radius:8px;';
+        toast.innerHTML = `${message}<button type="button" class="close" onclick="this.parentElement.remove()"><span>&times;</span></button>`;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+            toast.style.transition = 'opacity 0.3s';
+            toast.style.opacity = '0';
+            setTimeout(() => { if (toast.parentNode) toast.remove(); }, 300);
+        }, 3500);
     }
 
     // 更新默認語言
@@ -427,20 +877,43 @@
         }
     }
 
+    function isFieldDisplayed(field) {
+        if (!field) return true;
+        if (field.display !== undefined) return field.display !== false;
+        return field.visible !== false;
+    }
+
+    function updateFieldDisplay(sectionIndex, fieldIndex, checked) {
+        if (!formConfig.sections[sectionIndex] || !formConfig.sections[sectionIndex].fields[fieldIndex]) return;
+        const field = formConfig.sections[sectionIndex].fields[fieldIndex];
+        field.display = !!checked;
+        field.visible = !!checked;
+        const fieldElement = document.querySelector('[data-section-index="' + sectionIndex + '"] [data-field-index="' + fieldIndex + '"]');
+        if (fieldElement) {
+            fieldElement.classList.toggle('hidden-field', !checked);
+        }
+        const topSwitch = fieldElement && fieldElement.querySelector('.field-controls .form-check-input');
+        if (topSwitch) topSwitch.checked = !!checked;
+        updatePreview();
+    }
+
     // 更新字段屬性
     async function updateFieldProperty(sectionIndex, fieldIndex, property, value) {
         if (formConfig.sections[sectionIndex] && formConfig.sections[sectionIndex].fields[fieldIndex]) {
             formConfig.sections[sectionIndex].fields[fieldIndex][property] = value;
+            if (property === 'display') {
+                formConfig.sections[sectionIndex].fields[fieldIndex].visible = !!value;
+            }
             
             // 如果更改了字段類型，需要處理選項
             if (property === 'type') {
-                if (value === 'select') {
-                    // 如果是下拉選單，確保有選項數組
+                if (value === 'select' || value === 'checkbox' || value === 'radio') {
+                    // 如果是下拉選單、複選框或單選框，確保有選項數組
                     if (!formConfig.sections[sectionIndex].fields[fieldIndex].options) {
                         formConfig.sections[sectionIndex].fields[fieldIndex].options = [];
                     }
                 } else {
-                    // 如果不是下拉選單，清除選項
+                    // 如果不是需要選項的字段類型，清除選項
                     delete formConfig.sections[sectionIndex].fields[fieldIndex].options;
                 }
                 
@@ -467,6 +940,16 @@
         }
     }
 
+    // 更新選項布林欄位（例如 select「其他可自填」）
+    function updateOptionFlag(sectionIndex, fieldIndex, optionIndex, property, checked) {
+        if (formConfig.sections[sectionIndex] && 
+            formConfig.sections[sectionIndex].fields[fieldIndex] &&
+            formConfig.sections[sectionIndex].fields[fieldIndex].options[optionIndex]) {
+            formConfig.sections[sectionIndex].fields[fieldIndex].options[optionIndex][property] = !!checked;
+            updatePreview();
+        }
+    }
+
     // 添加選項
     async function addOption(sectionIndex, fieldIndex) {
         if (!formConfig.sections[sectionIndex].fields[fieldIndex].options) {
@@ -477,7 +960,8 @@
             label: {
                 zh: '',
                 en: ''
-            }
+            },
+            isOther: false
         });
         
         // 先保存到資料庫，然後重新載入頁面
@@ -504,17 +988,19 @@
         }
     }
 
-    // 切換字段顯示
+    // 切換字段顯示（頂部 switch 與 Display 勾選同步）
     function toggleField(sectionIndex, fieldIndex) {
         const field = formConfig.sections[sectionIndex].fields[fieldIndex];
-        field.visible = !field.visible;
+        const next = !isFieldDisplayed(field);
+        field.display = next;
+        field.visible = next;
         
         const fieldElement = document.querySelector('[data-section-index="' + sectionIndex + '"] [data-field-index="' + fieldIndex + '"]');
-        if (field.visible) {
-            fieldElement.classList.remove('hidden-field');
-        } else {
-            fieldElement.classList.add('hidden-field');
+        if (fieldElement) {
+            fieldElement.classList.toggle('hidden-field', !next);
         }
+        const displayCheckbox = fieldElement && fieldElement.querySelector('input[type="checkbox"][onchange*="updateFieldDisplay"]');
+        if (displayCheckbox) displayCheckbox.checked = next;
         updatePreview();
     }
 
@@ -539,6 +1025,7 @@
             label: '新字段',
             type: 'text',
             required: false,
+            display: true,
             visible: true,
             placeholder: '',
             order: formConfig.sections[sectionIndex].fields.length + 1
@@ -643,7 +1130,7 @@
                 html += '<h5>' + getMultilingualText(section.sectionTitle, previewLanguage) + '</h5>';
                 
                 section.fields.forEach(function(field) {
-                    if (field.visible) {
+                    if (isFieldDisplayed(field)) {
                         html += '<div class="mb-2">';
                         html += '<label class="form-label">' + getMultilingualText(field.label, previewLanguage);
                         if (field.required) html += ' <span class="text-danger">*</span>';
@@ -653,9 +1140,29 @@
                             html += '<select class="form-select" disabled>';
                             html += '<option>--- ' + (previewLanguage === 'zh' ? '請選擇' : 'Please select') + ' ---</option>';
                             field.options.forEach(function(option) {
-                                html += '<option value="' + option.value + '">' + getMultilingualText(option.label, previewLanguage) + '</option>';
+                                var lab = getMultilingualText(option.label, previewLanguage);
+                                if (option.isOther) lab += (previewLanguage === 'zh' ? '（可自填）' : ' (specify)');
+                                html += '<option value="' + (option.value || '').replace(/"/g, '&quot;') + '">' + lab + '</option>';
                             });
                             html += '</select>';
+                        } else if (field.type === 'checkbox' && field.options) {
+                            html += '<div class="checkbox-group">';
+                            field.options.forEach(function(option) {
+                                html += '<div class="form-check">';
+                                html += '<input class="form-check-input" type="checkbox" value="' + option.value + '" disabled>';
+                                html += '<label class="form-check-label">' + getMultilingualText(option.label, previewLanguage) + '</label>';
+                                html += '</div>';
+                            });
+                            html += '</div>';
+                        } else if (field.type === 'radio' && field.options) {
+                            html += '<div class="radio-group">';
+                            field.options.forEach(function(option) {
+                                html += '<div class="form-check">';
+                                html += '<input class="form-check-input" type="radio" name="preview_' + field.fieldName + '" value="' + option.value + '" disabled>';
+                                html += '<label class="form-check-label">' + getMultilingualText(option.label, previewLanguage) + '</label>';
+                                html += '</div>';
+                            });
+                            html += '</div>';
                         } else if (field.type === 'textarea') {
                             html += '<textarea class="form-control" placeholder="' + getMultilingualText(field.placeholder, previewLanguage) + '" disabled></textarea>';
                         } else {
@@ -675,6 +1182,44 @@
     // 儲存配置
     async function saveConfig() {
         try {
+            const registerPageEnabled = document.getElementById('registerPageEnabled').checked;
+            const languageSwitcherEnabled = document.getElementById('languageSwitcherEnabled').checked;
+            const registerClosedMessage = document.getElementById('registerClosedMessage').value || '';
+            const eventDisplayName = {
+                zh: (document.getElementById('eventDisplayNameZh').value || '').trim(),
+                en: (document.getElementById('eventDisplayNameEn').value || '').trim()
+            };
+            const registerSubHeader = {
+                zh: (document.getElementById('registerSubHeaderZh').value || '').trim(),
+                en: (document.getElementById('registerSubHeaderEn').value || '').trim()
+            };
+            const registerSubtitle = {
+                zh: (document.getElementById('registerSubtitleZh').value || '').trim(),
+                en: (document.getElementById('registerSubtitleEn').value || '').trim()
+            };
+            const terms = {
+                enabled: !!document.getElementById('termsEnabled').checked,
+                label: {
+                    zh: (document.getElementById('termsLabelZh').value || '').trim(),
+                    en: (document.getElementById('termsLabelEn').value || '').trim()
+                },
+                content: {
+                    zh: document.getElementById('termsContentZh').value || '',
+                    en: document.getElementById('termsContentEn').value || ''
+                }
+            };
+            const agreement = {
+                enabled: !!document.getElementById('agreementEnabled').checked,
+                label: {
+                    zh: (document.getElementById('agreementLabelZh').value || '').trim(),
+                    en: (document.getElementById('agreementLabelEn').value || '').trim()
+                },
+                content: {
+                    zh: document.getElementById('agreementContentZh').value || '',
+                    en: document.getElementById('agreementContentEn').value || ''
+                }
+            };
+            const paymentTicketUi = collectPaymentTicketUiFromForm();
             const response = await fetch('/formConfig/' + eventId + '/config', {
                 method: 'PUT',
                 headers: {
@@ -682,13 +1227,25 @@
                 },
                 body: JSON.stringify({ 
                     sections: formConfig.sections,
-                    defaultLanguage: formConfig.defaultLanguage
+                    defaultLanguage: formConfig.defaultLanguage,
+                    languageSwitcherEnabled,
+                    registerPageEnabled: registerPageEnabled,
+                    registerClosedMessage: registerClosedMessage,
+                    eventDisplayName,
+                    registerSubHeader,
+                    registerSubtitle,
+                    terms,
+                    agreement,
+                    paymentTicketUi
                 })
             });
             
             const result = await response.json();
             if (result.success) {
-                console.log('表單配置已儲存！');
+                if (result.formConfig && typeof result.formConfig.languageSwitcherEnabled === 'boolean') {
+                    formConfig.languageSwitcherEnabled = result.formConfig.languageSwitcherEnabled;
+                }
+                showAlert('success', '<%= t("form_config.savedSuccess") %>');
             } else {
                 console.error('儲存失敗：' + result.message);
                 throw new Error(result.message);
@@ -720,8 +1277,280 @@
         }
     }
 
+    // 更新區塊屬性
+    function updateSectionProperty(sectionIndex, property, value) {
+        if (formConfig.sections[sectionIndex]) {
+            formConfig.sections[sectionIndex][property] = value;
+            updatePreview();
+        }
+    }
+
+    // 導出配置為 JSON
+    function exportConfig() {
+        try {
+            // 創建要導出的配置對象（移除 MongoDB 相關字段）
+            const exportData = {
+                defaultLanguage: formConfig.defaultLanguage,
+                languageSwitcherEnabled: formConfig.languageSwitcherEnabled !== false,
+                eventDisplayName: formConfig.eventDisplayName || { zh: '', en: '' },
+                registerSubHeader: formConfig.registerSubHeader || { zh: '', en: '' },
+                registerSubtitle: formConfig.registerSubtitle || {
+                    zh: '請填寫以下資料完成活動報名',
+                    en: 'Please fill in the following information to complete event registration'
+                },
+                terms: formConfig.terms || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } },
+                agreement: formConfig.agreement || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } },
+                sections: formConfig.sections.map(section => ({
+                    sectionName: section.sectionName,
+                    sectionTitle: section.sectionTitle,
+                    visible: section.visible,
+                    order: section.order || 0,
+                    fields: (section.fields || []).map(field => ({
+                        fieldName: field.fieldName,
+                        label: field.label,
+                        type: field.type,
+                        required: field.required,
+                        display: field.display !== undefined ? field.display : field.visible !== false,
+                        visible: field.visible,
+                        placeholder: field.placeholder,
+                        options: field.options || [],
+                        validation: field.validation || {},
+                        order: field.order || 0
+                    }))
+                }))
+            };
+            
+            // 轉換為 JSON 字符串
+            const jsonString = JSON.stringify(exportData, null, 2);
+            
+            // 創建下載鏈接
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `formConfig_${eventId}_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            alert('配置已成功導出！');
+        } catch (error) {
+            console.error('導出失敗:', error);
+            alert('導出失敗：' + error.message);
+        }
+    }
+
+    // 導入配置從 JSON
+    function importConfig(event) {
+        const file = event.target.files[0];
+        if (!file) {
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importedData = JSON.parse(e.target.result);
+                
+                // 驗證導入的數據結構
+                if (!importedData.sections || !Array.isArray(importedData.sections)) {
+                    throw new Error('無效的配置文件格式：缺少 sections 數組');
+                }
+                
+                // 確認導入
+                if (confirm('確定要導入此配置嗎？這將覆蓋現有的表單配置。')) {
+                    // 更新 formConfig
+                    formConfig.defaultLanguage = importedData.defaultLanguage || formConfig.defaultLanguage;
+                    if (typeof importedData.languageSwitcherEnabled === 'boolean') {
+                        formConfig.languageSwitcherEnabled = importedData.languageSwitcherEnabled;
+                    }
+                    formConfig.terms = importedData.terms || formConfig.terms || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } };
+                    formConfig.agreement = importedData.agreement || formConfig.agreement || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } };
+                    formConfig.eventDisplayName = importedData.eventDisplayName || formConfig.eventDisplayName || { zh: '', en: '' };
+                    formConfig.registerSubHeader = importedData.registerSubHeader || formConfig.registerSubHeader || { zh: '', en: '' };
+                    formConfig.registerSubtitle = importedData.registerSubtitle || formConfig.registerSubtitle || {
+                        zh: '請填寫以下資料完成活動報名',
+                        en: 'Please fill in the following information to complete event registration'
+                    };
+                    formConfig.sections = importedData.sections.map(section => ({
+                        sectionName: section.sectionName || '新區塊',
+                        sectionTitle: section.sectionTitle || { zh: '新區塊', en: 'New Section' },
+                        visible: section.visible !== undefined ? section.visible : true,
+                        order: section.order || 0,
+                        fields: (section.fields || []).map(field => {
+                            const disp = field.display !== undefined ? field.display : (field.visible !== undefined ? field.visible : true);
+                            return {
+                            fieldName: field.fieldName || 'newField',
+                            label: field.label || { zh: '', en: '' },
+                            type: field.type || 'text',
+                            required: field.required || false,
+                            display: disp,
+                            visible: disp,
+                            placeholder: field.placeholder || { zh: '', en: '' },
+                            options: field.options || [],
+                            validation: field.validation || {},
+                            order: field.order || 0
+                        };
+                        })
+                    }));
+                    
+                    // 保存配置
+                    saveConfig().then(() => {
+                        alert('配置已成功導入！');
+                        location.reload();
+                    }).catch(error => {
+                        console.error('保存失敗:', error);
+                        alert('導入失敗：' + error.message);
+                    });
+                }
+            } catch (error) {
+                console.error('導入失敗:', error);
+                alert('導入失敗：' + error.message + '\n請確保文件是有效的 JSON 格式。');
+            }
+        };
+        
+        reader.readAsText(file);
+        // 重置文件輸入，以便可以再次選擇同一個文件
+        event.target.value = '';
+    }
+
     // 初始化預覽
     updatePreview();
+
+    // 初始化 T&C UI（載入 formConfig.terms 到表單欄位）
+    (function initTermsUi() {
+        try {
+            const t = formConfig.terms || {};
+            const enabledEl = document.getElementById('termsEnabled');
+            const labelZhEl = document.getElementById('termsLabelZh');
+            const labelEnEl = document.getElementById('termsLabelEn');
+            const contentZhEl = document.getElementById('termsContentZh');
+            const contentEnEl = document.getElementById('termsContentEn');
+            if (!enabledEl) return;
+            enabledEl.checked = !!t.enabled;
+            if (labelZhEl) labelZhEl.value = (t.label && t.label.zh) ? t.label.zh : labelZhEl.value;
+            if (labelEnEl) labelEnEl.value = (t.label && t.label.en) ? t.label.en : labelEnEl.value;
+            if (contentZhEl) contentZhEl.value = (t.content && t.content.zh) ? t.content.zh : contentZhEl.value;
+            if (contentEnEl) contentEnEl.value = (t.content && t.content.en) ? t.content.en : contentEnEl.value;
+        } catch (_) {}
+    })();
+
+    // 初始化 Agreement UI
+    (function initAgreementUi() {
+        try {
+            const a = formConfig.agreement || {};
+            const enabledEl = document.getElementById('agreementEnabled');
+            const labelZhEl = document.getElementById('agreementLabelZh');
+            const labelEnEl = document.getElementById('agreementLabelEn');
+            const contentZhEl = document.getElementById('agreementContentZh');
+            const contentEnEl = document.getElementById('agreementContentEn');
+            if (!enabledEl) return;
+            enabledEl.checked = !!a.enabled;
+            if (labelZhEl) labelZhEl.value = (a.label && a.label.zh) ? a.label.zh : labelZhEl.value;
+            if (labelEnEl) labelEnEl.value = (a.label && a.label.en) ? a.label.en : labelEnEl.value;
+            if (contentZhEl) contentZhEl.value = (a.content && a.content.zh) ? a.content.zh : contentZhEl.value;
+            if (contentEnEl) contentEnEl.value = (a.content && a.content.en) ? a.content.en : contentEnEl.value;
+        } catch (_) {}
+    })();
+
+    function renderPtCategoryButtonsList() {
+        const list = document.getElementById('ptCategoryButtonsList');
+        if (!list) return;
+        const rows = formConfig.paymentTicketUi.categoryButtons || [];
+        list.innerHTML = '';
+        rows.forEach((row, idx) => {
+            const div = document.createElement('div');
+            div.className = 'row mb-2 pt-cat-row';
+            div.dataset.idx = String(idx);
+            div.innerHTML =
+                '<div class="col-md-2"><input type="text" class="form-control form-control-sm pt-cat-key" placeholder="' + _t.ptCategoryKeyPh + '" value="' + (row.key || '').replace(/"/g, '&quot;') + '"></div>' +
+                '<div class="col-md-4"><input type="text" class="form-control form-control-sm pt-cat-label-zh" placeholder="' + _t.ptCategoryLabelZhPh + '" value="' + ((row.label && row.label.zh) || '').replace(/"/g, '&quot;') + '"></div>' +
+                '<div class="col-md-4"><input type="text" class="form-control form-control-sm pt-cat-label-en" placeholder="' + _t.ptCategoryLabelEnPh + '" value="' + ((row.label && row.label.en) || '').replace(/"/g, '&quot;') + '"></div>' +
+                '<div class="col-md-2"><button type="button" class="btn btn-sm btn-outline-danger pt-cat-remove">' + _t.ptCategoryDelete + '</button></div>';
+            list.appendChild(div);
+        });
+    }
+
+    function syncPtCategoryButtonsFromDom() {
+        const rows = [];
+        document.querySelectorAll('#ptCategoryButtonsList .pt-cat-row').forEach(el => {
+            const key = (el.querySelector('.pt-cat-key').value || '').trim();
+            if (!key) return;
+            rows.push({
+                key,
+                label: {
+                    zh: (el.querySelector('.pt-cat-label-zh').value || '').trim(),
+                    en: (el.querySelector('.pt-cat-label-en').value || '').trim()
+                }
+            });
+        });
+        formConfig.paymentTicketUi.categoryButtons = rows;
+    }
+
+    function collectPaymentTicketUiFromForm() {
+        syncPtCategoryButtonsFromDom();
+        return {
+            sectionTitle: {
+                zh: (document.getElementById('ptSectionTitleZh').value || '').trim(),
+                en: (document.getElementById('ptSectionTitleEn').value || '').trim()
+            },
+            categoryLabel: {
+                zh: (document.getElementById('ptCategoryLabelZh').value || '').trim(),
+                en: (document.getElementById('ptCategoryLabelEn').value || '').trim()
+            },
+            ticketLabel: {
+                zh: (document.getElementById('ptTicketLabelZh').value || '').trim(),
+                en: (document.getElementById('ptTicketLabelEn').value || '').trim()
+            },
+            defaultCategoryLabel: {
+                zh: (document.getElementById('ptDefaultCategoryZh').value || '').trim(),
+                en: (document.getElementById('ptDefaultCategoryEn').value || '').trim()
+            },
+            buttons: {
+                back: {
+                    zh: (document.getElementById('ptBackBtnZh').value || '').trim(),
+                    en: (document.getElementById('ptBackBtnEn').value || '').trim()
+                },
+                next: {
+                    zh: (document.getElementById('ptNextBtnZh').value || '').trim(),
+                    en: (document.getElementById('ptNextBtnEn').value || '').trim()
+                }
+            },
+            highlightText: {
+                zh: (document.getElementById('ptHighlightZh').value || '').trim(),
+                en: (document.getElementById('ptHighlightEn').value || '').trim()
+            },
+            categoryButtons: formConfig.paymentTicketUi.categoryButtons || []
+        };
+    }
+
+    document.getElementById('ptAddCategoryBtn')?.addEventListener('click', function() {
+        syncPtCategoryButtonsFromDom();
+        formConfig.paymentTicketUi.categoryButtons.push({ key: '', label: { zh: '', en: '' } });
+        renderPtCategoryButtonsList();
+    });
+    document.getElementById('ptCategoryButtonsList')?.addEventListener('click', function(e) {
+        if (!e.target.classList.contains('pt-cat-remove')) return;
+        const row = e.target.closest('.pt-cat-row');
+        const idx = parseInt(row.dataset.idx, 10);
+        syncPtCategoryButtonsFromDom();
+        formConfig.paymentTicketUi.categoryButtons.splice(idx, 1);
+        renderPtCategoryButtonsList();
+    });
+
+    renderPtCategoryButtonsList();
+
+    // 初始化 eventDisplayName UI
+    (function initEventDisplayNameUi() {
+        try {
+            const n = formConfig.eventDisplayName || {};
+            const zhEl = document.getElementById('eventDisplayNameZh');
+            const enEl = document.getElementById('eventDisplayNameEn');
+            if (zhEl) zhEl.value = n.zh || zhEl.value;
+            if (enEl) enEl.value = n.en || enEl.value;
+        } catch (_) {}
+    })();
 </script>
 
 <%- include ("components/footer") %>

@@ -1,0 +1,998 @@
+<%- include("components/header") %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+<style>
+        .container-fluid {
+            max-width: 1400px;
+        }
+        .sidebar {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            height: calc(100vh - 100px);
+            overflow-y: auto;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .canvas-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        #badgeCanvas {
+            border: 2px dashed #ddd;
+            background: white;
+            display: block;
+            margin: 0 auto;
+            cursor: crosshair;
+        }
+        .field-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .field-item:hover {
+            background: #e9ecef;
+            border-color: #007bff;
+        }
+        .field-item.selected {
+            background: #007bff;
+            color: white;
+        }
+        .element-controls {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .btn-group-vertical {
+            width: 100%;
+        }
+        .preview-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .element-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            cursor: move;
+        }
+        .element-item:hover {
+            border-color: #007bff;
+        }
+        .element-item .btn-sm {
+            padding: 2px 8px;
+            font-size: 18px;
+            line-height: 1;
+        }
+    </style>
+<%- include("components/menu", { eventId: eventId }) %>
+<%- include("components/responsive_layout_style") %>
+<div id="right-panel" class="right-panel">
+    <%- include("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+    <div class="container-fluid">
+        <div class="row mb-3">
+            <div class="col-12">
+                <h2><%= t('badge_design.canvasDimensions').split(' (')[0] %> - <%= event.name %></h2>
+                <div class="d-flex flex-wrap" style="gap: 8px; margin-top: 5px;">
+                    <button class="btn btn-primary" onclick="saveConfig()"><i class="fa fa-save mr-1"></i><%= t('badge_design.saveConfig') %></button>
+                    <button class="btn btn-success" onclick="generateTestImage()"><i class="fa fa-image mr-1"></i><%= t('badge_design.generateTestImage') %></button>
+                    <button class="btn btn-danger" onclick="deleteSelectedElement()" id="deleteElementBtn" disabled><i class="fa fa-trash mr-1"></i><%= t('badge_design.deleteSelectedElement') %></button>
+                    <button class="btn btn-secondary" onclick="clearCanvas()"><i class="fa fa-times mr-1"></i><%= t('badge_design.clear') %></button>
+                    <button class="btn btn-outline-secondary" id="toggleGuidesBtn" onclick="toggleCenterGuides()"><i class="fa fa-eye-slash mr-1"></i><%= t('badge_design.hideCenterLines') %></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Left: Form fields list -->
+            <div class="col-md-3">
+                <div class="sidebar">
+                    <h4><%= t('badge_design.formFields') %></h4>
+                    <div id="fieldList">
+                        <!-- Dynamic variables -->
+                        <div class="field-item" data-type="text" data-content="{{user.name}}">
+                            <strong>Name</strong> - {{user.name}}
+                        </div>
+                        <div class="field-item" data-type="text" data-content="{{user.email}}">
+                            <strong>Email</strong> - {{user.email}}
+                        </div>
+                        <div class="field-item" data-type="text" data-content="{{user.company}}">
+                            <strong>Company</strong> - {{user.company}}
+                        </div>
+                        <div class="field-item" data-type="text" data-content="{{user.phone}}">
+                            <strong>Phone</strong> - {{user.phone}}
+                        </div>
+                        <div class="field-item" data-type="qrcode" data-content="{{qrcodeUrl}}">
+                            <strong>QR Code</strong> - {{qrcodeUrl}}
+                        </div>
+                        <!-- 動態字段（FormConfig）：只顯示英文標籤，且跳過已在上方固定列出的 name / email / company / phone 避免重複 -->
+                        <%
+                          const fixedFieldNames = ['name', 'email', 'company', 'phone'];
+                          if (formConfig && formConfig.sections) {
+                            formConfig.sections.forEach(section => { %>
+                                <% if (section.visible && section.fields) {
+                                    section.fields.forEach(field => { %>
+                                        <% if (field.visible && fixedFieldNames.indexOf(field.fieldName) === -1) {
+                                          const labelEn = (field.label && field.label.en && field.label.en.trim()) ? field.label.en.trim() : field.fieldName;
+                                        %>
+                                            <div class="field-item" data-type="text" data-content="{{user.<%= field.fieldName %>}}">
+                                                <strong><%= labelEn %></strong> - {{user.<%= field.fieldName %>}}
+                                            </div>
+                                        <% } %>
+                                    <% });
+                                } %>
+                            <% });
+                          } %>
+                    </div>
+
+                    <div class="element-controls mt-4">
+                        <h5><%= t('badge_design.customText') %></h5>
+                        <div class="form-group">
+                            <input type="text" id="customTextInput" class="form-control" placeholder="<%= t('badge_design.customTextPlaceholder') %>">
+                            <button class="btn btn-primary btn-sm mt-2" onclick="addCustomText()" style="width: 100%;"><%= t('badge_design.addToCanvas') %></button>
+                        </div>
+                    </div>
+
+                    <div class="element-controls mt-4">
+                        <h5><%= t('badge_design.addedElements') %></h5>
+                        <div id="elementList"></div>
+                    </div>
+
+                    <div class="element-controls mt-4" id="elementControlsContainer" style="display: none;">
+                        <h5><%= t('badge_design.elementSettings') %></h5>
+                        <div id="elementControls"></div>
+                    </div>
+                    <div class="mt-2 small text-muted"><%= t('badge_design.ctrlHint') %></div>
+                </div>
+            </div>
+
+            <!-- Right: Canvas design area -->
+            <div class="col-md-9">
+                <div class="canvas-container">
+                    <h4><%= t('badge_design.canvasDimensions') %></h4>
+                    <div class="text-center mb-3">
+                        <canvas id="badgeCanvas"></canvas>
+                    </div>
+
+                    <div class="preview-section">
+                        <h5><%= t('badge_design.preview') %></h5>
+                        <div id="testImagePreview"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: 貼上時選擇要綁定的欄位 -->
+<div class="modal fade" id="pasteFieldModal" tabindex="-1" role="dialog" aria-labelledby="pasteFieldModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="pasteFieldModalLabel"><%= t('badge_design.chooseField') %></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small"><%= t('badge_design.pasteFieldDesc') %></p>
+                <div id="pasteFieldOptions" class="list-group"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('common.cancel') %></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include("components/footer_minimal") %>
+<script>
+    jQuery(function($) {
+        const eventId = '<%= eventId %>';
+        const badgeConfig = <%- JSON.stringify(badgeConfig) %>;
+
+        const _BD = {
+            enterText: '<%= t("badge_design.enterTextAlert") %>',
+            saveSuccess: '<%= t("badge_design.saveSuccess") %>',
+            saveFailed: '<%= t("badge_design.saveFailed") %>',
+            saveError: '<%= t("badge_design.saveError") %>',
+            testImageSuccess: '<%= t("badge_design.testImageSuccess") %>',
+            testImageFailed: '<%= t("badge_design.testImageFailed") %>',
+            testImageError: '<%= t("badge_design.testImageError") %>',
+            clearConfirm: '<%= t("badge_design.clearConfirm") %>',
+            deleteElementConfirm: '<%= t("badge_design.deleteElementConfirm") %>',
+            deleteSelectedConfirm: '<%= t("badge_design.deleteSelectedConfirm") %>',
+            noElementSelected: '<%= t("badge_design.noElementSelected") %>',
+            noCopied: '<%= t("badge_design.noCopied") %>',
+            noFieldOptions: '<%= t("badge_design.noFieldOptions") %>',
+            hideCenterLines: '<%= t("badge_design.hideCenterLines") %>',
+            showCenterLines: '<%= t("badge_design.showCenterLines") %>',
+            fullWidth: '<%= t("badge_design.fullWidth") %>',
+            fullWidthHint: '<%= t("badge_design.fullWidthHint") %>',
+            size: '<%= t("badge_design.size") %>',
+            sizeHint: '<%= t("badge_design.sizeHint") %>',
+            textAlign: '<%= t("badge_design.textAlign") %>',
+            alignLeft: '<%= t("badge_design.alignLeft") %>',
+            alignCenter: '<%= t("badge_design.alignCenter") %>',
+            alignRight: '<%= t("badge_design.alignRight") %>',
+            textAlignHint: '<%= t("badge_design.textAlignHint") %>',
+            baseFontSize: '<%= t("badge_design.baseFontSize") %>',
+            baseFontSizeHint: '<%= t("badge_design.baseFontSizeHint") %>',
+            color: '<%= t("badge_design.color") %>'
+        };
+
+        // Canvas 設置
+        // 100mm x 62mm @ 300 DPI = 1181px x 732px（橫向）
+        const MM_TO_PX = 300 / 25.4; // 300 DPI 轉換
+        const CANVAS_WIDTH = Math.round(100 * MM_TO_PX); // 1181px（寬）
+        const CANVAS_HEIGHT = Math.round(62 * MM_TO_PX); // 732px（高）
+
+        const canvas = document.getElementById('badgeCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+
+        // 設置 canvas 顯示大小（縮放顯示，保持橫向比例）
+        canvas.style.width = '645px';
+        canvas.style.height = '400px';
+
+        // 將已存的 elements 做一次標準化：文字預設 textAlign 為 center
+        let elements = (badgeConfig.elements || []).map(el => {
+            if (el.type === 'text' && !el.textAlign) {
+                return { ...el, textAlign: 'center' };
+            }
+            return el;
+        });
+        let selectedElement = null;
+        let copiedElement = null; // Ctrl+C 複製的 element（格式），貼上時可選不同欄位
+        let isDragging = false;
+        let isResizing = false;
+        let dragOffset = { x: 0, y: 0 };
+        let resizeStart = { x: 0, y: 0, width: 0, height: 0 };
+        const RESIZE_HANDLE_SIZE = 14; // 右下角拉伸點尺寸
+        const SNAP_DISTANCE = 10; // 中線「磁吸」距離（px）
+        let showCenterGuides = true; // 是否顯示中線提示
+
+        // 繪製中線提示（水平、垂直中心線）
+        function drawCenterGuides() {
+            if (!showCenterGuides) return;
+            ctx.save();
+            const cx = CANVAS_WIDTH / 2;
+            const cy = CANVAS_HEIGHT / 2;
+            ctx.strokeStyle = 'rgba(0, 150, 255, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([6, 6]);
+            // 垂直中線
+            ctx.beginPath();
+            ctx.moveTo(cx, 0);
+            ctx.lineTo(cx, CANVAS_HEIGHT);
+            ctx.stroke();
+            // 水平中線
+            ctx.beginPath();
+            ctx.moveTo(0, cy);
+            ctx.lineTo(CANVAS_WIDTH, cy);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+        }
+
+        // 初始化 canvas
+        function initCanvas() {
+            // 白色背景
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // 中線提示（在元素底下繪製，較不搶眼）
+            drawCenterGuides();
+
+            // 繪製所有元素
+            elements.forEach((element, index) => {
+                drawElement(element, index === selectedElement);
+            });
+
+            updateElementList();
+        }
+
+        // 文字換行函數
+        function wrapText(ctx, text, maxWidth) {
+            const words = text.split(' ');
+            const lines = [];
+            let currentLine = words[0] || '';
+
+            for (let i = 1; i < words.length; i++) {
+                const word = words[i];
+                const width = ctx.measureText(currentLine + ' ' + word).width;
+                if (width < maxWidth) {
+                    currentLine += ' ' + word;
+                } else {
+                    lines.push(currentLine);
+                    currentLine = word;
+                }
+            }
+            lines.push(currentLine);
+            return lines;
+        }
+
+        // 繪製元素
+        function drawElement(element, isSelected = false) {
+            ctx.save();
+
+            if (element.type === 'text') {
+                // 計算實際 font-size（根據 size 百分比）
+                const baseFontSize = element.fontSize || 16;
+                const sizePercent = element.size || 100;
+                const actualFontSize = Math.round(baseFontSize * (sizePercent / 100));
+
+                ctx.font = `${element.fontWeight || 'normal'} ${actualFontSize}px ${element.fontFamily || 'Arial'}`;
+                ctx.fillStyle = element.color || '#000000';
+
+                // 處理 fullWidth：如果 fullWidth，則元素寬度為整個 canvas 寬度，x 為 0
+                let elementX = element.x;
+                let elementWidth = element.width || 300;
+
+                if (element.fullWidth) {
+                    elementX = 0;
+                    elementWidth = CANVAS_WIDTH;
+                }
+
+                // 設定文字對齊方式
+                // fullWidth 時強制置中，否則使用設定的 textAlign（預設 center）
+                const textAlign = element.fullWidth ? 'center' : (element.textAlign || 'center');
+                ctx.textAlign = textAlign;
+                ctx.textBaseline = 'top';
+
+                // 計算文字繪製的 x 座標
+                let x = elementX;
+                if (textAlign === 'center') {
+                    x = elementX + elementWidth / 2;
+                } else if (textAlign === 'right') {
+                    x = elementX + elementWidth;
+                } else {
+                    x = elementX;
+                }
+
+                // 處理文字換行
+                const content = element.content || '';
+                const maxWidth = elementWidth - 10; // 留一點邊距
+                const lines = wrapText(ctx, content, maxWidth);
+
+                // 繪製多行文字
+                const lineHeight = actualFontSize * 1.2; // 行高
+                lines.forEach((line, index) => {
+                    ctx.fillText(line, x, element.y + index * lineHeight);
+                });
+
+                // 更新元素高度（根據行數）
+                if (lines.length > 1) {
+                    element.height = lines.length * lineHeight;
+                }
+            } else if (element.type === 'qrcode') {
+                // 繪製 QR Code 佔位符
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(element.x, element.y, element.width || 100, element.height || 100);
+                ctx.fillStyle = '#f0f0f0';
+                ctx.fillRect(element.x, element.y, element.width || 100, element.height || 100);
+                ctx.fillStyle = '#000000';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('QR Code', element.x + (element.width || 100) / 2, element.y + (element.height || 100) / 2);
+            }
+
+            // 選中時繪製邊框
+            if (isSelected) {
+                // 計算實際寬度（fullWidth 時使用 canvas 寬度）
+                let boxWidth = element.width || (element.type === 'qrcode' ? 100 : 100);
+                if (element.fullWidth && element.type === 'text') {
+                    boxWidth = CANVAS_WIDTH;
+                }
+                const boxHeight = element.height || (element.type === 'qrcode' ? 100 : 50);
+
+                ctx.strokeStyle = '#007bff';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.strokeRect(element.x - 2, element.y - 2, boxWidth + 4, boxHeight + 4);
+                ctx.setLineDash([]);
+
+                // 繪製右下角拉伸點
+                const handleX = element.x + boxWidth - RESIZE_HANDLE_SIZE / 2;
+                const handleY = element.y + boxHeight - RESIZE_HANDLE_SIZE / 2;
+                ctx.fillStyle = '#ffffff';
+                ctx.strokeStyle = '#007bff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.rect(handleX, handleY, RESIZE_HANDLE_SIZE, RESIZE_HANDLE_SIZE);
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
+        // 添加自定義文字到 canvas
+        function addCustomText() {
+            const customText = $('#customTextInput').val().trim();
+            if (!customText) {
+                alert(_BD.enterText);
+                return;
+            }
+
+            const newElement = {
+                type: 'text',
+                content: customText, // 直接使用輸入的文字（不是變量）
+                x: 50,
+                y: 50 + elements.length * 60,
+                width: 300,
+                height: 50,
+                fontSize: 16,
+                fontFamily: 'Arial',
+                fontWeight: 'normal',
+                textAlign: 'center',
+                color: '#000000',
+                fullWidth: false,
+                size: 100,
+                zIndex: elements.length
+            };
+
+            elements.push(newElement);
+            selectedElement = elements.length - 1;
+            $('#customTextInput').val(''); // 清空輸入框
+            initCanvas();
+        }
+
+        // 點擊字段添加到 canvas
+        $('.field-item').on('click', function() {
+            const type = $(this).data('type');
+            const content = $(this).data('content');
+
+            const newElement = {
+                type: type,
+                content: content,
+                x: 50,
+                y: 50 + elements.length * 60,
+                width: type === 'qrcode' ? 150 : 300,
+                height: type === 'qrcode' ? 150 : 50,
+                fontSize: 16,
+                fontFamily: 'Arial',
+                fontWeight: 'normal',
+                textAlign: 'center',
+                color: '#000000',
+                fullWidth: false, // 預設不全寬
+                size: 100, // 預設 100% 大小
+                qrData: type === 'qrcode' ? content : null,
+                zIndex: elements.length
+            };
+
+            elements.push(newElement);
+            selectedElement = elements.length - 1;
+            initCanvas();
+        });
+
+        // 自定義文字輸入框按 Enter 鍵也可以添加
+        $('#customTextInput').on('keypress', function(e) {
+            if (e.which === 13) { // Enter 鍵
+                addCustomText();
+            }
+        });
+
+        // 工具函數：轉換滑鼠座標到 canvas 內容座標
+        function getCanvasPoint(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = CANVAS_WIDTH / rect.width;
+            const scaleY = CANVAS_HEIGHT / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            return { x, y };
+        }
+
+        // Canvas 點擊事件
+        canvas.addEventListener('click', function(e) {
+            const { x, y } = getCanvasPoint(e);
+
+            // 檢查是否點擊了元素
+            let clickedElement = null;
+            for (let i = elements.length - 1; i >= 0; i--) {
+                const el = elements[i];
+                let elX = el.x;
+                let elWidth = el.width || (el.type === 'qrcode' ? 100 : 100);
+
+                // 處理 fullWidth
+                if (el.fullWidth && el.type === 'text') {
+                    elX = 0;
+                    elWidth = CANVAS_WIDTH;
+                }
+
+                const height = el.height || (el.type === 'qrcode' ? 100 : 50);
+                if (x >= elX && x <= elX + elWidth && y >= el.y && y <= el.y + height) {
+                    clickedElement = i;
+                    break;
+                }
+            }
+
+            selectedElement = clickedElement;
+            initCanvas();
+
+            // 更新控制面板和刪除按鈕
+            if (selectedElement !== null) {
+                updateElementControls(elements[selectedElement]);
+            } else {
+                $('#elementControls').html('');
+            }
+            updateDeleteButton();
+        });
+
+        // 拖動功能
+        canvas.addEventListener('mousedown', function(e) {
+            if (selectedElement === null) return;
+
+            const { x, y } = getCanvasPoint(e);
+            const el = elements[selectedElement];
+
+            let elX = el.x;
+            let boxWidth = el.width || (el.type === 'qrcode' ? 100 : 100);
+
+            // 處理 fullWidth
+            if (el.fullWidth && el.type === 'text') {
+                elX = 0;
+                boxWidth = CANVAS_WIDTH;
+            }
+
+            const boxHeight = el.height || (el.type === 'qrcode' ? 100 : 50);
+
+            // fullWidth 的元素不能調整大小，只能拖動垂直位置
+            if (!(el.fullWidth && el.type === 'text')) {
+                // 先檢查是否按到右下角拉伸點
+                const handleX = elX + boxWidth - RESIZE_HANDLE_SIZE / 2;
+                const handleY = el.y + boxHeight - RESIZE_HANDLE_SIZE / 2;
+                if (
+                    x >= handleX &&
+                    x <= handleX + RESIZE_HANDLE_SIZE &&
+                    y >= handleY &&
+                    y <= handleY + RESIZE_HANDLE_SIZE
+                ) {
+                    isResizing = true;
+                    resizeStart = { x, y, width: boxWidth, height: boxHeight };
+                    return;
+                }
+            }
+
+            // 否則就進入拖動模式
+            if (x >= elX && x <= elX + boxWidth && y >= el.y && y <= el.y + boxHeight) {
+                isDragging = true;
+                // dragOffset 記錄滑鼠相對於元素左上角的偏移
+                // fullWidth 的元素 x 是 0，所以 dragOffset.x 就是滑鼠的 x 座標
+                dragOffset.x = el.fullWidth ? x : (x - elX);
+                dragOffset.y = y - el.y;
+            }
+        });
+
+        canvas.addEventListener('mousemove', function(e) {
+            if (selectedElement === null) return;
+
+            const { x, y } = getCanvasPoint(e);
+            const el = elements[selectedElement];
+
+            // 拉大縮小（fullWidth 的元素不能調整大小）
+            if (isResizing && !(el.fullWidth && el.type === 'text')) {
+                let newWidth = resizeStart.width + (x - resizeStart.x);
+                let newHeight = resizeStart.height + (y - resizeStart.y);
+
+                // 最小尺寸限制
+                newWidth = Math.max(40, newWidth);
+                newHeight = Math.max(20, newHeight);
+
+                el.width = newWidth;
+                el.height = newHeight;
+
+                // 文字：根據高度自動調整字體大小（大約對應）
+                if (el.type === 'text') {
+                    const baseHeight = 50;
+                    const baseFont = 16;
+                    const ratio = newHeight / baseHeight;
+                    el.fontSize = Math.max(8, Math.round(baseFont * ratio));
+                }
+
+                initCanvas();
+                return;
+            }
+
+            // 拖動位置（含「磁吸」到中線）
+            if (isDragging) {
+                // fullWidth 的元素只能垂直拖動（水平位置固定在 x=0）
+                if (el.fullWidth && el.type === 'text') {
+                    // 只允許垂直拖動
+                    let newY = y - dragOffset.y;
+                    const boxHeight = el.height || 50;
+                    const canvasCenterY = CANVAS_HEIGHT / 2;
+                    const elementCenterY = newY + boxHeight / 2;
+
+                    if (Math.abs(elementCenterY - canvasCenterY) <= SNAP_DISTANCE) {
+                        newY = canvasCenterY - boxHeight / 2;
+                    }
+
+                    el.y = newY;
+                    initCanvas();
+                    return;
+                }
+
+                // 先計算正常拖動位置（基於滑鼠位置）
+                let newX = x - dragOffset.x;
+                let newY = y - dragOffset.y;
+
+                const boxWidth = el.width || (el.type === 'qrcode' ? 100 : 100);
+                const boxHeight = el.height || (el.type === 'qrcode' ? 100 : 50);
+
+                // 計算元素中心點位置
+                const elementCenterX = newX + boxWidth / 2;
+                const elementCenterY = newY + boxHeight / 2;
+
+                // 畫布中心點
+                const canvasCenterX = CANVAS_WIDTH / 2;
+                const canvasCenterY = CANVAS_HEIGHT / 2;
+
+                // 水平磁吸：當元素中心點靠近垂直中線時，讓元素中心對齊到中線
+                if (Math.abs(elementCenterX - canvasCenterX) <= SNAP_DISTANCE) {
+                    // 調整 newX，讓元素中心對齊到畫布中心
+                    newX = canvasCenterX - boxWidth / 2;
+                }
+
+                // 垂直磁吸：當元素中心點靠近水平中線時，讓元素中心對齊到中線
+                if (Math.abs(elementCenterY - canvasCenterY) <= SNAP_DISTANCE) {
+                    // 調整 newY，讓元素中心對齊到畫布中心
+                    newY = canvasCenterY - boxHeight / 2;
+                }
+
+                el.x = newX;
+                el.y = newY;
+                initCanvas();
+            }
+        });
+
+        canvas.addEventListener('mouseup', function() {
+            isDragging = false;
+            isResizing = false;
+        });
+
+        // 更新元素列表
+        function updateElementList() {
+            const list = $('#elementList');
+            list.empty();
+
+            elements.forEach((element, index) => {
+                const item = $('<div class="element-item d-flex justify-content-between align-items-center"></div>');
+                const content = $('<span></span>').text(`${element.type}: ${element.content || element.qrData || 'N/A'}`);
+                const deleteBtn = $('<button class="btn btn-sm btn-danger ml-2">×</button>');
+
+                if (index === selectedElement) {
+                    item.addClass('selected');
+                }
+
+                item.on('click', function(e) {
+                    // 如果點擊的是刪除按鈕，不觸發選中
+                    if ($(e.target).is('button')) return;
+                    selectedElement = index;
+                    initCanvas();
+                    updateElementControls(element);
+                    updateDeleteButton();
+                });
+
+                deleteBtn.on('click', function(e) {
+                    e.stopPropagation(); // 阻止觸發父元素的點擊事件
+                    if (confirm(_BD.deleteElementConfirm)) {
+                        deleteElement(index);
+                    }
+                });
+
+                item.append(content);
+                item.append(deleteBtn);
+                list.append(item);
+            });
+
+            updateDeleteButton();
+        }
+
+        // 刪除選中的元素
+        function deleteSelectedElement() {
+            if (selectedElement === null || selectedElement === undefined) {
+                alert(_BD.noElementSelected);
+                return;
+            }
+
+            if (confirm(_BD.deleteSelectedConfirm)) {
+                deleteElement(selectedElement);
+            }
+        }
+
+        // 刪除指定索引的元素
+        function deleteElement(index) {
+            if (index >= 0 && index < elements.length) {
+                elements.splice(index, 1);
+                selectedElement = null;
+                initCanvas();
+            }
+        }
+
+        // 更新刪除按鈕的啟用狀態
+        function updateDeleteButton() {
+            const deleteBtn = $('#deleteElementBtn');
+            if (selectedElement !== null && selectedElement !== undefined) {
+                deleteBtn.prop('disabled', false);
+            } else {
+                deleteBtn.prop('disabled', true);
+            }
+        }
+
+        // 更新元素控制面板
+        function updateElementControls(element) {
+            const controls = $('#elementControls');
+            const container = $('#elementControlsContainer');
+            controls.empty();
+
+            if (!element) {
+                container.hide();
+                return;
+            }
+
+            container.show();
+
+            if (element.type === 'text') {
+                const html = `
+                    <div class="form-group">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input js-badge-prop" id="elementFullWidth" data-prop="fullWidth" data-value-type="bool" ${element.fullWidth ? 'checked' : ''}>
+                            <label class="form-check-label" for="elementFullWidth">${_BD.fullWidth}</label>
+                        </div>
+                        <small class="form-text text-muted">${_BD.fullWidthHint}</small>
+                    </div>
+                    <div class="form-group">
+                        <label>${_BD.size}</label>
+                        <input type="number" id="elementSize" class="form-control js-badge-prop" data-prop="size" data-value-type="float"
+                               value="${element.size || 100}" min="10" max="500" step="5">
+                        <small class="form-text text-muted">${_BD.sizeHint}</small>
+                    </div>
+                    <div class="form-group">
+                        <label>${_BD.textAlign}</label>
+                        <select id="elementTextAlign" class="form-control js-badge-prop" data-prop="textAlign" data-value-type="string" ${element.fullWidth ? 'disabled' : ''}>
+                            <option value="left" ${element.textAlign === 'left' ? 'selected' : ''}>${_BD.alignLeft}</option>
+                            <option value="center" ${element.textAlign === 'center' ? 'selected' : ''}>${_BD.alignCenter}</option>
+                            <option value="right" ${element.textAlign === 'right' ? 'selected' : ''}>${_BD.alignRight}</option>
+                        </select>
+                        <small class="form-text text-muted">${_BD.textAlignHint}</small>
+                    </div>
+                    <div class="form-group">
+                        <label>${_BD.baseFontSize}</label>
+                        <input type="number" id="elementFontSize" class="form-control js-badge-prop" data-prop="fontSize" data-value-type="int"
+                               value="${element.fontSize || 16}" min="8" max="200">
+                        <small class="form-text text-muted">${_BD.baseFontSizeHint}</small>
+                    </div>
+                    <div class="form-group">
+                        <label>${_BD.color}</label>
+                        <input type="color" id="elementColor" class="form-control js-badge-prop" data-prop="color" data-value-type="string"
+                               value="${element.color || '#000000'}">
+                    </div>
+                `;
+                controls.html(html);
+                controls.find('.js-badge-prop').on('change input', function() {
+                    const prop = $(this).data('prop');
+                    const type = $(this).data('value-type');
+                    let val = $(this).val();
+                    if (type === 'bool') val = $(this).is(':checked');
+                    else if (type === 'float') val = parseFloat(val);
+                    else if (type === 'int') val = parseInt(val, 10);
+                    updateElementProperty(prop, val);
+                });
+            }
+        }
+
+        // 更新元素屬性
+        function updateElementProperty(property, value) {
+            if (selectedElement === null || selectedElement === undefined) return;
+
+            elements[selectedElement][property] = value;
+
+            // 如果更新了 fullWidth，需要調整元素位置和寬度
+            if (property === 'fullWidth' && value === true) {
+                elements[selectedElement].x = 0;
+                elements[selectedElement].width = CANVAS_WIDTH;
+            }
+
+            initCanvas();
+        }
+
+        // 保存配置
+        async function saveConfig() {
+            try {
+                const response = await fetch(`/events/${eventId}/badges/config`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: badgeConfig.name || 'Default Badge',
+                        width: 100,
+                        height: 62,
+                        dpi: 300,
+                        elements: elements
+                    })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert(_BD.saveSuccess);
+                } else {
+                    alert(_BD.saveFailed + result.message);
+                }
+            } catch (error) {
+                console.error('Error saving config:', error);
+                alert(_BD.saveError);
+            }
+        }
+
+        // 生成測試圖片
+        async function generateTestImage() {
+            try {
+                // 先保存配置
+                await saveConfig();
+
+                const response = await fetch(`/events/${eventId}/badges/test-image`, {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    // 顯示測試圖片
+                    const preview = $('#testImagePreview');
+                    preview.html(`<img src="${result.imageUrl}" alt="Test Badge" style="max-width: 100%;" />`);
+                    alert(_BD.testImageSuccess);
+                } else {
+                    alert(_BD.testImageFailed + result.message);
+                }
+            } catch (error) {
+                console.error('Error generating test image:', error);
+                alert(_BD.testImageError);
+            }
+        }
+
+        // 清除 canvas
+        function clearCanvas() {
+            if (confirm(_BD.clearConfirm)) {
+                elements = [];
+                selectedElement = null;
+                initCanvas();
+                updateDeleteButton();
+            }
+        }
+
+        // 取得左側 Form Fields 清單（用於貼上時選擇欄位）
+        function getFieldOptions() {
+            const opts = [];
+            $('#fieldList .field-item').each(function() {
+                const type = $(this).data('type');
+                const content = $(this).data('content');
+                const label = $(this).text().trim();
+                if (type && content) opts.push({ type, content, label });
+            });
+            return opts;
+        }
+
+        // Ctrl+C：複製選中 element 的格式（不含綁定欄位，貼上時再選）
+        function copySelectedElement() {
+            if (selectedElement === null || selectedElement === undefined) return;
+            const el = elements[selectedElement];
+            copiedElement = JSON.parse(JSON.stringify(el));
+            if (typeof showControllerToast === 'function') showControllerToast(_BD.saveSuccess, 'success');
+            else console.log('Element format copied. Use Ctrl+V to paste and choose field.');
+        }
+
+        // Ctrl+V：貼上並彈出選擇欄位
+        function pasteWithFieldChoice() {
+            if (!copiedElement) {
+                alert(_BD.noCopied);
+                return;
+            }
+            const fieldOptions = getFieldOptions();
+            if (fieldOptions.length === 0) {
+                alert(_BD.noFieldOptions);
+                return;
+            }
+            const container = $('#pasteFieldOptions');
+            container.empty();
+            fieldOptions.forEach(function(opt) {
+                const btn = $('<button type="button" class="list-group-item list-group-item-action"></button>')
+                    .text(opt.label)
+                    .data('opt', opt)
+                    .on('click', function() {
+                        applyPasteWithField($(this).data('opt'));
+                        $('#pasteFieldModal').modal('hide');
+                    });
+                container.append(btn);
+            });
+            $('#pasteFieldModal').modal('show');
+        }
+
+        // 使用選定的欄位建立並加入新 element（複製格式、偏移位置）
+        function applyPasteWithField(opt) {
+            if (!copiedElement || !opt) return;
+            const offset = 20;
+            const newEl = JSON.parse(JSON.stringify(copiedElement));
+            newEl.x = (newEl.x || 0) + offset;
+            newEl.y = (newEl.y || 0) + offset;
+            newEl.content = opt.content;
+            newEl.type = opt.type;
+            newEl.zIndex = elements.length;
+            if (opt.type === 'qrcode') {
+                newEl.qrData = opt.content;
+                newEl.width = newEl.width || 150;
+                newEl.height = newEl.height || 150;
+            }
+            elements.push(newEl);
+            selectedElement = elements.length - 1;
+            initCanvas();
+            updateElementControls(newEl);
+            updateDeleteButton();
+        }
+
+        // 鍵盤快捷鍵：Delete 刪除選中；Ctrl+C 複製格式；Ctrl+V 貼上並選欄位
+        document.addEventListener('keydown', function(e) {
+            const inInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                if (!inInput && selectedElement !== null && selectedElement !== undefined) {
+                    deleteSelectedElement();
+                }
+                return;
+            }
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 'c') {
+                    if (!inInput && selectedElement !== null) {
+                        e.preventDefault();
+                        copySelectedElement();
+                    }
+                    return;
+                }
+                if (e.key === 'v') {
+                    if (!inInput && copiedElement) {
+                        e.preventDefault();
+                        pasteWithFieldChoice();
+                    }
+                    return;
+                }
+            }
+        });
+
+        // 切換中線提示顯示
+        function toggleCenterGuides() {
+            showCenterGuides = !showCenterGuides;
+            const btn = document.getElementById('toggleGuidesBtn');
+            if (btn) btn.textContent = showCenterGuides ? _BD.hideCenterLines : _BD.showCenterLines;
+            initCanvas();
+        }
+
+        // 初始化
+        initCanvas();
+
+        /* inline onclick 須掛在 window（函式在 jQuery.ready 閉包內） */
+        window.saveConfig = saveConfig;
+        window.generateTestImage = generateTestImage;
+        window.deleteSelectedElement = deleteSelectedElement;
+        window.clearCanvas = clearCanvas;
+        window.toggleCenterGuides = toggleCenterGuides;
+        window.addCustomText = addCustomText;
+        window.updateElementProperty = updateElementProperty;
+    });
+</script>
+</body>
+</html>

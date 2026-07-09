@@ -1,0 +1,94 @@
+<%- include ("components/header") %>
+<%- include ("components/menu", {eventId: eventId }) %>
+<%- include("components/responsive_layout_style") %>
+<link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
+<link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+<div id="right-panel" class="right-panel">
+    <%- include ("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title"><%= t('sms_template_list.title') %></strong>
+                        </div>
+                        <div class="card-body">
+                            <table id="bootstrap-data-table" class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th><%= t('common.type') %></th>
+                                        <th><%= t('common.content') %></th>
+                                        <th><%= t('common.created_at') %></th>
+                                        <th><%= t('common.updated_at') %></th>
+                                        <th><%= t('common.actions') %></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (smsTemplates && smsTemplates.length > 0) { %>
+                                        <% smsTemplates.forEach(tmpl => { %>
+                                            <tr>
+                                                <td>
+                                                    <% if (tmpl.eventId) { %>
+                                                        <a href="/events/<%= tmpl.eventId %>/smsTemplate/<%= tmpl._id %>"><%= tmpl.type || 'welcome' %></a>
+                                                    <% } else { %>
+                                                        <a href="/smsTemplate/<%= tmpl._id %>"><%= tmpl.type || 'welcome' %></a>
+                                                    <% } %>
+                                                </td>
+                                                <td><%= (tmpl.content || '').substring(0, 50) %>...</td>
+                                                <td><%= new Date(tmpl.created_at).toLocaleString() %></td>
+                                                <td><%= new Date(tmpl.modified_at).toLocaleString() %></td>
+                                                <td>
+                                                    <button class="btn btn-danger btn-sm" onclick="deleteTemplate('<%= tmpl._id %>', '<%= (tmpl.type || 'welcome').replace(/'/g, "\\'") %>')">
+                                                        <%= t('common.delete') %>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        <% }); %>
+                                    <% } else { %>
+                                        <tr><td colspan="5" class="text-center"><%= t('sms_template_list.noData') %></td></tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                            <% if (eventId != null) { %>
+                                <a href="/events/<%= eventId %>/smsTemplate/create" class="btn btn-primary"><%= t('sms_template_list.createBtn') %></a>
+                            <% } else { %>
+                                <a href="/smsTemplate/create" class="btn btn-primary"><%= t('sms_template_list.createBtn') %></a>
+                            <% } %>
+                            <a href="/events/<%= eventId %>" class="btn btn-secondary"><%= t('common.back') %></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include ("./components/footer") %>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
+<script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
+<script>
+    $(document).ready(function() {
+        const hasData = <%= (smsTemplates && smsTemplates.length > 0) ? 'true' : 'false' %>;
+        if (hasData) $('#bootstrap-data-table').DataTable();
+    });
+
+    function deleteTemplate(templateId, templateType) {
+        const msg = t('sms_template_list.confirmDelete').replace('{type}', templateType);
+        if (confirm(msg)) {
+            $.ajax({
+                url: '/events/<%= eventId %>/smsTemplate/' + templateId,
+                type: 'DELETE',
+                success: function() {
+                    alert('<%= t("sms_template_list.deleteSuccess") %>');
+                    location.reload();
+                },
+                error: function() {
+                    alert('<%= t("sms_template_list.deleteFailed") %>');
+                }
+            });
+        }
+    }
+</script>

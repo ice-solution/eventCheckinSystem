@@ -3,6 +3,7 @@ require('dotenv').config(); // 加載環境變量
 const QRCode = require('qrcode');
 
 const express = require('express');
+const cors = require('cors');
 const mongoose = require('mongoose');
 const http = require('http');
 const session = require('express-session');
@@ -12,27 +13,45 @@ const websiteRouter = require('./routes/websites');
 const eventsRouter = require('./routes/events');
 const awardsRouter = require('./routes/awards'); // 引入新的路由
 const authRoutes = require('./routes/auth'); // 引入 auth 路由
+const permission = require('./middleware/permission'); // 權限中間件
+
 const emailTemplateRoutes = require('./routes/emailTemplate'); // 引入 emailTemplate 路由
 const prizesRouter = require('./routes/prizes'); // 引入獎品路由
 const votesRouter = require('./routes/votes'); // 引入投票路由
 const gamesRouter = require('./routes/games'); // 引入遊戲路由
 const formConfigRouter = require('./routes/formConfig'); // 引入表單配置路由
+const ipadApiRouter = require('./routes/ipadApi'); // iPad API (JWT)
 
 const eventsController = require('./controllers/eventsController');
+const luckydrawGameConfigController = require('./controllers/luckydrawGameConfigController');
 
 const Auth = require('./model/Auth'); // 引入 Auth 模型
+const { isInvoiceEmailEnabled } = require('./utils/featureFlags');
 const path = require('path'); // 引入 path 模組
 const bcrypt = require('bcrypt');
 const { render } = require('ejs');
 const { initSocket } = require('./socket'); // 引入 socket.js
+const { translate, getDict, resolveLang } = require('./utils/i18n');
 
 const app = express();
 const PORT = process.env.PORT || 3377;
 const server = http.createServer(app);
 const io = initSocket(server); // 初始化 Socket.IO
 
+// CORS：由 .env 的 CORS_ENABLED 開關（true=允許跨域，false/未設=僅同源）
+const corsEnabled = (process.env.CORS_ENABLED || '').toString().trim().toLowerCase() === 'true' || process.env.CORS_ENABLED === '1';
+if (corsEnabled) {
+    const corsOrigin = (process.env.CORS_ORIGIN || '').trim();
+    const corsOptions = corsOrigin
+        ? { origin: corsOrigin.split(',').map(s => s.trim()).filter(Boolean), credentials: true }
+        : { origin: true, credentials: true };
+    app.use(cors(corsOptions));
+}
+
+// Stripe webhook 需 raw body 驗證簽名，必須在 express.json() 之前註冊
+app.post('/web/webhook/stripe', express.raw({ type: 'application/json' }), eventsController.stripeWebhook);
+
 // 中間件
-app.post('/web/webhook/stripe', express.raw({type: 'application/json'}), eventsController.stripeWebhook);
 app.use(express.json()); // 解析 JSON 請求主體
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
@@ -45,16 +64,48 @@ app.set('view engine', 'ejs'); // 設置 EJS 作為模板引擎
 app.set('views', './views'); // 設置視圖文件夾
 
 app.use(express.static(path.join(__dirname, 'public'))); // 提供 public 文件夾中的靜態文件
+// 提供 games/ 內的靜態檔案（掛載到 /games）
+app.use('/games', express.static(path.join(__dirname, 'games')));
+
+// 若 /games 直接打開，希望能顯示 games 的首頁（若 build 的入口不是 index.html，需自行調整檔名）
+app.get('/games', (req, res) => {
+    const fs = require('fs');
+    const indexPath = path.join(__dirname, 'games', 'index.html');
+    if (fs.existsSync(indexPath)) {
+        return res.sendFile(indexPath);
+    }
+    // 沒有 index.html 時，直接回 404（/games/game/xxx 會由 express.static 提供）
+    return res.status(404).send('Not found');
+});
+
+// 讓 /games/game/:slug（沒有尾端 /）能自動導到 /games/game/:slug/
+// 注意：Express 預設會把有尾端 / 的路徑也 match 到 '/games/game/:slug'，
+// 會造成 redirect loop，所以用 regex 只匹配「完全沒有尾端 /」的情況。
+app.get(/^\/games\/game\/([^/]+)$/, (req, res) => {
+    const slug = req.params && req.params[0] ? req.params[0] : '';
+    return res.redirect(301, `/games/game/${slug}/`);
+});
 
 // 設置全局變量
 app.use((req, res, next) => {
     res.locals.success_msg = req.flash('success_msg');
     res.locals.error_msg = req.flash('error_msg');
+    res.locals.TINYMCE_API_KEY = process.env.TINYMCE_API_KEY || '';
+    res.locals.invoiceEmailEnabled = isInvoiceEmailEnabled();
+    if (req.session && req.session.user) {
+        res.locals.userForMenu = req.session.user; // 左側選單依權限顯示用
+    } else {
+        res.locals.userForMenu = null;
+    }
+    const lang = resolveLang(req);
+    res.locals.lang = lang;
+    res.locals.t = (key) => translate(lang, key);
+    res.locals.i18nDict = getDict(lang);
     next();
 });
 
 // 連接到 MongoDB
-mongoose.connect(process.env.mongodb, {
+mongoose.connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 })
@@ -98,7 +149,17 @@ app.post('/login', async (req, res) => {
         }
         const isMatch = await bcrypt.compare(password, user.password);
         if (isMatch) {
-            req.session.user = user; // 設置 session
+            const u = user.toObject ? user.toObject() : user;
+            req.session.user = {
+                _id: u._id,
+                username: u.username,
+                role: u.role || 'user',
+                allowedEvents: (u.allowedEvents || []).map(id => id && id.toString()),
+                eventPermissions: (u.eventPermissions || []).map(p => ({
+                    eventId: p.eventId && p.eventId.toString(),
+                    functions: p.functions || []
+                }))
+            };
             return res.status(200).send(); // 登入成功
         } else {
             return res.status(401).send(); // 密碼不正確
@@ -113,6 +174,19 @@ app.get('/logout', (req, res) => {
     res.redirect('/login'); // 重定向到登入頁面
 });
 
+app.get('/set-lang', (req, res) => {
+    const lang = req.query.lang === 'en' ? 'en' : 'zh';
+    req.session.lang = lang;
+    const referer = req.get('Referer') || '/events/list';
+    try {
+        const u = new URL(referer);
+        u.searchParams.delete('lang');
+        res.redirect(u.toString());
+    } catch (e) {
+        res.redirect(referer);
+    }
+});
+
 // 中間件：檢查是否登入
 const isAuthenticated = (req, res, next) => {
     if (req.session.user) {
@@ -121,17 +195,35 @@ const isAuthenticated = (req, res, next) => {
     res.redirect('/login'); // 未登入，重定向到登入頁
 };
 
+// Email Tracking 路由（需要在其他路由之前，避免衝突）
+const emailTrackingController = require('./controllers/emailTrackingController');
+app.get('/track/email/open/:trackingId', emailTrackingController.trackEmailOpen); // 追蹤郵件打開
+app.get('/track/email/click/:trackingId', emailTrackingController.trackEmailClick); // 追蹤郵件點擊
+app.get('/track/email/stats', emailTrackingController.getEmailTrackingStats); // 獲取追蹤統計
+
+// 公開 API：Lucky Draw 前端取得 game config（不需登入）
+app.get('/events/:eventId/luckydraw-config', luckydrawGameConfigController.getConfigApi);
+
+// 中獎名單頁及解鎖：不需後台登入，以 LuckyDraw Setting 設定的密碼保護
+app.get('/events/:eventId/luckydraw/award', eventsController.renderLuckydrawAwardPage);
+app.post('/events/:eventId/luckydraw/award/unlock', eventsController.unlockLuckydrawAwardPage);
+
 // 設置路由
 app.use('/web', websiteRouter);
-app.use('/events', eventsRouter);
+app.use('/events', isAuthenticated, permission.refreshUserPermissions, (req, res, next) => {
+    const m = req.path.match(/^\/([a-f0-9]{24})(\/|$)/);
+    if (m) req._eventIdFromPath = m[1];
+    next();
+}, permission.requireEventPermission, eventsRouter);
 app.use('/users',isAuthenticated, usersRouter);
 app.use('/awards', awardsRouter);
-app.use('/auth', authRoutes); // 使用 auth 路由
+app.use('/auth', isAuthenticated, permission.refreshUserPermissions, authRoutes); // 需要登入
 app.use('/emailTemplate', emailTemplateRoutes); // 使用 emailTemplate 路由
-app.use('/prizes', prizesRouter); // 使用獎品路由
+app.use('/prizes', isAuthenticated, permission.refreshUserPermissions, permission.requirePrizesPermission, prizesRouter); // 使用獎品路由
 app.use('/votes', votesRouter); // 使用投票路由
 app.use('/api/game', gamesRouter); // 使用遊戲API路由
-app.use('/formConfig', isAuthenticated, formConfigRouter); // 使用表單配置路由（需要認證）
+app.use('/api/ipad', ipadApiRouter); // iPad API
+app.use('/formConfig', isAuthenticated, permission.refreshUserPermissions, permission.requireFormConfigPermission, formConfigRouter); // 使用表單配置路由（需要認證）
 
 app.get('/demo_website',async function (req, res){
     try {

@@ -1,24 +1,31 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <title>Create Points</title>
-</head>
-<body>
 <%- include("../components/header") %>
-<%- include("../components/menu") %>
+<%- include("../components/menu", { eventId: eventId }) %>
+<link rel="stylesheet" href="/admin/assets/css/style.css">
 
-<div class="container mt-5">
-    <h2>Create Points</h2>
-    <form id="createPointForm" action="/events/<%= eventId %>/points" method="POST">
-        <div class="form-group">
-            <label for="point">Points</label>
-            <input type="number" class="form-control" id="point" name="point" required>
+<div id="right-panel" class="right-panel">
+    <%- include("../components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <strong class="card-title"><%= t('points_pages.createHeading') %></strong>
+                        </div>
+                        <div class="card-body">
+                            <form id="createPointForm" action="/events/<%= eventId %>/points" method="POST">
+                                <div class="form-group">
+                                    <label for="point"><%= t('points_pages.pointsLabel') %></label>
+                                    <input type="number" class="form-control" id="point" name="point" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary"><%= t('points_pages.createBtn') %></button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <button type="submit" class="btn btn-primary">Create Point</button>
-    </form>
+    </div>
 </div>
-</body>
-</html>
+
+<%- include("../components/footer") %>

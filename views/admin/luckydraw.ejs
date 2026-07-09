@@ -1,34 +1,6 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-    <meta charset="UTF-8">
-    <title>中獎者列表</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            /* background: rgb(0, 46, 93); */
-            color: white;
-            padding: 20px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            padding: 10px;
-            border: 1px solid #fff;
-            text-align: left;
-        }
-        th {
-            background-color: #4CAF50;
-        }
-    </style>
-</head>
-<body>
-
 <%- include("components/header") %>
 <%- include("components/menu", { eventId: eventId }) %>
+<%- include("components/responsive_layout_style") %>
 
 <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
 <link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
@@ -42,35 +14,86 @@
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <strong class="card-title">中獎者列表 - event : <%= eventId %></strong>
+                            <strong class="card-title"><%= t('luckydraw_winners.title') %> - <%= eventId %></strong>
                         </div>
                         <div class="card-body">
+                            <div class="mb-3">
+                                <a href="/events/<%= eventId %>/luckydraw/list/export" class="btn btn-success">
+                                    <%= t('luckydraw_winners.exportExcel') %>
+                                </a>
+                                <button type="button" id="reset-winner-order" class="btn btn-warning" style="margin-left: 10px;">
+                                    <i class="fa fa-undo"></i> <%= t('luckydraw_winners.resetWinnerNo') %>
+                                </button>
+                                <button id="delete-all-winners" class="btn btn-danger" style="margin-left: 10px;">
+                                    <i class="fa fa-trash"></i> <%= t('luckydraw_winners.deleteAll') %>
+                                </button>
+                                <div class="mt-2 text-muted small">
+                                    maxLuckydrawOrder = <strong id="max-order-display"><%= typeof maxLuckydrawOrder !== 'undefined' ? maxLuckydrawOrder : 0 %></strong>
+                                </div>
+                            </div>
+                            <%
+                              const colDefs = typeof columnDefs !== 'undefined' && columnDefs.length ? columnDefs : [];
+                              const fieldOpts = typeof formFieldOptions !== 'undefined' ? formFieldOptions : [];
+                              const selectedFields = typeof luckydrawListFieldNames !== 'undefined' ? luckydrawListFieldNames : ['name','company','table'];
+                              function winnerDisplayName(w) {
+                                if (!w || !w.cells) return (w && w.name) || 'Winner';
+                                const nameCell = w.cells.find(function(c){ return c.fieldName === 'name'; });
+                                return (nameCell && nameCell.value && nameCell.value !== '–') ? nameCell.value : ('#' + (w.order || ''));
+                              }
+                            %>
+                            <div class="card mb-3 border-info">
+                                <div class="card-header py-2"><strong><%= t('luckydraw_winners.displayFields') %></strong> — <%= t('luckydraw_winners.displayFieldsDesc') %></div>
+                                <div class="card-body py-2">
+                                    <% if (fieldOpts.length === 0) { %>
+                                        <p class="text-muted mb-0 small"><%= t('luckydraw_winners.noFormConfig') %></p>
+                                    <% } else { %>
+                                        <div class="d-flex flex-wrap align-items-center">
+                                            <% fieldOpts.forEach(function(opt) { %>
+                                                <label class="mr-3 mb-1" style="cursor:pointer;">
+                                                    <input type="checkbox" class="luckydraw-field-cb" value="<%= opt.fieldName %>" <%= selectedFields.indexOf(opt.fieldName) >= 0 ? 'checked' : '' %>>
+                                                    <%= opt.label %> <small class="text-muted">(<%= opt.fieldName %>)</small>
+                                                </label>
+                                            <% }); %>
+                                        </div>
+                                        <button type="button" id="btn-save-luckydraw-columns" class="btn btn-sm btn-primary mt-2"><%= t('luckydraw_winners.saveColumns') %></button>
+                                        <span id="luckydraw-columns-msg" class="ml-2 small text-success" style="display:none;"><%= t('luckydraw_winners.columnsSaved') %></span>
+                                    <% } %>
+                                </div>
+                            </div>
                             <table id="winners-table" class="table table-bordered">
                                 <thead>
                                     <tr>
-                                        <th>次序</th>
-                                        <th>姓名</th>
-                                        <th>公司</th>
-                                        <th>桌號</th>
-                                        <th>獎品</th>
-                                        <th>中獎時間</th>
-                                        <th>操作</th>
+                                        <th><%= t('luckydraw_winners.winnerNo') %></th>
+                                        <% colDefs.forEach(function(c) { %>
+                                            <th><%= c.label %></th>
+                                        <% }); %>
+                                        <th><%= t('luckydraw_winners.prize') %></th>
+                                        <th><%= t('luckydraw_winners.wonAt') %></th>
+                                        <th><%= t('common.actions') %></th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <% winners.forEach(winner => { %>
+                                    <% winners.forEach(function(winner) {
+                                         const displayName = winnerDisplayName(winner);
+                                    %>
                                         <tr data-winner-id="<%= winner._id %>">
                                             <td><%= winner.order %></td>
-                                            <td><%= winner.name %></td>
-                                            <td><%= winner.company || '-' %></td>
-                                            <td><%= winner.table || '-' %></td>
-                                            <td><%= winner.prizeName || '隨機獎品' %></td>
-                                            <td><%= winner.wonAt ? new Date(winner.wonAt).toLocaleString('zh-TW') : '未記錄' %></td>
+                                            <% if (winner.cells && winner.cells.length) { %>
+                                                <% winner.cells.forEach(function(cell) { %>
+                                                    <td><%= cell.value %></td>
+                                                <% }); %>
+                                            <% } else { %>
+                                                <td><%= winner.name || '–' %></td>
+                                                <td><%= winner.company || '–' %></td>
+                                                <td><%= winner.table || '–' %></td>
+                                            <% } %>
+                                            <td><%= winner.prizeName || 'Random prize' %></td>
+                                            <td><%= winner.wonAt ? new Date(winner.wonAt).toLocaleString('en-US', { timeZone: 'Asia/Taipei' }) : 'N/A' %></td>
                                             <td>
-                                                <button class="btn btn-danger btn-sm delete-winner" 
+                                                <button class="btn btn-danger btn-sm delete-winner"
                                                         data-winner-id="<%= winner._id %>"
-                                                        data-winner-name="<%= winner.name %>">
-                                                    <i class="fa fa-trash"></i> 刪除
+                                                        data-winner-name="<%= String(displayName).replace(/"/g, '&quot;') %>">
+                                                    <i class="fa fa-trash"></i> <%= t('common.delete') %>
                                                 </button>
                                             </td>
                                         </tr>
@@ -78,7 +101,7 @@
                                 </tbody>
                             </table>
                             <div class="button-container" style="margin-top: 20px; text-align: center;">
-                                <a href="/events/<%= eventId %>" class="btn btn-primary">返回事件列表</a>
+                                <a href="/events/<%= eventId %>" class="btn btn-primary"><%= t('luckydraw_winners.backToEvent') %></a>
                             </div>
                         </div>
                     </div>
@@ -94,48 +117,94 @@
 <script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
 <script src="/admin/assets/js/init/datatables-init.js"></script>
 <script type="text/javascript">
+    const eventId = '<%= eventId %>';
+
     $(document).ready(function() {
-        $('#winners-table').DataTable(); // 初始化 DataTable
-        
-        // 處理刪除中獎者
+        $('#btn-save-luckydraw-columns').on('click', function() {
+            const fieldNames = [];
+            $('.luckydraw-field-cb:checked').each(function() { fieldNames.push($(this).val()); });
+            if (fieldNames.length === 0) {
+                alert('<%= t("luckydraw_winners.selectAtLeastOne") %>');
+                return;
+            }
+            const btn = $(this);
+            btn.prop('disabled', true);
+            $.ajax({
+                url: '/events/' + eventId + '/luckydraw/list-columns',
+                type: 'PATCH',
+                contentType: 'application/json',
+                data: JSON.stringify({ fieldNames: fieldNames }),
+                success: function() {
+                    $('#luckydraw-columns-msg').show();
+                    setTimeout(function() { location.reload(); }, 800);
+                },
+                error: function(xhr) {
+                    let msg = '<%= t("luckydraw_winners.saveFailed") %>';
+                    try { var j = JSON.parse(xhr.responseText); if (j.message) msg = j.message; } catch(e) {}
+                    alert(msg);
+                },
+                complete: function() { btn.prop('disabled', false); }
+            });
+        });
+
         $(document).on('click', '.delete-winner', function() {
             const winnerId = $(this).data('winner-id');
             const winnerName = $(this).data('winner-name');
-            
-            if (confirm(`確定要刪除 ${winnerName} 的中獎記錄嗎？`)) {
-                // 發送刪除請求
+            if (confirm(t('luckydraw_winners.confirmDelete').replace('{name}', winnerName))) {
                 $.ajax({
                     url: `/events/<%= eventId %>/luckydraw`,
                     type: 'DELETE',
                     contentType: 'application/json',
                     data: JSON.stringify({ _id: winnerId }),
-                    success: function(response) {
-                        // 刪除成功，移除表格行
-                        $(`tr[data-winner-id="${winnerId}"]`).fadeOut(300, function() {
-                            $(this).remove();
-                            // 重新計算次序
-                            updateOrderNumbers();
-                        });
-                        
-                        // 顯示成功消息
-                        alert('中獎記錄已成功刪除！');
+                    success: function() {
+                        $(`tr[data-winner-id="${winnerId}"]`).fadeOut(300, function() { $(this).remove(); });
+                        alert('<%= t("luckydraw_winners.deleteSuccess") %>');
                     },
-                    error: function(xhr, status, error) {
-                        console.error('刪除失敗:', error);
-                        alert('刪除失敗，請稍後再試。');
+                    error: function() {
+                        alert('<%= t("luckydraw_winners.deleteFailed") %>');
                     }
                 });
             }
         });
-        
-        // 重新計算表格行的次序
-        function updateOrderNumbers() {
-            $('#winners-table tbody tr').each(function(index) {
-                $(this).find('td:first').text(index + 1);
+
+        $('#reset-winner-order').on('click', function() {
+            if (!confirm(`<%= t("luckydraw_winners.confirmResetOrder") %>`)) return;
+            const btn = $(this);
+            btn.prop('disabled', true);
+            $.ajax({
+                url: `/events/${eventId}/luckydraw/reset-winner-order`,
+                type: 'POST',
+                contentType: 'application/json',
+                success: function(data) {
+                    $('#max-order-display').text(data.maxLuckydrawOrder);
+                    alert(t('luckydraw_winners.resetSuccess')
+                        .replace('{max}', data.maxLuckydrawOrder)
+                        .replace('{next}', data.nextWinnerOrder));
+                },
+                error: function(xhr) {
+                    let msg = '<%= t("luckydraw_winners.saveFailed") %>';
+                    try { const j = JSON.parse(xhr.responseText); if (j.message) msg = j.message; } catch(e) {}
+                    alert(msg);
+                },
+                complete: function() { btn.prop('disabled', false); }
             });
-        }
+        });
+
+        $('#delete-all-winners').on('click', function() {
+            if (!confirm(`<%= t("luckydraw_winners.confirmDeleteAll") %>`)) return;
+            if (!confirm(`<%= t("luckydraw_winners.confirmDeleteAllFinal") %>`)) return;
+            $.ajax({
+                url: `/events/<%= eventId %>/luckydraw/all`,
+                type: 'DELETE',
+                success: function() {
+                    alert('<%= t("luckydraw_winners.deleteAllSuccess") %>');
+                    location.reload();
+                },
+                error: function(xhr) {
+                    const errorMsg = xhr.responseJSON?.message || xhr.responseText || '';
+                    alert('<%= t("luckydraw_winners.deleteAllFailed") %>' + errorMsg);
+                }
+            });
+        });
     });
 </script>
-
-</body>
-</html>
