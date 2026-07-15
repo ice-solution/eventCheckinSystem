@@ -4590,12 +4590,73 @@ exports.exportTransactionRecords = async (req, res) => {
     }
 };
 
+function normalizeReportEmail(email) {
+    return email ? String(email).trim().toLowerCase() : '';
+}
+
+function formatReportDateTime(date) {
+    if (!date) return '';
+    return new Date(date).toLocaleString('zh-HK', {
+        timeZone: 'Asia/Hong_Kong',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+    });
+}
+
+/** 依 email 配對該用戶最相關的 transaction（paid/free 優先，再取最新） */
+function pickTransactionForUser(email, transactionsByEmail) {
+    const key = normalizeReportEmail(email);
+    if (!key) return null;
+    const list = transactionsByEmail.get(key);
+    if (!list || !list.length) return null;
+    const paidOrFree = list.find((tx) => tx.status === 'paid' || tx.status === 'free');
+    return paidOrFree || list[0];
+}
+
+function buildTransactionsByEmail(transactions) {
+    const map = new Map();
+    transactions.forEach((tx) => {
+        const key = normalizeReportEmail(tx.userEmail);
+        if (!key) return;
+        if (!map.has(key)) map.set(key, []);
+        map.get(key).push(tx);
+    });
+    return map;
+}
+
+function resolveUserTicketInfo(userObj, transaction) {
+    const ticketTitle = (transaction && transaction.ticketTitle)
+        || userObj.ticketTitle
+        || '';
+    const ticketPrice = transaction && transaction.ticketPrice != null
+        ? transaction.ticketPrice
+        : (userObj.ticketPrice != null ? userObj.ticketPrice : '');
+    return {
+        ticketTitle,
+        ticketPrice,
+        transactionId: transaction && transaction._id ? String(transaction._id) : '',
+        transactionStatus: transaction && transaction.status ? transaction.status : '',
+        paymentGateway: transaction && transaction.paymentGateway ? transaction.paymentGateway : '',
+        transactionDate: transaction && transaction.createdAt ? formatReportDateTime(transaction.createdAt) : '',
+    };
+}
+
 exports.outputReport = async (req, res) => {
     const { eventId } = req.params;
     try {
         const event = await Event.findById(eventId);
         if (!event) return res.status(404).send('Event not found');
         const users = event.users || [];
+
+        const transactions = await Transaction.find({ eventId })
+            .sort({ updatedAt: -1 })
+            .lean();
+        const transactionsByEmail = buildTransactionsByEmail(transactions);
 
         const FormConfig = require('../model/FormConfig');
         let formConfig = await FormConfig.findOne({ eventId });
@@ -4634,6 +4695,20 @@ exports.outputReport = async (req, res) => {
             });
         }
 
+        // Ticket / Transaction（以 email 配對 Transaction，$0 票券可從 user.ticketTitle 補充）
+        const ticketColumns = [
+            { header: 'Ticket Title (票券)', key: 'ticketTitle', width: 25 },
+            { header: 'Ticket Price HKD (票價)', key: 'ticketPrice', width: 14 },
+            { header: 'Transaction ID', key: 'transactionId', width: 26 },
+            { header: 'Transaction Status (交易狀態)', key: 'transactionStatus', width: 16 },
+            { header: 'Payment Gateway (付款閘道)', key: 'paymentGateway', width: 16 },
+            { header: 'Transaction Date (交易日期)', key: 'transactionDate', width: 22 },
+        ];
+        ticketColumns.forEach((col) => {
+            columnDefs.push(col);
+            fieldKeys.push(col.key);
+        });
+
         // Append CheckInAt and 已簽到 at the end
         columnDefs.push({ header: 'CheckInAt', key: 'checkInAt', width: 15 });
         columnDefs.push({ header: '已簽到', key: 'isCheckIn', width: 10 });
@@ -4656,6 +4731,8 @@ exports.outputReport = async (req, res) => {
 
         users.forEach(user => {
             const userObj = user.toObject ? user.toObject() : user;
+            const transaction = pickTransactionForUser(userObj.email, transactionsByEmail);
+            const ticketInfo = resolveUserTicketInfo(userObj, transaction);
             const row = {};
             fieldKeys.forEach(key => {
                 if (key === '_id') {
@@ -4664,6 +4741,8 @@ exports.outputReport = async (req, res) => {
                     row[key] = checkInAtFormat(userObj.checkInAt);
                 } else if (key === 'isCheckIn') {
                     row[key] = userObj.isCheckIn ? '✓' : '';
+                } else if (Object.prototype.hasOwnProperty.call(ticketInfo, key)) {
+                    row[key] = ticketInfo[key] !== undefined && ticketInfo[key] !== null ? String(ticketInfo[key]) : '';
                 } else {
                     const val = userObj[key];
                     row[key] = val !== undefined && val !== null ? (Array.isArray(val) ? val.join(', ') : String(val)) : '';
