@@ -124,7 +124,7 @@
                             formConfig.sections.forEach(section => { %>
                                 <% if (section.visible && section.fields) {
                                     section.fields.forEach(field => { %>
-                                        <% if (field.visible && fixedFieldNames.indexOf(field.fieldName) === -1) {
+                                        <% if (field.visible && field.type !== 'display' && fixedFieldNames.indexOf(field.fieldName) === -1) {
                                           const labelEn = (field.label && field.label.en && field.label.en.trim()) ? field.label.en.trim() : field.fieldName;
                                         %>
                                             <div class="field-item" data-type="text" data-content="{{user.<%= field.fieldName %>}}">

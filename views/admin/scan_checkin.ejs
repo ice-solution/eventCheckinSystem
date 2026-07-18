@@ -152,7 +152,7 @@
                             <% formConfig.sections.forEach(section => { %>
                                 <% if (section.visible && section.fields) { %>
                                     <% section.fields.forEach(field => { %>
-                                        <% if (field.visible) { %>
+                                        <% if (field.visible && field.type !== 'display') { %>
                                             <th>
                                                 <% 
                                                 let displayLabel = '';
@@ -192,7 +192,7 @@
                             formConfig.sections.forEach(section => {
                                 if (section.visible && section.fields) {
                                     section.fields.forEach(field => {
-                                        if (field.visible) {
+                                        if (field.visible && field.type !== 'display') {
                                             params.push("'" + (user[field.fieldName] || '').toString().replace(/'/g, "\\'") + "'");
                                         }
                                     });
@@ -208,7 +208,7 @@
                                 <% formConfig.sections.forEach(section => { %>
                                     <% if (section.visible && section.fields) { %>
                                         <% section.fields.forEach(field => { %>
-                                            <% if (field.visible) { %>
+                                            <% if (field.visible && field.type !== 'display') { %>
                                                 <td><%= user[field.fieldName] || '-' %></td>
                                             <% } %>
                                         <% }); %>
@@ -313,7 +313,7 @@
             formConfig.sections.forEach(section => {
                 if (section.visible && section.fields) {
                     section.fields.forEach(field => {
-                        if (field.visible) {
+                        if (field.visible && field.type !== 'display') {
                             fields.push(field);
                         }
                     });

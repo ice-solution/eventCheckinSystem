@@ -33,7 +33,7 @@
                                         {{user.name}}, {{user.email}}, {{user.company}}, {{user.phone}}, {{user.phone_code}}, {{user.table}}, {{user.role}}<br>
                                         <% if (formConfig && formConfig.sections) {
                                             const formFields = [];
-                                            formConfig.sections.forEach(s => { if (s.visible && s.fields) s.fields.forEach(f => { if (f.visible) formFields.push('{{user.' + f.fieldName + '}}'); }); });
+                                            formConfig.sections.forEach(s => { if (s.visible && s.fields) s.fields.forEach(f => { if (f.visible && f.type !== 'display') formFields.push('{{user.' + f.fieldName + '}}'); }); });
                                             if (formFields.length) { %><br><%= formFields.join(', ') %><% } %>
                                         <% } %>
                                         <br>{{event.name}}, {{loginUrl}}, {{confirmUrl}}, {{qrCodeUrl}}

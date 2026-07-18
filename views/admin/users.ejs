@@ -1278,7 +1278,7 @@
                                                         <% if (section.visible && section.fields) { %>
                                                             <% const cond1Fields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
                                                             <% cond1Fields.forEach(field => { %>
-                                                                <% if (field.visible) { %>
+                                                                <% if (field.visible && field.type !== 'display') { %>
                                                                     <% let l1 = (typeof field.label === 'string') ? field.label : (field.label && (field.label[lang] || field.label.zh || field.label.en)) ? (field.label[lang] || field.label.zh || field.label.en) : field.fieldName; %>
                                                                     <option value="<%= field.fieldName %>"><%= l1 %> (<%= field.fieldName %>)</option>
                                                                 <% } %>
@@ -1315,7 +1315,7 @@
                                                         <% if (section.visible && section.fields) { %>
                                                             <% const cond2Fields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
                                                             <% cond2Fields.forEach(field => { %>
-                                                                <% if (field.visible) { %>
+                                                                <% if (field.visible && field.type !== 'display') { %>
                                                                     <% let l2 = (typeof field.label === 'string') ? field.label : (field.label && (field.label[lang] || field.label.zh || field.label.en)) ? (field.label[lang] || field.label.zh || field.label.en) : field.fieldName; %>
                                                                     <option value="<%= field.fieldName %>"><%= l2 %> (<%= field.fieldName %>)</option>
                                                                 <% } %>
@@ -1376,7 +1376,7 @@
                                                 <% if (section.visible && section.fields) { %>
                                                     <% const sortedFields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
                                                     <% sortedFields.forEach(field => { %>
-                                                        <% if (field.visible) { %>
+                                                        <% if (field.visible && field.type !== 'display') { %>
                                                             <th data-field-name="<%= field.fieldName %>">
                                                                 <% 
                                                                 let displayLabel = '';
@@ -1423,7 +1423,7 @@
                                                     <% if (section.visible && section.fields) { %>
                                                         <% const sortedFields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
                                                         <% sortedFields.forEach(field => { %>
-                                                            <% if (field.visible) { %>
+                                                            <% if (field.visible && field.type !== 'display') { %>
                                                         <td data-field-name="<%= field.fieldName %>"><%= userRow[field.fieldName] || '-' %></td>
                                                             <% } %>
                                                         <% }); %>
@@ -1787,7 +1787,7 @@ const _US = {
                 <% if (section.visible && section.fields) { %>
                     <% const jsSortedFields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
                     <% jsSortedFields.forEach(field => { %>
-                        <% if (field.visible) { %>
+                        <% if (field.visible && field.type !== 'display') { %>
                             searchableFieldNames.push('<%= field.fieldName %>');
                         <% } %>
                     <% }); %>
@@ -3029,7 +3029,7 @@ const _US = {
                             <% if (section.visible && section.fields) { %>
                                 <% const ajaxSortedFields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
                                 <% ajaxSortedFields.forEach(field => { %>
-                                    <% if (field.visible) { %>
+                                    <% if (field.visible && field.type !== 'display') { %>
                                         fieldNames.push('<%= field.fieldName %>');
                                         newRow.push(userData['<%= field.fieldName %>'] || '-');
                                     <% } %>
