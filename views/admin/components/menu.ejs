@@ -30,6 +30,11 @@
                     <a href="/events/<%=eventId%>" data-tooltip="<%= t('menu.rsvp') %>"> <i class="menu-icon far fa-square-check"></i><%= t('menu.rsvp') %> </a>
                 </li>
                 <% } %>
+                <% if (can('stationCheckin')) { %>
+                <li>
+                    <a href="/events/<%=eventId%>/station-checkin" data-tooltip="<%= t('menu.stationCheckin') %>"> <i class="menu-icon fa fa-map-marker"></i><%= t('menu.stationCheckin') %></a>
+                </li>
+                <% } %>
                 <%# HIDDEN: editEventName — moved to inline icon in users page card-title %>
                 <% if (false) { %>
                 <li>

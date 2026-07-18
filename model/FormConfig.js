@@ -11,7 +11,7 @@ const formFieldSchema = new mongoose.Schema({
     },
     type: { 
         type: String, 
-        enum: ['text', 'email', 'select', 'textarea', 'tel', 'checkbox', 'radio'], 
+        enum: ['text', 'email', 'select', 'textarea', 'tel', 'checkbox', 'radio', 'display'], 
         required: true 
     },
     required: { 
@@ -136,6 +136,25 @@ const formConfigSchema = new mongoose.Schema({
         content: {
             zh: { type: String, default: '' },
             en: { type: String, default: '' }
+        }
+    },
+    // 報名成功頁 Thank You 文案
+    thankYou: {
+        title: {
+            zh: { type: String, default: '感謝你參加！' },
+            en: { type: String, default: 'Thank you for participating!' }
+        },
+        message: {
+            zh: { type: String, default: '我們會透過 Email 把資訊發送給你。' },
+            en: { type: String, default: 'We will send the information to you via Email.' }
+        },
+        purchaseTitle: {
+            zh: { type: String, default: '感謝您的購票！' },
+            en: { type: String, default: 'Thank you for your purchase!' }
+        },
+        purchaseMessage: {
+            zh: { type: String, default: '您的付款已成功，以下是您的交易紀錄：' },
+            en: { type: String, default: 'Your payment was successful. Here are your transaction details:' }
         }
     },
     // 付費票券區塊文案與分類按鈕（Register 頁）

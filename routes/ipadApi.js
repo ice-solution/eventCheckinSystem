@@ -9,6 +9,7 @@ const { authenticateJwt, getJwtSecret } = require('../utils/jwtAuth');
 const permission = require('../middleware/permission');
 const formConfigController = require('../controllers/formConfigController');
 const eventsController = require('../controllers/eventsController');
+const stationCheckinController = require('../controllers/stationCheckinController');
 
 const router = express.Router();
 
@@ -651,6 +652,90 @@ function replaceBadgeVariables(text, data) {
 
   return text;
 }
+
+// ── Station Check-in（分站簽到）────────────────────────────────
+// 6a) 取得活動下所有分站
+router.get('/events/:eventId/stations', authenticateJwt, async (req, res) => {
+  const { eventId } = req.params;
+  try {
+    const event = await Event.findById(eventId).select({ owner: 1, checkInStations: 1, stationCheckIns: 1 });
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+    if (!(await permission.assertJwtEventAccess(req, res, event))) return;
+    return stationCheckinController.listStations(req, res);
+  } catch (err) {
+    console.error('iPad API list stations error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// 6b) 取得某分站簽到記錄
+router.get('/events/:eventId/stations/:stationId/checkins', authenticateJwt, async (req, res) => {
+  const { eventId } = req.params;
+  try {
+    const event = await Event.findById(eventId).select({ owner: 1 });
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+    if (!(await permission.assertJwtEventAccess(req, res, event))) return;
+    return stationCheckinController.listStationCheckIns(req, res);
+  } catch (err) {
+    console.error('iPad API list station checkins error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// 6c) 分站簽到（需已完成進場 isCheckIn；同一站同一人只能一次）
+router.post('/events/:eventId/stations/:stationId/checkin', authenticateJwt, async (req, res) => {
+  const { eventId } = req.params;
+  try {
+    const event = await Event.findById(eventId).select({ owner: 1 });
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+    if (!(await permission.assertJwtEventAccess(req, res, event))) return;
+    return stationCheckinController.checkInToStation(req, res);
+  } catch (err) {
+    console.error('iPad API station checkin error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// 6c2) 取消分站簽到
+router.delete('/events/:eventId/stations/:stationId/checkin/:userId', authenticateJwt, async (req, res) => {
+  const { eventId } = req.params;
+  try {
+    const event = await Event.findById(eventId).select({ owner: 1 });
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+    if (!(await permission.assertJwtEventAccess(req, res, event))) return;
+    return stationCheckinController.uncheckStationCheckIn(req, res);
+  } catch (err) {
+    console.error('iPad API station uncheck error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.post('/events/:eventId/stations/:stationId/uncheck', authenticateJwt, async (req, res) => {
+  const { eventId } = req.params;
+  try {
+    const event = await Event.findById(eventId).select({ owner: 1 });
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+    if (!(await permission.assertJwtEventAccess(req, res, event))) return;
+    return stationCheckinController.uncheckStationCheckIn(req, res);
+  } catch (err) {
+    console.error('iPad API station uncheck error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// 6d) 取得某用戶在各分站的簽到狀態
+router.get('/events/:eventId/users/:userId/station-checkins', authenticateJwt, async (req, res) => {
+  const { eventId } = req.params;
+  try {
+    const event = await Event.findById(eventId).select({ owner: 1 });
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+    if (!(await permission.assertJwtEventAccess(req, res, event))) return;
+    return stationCheckinController.getUserStationCheckIns(req, res);
+  } catch (err) {
+    console.error('iPad API user station checkins error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
 
 module.exports = router;
 

@@ -79,8 +79,13 @@ const migrateFormConfig = (formConfig) => {
                 if (migratedField.visible === undefined) {
                     migratedField.visible = migratedField.display !== false;
                 }
+                // Display 僅輸出文字，不可設為必填、不需 options
+                if (migratedField.type === 'display') {
+                    migratedField.required = false;
+                    delete migratedField.options;
+                }
                 
-                if (field.options) {
+                if (field.options && migratedField.type !== 'display') {
                     migratedField.options = field.options.map(option => {
                         const migratedOption = { ...option };
                         
@@ -204,6 +209,34 @@ function applyFormConfigMetaDefaults(migratedConfig) {
         }
     }
 
+    // 確保有 thankYou 設定
+    const defaultThankYou = {
+        title: { zh: '感謝你參加！', en: 'Thank you for participating!' },
+        message: { zh: '我們會透過 Email 把資訊發送給你。', en: 'We will send the information to you via Email.' },
+        purchaseTitle: { zh: '感謝您的購票！', en: 'Thank you for your purchase!' },
+        purchaseMessage: {
+            zh: '您的付款已成功，以下是您的交易紀錄：',
+            en: 'Your payment was successful. Here are your transaction details:'
+        }
+    };
+    if (!migratedConfig.thankYou || typeof migratedConfig.thankYou !== 'object') {
+        migratedConfig.thankYou = {
+            title: { ...defaultThankYou.title },
+            message: { ...defaultThankYou.message },
+            purchaseTitle: { ...defaultThankYou.purchaseTitle },
+            purchaseMessage: { ...defaultThankYou.purchaseMessage }
+        };
+    } else {
+        ['title', 'message', 'purchaseTitle', 'purchaseMessage'].forEach((key) => {
+            if (!migratedConfig.thankYou[key] || typeof migratedConfig.thankYou[key] !== 'object') {
+                migratedConfig.thankYou[key] = { ...defaultThankYou[key] };
+            } else {
+                migratedConfig.thankYou[key].zh = migratedConfig.thankYou[key].zh || defaultThankYou[key].zh;
+                migratedConfig.thankYou[key].en = migratedConfig.thankYou[key].en || defaultThankYou[key].en;
+            }
+        });
+    }
+
     migratedConfig.paymentTicketUi = normalizePaymentTicketUi(migratedConfig.paymentTicketUi);
     
     return migratedConfig;
@@ -242,6 +275,15 @@ exports.getDefaultFormConfig = () => ({
             en: 'I have read and agree to the agreement above.'
         },
         content: { zh: '', en: '' }
+    },
+    thankYou: {
+        title: { zh: '感謝你參加！', en: 'Thank you for participating!' },
+        message: { zh: '我們會透過 Email 把資訊發送給你。', en: 'We will send the information to you via Email.' },
+        purchaseTitle: { zh: '感謝您的購票！', en: 'Thank you for your purchase!' },
+        purchaseMessage: {
+            zh: '您的付款已成功，以下是您的交易紀錄：',
+            en: 'Your payment was successful. Here are your transaction details:'
+        }
     },
     paymentTicketUi: normalizePaymentTicketUi(),
     sections: [
@@ -499,7 +541,7 @@ exports.getFormConfig = async (req, res) => {
 exports.updateFormConfig = async (req, res) => {
     try {
         const { eventId } = req.params;
-        const { sections, defaultLanguage, languageSwitcherEnabled, registerPageEnabled, registerClosedMessage, terms, agreement, eventDisplayName, registerSubHeader, registerSubtitle, paymentTicketUi } = req.body;
+        const { sections, defaultLanguage, languageSwitcherEnabled, registerPageEnabled, registerClosedMessage, terms, agreement, thankYou, eventDisplayName, registerSubHeader, registerSubtitle, paymentTicketUi } = req.body;
         
         // 驗證事件是否存在
         const event = await Event.findById(eventId);
@@ -548,6 +590,10 @@ exports.updateFormConfig = async (req, res) => {
                 const migrated = migrateFormConfig({ sections: formConfig.sections, agreement });
                 formConfig.agreement = migrated.agreement;
             }
+            if (thankYou && typeof thankYou === 'object') {
+                const migrated = migrateFormConfig({ sections: formConfig.sections, thankYou });
+                formConfig.thankYou = migrated.thankYou;
+            }
             if (paymentTicketUi && typeof paymentTicketUi === 'object') {
                 formConfig.paymentTicketUi = normalizePaymentTicketUi(paymentTicketUi);
             }
@@ -577,6 +623,9 @@ exports.updateFormConfig = async (req, res) => {
                 agreement: agreement && typeof agreement === 'object'
                     ? migrateFormConfig({ sections: (sections || defaultConfig.sections), agreement }).agreement
                     : defaultConfig.agreement,
+                thankYou: thankYou && typeof thankYou === 'object'
+                    ? migrateFormConfig({ sections: (sections || defaultConfig.sections), thankYou }).thankYou
+                    : defaultConfig.thankYou,
                 paymentTicketUi: paymentTicketUi && typeof paymentTicketUi === 'object'
                     ? normalizePaymentTicketUi(paymentTicketUi)
                     : defaultConfig.paymentTicketUi

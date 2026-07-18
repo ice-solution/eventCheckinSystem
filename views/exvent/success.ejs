@@ -111,9 +111,20 @@
         </div>
 
         <div class="success-content">
+            <% 
+                const ty = (typeof formConfig !== 'undefined' && formConfig && formConfig.thankYou) ? formConfig.thankYou : {};
+                const freeTitleZh = (ty.title && ty.title.zh) ? ty.title.zh : '感謝你參加！';
+                const freeTitleEn = (ty.title && ty.title.en) ? ty.title.en : 'Thank you for participating!';
+                const freeMsgZh = (ty.message && ty.message.zh) ? ty.message.zh : '我們會透過 Email 把資訊發送給你。';
+                const freeMsgEn = (ty.message && ty.message.en) ? ty.message.en : 'We will send the information to you via Email.';
+                const purchaseTitleZh = (ty.purchaseTitle && ty.purchaseTitle.zh) ? ty.purchaseTitle.zh : '感謝您的購票！';
+                const purchaseTitleEn = (ty.purchaseTitle && ty.purchaseTitle.en) ? ty.purchaseTitle.en : 'Thank you for your purchase!';
+                const purchaseMsgZh = (ty.purchaseMessage && ty.purchaseMessage.zh) ? ty.purchaseMessage.zh : '您的付款已成功，以下是您的交易紀錄：';
+                const purchaseMsgEn = (ty.purchaseMessage && ty.purchaseMessage.en) ? ty.purchaseMessage.en : 'Your payment was successful. Here are your transaction details:';
+            %>
             <% if (transaction) { %>
-                <h5 id="thankYouTitle" data-zh="感謝您的購票！" data-en="Thank you for your purchase!">感謝您的購票！</h5>
-                <p id="emailMessage" data-zh="您的付款已成功，以下是您的交易紀錄：" data-en="Your payment was successful. Here are your transaction details:">您的付款已成功，以下是您的交易紀錄：</p>
+                <h5 id="thankYouTitle" data-zh="<%= purchaseTitleZh %>" data-en="<%= purchaseTitleEn %>"><%= purchaseTitleZh %></h5>
+                <p id="emailMessage" data-zh="<%= purchaseMsgZh %>" data-en="<%= purchaseMsgEn %>"><%= purchaseMsgZh %></p>
                 
                 <div class="transaction-details">
                     <h5 id="transactionTitle" data-zh="交易詳情" data-en="Transaction Details">交易詳情</h5>
@@ -135,8 +146,8 @@
                     </div>
                 </div>
             <% } else { %>
-                <h5 id="thankYouTitle" data-zh="感謝你參加！" data-en="Thank you for participating!">感謝你參加！</h5>
-                <p id="emailMessage" data-zh="我們會透過 Email 把資訊發送給你。" data-en="We will send the information to you via Email.">我們會透過 Email 把資訊發送給你。</p>
+                <h5 id="thankYouTitle" data-zh="<%= freeTitleZh %>" data-en="<%= freeTitleEn %>"><%= freeTitleZh %></h5>
+                <p id="emailMessage" data-zh="<%= freeMsgZh %>" data-en="<%= freeMsgEn %>"><%= freeMsgZh %></p>
             <% } %>
 
             <div class="btn-container">

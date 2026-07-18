@@ -3563,7 +3563,7 @@ function collectFormConfigFields(formConfig) {
     for (const sec of formConfig.sections) {
         if (!sec || !sec.fields || sec.visible === false) continue;
         for (const f of sec.fields) {
-            if (!f || f.visible === false || !f.fieldName) continue;
+            if (!f || f.visible === false || !f.fieldName || f.type === 'display') continue;
             if (seen.has(f.fieldName)) continue;
             seen.add(f.fieldName);
             const label = (f.label && f.label.zh) || (f.label && f.label.en) || f.fieldName;
@@ -4672,7 +4672,7 @@ exports.outputReport = async (req, res) => {
                 if (!section.visible || !section.fields) return;
                 const fields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0));
                 fields.forEach(field => {
-                    if (!field.visible) return;
+                    if (!field.visible || field.type === 'display') return;
                     const header = (field.label && (field.label[lang] || field.label.zh || field.label.en)) || field.fieldName || '';
                     columnDefs.push({ header, key: field.fieldName, width: Math.min(25, Math.max(10, (header && header.length) || 10)) });
                     fieldKeys.push(field.fieldName);

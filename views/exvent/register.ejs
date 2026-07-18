@@ -161,6 +161,19 @@
             line-height: 1.5;
             padding-left: 0;
         }
+        .form-row.form-row-display {
+            align-items: flex-start;
+        }
+        .form-row.form-row-display .form-display-text {
+            flex: 1;
+            max-width: none;
+            color: #2c3e50;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            padding: 4px 0;
+        }
         .required {
             color: #e74c3c;
             margin-left: 3px;
@@ -477,6 +490,16 @@
                                         <% var _selectHasOther = (field.type === 'select' && field.options && field.options.some(function (o) { return o && o.isOther; })); %>
                                         <% var _fieldControlId = (field.type === 'select' && _selectHasOther) ? (field.fieldName + '_sel') : field.fieldName; %>
                                         <% var _isChoiceField = field.type === 'radio' || field.type === 'checkbox'; %>
+                                        <% var _isDisplayField = field.type === 'display'; %>
+                                        <% if (_isDisplayField) { %>
+                                        <div class="form-row form-row-display">
+                                            <div class="form-display-text field-display-text"
+                                                 data-zh="<%= field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '') %>"
+                                                 data-en="<%= field.label && field.label.en ? field.label.en : '' %>">
+                                                <%= field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '') %>
+                                            </div>
+                                        </div>
+                                        <% } else { %>
                                         <div class="form-row<%= _isChoiceField ? ' form-row-stacked' : '' %>">
                                             <label class="form-label field-label" for="<%= _fieldControlId %>" 
                                                    data-zh="<%= field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '') %>" 
@@ -616,6 +639,7 @@
                                                 <% } %>
                                             </div>
                                         </div>
+                                        <% } %>
                                     <% } %>
                                 <% }); %>
                             <% } %>
@@ -1139,6 +1163,18 @@
                     } else {
                         $label.text(enText);
                     }
+                }
+            });
+
+            // Display 欄位（純文字）
+            $('.field-display-text').each(function() {
+                const $el = $(this);
+                const zhText = $el.data('zh');
+                const enText = $el.data('en');
+                if (currentLanguage === 'zh' && zhText != null && zhText !== '') {
+                    $el.text(zhText);
+                } else if (currentLanguage === 'en' && enText != null && enText !== '') {
+                    $el.text(enText);
                 }
             });
 

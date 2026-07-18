@@ -78,6 +78,26 @@ const treasureHuntItemSchema = new mongoose.Schema({
     modified_at: { type: Date, default: Date.now } // 修改時間
 });
 
+/** 分站簽到（Station Check-in）站點定義 */
+const checkInStationSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    description: { type: String, default: '' },
+    enabled: { type: Boolean, default: true },
+    order: { type: Number, default: 0 },
+    created_at: { type: Date, default: Date.now },
+    modified_at: { type: Date, default: Date.now },
+});
+
+/** 分站簽到記錄：同一 user + station 只允許一次 */
+const stationCheckInSchema = new mongoose.Schema({
+    stationId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    userName: { type: String, default: '' },
+    userEmail: { type: String, default: '' },
+    checkedInAt: { type: Date, default: Date.now },
+    checkedInBy: { type: String, default: '' }, // 操作者（後台帳號或 ipad）
+});
+
 const eventSchema = new mongoose.Schema({
     name: { type: String, required: true }, // 事件名稱
     from: { type: Date, required: true },   // 事件開始時間
@@ -100,6 +120,8 @@ const eventSchema = new mongoose.Schema({
     gameIds: [{ type: String }], // 新增 gameIds 陣列，存儲該事件開放的遊戲ID
     scanPointUsers: [scanPointUserSchema], // 掃瞄加分用戶列表
     treasureHuntItems: [treasureHuntItemSchema], // Treasure Hunt 項目列表
+    checkInStations: [checkInStationSchema], // 分站簽到站點
+    stationCheckIns: [stationCheckInSchema], // 分站簽到記錄
     // 電郵發送設置
     emailSettings: {
         sendWelcomeEmail: { type: Boolean, default: false }, // 是否立即發送歡迎電郵

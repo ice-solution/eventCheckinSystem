@@ -1,0 +1,445 @@
+const Event = require('../model/Event');
+const mongoose = require('mongoose');
+
+function operatorName(req) {
+    if (req.session && req.session.user && req.session.user.username) {
+        return req.session.user.username;
+    }
+    if (req.jwt && req.jwt.username) {
+        return `ipad:${req.jwt.username}`;
+    }
+    return '';
+}
+
+function findStation(event, stationId) {
+    if (!event.checkInStations) return null;
+    return event.checkInStations.id(stationId);
+}
+
+function findUser(event, userId) {
+    if (!event.users) return null;
+    return event.users.id(userId);
+}
+
+function alreadyCheckedIn(event, stationId, userId) {
+    const sid = String(stationId);
+    const uid = String(userId);
+    return (event.stationCheckIns || []).some(
+        (r) => String(r.stationId) === sid && String(r.userId) === uid
+    );
+}
+
+function serializeStation(station, checkInCount = 0) {
+    return {
+        _id: station._id,
+        name: station.name,
+        description: station.description || '',
+        enabled: station.enabled !== false,
+        order: station.order || 0,
+        created_at: station.created_at,
+        modified_at: station.modified_at,
+        checkInCount,
+    };
+}
+
+function countByStation(event) {
+    const map = {};
+    (event.stationCheckIns || []).forEach((r) => {
+        const key = String(r.stationId);
+        map[key] = (map[key] || 0) + 1;
+    });
+    return map;
+}
+
+/** 後台：分站簽到管理頁 */
+exports.renderStationCheckinPage = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).send('Event not found');
+
+        const counts = countByStation(event);
+        const stations = (event.checkInStations || [])
+            .slice()
+            .sort((a, b) => (a.order || 0) - (b.order || 0) || String(a.name).localeCompare(String(b.name)))
+            .map((s) => serializeStation(s, counts[String(s._id)] || 0));
+
+        res.render('admin/station_checkin', {
+            event,
+            eventId,
+            stations,
+        });
+    } catch (err) {
+        console.error('renderStationCheckinPage:', err);
+        res.status(500).send('Server error');
+    }
+};
+
+/** 後台：單一站點簽到頁（手動 + 掃 QR） */
+exports.renderStationDetailPage = async (req, res) => {
+    const { eventId, stationId } = req.params;
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).send('Event not found');
+        const station = findStation(event, stationId);
+        if (!station) return res.status(404).send('Station not found');
+
+        const records = (event.stationCheckIns || [])
+            .filter((r) => String(r.stationId) === String(stationId))
+            .slice()
+            .sort((a, b) => new Date(b.checkedInAt) - new Date(a.checkedInAt));
+
+        const checkedInUserIds = new Set(records.map((r) => String(r.userId)));
+        const eligibleUsers = (event.users || [])
+            .filter((u) => u.isCheckIn && !checkedInUserIds.has(String(u._id)))
+            .map((u) => ({
+                _id: u._id,
+                name: u.name || '',
+                email: u.email || '',
+                company: u.company || '',
+                table: u.table || '',
+            }));
+
+        res.render('admin/station_checkin_detail', {
+            event,
+            eventId,
+            station,
+            records,
+            eligibleUsers,
+        });
+    } catch (err) {
+        console.error('renderStationDetailPage:', err);
+        res.status(500).send('Server error');
+    }
+};
+
+/** 建立站點 */
+exports.createStation = async (req, res) => {
+    const { eventId } = req.params;
+    const { name, description, order } = req.body || {};
+    try {
+        const trimmed = name != null ? String(name).trim() : '';
+        if (!trimmed) {
+            return res.status(400).json({ message: 'Station name is required' });
+        }
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+
+        event.checkInStations = event.checkInStations || [];
+        const station = {
+            name: trimmed,
+            description: description != null ? String(description).trim() : '',
+            enabled: true,
+            order: order != null && order !== '' ? Number(order) || 0 : event.checkInStations.length,
+            created_at: new Date(),
+            modified_at: new Date(),
+        };
+        event.checkInStations.push(station);
+        event.markModified('checkInStations');
+        await event.save();
+
+        const saved = event.checkInStations[event.checkInStations.length - 1];
+        return res.status(201).json(serializeStation(saved, 0));
+    } catch (err) {
+        console.error('createStation:', err);
+        return res.status(500).json({ message: err.message || 'Server error' });
+    }
+};
+
+/** 更新站點 */
+exports.updateStation = async (req, res) => {
+    const { eventId, stationId } = req.params;
+    const { name, description, enabled, order } = req.body || {};
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+        const station = findStation(event, stationId);
+        if (!station) return res.status(404).json({ message: 'Station not found' });
+
+        if (name !== undefined) {
+            const trimmed = String(name).trim();
+            if (!trimmed) return res.status(400).json({ message: 'Station name is required' });
+            station.name = trimmed;
+        }
+        if (description !== undefined) station.description = String(description).trim();
+        if (enabled !== undefined) station.enabled = !!enabled;
+        if (order !== undefined && order !== '') station.order = Number(order) || 0;
+        station.modified_at = new Date();
+
+        event.markModified('checkInStations');
+        await event.save();
+
+        const counts = countByStation(event);
+        return res.json(serializeStation(station, counts[String(station._id)] || 0));
+    } catch (err) {
+        console.error('updateStation:', err);
+        return res.status(500).json({ message: err.message || 'Server error' });
+    }
+};
+
+/** 刪除站點（連同該站簽到記錄） */
+exports.deleteStation = async (req, res) => {
+    const { eventId, stationId } = req.params;
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+        const station = findStation(event, stationId);
+        if (!station) return res.status(404).json({ message: 'Station not found' });
+
+        event.checkInStations.pull(stationId);
+        event.stationCheckIns = (event.stationCheckIns || []).filter(
+            (r) => String(r.stationId) !== String(stationId)
+        );
+        event.markModified('checkInStations');
+        event.markModified('stationCheckIns');
+        await event.save();
+
+        return res.json({ message: 'Station deleted' });
+    } catch (err) {
+        console.error('deleteStation:', err);
+        return res.status(500).json({ message: err.message || 'Server error' });
+    }
+};
+
+/**
+ * 共用：執行分站簽到
+ * 規則：必須先完成進場 isCheckIn；同一站同一人只能一次
+ */
+async function performStationCheckIn(event, stationId, userId, checkedInBy) {
+    const station = findStation(event, stationId);
+    if (!station) {
+        return { status: 404, body: { message: 'Station not found' } };
+    }
+    if (station.enabled === false) {
+        return { status: 400, body: { message: 'Station is disabled' } };
+    }
+
+    const user = findUser(event, userId);
+    if (!user) {
+        return { status: 404, body: { message: 'User not found' } };
+    }
+    if (!user.isCheckIn) {
+        return {
+            status: 400,
+            body: {
+                message: 'Entry check-in required before station check-in',
+                code: 'ENTRY_CHECKIN_REQUIRED',
+            },
+        };
+    }
+    if (alreadyCheckedIn(event, stationId, userId)) {
+        return {
+            status: 400,
+            body: {
+                message: 'User already checked in at this station',
+                code: 'ALREADY_CHECKED_IN',
+            },
+        };
+    }
+
+    const record = {
+        stationId: station._id,
+        userId: user._id,
+        userName: user.name || '',
+        userEmail: user.email || '',
+        checkedInAt: new Date(),
+        checkedInBy: checkedInBy || '',
+    };
+    event.stationCheckIns = event.stationCheckIns || [];
+    event.stationCheckIns.push(record);
+    event.markModified('stationCheckIns');
+    await event.save();
+
+    const saved = event.stationCheckIns[event.stationCheckIns.length - 1];
+    return {
+        status: 200,
+        body: {
+            message: 'Station check-in successful',
+            station: { _id: station._id, name: station.name },
+            record: saved,
+            user: {
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                isCheckIn: user.isCheckIn,
+            },
+        },
+    };
+}
+
+/** 後台 / API：對站點簽到 */
+exports.checkInToStation = async (req, res) => {
+    const { eventId, stationId } = req.params;
+    const { userId } = req.body || {};
+    try {
+        if (!userId) {
+            return res.status(400).json({ message: 'userId is required' });
+        }
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: 'Invalid userId' });
+        }
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+
+        const result = await performStationCheckIn(event, stationId, userId, operatorName(req));
+        return res.status(result.status).json(result.body);
+    } catch (err) {
+        console.error('checkInToStation:', err);
+        return res.status(500).json({ message: err.message || 'Server error' });
+    }
+};
+
+/**
+ * 取消分站簽到（誤點可還原）
+ * Body 可傳 userId，或用 URL :userId
+ */
+exports.uncheckStationCheckIn = async (req, res) => {
+    const { eventId, stationId } = req.params;
+    const userId = (req.body && req.body.userId) || req.params.userId;
+    try {
+        if (!userId) {
+            return res.status(400).json({ message: 'userId is required' });
+        }
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ message: 'Invalid userId' });
+        }
+
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+
+        const station = findStation(event, stationId);
+        if (!station) return res.status(404).json({ message: 'Station not found' });
+
+        const before = (event.stationCheckIns || []).length;
+        event.stationCheckIns = (event.stationCheckIns || []).filter(
+            (r) => !(String(r.stationId) === String(stationId) && String(r.userId) === String(userId))
+        );
+
+        if (event.stationCheckIns.length === before) {
+            return res.status(404).json({
+                message: 'Station check-in record not found',
+                code: 'NOT_CHECKED_IN',
+            });
+        }
+
+        event.markModified('stationCheckIns');
+        await event.save();
+
+        const user = findUser(event, userId);
+        return res.json({
+            message: 'Station check-in removed',
+            station: { _id: station._id, name: station.name },
+            userId: String(userId),
+            user: user
+                ? { _id: user._id, name: user.name, email: user.email, isCheckIn: !!user.isCheckIn }
+                : null,
+        });
+    } catch (err) {
+        console.error('uncheckStationCheckIn:', err);
+        return res.status(500).json({ message: err.message || 'Server error' });
+    }
+};
+
+/** 別名：供 routes/events.js 使用 */
+exports.uncheckInFromStation = exports.uncheckStationCheckIn;
+
+/** 取得站點列表（含簽到人數） */
+exports.listStations = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        const event = await Event.findById(eventId).select({
+            checkInStations: 1,
+            stationCheckIns: 1,
+            owner: 1,
+        });
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+
+        const counts = countByStation(event);
+        const stations = (event.checkInStations || [])
+            .slice()
+            .sort((a, b) => (a.order || 0) - (b.order || 0))
+            .map((s) => serializeStation(s, counts[String(s._id)] || 0));
+
+        return res.json(stations);
+    } catch (err) {
+        console.error('listStations:', err);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+/** 取得單一站點簽到記錄 */
+exports.listStationCheckIns = async (req, res) => {
+    const { eventId, stationId } = req.params;
+    try {
+        const event = await Event.findById(eventId).select({
+            checkInStations: 1,
+            stationCheckIns: 1,
+            owner: 1,
+        });
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+        const station = findStation(event, stationId);
+        if (!station) return res.status(404).json({ message: 'Station not found' });
+
+        const records = (event.stationCheckIns || [])
+            .filter((r) => String(r.stationId) === String(stationId))
+            .slice()
+            .sort((a, b) => new Date(b.checkedInAt) - new Date(a.checkedInAt));
+
+        return res.json({
+            station: serializeStation(station, records.length),
+            checkIns: records,
+        });
+    } catch (err) {
+        console.error('listStationCheckIns:', err);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+/** 取得某用戶在各站點的簽到狀態 */
+exports.getUserStationCheckIns = async (req, res) => {
+    const { eventId, userId } = req.params;
+    try {
+        const event = await Event.findById(eventId).select({
+            users: 1,
+            checkInStations: 1,
+            stationCheckIns: 1,
+            owner: 1,
+        });
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+        const user = findUser(event, userId);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const userRecords = (event.stationCheckIns || []).filter(
+            (r) => String(r.userId) === String(userId)
+        );
+        const byStation = {};
+        userRecords.forEach((r) => {
+            byStation[String(r.stationId)] = r;
+        });
+
+        const stations = (event.checkInStations || []).map((s) => {
+            const rec = byStation[String(s._id)];
+            return {
+                ...serializeStation(s),
+                checkedIn: !!rec,
+                checkedInAt: rec ? rec.checkedInAt : null,
+            };
+        });
+
+        return res.json({
+            user: {
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                isCheckIn: !!user.isCheckIn,
+                checkInAt: user.checkInAt || null,
+            },
+            stations,
+        });
+    } catch (err) {
+        console.error('getUserStationCheckIns:', err);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+exports.performStationCheckIn = performStationCheckIn;

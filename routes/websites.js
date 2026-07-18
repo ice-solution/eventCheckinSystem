@@ -129,7 +129,22 @@ router.get('/:event_id/register/success', async (req, res) => {
             transaction = null;
         }
     }
-    res.render('exvent/success', { event_id, transaction, lang: lang || null });
+
+    const FormConfig = require('../model/FormConfig');
+    const formConfigController = require('../controllers/formConfigController');
+    let formConfig = await FormConfig.findOne({ eventId: event_id });
+    if (!formConfig) {
+        formConfig = formConfigController.getDefaultFormConfig();
+    } else {
+        formConfig = formConfigController.getFormConfigForRender(formConfig);
+    }
+
+    res.render('exvent/success', {
+        event_id,
+        transaction,
+        lang: lang || null,
+        formConfig
+    });
 });
 
 // 路由到付款失敗頁面
