@@ -129,7 +129,7 @@
         uploading: '<%= t("attachments.uploading") %>'
     };
 
-    $(document).ready(function() {
+    jQuery(function($) {
         loadAttachments();
 
         $('#fileInput').on('change', function(e) {
@@ -159,193 +159,195 @@
                 uploadFiles(files);
             }
         });
-    });
 
-    function loadAttachments() {
-        $.ajax({
-            url: `/events/${eventId}/attachments/api`,
-            type: 'GET',
-            success: function(response) {
-                if (response.success && response.attachments) {
-                    renderAttachments(response.attachments);
-                } else {
-                    $('#attachmentsContainer').html(`<p class="text-muted">${_AT.noAttachments}</p>`);
+        function loadAttachments() {
+            $.ajax({
+                url: `/events/${eventId}/attachments/api`,
+                type: 'GET',
+                success: function(response) {
+                    if (response.success && response.attachments) {
+                        renderAttachments(response.attachments);
+                    } else {
+                        $('#attachmentsContainer').html(`<p class="text-muted">${_AT.noAttachments}</p>`);
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Error loading attachments:', xhr);
+                    showAlert('danger', _AT.loadFailed);
                 }
-            },
-            error: function(xhr) {
-                console.error('Error loading attachments:', xhr);
-                showAlert('danger', _AT.loadFailed);
-            }
-        });
-    }
-
-    function renderAttachments(attachments) {
-        if (attachments.length === 0) {
-            $('#attachmentsContainer').html(`<p class="text-muted">${_AT.noAttachments}</p>`);
-            return;
+            });
         }
 
-        let html = '';
-        attachments.forEach(function(attachment) {
-            const fileIcon = getFileIcon(attachment.mimeType);
-            const fileSize = formatFileSize(attachment.size);
-            const uploadDate = new Date(attachment.uploadedAt).toLocaleString('zh-HK');
-            const fullUrl = window.location.origin + attachment.url;
-
-            html += `
-                <div class="attachment-item" data-attachment-id="${attachment._id}">
-                    <div class="d-flex align-items-center">
-                        <div class="attachment-icon">
-                            <i class="${fileIcon}"></i>
-                        </div>
-                        <div class="attachment-info flex-grow-1">
-                            <h6 class="mb-1">${attachment.filename}</h6>
-                            <p class="mb-1 file-size">
-                                <span>${fileSize}</span> •
-                                <span>${uploadDate}</span>
-                            </p>
-                            <div class="url-container d-flex align-items-center mt-2">
-                                <label class="mb-0 mr-2" style="font-weight: 500; min-width: 50px;">URL:</label>
-                                <input type="text" class="form-control form-control-sm url-input" value="${fullUrl}" readonly style="flex: 1; font-family: monospace; font-size: 0.85rem;">
-                                <button type="button" class="btn btn-sm btn-outline-secondary ml-2" onclick="copyUrl('${fullUrl}')" title="${_AT.copyBtn}">
-                                    <i class="fas fa-copy"></i> ${_AT.copyBtn}
-                                </button>
-                            </div>
-                        </div>
-                        <div class="attachment-actions ml-3">
-                            <a href="${attachment.url}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-download"></i> ${_AT.downloadBtn}
-                            </a>
-                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteAttachment('${attachment._id}')">
-                                <i class="fas fa-trash"></i> ${_AT.deleteBtn}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-
-        $('#attachmentsContainer').html(html);
-    }
-
-    function copyUrl(url) {
-        const input = document.createElement('input');
-        input.value = url;
-        document.body.appendChild(input);
-        input.select();
-        document.execCommand('copy');
-        document.body.removeChild(input);
-        showAlert('success', _AT.urlCopied);
-    }
-
-    function uploadFiles(files) {
-        Array.from(files).forEach(function(file) {
-            if (file.size > 10 * 1024 * 1024) {
-                showAlert('danger', _AT.fileSizeExceededTpl.replace('{name}', file.name));
+        function renderAttachments(attachments) {
+            if (attachments.length === 0) {
+                $('#attachmentsContainer').html(`<p class="text-muted">${_AT.noAttachments}</p>`);
                 return;
             }
 
-            const formData = new FormData();
-            formData.append('file', file);
+            let html = '';
+            attachments.forEach(function(attachment) {
+                const fileIcon = getFileIcon(attachment.mimeType);
+                const fileSize = formatFileSize(attachment.size);
+                const uploadDate = new Date(attachment.uploadedAt).toLocaleString('zh-HK');
+                const fullUrl = window.location.origin + attachment.url;
 
-            const uploadBtn = $('<button class="btn btn-sm btn-secondary" disabled>')
-                .html(`<i class="fas fa-spinner fa-spin"></i> ${_AT.uploading}${file.name}`);
-            $('#attachmentsContainer').prepend($('<div class="attachment-item">').append(uploadBtn));
+                html += `
+                    <div class="attachment-item" data-attachment-id="${attachment._id}">
+                        <div class="d-flex align-items-center">
+                            <div class="attachment-icon">
+                                <i class="${fileIcon}"></i>
+                            </div>
+                            <div class="attachment-info flex-grow-1">
+                                <h6 class="mb-1">${attachment.filename}</h6>
+                                <p class="mb-1 file-size">
+                                    <span>${fileSize}</span> •
+                                    <span>${uploadDate}</span>
+                                </p>
+                                <div class="url-container d-flex align-items-center mt-2">
+                                    <label class="mb-0 mr-2" style="font-weight: 500; min-width: 50px;">URL:</label>
+                                    <input type="text" class="form-control form-control-sm url-input" value="${fullUrl}" readonly style="flex: 1; font-family: monospace; font-size: 0.85rem;">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ml-2" onclick="copyUrl('${fullUrl}')" title="${_AT.copyBtn}">
+                                        <i class="fas fa-copy"></i> ${_AT.copyBtn}
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="attachment-actions ml-3">
+                                <a href="${attachment.url}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-download"></i> ${_AT.downloadBtn}
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteAttachment('${attachment._id}')">
+                                    <i class="fas fa-trash"></i> ${_AT.deleteBtn}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            $('#attachmentsContainer').html(html);
+        }
+
+        function uploadFiles(files) {
+            Array.from(files).forEach(function(file) {
+                if (file.size > 10 * 1024 * 1024) {
+                    showAlert('danger', _AT.fileSizeExceededTpl.replace('{name}', file.name));
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const uploadBtn = $('<button class="btn btn-sm btn-secondary" disabled>')
+                    .html(`<i class="fas fa-spinner fa-spin"></i> ${_AT.uploading}${file.name}`);
+                $('#attachmentsContainer').prepend($('<div class="attachment-item">').append(uploadBtn));
+
+                $.ajax({
+                    url: `/events/${eventId}/attachments`,
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        if (response.success) {
+                            showAlert('success', _AT.uploadSuccessTpl.replace('{name}', file.name));
+                            loadAttachments();
+                        } else {
+                            showAlert('danger', response.message || _AT.uploadFailed);
+                        }
+                    },
+                    error: function(xhr) {
+                        const errorMsg = xhr.responseJSON && xhr.responseJSON.message
+                            ? xhr.responseJSON.message
+                            : _AT.uploadFailed;
+                        showAlert('danger', errorMsg);
+                    },
+                    complete: function() {
+                        uploadBtn.closest('.attachment-item').remove();
+                    }
+                });
+            });
+
+            $('#fileInput').val('');
+        }
+
+        function deleteAttachment(attachmentId) {
+            if (!confirm(_AT.deleteConfirm)) {
+                return;
+            }
 
             $.ajax({
-                url: `/events/${eventId}/attachments`,
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
+                url: `/events/${eventId}/attachments/${attachmentId}`,
+                type: 'DELETE',
                 success: function(response) {
                     if (response.success) {
-                        showAlert('success', _AT.uploadSuccessTpl.replace('{name}', file.name));
+                        showAlert('success', _AT.deleteSuccess);
                         loadAttachments();
                     } else {
-                        showAlert('danger', response.message || _AT.uploadFailed);
+                        showAlert('danger', response.message || _AT.deleteFailed);
                     }
                 },
                 error: function(xhr) {
                     const errorMsg = xhr.responseJSON && xhr.responseJSON.message
                         ? xhr.responseJSON.message
-                        : _AT.uploadFailed;
+                        : _AT.deleteFailed;
                     showAlert('danger', errorMsg);
-                },
-                complete: function() {
-                    uploadBtn.closest('.attachment-item').remove();
                 }
             });
-        });
-
-        $('#fileInput').val('');
-    }
-
-    function deleteAttachment(attachmentId) {
-        if (!confirm(_AT.deleteConfirm)) {
-            return;
         }
 
-        $.ajax({
-            url: `/events/${eventId}/attachments/${attachmentId}`,
-            type: 'DELETE',
-            success: function(response) {
-                if (response.success) {
-                    showAlert('success', _AT.deleteSuccess);
-                    loadAttachments();
-                } else {
-                    showAlert('danger', response.message || _AT.deleteFailed);
-                }
-            },
-            error: function(xhr) {
-                const errorMsg = xhr.responseJSON && xhr.responseJSON.message
-                    ? xhr.responseJSON.message
-                    : _AT.deleteFailed;
-                showAlert('danger', errorMsg);
+        function getFileIcon(mimeType) {
+            if (mimeType.startsWith('image/')) {
+                return 'fas fa-file-image';
+            } else if (mimeType.startsWith('video/')) {
+                return 'fas fa-file-video';
+            } else if (mimeType.startsWith('audio/')) {
+                return 'fas fa-file-audio';
+            } else if (mimeType === 'application/pdf') {
+                return 'fas fa-file-pdf';
+            } else if (mimeType.includes('word') || mimeType.includes('document')) {
+                return 'fas fa-file-word';
+            } else if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) {
+                return 'fas fa-file-excel';
+            } else if (mimeType.includes('zip') || mimeType.includes('archive')) {
+                return 'fas fa-file-archive';
+            } else {
+                return 'fas fa-file';
             }
-        });
-    }
-
-    function getFileIcon(mimeType) {
-        if (mimeType.startsWith('image/')) {
-            return 'fas fa-file-image';
-        } else if (mimeType.startsWith('video/')) {
-            return 'fas fa-file-video';
-        } else if (mimeType.startsWith('audio/')) {
-            return 'fas fa-file-audio';
-        } else if (mimeType === 'application/pdf') {
-            return 'fas fa-file-pdf';
-        } else if (mimeType.includes('word') || mimeType.includes('document')) {
-            return 'fas fa-file-word';
-        } else if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) {
-            return 'fas fa-file-excel';
-        } else if (mimeType.includes('zip') || mimeType.includes('archive')) {
-            return 'fas fa-file-archive';
-        } else {
-            return 'fas fa-file';
         }
-    }
 
-    function formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-    }
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
 
-    function showAlert(type, message) {
-        const alertHtml = `
-            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                ${message}
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-        `;
-        $('#alertContainer').html(alertHtml);
-        setTimeout(() => {
-            $('.alert').alert('close');
-        }, 3000);
-    }
+        function showAlert(type, message) {
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            `;
+            $('#alertContainer').html(alertHtml);
+            setTimeout(() => {
+                $('.alert').alert('close');
+            }, 3000);
+        }
+
+        window.copyUrl = function(url) {
+            const input = document.createElement('input');
+            input.value = url;
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand('copy');
+            document.body.removeChild(input);
+            showAlert('success', _AT.urlCopied);
+        };
+
+        window.deleteAttachment = deleteAttachment;
+    });
 </script>

@@ -37,7 +37,7 @@
 <script>
     const eventId = '<%= eventId %>';
     const initialName = <%- JSON.stringify(typeof eventName !== 'undefined' ? eventName : '') %>;
-    $(function() {
+    jQuery(function($) {
         $('#name').val(initialName);
         $('#editEventNameForm').on('submit', function(e) {
             e.preventDefault();

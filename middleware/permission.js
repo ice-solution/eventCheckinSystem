@@ -8,6 +8,7 @@ const Auth = require('../model/Auth');
 const EVENT_FUNCTIONS = [
     { key: 'rsvp', label: 'RSVP / User List', pathMatch: /^\/events\/[^/]+\/?$/ },
     { key: 'rsvp', label: 'Edit Event Name', pathMatch: /^\/events\/[^/]+\/edit-name/ },
+    { key: 'rsvp', label: 'Update Event Name', pathMatch: /^\/events\/[^/]+\/name$/ },
     { key: 'stationCheckin', label: 'Station Check-in', pathMatch: /^\/events\/[^/]+\/station-checkin/ },
     { key: 'seating', label: '排桌 Seating', pathMatch: /^\/events\/[^/]+\/seating-arrangement/ },
     { key: 'guestList', label: 'Guest List', pathMatch: /^\/events\/[^/]+\/guest-list/ },
