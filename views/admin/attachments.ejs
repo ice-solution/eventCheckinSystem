@@ -111,9 +111,10 @@
 
 <%- include ("components/footer") %>
 <script>
-    const eventId = '<%= event._id %>';
+(function($) {
+    var eventId = '<%= event._id %>';
 
-    const _AT = {
+    var _AT = {
         noAttachments: '<%= t("attachments.noAttachments") %>',
         copyBtn: '<%= t("attachments.copyBtn") %>',
         downloadBtn: '<%= t("attachments.downloadBtn") %>',
@@ -129,18 +130,187 @@
         uploading: '<%= t("attachments.uploading") %>'
     };
 
-    jQuery(function($) {
-        loadAttachments();
+    function showAlert(type, message) {
+        var alertHtml =
+            '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+                message +
+                '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                    '<span aria-hidden="true">&times;</span>' +
+                '</button>' +
+            '</div>';
+        $('#alertContainer').html(alertHtml);
+        setTimeout(function() {
+            $('.alert').alert('close');
+        }, 3000);
+    }
 
-        $('#fileInput').on('change', function(e) {
-            const files = e.target.files;
-            if (files.length > 0) {
-                uploadFiles(files);
-            }
+    function getFileIcon(mimeType) {
+        if (mimeType.startsWith('image/')) {
+            return 'fas fa-file-image';
+        } else if (mimeType.startsWith('video/')) {
+            return 'fas fa-file-video';
+        } else if (mimeType.startsWith('audio/')) {
+            return 'fas fa-file-audio';
+        } else if (mimeType === 'application/pdf') {
+            return 'fas fa-file-pdf';
+        } else if (mimeType.includes('word') || mimeType.includes('document')) {
+            return 'fas fa-file-word';
+        } else if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) {
+            return 'fas fa-file-excel';
+        } else if (mimeType.includes('zip') || mimeType.includes('archive')) {
+            return 'fas fa-file-archive';
+        }
+        return 'fas fa-file';
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        var k = 1024;
+        var sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        var i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+
+    function renderAttachments(attachments) {
+        if (attachments.length === 0) {
+            $('#attachmentsContainer').html('<p class="text-muted">' + _AT.noAttachments + '</p>');
+            return;
+        }
+
+        var html = '';
+        attachments.forEach(function(attachment) {
+            var fileIcon = getFileIcon(attachment.mimeType);
+            var fileSize = formatFileSize(attachment.size);
+            var uploadDate = new Date(attachment.uploadedAt).toLocaleString('zh-HK');
+            var fullUrl = window.location.origin + attachment.url;
+
+            html += ''
+                + '<div class="attachment-item" data-attachment-id="' + attachment._id + '">'
+                + '<div class="d-flex align-items-center">'
+                + '<div class="attachment-icon"><i class="' + fileIcon + '"></i></div>'
+                + '<div class="attachment-info flex-grow-1">'
+                + '<h6 class="mb-1">' + attachment.filename + '</h6>'
+                + '<p class="mb-1 file-size"><span>' + fileSize + '</span> • <span>' + uploadDate + '</span></p>'
+                + '<div class="url-container d-flex align-items-center mt-2">'
+                + '<label class="mb-0 mr-2" style="font-weight: 500; min-width: 50px;">URL:</label>'
+                + '<input type="text" class="form-control form-control-sm url-input" value="' + fullUrl + '" readonly style="flex: 1; font-family: monospace; font-size: 0.85rem;">'
+                + '<button type="button" class="btn btn-sm btn-outline-secondary ml-2" onclick="copyUrl(\'' + fullUrl + '\')" title="' + _AT.copyBtn + '">'
+                + '<i class="fas fa-copy"></i> ' + _AT.copyBtn
+                + '</button>'
+                + '</div>'
+                + '</div>'
+                + '<div class="attachment-actions ml-3">'
+                + '<a href="' + attachment.url + '" target="_blank" class="btn btn-sm btn-outline-primary">'
+                + '<i class="fas fa-download"></i> ' + _AT.downloadBtn
+                + '</a>'
+                + '<button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteAttachment(\'' + attachment._id + '\')">'
+                + '<i class="fas fa-trash"></i> ' + _AT.deleteBtn
+                + '</button>'
+                + '</div>'
+                + '</div>'
+                + '</div>';
         });
 
-        const uploadArea = document.getElementById('uploadArea');
+        $('#attachmentsContainer').html(html);
+    }
 
+    function loadAttachments() {
+        $.ajax({
+            url: '/events/' + eventId + '/attachments/api',
+            type: 'GET',
+            success: function(response) {
+                if (response.success && response.attachments) {
+                    renderAttachments(response.attachments);
+                } else {
+                    $('#attachmentsContainer').html('<p class="text-muted">' + _AT.noAttachments + '</p>');
+                }
+            },
+            error: function(xhr) {
+                console.error('Error loading attachments:', xhr);
+                showAlert('danger', _AT.loadFailed);
+            }
+        });
+    }
+
+    function uploadFiles(files) {
+        Array.from(files).forEach(function(file) {
+            if (file.size > 10 * 1024 * 1024) {
+                showAlert('danger', _AT.fileSizeExceededTpl.replace('{name}', file.name));
+                return;
+            }
+
+            var formData = new FormData();
+            formData.append('file', file);
+
+            var uploadBtn = $('<button class="btn btn-sm btn-secondary" disabled>')
+                .html('<i class="fas fa-spinner fa-spin"></i> ' + _AT.uploading + file.name);
+            $('#attachmentsContainer').prepend($('<div class="attachment-item">').append(uploadBtn));
+
+            $.ajax({
+                url: '/events/' + eventId + '/attachments',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        showAlert('success', _AT.uploadSuccessTpl.replace('{name}', file.name));
+                        loadAttachments();
+                    } else {
+                        showAlert('danger', response.message || _AT.uploadFailed);
+                    }
+                },
+                error: function(xhr) {
+                    var errorMsg = xhr.responseJSON && xhr.responseJSON.message
+                        ? xhr.responseJSON.message
+                        : _AT.uploadFailed;
+                    showAlert('danger', errorMsg);
+                },
+                complete: function() {
+                    uploadBtn.closest('.attachment-item').remove();
+                }
+            });
+        });
+
+        $('#fileInput').val('');
+    }
+
+    function deleteAttachment(attachmentId) {
+        if (!confirm(_AT.deleteConfirm)) {
+            return;
+        }
+
+        $.ajax({
+            url: '/events/' + eventId + '/attachments/' + attachmentId,
+            type: 'DELETE',
+            success: function(response) {
+                if (response.success) {
+                    showAlert('success', _AT.deleteSuccess);
+                    loadAttachments();
+                } else {
+                    showAlert('danger', response.message || _AT.deleteFailed);
+                }
+            },
+            error: function(xhr) {
+                var errorMsg = xhr.responseJSON && xhr.responseJSON.message
+                    ? xhr.responseJSON.message
+                    : _AT.deleteFailed;
+                showAlert('danger', errorMsg);
+            }
+        });
+    }
+
+    loadAttachments();
+
+    $('#fileInput').on('change', function(e) {
+        var files = e.target.files;
+        if (files.length > 0) {
+            uploadFiles(files);
+        }
+    });
+
+    var uploadArea = document.getElementById('uploadArea');
+    if (uploadArea) {
         uploadArea.addEventListener('dragover', function(e) {
             e.preventDefault();
             uploadArea.classList.add('dragover');
@@ -154,200 +324,23 @@
         uploadArea.addEventListener('drop', function(e) {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
-            const files = e.dataTransfer.files;
+            var files = e.dataTransfer.files;
             if (files.length > 0) {
                 uploadFiles(files);
             }
         });
+    }
 
-        function loadAttachments() {
-            $.ajax({
-                url: `/events/${eventId}/attachments/api`,
-                type: 'GET',
-                success: function(response) {
-                    if (response.success && response.attachments) {
-                        renderAttachments(response.attachments);
-                    } else {
-                        $('#attachmentsContainer').html(`<p class="text-muted">${_AT.noAttachments}</p>`);
-                    }
-                },
-                error: function(xhr) {
-                    console.error('Error loading attachments:', xhr);
-                    showAlert('danger', _AT.loadFailed);
-                }
-            });
-        }
+    window.copyUrl = function(url) {
+        var input = document.createElement('input');
+        input.value = url;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        showAlert('success', _AT.urlCopied);
+    };
 
-        function renderAttachments(attachments) {
-            if (attachments.length === 0) {
-                $('#attachmentsContainer').html(`<p class="text-muted">${_AT.noAttachments}</p>`);
-                return;
-            }
-
-            let html = '';
-            attachments.forEach(function(attachment) {
-                const fileIcon = getFileIcon(attachment.mimeType);
-                const fileSize = formatFileSize(attachment.size);
-                const uploadDate = new Date(attachment.uploadedAt).toLocaleString('zh-HK');
-                const fullUrl = window.location.origin + attachment.url;
-
-                html += `
-                    <div class="attachment-item" data-attachment-id="${attachment._id}">
-                        <div class="d-flex align-items-center">
-                            <div class="attachment-icon">
-                                <i class="${fileIcon}"></i>
-                            </div>
-                            <div class="attachment-info flex-grow-1">
-                                <h6 class="mb-1">${attachment.filename}</h6>
-                                <p class="mb-1 file-size">
-                                    <span>${fileSize}</span> •
-                                    <span>${uploadDate}</span>
-                                </p>
-                                <div class="url-container d-flex align-items-center mt-2">
-                                    <label class="mb-0 mr-2" style="font-weight: 500; min-width: 50px;">URL:</label>
-                                    <input type="text" class="form-control form-control-sm url-input" value="${fullUrl}" readonly style="flex: 1; font-family: monospace; font-size: 0.85rem;">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary ml-2" onclick="copyUrl('${fullUrl}')" title="${_AT.copyBtn}">
-                                        <i class="fas fa-copy"></i> ${_AT.copyBtn}
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="attachment-actions ml-3">
-                                <a href="${attachment.url}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-download"></i> ${_AT.downloadBtn}
-                                </a>
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteAttachment('${attachment._id}')">
-                                    <i class="fas fa-trash"></i> ${_AT.deleteBtn}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-
-            $('#attachmentsContainer').html(html);
-        }
-
-        function uploadFiles(files) {
-            Array.from(files).forEach(function(file) {
-                if (file.size > 10 * 1024 * 1024) {
-                    showAlert('danger', _AT.fileSizeExceededTpl.replace('{name}', file.name));
-                    return;
-                }
-
-                const formData = new FormData();
-                formData.append('file', file);
-
-                const uploadBtn = $('<button class="btn btn-sm btn-secondary" disabled>')
-                    .html(`<i class="fas fa-spinner fa-spin"></i> ${_AT.uploading}${file.name}`);
-                $('#attachmentsContainer').prepend($('<div class="attachment-item">').append(uploadBtn));
-
-                $.ajax({
-                    url: `/events/${eventId}/attachments`,
-                    type: 'POST',
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function(response) {
-                        if (response.success) {
-                            showAlert('success', _AT.uploadSuccessTpl.replace('{name}', file.name));
-                            loadAttachments();
-                        } else {
-                            showAlert('danger', response.message || _AT.uploadFailed);
-                        }
-                    },
-                    error: function(xhr) {
-                        const errorMsg = xhr.responseJSON && xhr.responseJSON.message
-                            ? xhr.responseJSON.message
-                            : _AT.uploadFailed;
-                        showAlert('danger', errorMsg);
-                    },
-                    complete: function() {
-                        uploadBtn.closest('.attachment-item').remove();
-                    }
-                });
-            });
-
-            $('#fileInput').val('');
-        }
-
-        function deleteAttachment(attachmentId) {
-            if (!confirm(_AT.deleteConfirm)) {
-                return;
-            }
-
-            $.ajax({
-                url: `/events/${eventId}/attachments/${attachmentId}`,
-                type: 'DELETE',
-                success: function(response) {
-                    if (response.success) {
-                        showAlert('success', _AT.deleteSuccess);
-                        loadAttachments();
-                    } else {
-                        showAlert('danger', response.message || _AT.deleteFailed);
-                    }
-                },
-                error: function(xhr) {
-                    const errorMsg = xhr.responseJSON && xhr.responseJSON.message
-                        ? xhr.responseJSON.message
-                        : _AT.deleteFailed;
-                    showAlert('danger', errorMsg);
-                }
-            });
-        }
-
-        function getFileIcon(mimeType) {
-            if (mimeType.startsWith('image/')) {
-                return 'fas fa-file-image';
-            } else if (mimeType.startsWith('video/')) {
-                return 'fas fa-file-video';
-            } else if (mimeType.startsWith('audio/')) {
-                return 'fas fa-file-audio';
-            } else if (mimeType === 'application/pdf') {
-                return 'fas fa-file-pdf';
-            } else if (mimeType.includes('word') || mimeType.includes('document')) {
-                return 'fas fa-file-word';
-            } else if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) {
-                return 'fas fa-file-excel';
-            } else if (mimeType.includes('zip') || mimeType.includes('archive')) {
-                return 'fas fa-file-archive';
-            } else {
-                return 'fas fa-file';
-            }
-        }
-
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-        }
-
-        function showAlert(type, message) {
-            const alertHtml = `
-                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                    ${message}
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-            `;
-            $('#alertContainer').html(alertHtml);
-            setTimeout(() => {
-                $('.alert').alert('close');
-            }, 3000);
-        }
-
-        window.copyUrl = function(url) {
-            const input = document.createElement('input');
-            input.value = url;
-            document.body.appendChild(input);
-            input.select();
-            document.execCommand('copy');
-            document.body.removeChild(input);
-            showAlert('success', _AT.urlCopied);
-        };
-
-        window.deleteAttachment = deleteAttachment;
-    });
+    window.deleteAttachment = deleteAttachment;
+})(jQuery);
 </script>
