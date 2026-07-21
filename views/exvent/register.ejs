@@ -1,9 +1,22 @@
 <!DOCTYPE html>
+<%
+function getRegisterEventTitle(formConfig, event, lang) {
+    var edn = (formConfig && formConfig.eventDisplayName) ? formConfig.eventDisplayName : { zh: '', en: '' };
+    var fallback = (event && event.name) ? String(event.name).trim() : 'Event';
+    var zh = edn.zh ? String(edn.zh).trim() : '';
+    var en = edn.en ? String(edn.en).trim() : '';
+    if (lang === 'en') return en || zh || fallback;
+    return zh || en || fallback;
+}
+var registerPageLang = (formConfig && formConfig.defaultLanguage) ? formConfig.defaultLanguage : 'zh';
+var registerEventTitle = getRegisterEventTitle(formConfig, event, registerPageLang);
+var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - 登記';
+%>
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= event && event.name ? event.name : 'Event' %> - 登記</title>
+    <title><%= registerEventTitle %><%= registerPageTitleSuffix %></title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         body {
@@ -459,7 +472,7 @@
         %>
         <div class="form-header">
             <br><br>
-            <h1 id="formTitle"><%= event && event.name ? event.name : 'Event' %></h1>
+            <h1 id="formTitle"><%= registerEventTitle %></h1>
             <p id="formSubHeader" class="form-subheader"<%= initSubHeader ? '' : ' style="display:none;"' %>><%= initSubHeader %></p>
             <p class="text-muted" id="formSubtitle"><%= initSubtitle %></p>
         </div>
@@ -863,7 +876,9 @@
             );
         }
         function updateRegisterHeaderText() {
-            $('#formTitle').text(getHeaderEventName(currentLanguage));
+            var name = getHeaderEventName(currentLanguage);
+            $('#formTitle').text(name);
+            document.title = name + (currentLanguage === 'en' ? ' - Register' : ' - 登記');
             const sub = getRegisterSubHeader(currentLanguage);
             if (sub) {
                 $('#formSubHeader').text(sub).show();
