@@ -2,18 +2,230 @@
 <%- include("components/menu", { eventId: eventId }) %>
 <%- include("components/responsive_layout_style") %>
 <link rel="stylesheet" href="/admin/assets/css/style.css">
-<link rel="stylesheet" href="/admin/assets/css/lib/datatable/dataTables.bootstrap.min.css">
 <style>
-    .alert-container { position: fixed; top: 80px; right: 20px; z-index: 1050; min-width: 300px; }
+    .alert-container {
+        position: fixed;
+        top: 72px;
+        left: 12px;
+        right: 12px;
+        z-index: 2000;
+        max-width: 420px;
+        margin-left: auto;
+        pointer-events: none;
+    }
+    .alert-container .alert {
+        pointer-events: auto;
+        opacity: 1 !important;
+        background-clip: padding-box;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+        border-width: 1px;
+        border-style: solid;
+    }
+    .alert-container .alert-success {
+        color: #155724;
+        background-color: #d4edda !important;
+        border-color: #c3e6cb;
+    }
+    .alert-container .alert-danger {
+        color: #721c24;
+        background-color: #f8d7da !important;
+        border-color: #f5c6cb;
+    }
+    .alert-container .alert-warning {
+        color: #856404;
+        background-color: #fff3cd !important;
+        border-color: #ffeeba;
+    }
+    .alert-container .alert-info {
+        color: #0c5460;
+        background-color: #d1ecf1 !important;
+        border-color: #bee5eb;
+    }
+    .station-detail-notes { font-size: 0.875rem; color: #6b7a8d; margin-bottom: 1rem; }
+    .scan-panel,
+    .section-list-panel {
+        border: 1px solid #e4e9f0;
+        border-radius: 10px;
+        padding: 14px;
+        background: #fff;
+        margin-bottom: 16px;
+    }
     #reader { width: 100%; max-width: 360px; margin: 0 auto; }
-    .scan-panel { border: 1px solid #e4e9f0; border-radius: 10px; padding: 16px; background: #fff; }
+    .scan-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+        margin-top: 10px;
+    }
+    .scan-actions .btn { min-width: 120px; }
     .status-ok { color: #28a745; font-weight: 600; }
     .status-err { color: #dc3545; font-weight: 600; }
-    .section-list-panel { border: 1px solid #e4e9f0; border-radius: 10px; padding: 16px; background: #fff; margin-bottom: 16px; }
     .section-list-hint { font-size: 0.875rem; color: #6b7a8d; }
-    .badge-checked { background: #28a745; }
-    .badge-pending { background: #6c757d; }
-    #addUserSelect { max-width: 100%; }
+    .add-list-row {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+    .add-list-row .btn { width: 100%; }
+    .addable-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    .addable-toolbar .form-control {
+        flex: 1 1 160px;
+        min-width: 0;
+    }
+    .addable-toolbar .btn { flex: 0 0 auto; width: auto; }
+    .addable-user-list {
+        max-height: 240px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        background: #fff;
+    }
+    .addable-user-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 12px 12px;
+        margin: 0;
+        border-bottom: 1px solid #f1f3f5;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+    }
+    .addable-user-item:last-child { border-bottom: none; }
+    .addable-user-item:active,
+    .addable-user-item.is-checked { background: #e8f1ff; }
+    .addable-user-item input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        margin-top: 2px;
+        flex-shrink: 0;
+    }
+    .addable-user-item .user-label {
+        flex: 1;
+        min-width: 0;
+        line-height: 1.35;
+        word-break: break-word;
+    }
+    .addable-user-item .user-meta {
+        display: block;
+        font-size: 0.8rem;
+        color: #6b7a8d;
+        margin-top: 2px;
+    }
+    .addable-empty {
+        padding: 16px;
+        text-align: center;
+        color: #6b7a8d;
+        font-size: 0.9rem;
+    }
+    .addable-selected-count {
+        font-size: 0.85rem;
+        color: #6b7a8d;
+    }
+    .xlsx-import-panel {
+        border: 1px dashed #c5d0dc;
+        border-radius: 8px;
+        padding: 12px;
+        background: #f8fafc;
+    }
+    .xlsx-import-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+    }
+    .xlsx-import-actions .btn { width: auto; }
+    .xlsx-import-actions input[type="file"] {
+        flex: 1 1 180px;
+        min-width: 0;
+        max-width: 100%;
+    }
+    #unifiedListTable {
+        width: 100%;
+        table-layout: fixed;
+        margin-bottom: 0;
+    }
+    #unifiedListTable th,
+    #unifiedListTable td {
+        vertical-align: middle;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        white-space: normal;
+    }
+    #unifiedListTable th:first-child,
+    #unifiedListTable td:first-child { width: 72%; }
+    #unifiedListTable th:last-child,
+    #unifiedListTable td:last-child { width: 28%; text-align: right; }
+    #unifiedListTable tbody tr.row-checked-in {
+        background-color: #d4edda !important;
+    }
+    #unifiedListTable tbody tr.row-pending {
+        background-color: transparent;
+    }
+    #unifiedListTable .name-cell {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    #unifiedListTable .station-checkin-cb {
+        width: 20px;
+        height: 20px;
+        margin-top: 2px;
+        flex-shrink: 0;
+        cursor: pointer;
+    }
+    #unifiedListTable .station-checkin-cb:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+    }
+    #unifiedListTable .user-name-wrap {
+        min-width: 0;
+        flex: 1;
+    }
+    #unifiedListTable .user-name {
+        font-weight: 600;
+        color: #2c3e50;
+        line-height: 1.3;
+    }
+    #unifiedListTable .user-sub {
+        display: block;
+        font-size: 0.8rem;
+        color: #6b7a8d;
+        margin-top: 2px;
+    }
+    #unifiedListTable .action-btns {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+    #unifiedListTable .action-btns .btn {
+        margin: 0;
+        white-space: nowrap;
+    }
+    @media (max-width: 767.98px) {
+        .content { padding-left: 10px; padding-right: 10px; }
+        .card-body { padding: 12px; }
+        .scan-panel,
+        .section-list-panel { padding: 12px; }
+        #unifiedListTable th,
+        #unifiedListTable td { padding: 0.5rem 0.4rem; font-size: 0.9rem; }
+        #unifiedListTable th:first-child,
+        #unifiedListTable td:first-child { width: 68%; }
+        #unifiedListTable th:last-child,
+        #unifiedListTable td:last-child { width: 32%; }
+        #unifiedListTable .action-btns .btn { font-size: 0.8rem; padding: 0.25rem 0.45rem; }
+        .alert-container { left: 8px; right: 8px; max-width: none; }
+    }
 </style>
 
 <div id="right-panel" class="right-panel">
@@ -21,7 +233,7 @@
     <div class="content">
         <div class="animated fadeIn">
             <div class="row">
-                <div class="col-lg-12">
+                <div class="col-12">
                     <div class="card">
                         <div class="card-header">
                             <strong class="card-title">
@@ -31,152 +243,151 @@
                         <div class="card-body">
                             <div class="alert-container" id="alertContainer"></div>
                             <% if (station.description) { %>
-                                <p class="text-muted"><%= station.description %></p>
+                                <p class="text-muted mb-2"><%= station.description %></p>
                             <% } %>
-                            <p class="text-muted small"><%= t('station_checkin.requireEntryNote') %></p>
-                            <p class="text-muted small"><%= t('station_checkin.sectionListNote') %></p>
+                            <div class="station-detail-notes">
+                                <p class="mb-1"><%= t('station_checkin.requireEntryNote') %></p>
+                                <p class="mb-0"><%= t('station_checkin.sectionListNote') %></p>
+                            </div>
 
-                            <div class="row">
-                                <div class="col-md-5 mb-4">
-                                    <div class="scan-panel">
-                                        <h5><%= t('station_checkin.scanTitle') %></h5>
-                                        <div id="reader"></div>
-                                        <div class="mt-2">
-                                            <button type="button" class="btn btn-primary btn-sm" id="startScanBtn"><%= t('station_checkin.startScan') %></button>
-                                            <button type="button" class="btn btn-secondary btn-sm" id="stopScanBtn" disabled><%= t('station_checkin.stopScan') %></button>
-                                        </div>
-                                        <div id="scanResult" class="mt-3"></div>
-                                    </div>
-
-                                    <div class="scan-panel mt-3">
-                                        <h5><%= t('station_checkin.manualTitle') %></h5>
-                                        <div class="form-group">
-                                            <label><%= t('station_checkin.selectUser') %></label>
-                                            <select class="form-control" id="manualUserSelect">
-                                                <option value=""><%= t('common.selectOption') %></option>
-                                                <% (eligibleUsers || []).forEach(function(u) { %>
-                                                    <option value="<%= u._id %>">
-                                                        <%= u.name || '-' %><%= u.email ? ' (' + u.email + ')' : '' %>
-                                                    </option>
-                                                <% }); %>
-                                            </select>
-                                        </div>
-                                        <button type="button" class="btn btn-success" id="manualCheckInBtn">
-                                            <%= t('station_checkin.checkInBtn') %>
-                                        </button>
-                                    </div>
+                            <!-- 1) Scan (top) -->
+                            <div class="scan-panel">
+                                <h5 class="mb-3"><%= t('station_checkin.scanTitle') %></h5>
+                                <div id="reader"></div>
+                                <div class="scan-actions">
+                                    <button type="button" class="btn btn-primary" id="startScanBtn"><%= t('station_checkin.startScan') %></button>
+                                    <button type="button" class="btn btn-secondary" id="stopScanBtn" disabled><%= t('station_checkin.stopScan') %></button>
                                 </div>
+                                <div id="scanResult" class="mt-3 text-center"></div>
+                            </div>
 
-                                <div class="col-md-7">
-                                    <div class="section-list-panel">
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <h5 class="mb-0">
-                                                <%= t('station_checkin.sectionListTitle') %>
-                                                (<span class="badge badge-info" id="sectionListCount"><%= (sectionListUsers || []).length %></span>
-                                            </h5>
-                                        </div>
-                                        <p class="section-list-hint mb-3"><%= t('station_checkin.sectionListHint') %></p>
+                            <!-- 2) Merged Section List + Check-in (bottom) -->
+                            <div class="section-list-panel">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap mb-2">
+                                    <h5 class="mb-0">
+                                        <%= t('station_checkin.mergedListTitle') %>
+                                        <span class="badge badge-info" id="sectionListCount"><%= (unifiedUsers || []).filter(function(u) { return u.onSectionList; }).length %></span>
+                                    </h5>
+                                </div>
+                                <p class="section-list-hint mb-3"><%= t('station_checkin.mergedListHint') %></p>
 
-                                        <div class="form-row align-items-end mb-3">
-                                            <div class="form-group col-md-8 mb-2 mb-md-0">
-                                                <label for="addUserSelect"><%= t('station_checkin.addToListLabel') %></label>
-                                                <select class="form-control" id="addUserSelect" multiple size="6">
-                                                    <% (addableUsers || []).forEach(function(u) { %>
-                                                        <option value="<%= u._id %>">
-                                                            <%= u.name || '-' %><%= u.email ? ' (' + u.email + ')' : '' %><%= u.isCheckIn ? '' : ' [' + t('station_checkin.notEntered') + ']' %>
-                                                        </option>
-                                                    <% }); %>
-                                                </select>
-                                                <small class="text-muted"><%= t('station_checkin.multiSelectHint') %></small>
-                                            </div>
-                                            <div class="form-group col-md-4 mb-0">
-                                                <button type="button" class="btn btn-primary btn-block" id="addToListBtn">
-                                                    <i class="fa fa-plus"></i> <%= t('station_checkin.addToListBtn') %>
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div class="table-responsive">
-                                            <table id="sectionListTable" class="table table-sm table-striped table-bordered mb-0">
-                                                <thead>
-                                                    <tr>
-                                                        <th><%= t('common.name') %></th>
-                                                        <th><%= t('common.email') %></th>
-                                                        <th><%= t('station_checkin.listStatus') %></th>
-                                                        <th><%= t('common.actions') %></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <% if (!sectionListUsers || sectionListUsers.length === 0) { %>
-                                                        <tr class="empty-row">
-                                                            <td colspan="4" class="text-muted text-center"><%= t('station_checkin.sectionListEmpty') %></td>
-                                                        </tr>
-                                                    <% } else { %>
-                                                        <% sectionListUsers.forEach(function(u) { %>
-                                                            <tr data-user-id="<%= u._id %>">
-                                                                <td><%= u.name || '-' %></td>
-                                                                <td><%= u.email || '-' %></td>
-                                                                <td>
-                                                                    <% if (u.stationCheckedIn) { %>
-                                                                        <span class="badge badge-checked"><%= t('station_checkin.statusCheckedIn') %></span>
-                                                                    <% } else if (!u.isCheckIn) { %>
-                                                                        <span class="badge badge-warning"><%= t('station_checkin.notEntered') %></span>
-                                                                    <% } else { %>
-                                                                        <span class="badge badge-pending"><%= t('station_checkin.statusPending') %></span>
-                                                                    <% } %>
-                                                                </td>
-                                                                <td>
-                                                                    <% if (!u.stationCheckedIn && u.isCheckIn) { %>
-                                                                        <button type="button" class="btn btn-sm btn-success list-checkin-btn"
-                                                                            data-user-id="<%= u._id %>"
-                                                                            data-user-name="<%= u.name || '' %>">
-                                                                            <%= t('station_checkin.checkInBtn') %>
-                                                                        </button>
-                                                                    <% } %>
-                                                                    <button type="button" class="btn btn-sm btn-outline-danger remove-from-list-btn"
-                                                                        data-user-id="<%= u._id %>"
-                                                                        data-user-name="<%= u.name || '' %>">
-                                                                        <%= t('station_checkin.removeFromListBtn') %>
-                                                                    </button>
-                                                                </td>
-                                                            </tr>
-                                                        <% }); %>
-                                                    <% } %>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-
-                                    <h5><%= t('station_checkin.recordsTitle') %> (<%= (records || []).length %>)</h5>
-                                    <table id="recordsTable" class="table table-striped table-bordered">
-                                        <thead>
-                                            <tr>
-                                                <th><%= t('common.name') %></th>
-                                                <th><%= t('common.email') %></th>
-                                                <th><%= t('station_checkin.checkedInAt') %></th>
-                                                <th><%= t('station_checkin.checkedInBy') %></th>
-                                                <th><%= t('common.actions') %></th>
+                                <table id="unifiedListTable" class="table table-bordered mb-3">
+                                    <thead>
+                                        <tr>
+                                            <th><%= t('common.name') %></th>
+                                            <th><%= t('common.actions') %></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% if (!unifiedUsers || unifiedUsers.length === 0) { %>
+                                            <tr class="empty-row">
+                                                <td colspan="2" class="text-muted text-center"><%= t('station_checkin.sectionListEmpty') %></td>
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                            <% (records || []).forEach(function(r) { %>
-                                                <tr>
-                                                    <td><%= r.userName || '-' %></td>
-                                                    <td><%= r.userEmail || '-' %></td>
-                                                    <td><%= r.checkedInAt ? new Date(r.checkedInAt).toLocaleString('zh-HK', { timeZone: 'Asia/Hong_Kong', hour12: false }) : '-' %></td>
-                                                    <td><%= r.checkedInBy || '-' %></td>
+                                        <% } else { %>
+                                            <% unifiedUsers.forEach(function(u) { %>
+                                                <tr data-user-id="<%= u._id %>"
+                                                    data-entered="<%= u.isCheckIn ? '1' : '0' %>"
+                                                    class="<%= u.stationCheckedIn ? 'row-checked-in' : 'row-pending' %>">
                                                     <td>
-                                                        <button type="button"
-                                                            class="btn btn-sm btn-warning uncheck-btn"
-                                                            data-user-id="<%= r.userId %>"
-                                                            data-user-name="<%= r.userName || '' %>">
-                                                            <%= t('station_checkin.uncheckBtn') %>
-                                                        </button>
+                                                        <div class="name-cell">
+                                                            <input type="checkbox"
+                                                                class="station-checkin-cb"
+                                                                data-user-id="<%= u._id %>"
+                                                                data-user-name="<%= u.name || '' %>"
+                                                                <%= u.stationCheckedIn ? 'checked' : '' %>
+                                                                <%= u.isCheckIn ? '' : 'disabled' %>
+                                                                aria-label="<%= t('station_checkin.checkInBtn') %>">
+                                                            <div class="user-name-wrap">
+                                                                <div class="user-name"><%= u.name || '-' %></div>
+                                                                <% if (!u.isCheckIn) { %>
+                                                                    <span class="user-sub"><%= t('station_checkin.notEntered') %></span>
+                                                                <% } %>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="action-btns">
+                                                            <% if (u.onSectionList) { %>
+                                                                <button type="button"
+                                                                    class="btn btn-sm btn-outline-danger remove-from-list-btn"
+                                                                    data-user-id="<%= u._id %>"
+                                                                    data-user-name="<%= u.name || '' %>">
+                                                                    <%= t('station_checkin.removeFromListBtn') %>
+                                                                </button>
+                                                            <% } else { %>
+                                                                <span class="text-muted">—</span>
+                                                            <% } %>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             <% }); %>
-                                        </tbody>
-                                    </table>
+                                        <% } %>
+                                    </tbody>
+                                </table>
+
+                                <div class="add-list-row mb-3">
+                                    <div>
+                                        <label class="mb-1 d-block"><%= t('station_checkin.addToListLabel') %></label>
+                                        <% if (!addableUsers || addableUsers.length === 0) { %>
+                                            <div class="addable-empty border rounded"><%= t('station_checkin.addableEmpty') %></div>
+                                        <% } else { %>
+                                            <div class="addable-toolbar">
+                                                <input type="search" class="form-control" id="addableUserFilter"
+                                                       placeholder="<%= t('station_checkin.addableSearchPlaceholder') %>"
+                                                       autocomplete="off">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" id="addableSelectAllBtn">
+                                                    <%= t('station_checkin.selectAllVisible') %>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" id="addableClearBtn">
+                                                    <%= t('station_checkin.clearSelection') %>
+                                                </button>
+                                            </div>
+                                            <div class="addable-user-list" id="addableUserList">
+                                                <% addableUsers.forEach(function(u) { %>
+                                                    <%
+                                                        const displayName = u.name || '-';
+                                                        const displayEmail = u.email || '';
+                                                        const searchText = (displayName + ' ' + displayEmail).toLowerCase();
+                                                    %>
+                                                    <label class="addable-user-item"
+                                                           data-search="<%= searchText.replace(/"/g, '') %>">
+                                                        <input type="checkbox" class="addable-user-cb" value="<%= u._id %>">
+                                                        <span class="user-label">
+                                                            <%= displayName %>
+                                                            <% if (displayEmail) { %>
+                                                                <span class="user-meta"><%= displayEmail %></span>
+                                                            <% } %>
+                                                        </span>
+                                                    </label>
+                                                <% }); %>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center mt-2">
+                                                <small class="addable-selected-count" id="addableSelectedCount">
+                                                    <%= t('station_checkin.selectedCount').replace('{count}', '0') %>
+                                                </small>
+                                                <small class="text-muted"><%= t('station_checkin.multiSelectHint') %></small>
+                                            </div>
+                                        <% } %>
+                                    </div>
+                                    <button type="button" class="btn btn-primary" id="addToListBtn"
+                                        <%= (!addableUsers || addableUsers.length === 0) ? 'disabled' : '' %>>
+                                        <i class="fa fa-plus"></i> <%= t('station_checkin.addToListBtn') %>
+                                    </button>
+                                </div>
+
+                                <div class="xlsx-import-panel">
+                                    <h6 class="mb-2"><%= t('station_checkin.xlsxImportTitle') %></h6>
+                                    <p class="section-list-hint mb-2"><%= t('station_checkin.xlsxImportHint') %></p>
+                                    <div class="xlsx-import-actions">
+                                        <a class="btn btn-outline-info"
+                                           href="/events/<%= eventId %>/station-checkin/<%= station._id %>/section-list/export">
+                                            <i class="fa fa-download"></i> <%= t('station_checkin.xlsxExportBtn') %>
+                                        </a>
+                                        <input type="file" id="sectionListXlsxInput" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+                                        <button type="button" class="btn btn-outline-primary" id="sectionListImportBtn">
+                                            <i class="fa fa-upload"></i> <%= t('station_checkin.xlsxImportBtn') %>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -188,8 +399,6 @@
 </div>
 <%- include("components/footer_minimal") %>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
-<script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
 <script>
 jQuery(function($) {
     var eventId = '<%= eventId %>';
@@ -203,22 +412,21 @@ jQuery(function($) {
         addSuccess: <%- JSON.stringify(t('station_checkin.addToListSuccess')) %>,
         selectAddFirst: <%- JSON.stringify(t('station_checkin.selectAddFirst')) %>,
         checkInSuccess: <%- JSON.stringify(t('station_checkin.checkInSuccess')) %>,
-        selectUserFirst: <%- JSON.stringify(t('station_checkin.selectUserFirst')) %>,
         uncheckConfirm: <%- JSON.stringify(t('station_checkin.uncheckConfirm')) %>,
         uncheckSuccess: <%- JSON.stringify(t('station_checkin.uncheckSuccess')) %>,
-        processing: <%- JSON.stringify(t('station_checkin.processing')) %>
+        processing: <%- JSON.stringify(t('station_checkin.processing')) %>,
+        selectedCount: <%- JSON.stringify(t('station_checkin.selectedCount')) %>,
+        xlsxSelectFileFirst: <%- JSON.stringify(t('station_checkin.xlsxSelectFileFirst')) %>,
+        xlsxImportSuccess: <%- JSON.stringify(t('station_checkin.xlsxImportSuccess')) %>,
+        xlsxImportFailed: <%- JSON.stringify(t('station_checkin.xlsxImportFailed')) %>
     };
 
-    if ($.fn.DataTable) {
-        $('#recordsTable').DataTable({ order: [[2, 'desc']], pageLength: 25 });
-    }
-
     function showAlert(type, msg) {
-        var html = '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+        var html = '<div class="alert alert-' + type + ' alert-dismissible show" role="alert">' +
             msg +
             '<button type="button" class="close" data-dismiss="alert"><span>&times;</span></button></div>';
         var $a = $(html);
-        $('#alertContainer').append($a);
+        $('#alertContainer').empty().append($a);
         setTimeout(function() { $a.alert('close'); }, 4500);
     }
 
@@ -243,29 +451,107 @@ jQuery(function($) {
         showAlert('danger', body.message || 'Error');
     }
 
-    $(document).on('click', '.uncheck-btn', function() {
-        var userId = $(this).data('user-id');
-        var userName = $(this).data('user-name') || userId;
-        if (!userId) return;
-        if (!confirm(i18n.uncheckConfirm.replace('{name}', userName))) return;
+    function setStationRowChecked($row, checked) {
+        if (!$row || !$row.length) return;
+        $row.toggleClass('row-checked-in', !!checked);
+        $row.toggleClass('row-pending', !checked);
+        var $cb = $row.find('.station-checkin-cb');
+        if ($cb.length) {
+            $cb.prop('checked', !!checked);
+            if ($row.attr('data-entered') === '1') {
+                $cb.prop('disabled', false);
+            }
+        }
+    }
 
-        var $btn = $(this).prop('disabled', true);
-        $.ajax({
+    function findStationRow(userId) {
+        return $('#unifiedListTable tbody tr[data-user-id="' + userId + '"]');
+    }
+
+    function doUncheck(userId) {
+        return $.ajax({
             url: '/events/' + eventId + '/station-checkin/' + stationId + '/checkin/' + userId,
-            method: 'DELETE',
-            success: function() {
-                showAlert('success', i18n.uncheckSuccess);
-                setTimeout(function() { location.reload(); }, 600);
-            },
-            error: function(xhr) {
-                $btn.prop('disabled', false);
-                showAlert('danger', (xhr.responseJSON && xhr.responseJSON.message) || 'Error');
+            method: 'DELETE'
+        });
+    }
+
+    function doCheckIn(userId) {
+        return $.ajax({
+            url: '/events/' + eventId + '/station-checkin/' + stationId + '/checkin',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ userId: userId })
+        });
+    }
+
+    function parseUserId(decodedText) {
+        if (!decodedText) return '';
+        var text = String(decodedText).trim();
+        if (text.includes(',')) {
+            var parts = text.split(',');
+            return (parts[parts.length - 1] || '').trim();
+        }
+        return text;
+    }
+
+    $(document).on('change', '.station-checkin-cb', function() {
+        var $cb = $(this);
+        var userId = String($cb.data('user-id') || '');
+        var wantChecked = $cb.prop('checked');
+        var $row = $cb.closest('tr');
+        if (!userId) return;
+
+        $cb.prop('disabled', true);
+        var req = wantChecked ? doCheckIn(userId) : doUncheck(userId);
+        req.done(function() {
+            setStationRowChecked($row, wantChecked);
+            showAlert('success', wantChecked ? i18n.checkInSuccess : i18n.uncheckSuccess);
+        }).fail(function(xhr) {
+            $cb.prop('checked', !wantChecked);
+            handleCheckInError(xhr);
+        }).always(function() {
+            if ($row.attr('data-entered') === '1') {
+                $cb.prop('disabled', false);
             }
         });
     });
 
+    function updateAddableSelectionUI() {
+        var $checked = $('#addableUserList .addable-user-cb:checked');
+        $('#addableSelectedCount').text(i18n.selectedCount.replace('{count}', String($checked.length)));
+        $('#addableUserList .addable-user-item').each(function() {
+            $(this).toggleClass('is-checked', $(this).find('.addable-user-cb').prop('checked'));
+        });
+    }
+
+    function getVisibleAddableItems() {
+        return $('#addableUserList .addable-user-item:visible');
+    }
+
+    $('#addableUserFilter').on('input', function() {
+        var q = String($(this).val() || '').trim().toLowerCase();
+        $('#addableUserList .addable-user-item').each(function() {
+            var hay = String($(this).data('search') || '');
+            $(this).toggle(!q || hay.indexOf(q) !== -1);
+        });
+    });
+
+    $('#addableSelectAllBtn').on('click', function() {
+        getVisibleAddableItems().find('.addable-user-cb').prop('checked', true);
+        updateAddableSelectionUI();
+    });
+
+    $('#addableClearBtn').on('click', function() {
+        $('#addableUserList .addable-user-cb').prop('checked', false);
+        updateAddableSelectionUI();
+    });
+
+    $(document).on('change', '.addable-user-cb', updateAddableSelectionUI);
+
     $('#addToListBtn').on('click', function() {
-        var userIds = $('#addUserSelect').val() || [];
+        var userIds = $('#addableUserList .addable-user-cb:checked').map(function() {
+            return $(this).val();
+        }).get();
         if (!userIds.length) {
             showAlert('warning', i18n.selectAddFirst);
             return;
@@ -287,6 +573,39 @@ jQuery(function($) {
         });
     });
 
+    $('#sectionListImportBtn').on('click', function() {
+        var fileInput = document.getElementById('sectionListXlsxInput');
+        var file = fileInput && fileInput.files && fileInput.files[0];
+        if (!file) {
+            showAlert('warning', i18n.xlsxSelectFileFirst);
+            return;
+        }
+        var $btn = $(this).prop('disabled', true);
+        var fd = new FormData();
+        fd.append('file', file);
+        $.ajax({
+            url: '/events/' + eventId + '/station-checkin/' + stationId + '/section-list/import',
+            method: 'POST',
+            data: fd,
+            processData: false,
+            contentType: false,
+            success: function(res) {
+                var s = (res && res.summary) || {};
+                var msg = i18n.xlsxImportSuccess
+                    .replace('{added}', String(s.added != null ? s.added : 0))
+                    .replace('{removed}', String(s.removed != null ? s.removed : 0))
+                    .replace('{unchanged}', String(s.unchanged != null ? s.unchanged : 0))
+                    .replace('{skipped}', String(s.skipped != null ? s.skipped : 0));
+                showAlert('success', msg);
+                setTimeout(function() { location.reload(); }, 900);
+            },
+            error: function(xhr) {
+                $btn.prop('disabled', false);
+                showAlert('danger', (xhr.responseJSON && xhr.responseJSON.message) || i18n.xlsxImportFailed);
+            }
+        });
+    });
+
     $(document).on('click', '.remove-from-list-btn', function() {
         var userId = $(this).data('user-id');
         var userName = $(this).data('user-name') || userId;
@@ -294,66 +613,27 @@ jQuery(function($) {
         if (!confirm(i18n.removeConfirm.replace('{name}', userName))) return;
 
         var $btn = $(this).prop('disabled', true);
+        var $row = $(this).closest('tr');
         $.ajax({
             url: '/events/' + eventId + '/station-checkin/' + stationId + '/section-list/' + userId,
             method: 'DELETE',
             success: function() {
                 showAlert('success', i18n.removeSuccess);
-                setTimeout(function() { location.reload(); }, 500);
+                $row.remove();
+                var $count = $('#sectionListCount');
+                var n = parseInt($count.text(), 10);
+                if (!isNaN(n) && n > 0) $count.text(String(n - 1));
+                if (!$('#unifiedListTable tbody tr[data-user-id]').length) {
+                    $('#unifiedListTable tbody').html(
+                        '<tr class="empty-row"><td colspan="2" class="text-muted text-center"><%= t("station_checkin.sectionListEmpty") %></td></tr>'
+                    );
+                }
             },
             error: function(xhr) {
                 $btn.prop('disabled', false);
                 showAlert('danger', (xhr.responseJSON && xhr.responseJSON.message) || 'Error');
             }
         });
-    });
-
-    $(document).on('click', '.list-checkin-btn', function() {
-        var userId = $(this).data('user-id');
-        if (!userId) return;
-        var $btn = $(this).prop('disabled', true);
-        doCheckIn(userId)
-            .done(function() {
-                showAlert('success', i18n.checkInSuccess);
-                setTimeout(function() { location.reload(); }, 600);
-            })
-            .fail(function(xhr) {
-                $btn.prop('disabled', false);
-                handleCheckInError(xhr);
-            });
-    });
-
-    function parseUserId(decodedText) {
-        if (!decodedText) return '';
-        var text = String(decodedText).trim();
-        if (text.includes(',')) {
-            var parts = text.split(',');
-            return (parts[parts.length - 1] || '').trim();
-        }
-        return text;
-    }
-
-    function doCheckIn(userId) {
-        return $.ajax({
-            url: '/events/' + eventId + '/station-checkin/' + stationId + '/checkin',
-            method: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({ userId: userId })
-        });
-    }
-
-    $('#manualCheckInBtn').on('click', function() {
-        var userId = $('#manualUserSelect').val();
-        if (!userId) {
-            showAlert('warning', i18n.selectUserFirst);
-            return;
-        }
-        doCheckIn(userId)
-            .done(function() {
-                showAlert('success', i18n.checkInSuccess);
-                setTimeout(function() { location.reload(); }, 800);
-            })
-            .fail(handleCheckInError);
     });
 
     function stopScanner() {
@@ -390,8 +670,10 @@ jQuery(function($) {
                 doCheckIn(userId)
                     .done(function(res) {
                         var name = (res.user && res.user.name) || userId;
+                        var uid = (res.user && res.user._id) ? String(res.user._id) : userId;
+                        setStationRowChecked(findStationRow(uid), true);
                         $('#scanResult').html('<span class="status-ok">' + i18n.checkInSuccess + ': ' + name + '</span>');
-                        setTimeout(function() { location.reload(); }, 1000);
+                        showAlert('success', i18n.checkInSuccess + ': ' + name);
                     })
                     .fail(function(xhr) {
                         var body = xhr.responseJSON || {};

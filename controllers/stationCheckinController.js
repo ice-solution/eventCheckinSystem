@@ -128,41 +128,53 @@ exports.renderStationDetailPage = async (req, res) => {
             .filter(Boolean)
             .map((u) => serializeListUser(u, checkedInUserIds.has(String(u._id))));
 
-        // 可加入 section list 的 RSVP 用戶（尚未在名單內）
+        // 可加入 section list 的 RSVP 用戶：僅已進場、且尚未在名單內
         const addableUsers = (event.users || [])
-            .filter((u) => !allowedSet.has(String(u._id)))
+            .filter((u) => !!u.isCheckIn && !allowedSet.has(String(u._id)))
             .map((u) => ({
                 _id: u._id,
                 name: u.name || '',
                 email: u.email || '',
                 company: u.company || '',
                 table: u.table || '',
-                isCheckIn: !!u.isCheckIn,
+                isCheckIn: true,
             }))
             .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'zh-HK'));
 
-        // 手動簽到下拉：有 section list 時只顯示名單內、已進場、尚未於此站簽到
-        const eligibleUsers = (event.users || [])
-            .filter((u) => {
-                if (!u.isCheckIn || checkedInUserIds.has(String(u._id))) return false;
-                if (hasSectionList && !allowedSet.has(String(u._id))) return false;
-                return true;
-            })
-            .map((u) => ({
-                _id: u._id,
-                name: u.name || '',
-                email: u.email || '',
-                company: u.company || '',
-                table: u.table || '',
-            }));
+        // 融合 Section List + 簽到記錄：名單用戶 + 僅有簽到記錄但不在名單者
+        const listIdSet = new Set(sectionListUsers.map((u) => String(u._id)));
+        const unifiedUsers = sectionListUsers.map((u) => ({
+            ...u,
+            onSectionList: true,
+        }));
+        records.forEach((r) => {
+            const uid = String(r.userId);
+            if (listIdSet.has(uid)) return;
+            unifiedUsers.push({
+                _id: r.userId,
+                name: r.userName || '',
+                email: r.userEmail || '',
+                company: '',
+                table: '',
+                isCheckIn: true,
+                stationCheckedIn: true,
+                onSectionList: false,
+            });
+        });
+        unifiedUsers.sort((a, b) => {
+            if (!!a.stationCheckedIn !== !!b.stationCheckedIn) {
+                return a.stationCheckedIn ? 1 : -1; // 未簽到在上，方便操作
+            }
+            return String(a.name || '').localeCompare(String(b.name || ''), 'zh-HK');
+        });
 
         res.render('admin/station_checkin_detail', {
             event,
             eventId,
             station,
             records,
-            eligibleUsers,
             sectionListUsers,
+            unifiedUsers,
             addableUsers,
             hasSectionList,
         });
@@ -451,6 +463,10 @@ exports.addUsersToStationList = async (req, res) => {
                 skipped.push({ userId: id, reason: 'USER_NOT_FOUND' });
                 continue;
             }
+            if (!user.isCheckIn) {
+                skipped.push({ userId: id, reason: 'NOT_ENTERED' });
+                continue;
+            }
             if (existing.has(id)) {
                 skipped.push({ userId: id, reason: 'ALREADY_IN_LIST' });
                 continue;
@@ -474,6 +490,194 @@ exports.addUsersToStationList = async (req, res) => {
         console.error('addUsersToStationList:', err);
         return res.status(500).json({ message: err.message || 'Server error' });
     }
+};
+
+function parseIncludeCell(raw) {
+    if (typeof raw === 'boolean') return raw;
+    if (typeof raw === 'number') return raw === 1;
+    const v = raw != null ? String(raw).trim().toLowerCase() : '';
+    return v === 'y' || v === 'yes' || v === 'true' || v === '1' || v === '是';
+}
+
+function findHeaderIndex(headerRow, candidates) {
+    const normalized = headerRow.map((h) => String(h || '').trim().toLowerCase());
+    for (const name of candidates) {
+        const idx = normalized.indexOf(String(name).toLowerCase());
+        if (idx !== -1) return idx;
+    }
+    return -1;
+}
+
+/** 匯出完整 RSVP 表（含 _id + include）供 Section List 編輯後再匯入 */
+exports.exportStationSectionListTemplate = async (req, res) => {
+    const { eventId, stationId } = req.params;
+    try {
+        const XLSX = require('xlsx');
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+        const station = findStation(event, stationId);
+        if (!station) return res.status(404).json({ message: 'Station not found' });
+
+        const allowedSet = new Set(getAllowedUserIds(station));
+        const header = ['_id', 'name', 'email', 'phone', 'isCheckIn', 'include'];
+        const rows = [header];
+
+        (event.users || []).forEach((u) => {
+            const id = u && u._id ? String(u._id) : '';
+            if (!id) return;
+            rows.push([
+                id,
+                u.name != null ? String(u.name) : '',
+                u.email != null ? String(u.email) : '',
+                u.phone != null ? String(u.phone) : '',
+                u.isCheckIn ? 'Y' : '',
+                allowedSet.has(id) ? 'Y' : '',
+            ]);
+        });
+
+        const worksheet = XLSX.utils.aoa_to_sheet(rows);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'SectionList');
+        const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+
+        const safeName = String(station.name || 'station').replace(/[\\/:*?"<>|]+/g, '_').slice(0, 40);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader(
+            'Content-Disposition',
+            `attachment; filename=station_section_list_${safeName}.xlsx`
+        );
+        return res.send(Buffer.from(buffer));
+    } catch (err) {
+        console.error('exportStationSectionListTemplate:', err);
+        return res.status(500).json({ message: err.message || 'Server error' });
+    }
+};
+
+/**
+ * 以 xlsx 同步 Section List：
+ * - 只認 _id + include（Y = 加入／保留；非 Y = 移出）
+ * - 不依賴 name / email / phone
+ * - 已在名單且仍為 Y → 不重覆加入
+ * - 上次有 Y、今次清走 → 移出
+ */
+exports.importStationSectionList = async (req, res) => {
+    const { eventId, stationId } = req.params;
+    const multer = require('multer');
+    const XLSX = require('xlsx');
+    const upload = multer({
+        storage: multer.memoryStorage(),
+        limits: { fileSize: 8 * 1024 * 1024 },
+    }).single('file');
+
+    upload(req, res, async (uploadErr) => {
+        if (uploadErr) {
+            return res.status(400).json({ message: uploadErr.message || 'Upload failed' });
+        }
+        try {
+            if (!req.file || !req.file.buffer) {
+                return res.status(400).json({ message: 'No file uploaded' });
+            }
+
+            const event = await Event.findById(eventId);
+            if (!event) return res.status(404).json({ message: 'Event not found' });
+            const station = findStation(event, stationId);
+            if (!station) return res.status(404).json({ message: 'Station not found' });
+
+            const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+            const sheetName = workbook.SheetNames[0];
+            if (!sheetName) {
+                return res.status(400).json({ message: 'Workbook has no sheets' });
+            }
+            const sheet = workbook.Sheets[sheetName];
+            const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+            if (!aoa || aoa.length < 2) {
+                return res.status(400).json({ message: 'File is empty or missing data rows' });
+            }
+
+            const headerRow = aoa[0] || [];
+            const idIdx = findHeaderIndex(headerRow, ['_id', 'id', 'userid', 'user_id', 'objectid']);
+            const includeIdx = findHeaderIndex(headerRow, ['include', 'y', 'included', 'in_list']);
+            if (idIdx === -1) {
+                return res.status(400).json({ message: 'Missing required column: _id' });
+            }
+            if (includeIdx === -1) {
+                return res.status(400).json({ message: 'Missing required column: include' });
+            }
+
+            station.allowedUserIds = station.allowedUserIds || [];
+            const existing = new Set(getAllowedUserIds(station));
+            const added = [];
+            const removed = [];
+            const unchanged = [];
+            const skipped = [];
+            const seenIds = new Set();
+
+            for (let r = 1; r < aoa.length; r++) {
+                const row = aoa[r] || [];
+                const rawId = row[idIdx];
+                const id = rawId != null ? String(rawId).trim() : '';
+                if (!id) continue;
+                if (seenIds.has(id)) {
+                    skipped.push({ userId: id, reason: 'DUPLICATE_ROW' });
+                    continue;
+                }
+                seenIds.add(id);
+
+                if (!mongoose.Types.ObjectId.isValid(id)) {
+                    skipped.push({ userId: id, reason: 'INVALID_ID' });
+                    continue;
+                }
+
+                const user = findUser(event, id);
+                if (!user) {
+                    skipped.push({ userId: id, reason: 'USER_NOT_FOUND' });
+                    continue;
+                }
+
+                const wantInclude = parseIncludeCell(row[includeIdx]);
+                const isInList = existing.has(id);
+
+                if (wantInclude) {
+                    if (isInList) {
+                        unchanged.push(id);
+                    } else {
+                        station.allowedUserIds.push(user._id);
+                        existing.add(id);
+                        added.push(id);
+                    }
+                } else if (isInList) {
+                    station.allowedUserIds = station.allowedUserIds.filter(
+                        (uid) => String(uid) !== id
+                    );
+                    existing.delete(id);
+                    removed.push(id);
+                } else {
+                    unchanged.push(id);
+                }
+            }
+
+            station.modified_at = new Date();
+            event.markModified('checkInStations');
+            await event.save();
+
+            return res.status(200).json({
+                message: 'Section list imported',
+                station: serializeStation(station, countByStation(event)[String(station._id)] || 0),
+                summary: {
+                    added: added.length,
+                    removed: removed.length,
+                    unchanged: unchanged.length,
+                    skipped: skipped.length,
+                },
+                added,
+                removed,
+                skipped,
+            });
+        } catch (err) {
+            console.error('importStationSectionList:', err);
+            return res.status(500).json({ message: err.message || 'Server error' });
+        }
+    });
 };
 
 /** 從站點 Section List 移除用戶 */

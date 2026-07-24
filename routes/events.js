@@ -125,6 +125,8 @@ router.get('/:eventId/station-checkin/:stationId', stationCheckinController.rend
 router.put('/:eventId/station-checkin/:stationId', stationCheckinController.updateStation);
 router.delete('/:eventId/station-checkin/:stationId', stationCheckinController.deleteStation);
 router.get('/:eventId/station-checkin/:stationId/section-list', stationCheckinController.getStationSectionList);
+router.get('/:eventId/station-checkin/:stationId/section-list/export', stationCheckinController.exportStationSectionListTemplate);
+router.post('/:eventId/station-checkin/:stationId/section-list/import', stationCheckinController.importStationSectionList);
 router.post('/:eventId/station-checkin/:stationId/section-list', stationCheckinController.addUsersToStationList);
 router.delete('/:eventId/station-checkin/:stationId/section-list/:userId', stationCheckinController.removeUserFromStationList);
 router.post('/:eventId/station-checkin/:stationId/checkin', stationCheckinController.checkInToStation);
