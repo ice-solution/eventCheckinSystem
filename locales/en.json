@@ -510,6 +510,7 @@
     "emailSettingsBtn": "Auto Email Setting",
     "paymentEventLabel": "Payment Event", "paymentEventHint": "Enable paid event functionality",
     "colCreatedAt": "Created At", "colCheckedIn": "Checked In", "colActions": "Actions",
+    "colThankYouYesNo": "Yes/No Answer",
     "addUserFormTitle": "Add New Guest",
     "batchEmailModalTitle": "Batch Send Email", "selectedCount": "Selected {count} guest(s)",
     "selectEmailTypeLabel": "Select Email Type", "selectEmailTemplateLabel": "Select Email Template",

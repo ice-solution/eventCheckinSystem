@@ -1295,6 +1295,9 @@
                                                     <option value="agreementAgreed">協議同意 (agreementAgreed)</option>
                                                     <option value="agreementRecordedAt">協議記錄時間 (agreementRecordedAt)</option>
                                                 <% } %>
+                                                <% if (formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled) { %>
+                                                    <option value="thankYouYesNo"><%= t('users.colThankYouYesNo') %> (thankYouYesNo)</option>
+                                                <% } %>
                                             </select>
                                         </div>
                                         <div class="col-auto">
@@ -1331,6 +1334,9 @@
                                                 <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
                                                     <option value="agreementAgreed">協議同意 (agreementAgreed)</option>
                                                     <option value="agreementRecordedAt">協議記錄時間 (agreementRecordedAt)</option>
+                                                <% } %>
+                                                <% if (formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled) { %>
+                                                    <option value="thankYouYesNo"><%= t('users.colThankYouYesNo') %> (thankYouYesNo)</option>
                                                 <% } %>
                                             </select>
                                         </div>
@@ -1407,6 +1413,17 @@
                                             <th data-field-name="agreementAgreed">協議同意</th>
                                             <th data-field-name="agreementRecordedAt">協議記錄時間</th>
                                         <% } %>
+                                        <% if (formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled) { %>
+                                            <%
+                                                const ynqHead = formConfig.thankYou.yesNoQuestion;
+                                                let ynqColLabel = t('users.colThankYouYesNo');
+                                                if (ynqHead.question) {
+                                                    const q = (ynqHead.question[lang] || ynqHead.question.zh || ynqHead.question.en || '').trim();
+                                                    if (q) ynqColLabel = q;
+                                                }
+                                            %>
+                                            <th data-field-name="thankYouYesNo"><%= ynqColLabel %></th>
+                                        <% } %>
                                         <th><%= t('users.colCreatedAt') %></th>
                                         <th><%= t('users.colCheckedIn') %></th>
                                         <th></th>
@@ -1457,6 +1474,25 @@
                                                 <% } else { %>-<% }
                                                 } else { %>-<% } %>
                                             </td>
+                                            <% } %>
+                                            <% if (formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled) { %>
+                                            <%
+                                                const ynqCell = formConfig.thankYou.yesNoQuestion;
+                                                const ynqRaw = userRow.thankYouYesNo != null ? String(userRow.thankYouYesNo).trim().toLowerCase() : '';
+                                                const ynqIsYes = ['yes', 'y', '是', 'true', '1'].includes(ynqRaw);
+                                                let ynqDisplay = '-';
+                                                let ynqOrder = 0;
+                                                if (ynqRaw) {
+                                                    if (ynqIsYes) {
+                                                        ynqDisplay = (ynqCell.yesLabel && (ynqCell.yesLabel[lang] || ynqCell.yesLabel.zh || ynqCell.yesLabel.en)) || (lang === 'en' ? 'Yes' : '是');
+                                                        ynqOrder = 2;
+                                                    } else {
+                                                        ynqDisplay = (ynqCell.noLabel && (ynqCell.noLabel[lang] || ynqCell.noLabel.zh || ynqCell.noLabel.en)) || (lang === 'en' ? 'No' : '否');
+                                                        ynqOrder = 1;
+                                                    }
+                                                }
+                                            %>
+                                            <td data-field-name="thankYouYesNo" data-order="<%= ynqOrder %>"><%= ynqDisplay %></td>
                                             <% } %>
                                             <td data-order="<%= (user.create_at || user.created_at) ? new Date(user.create_at || user.created_at).getTime() : 0 %>">
                                                 <% 
@@ -1611,6 +1647,19 @@ const _US = {
         if (val === true || val === 'true' || val === 1 || val === '1') return '同意';
         if (val === false || val === 'false' || val === 0 || val === '0') return '未同意';
         return '-';
+    }
+    function formatThankYouYesNoCell(val) {
+        const raw = val == null ? '' : String(val).trim().toLowerCase();
+        if (!raw) return '-';
+        const isYes = ['yes', 'y', '是', 'true', '1'].indexOf(raw) !== -1;
+        <% if (formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion) { %>
+        const yesLabel = <%- JSON.stringify((formConfig.thankYou.yesNoQuestion.yesLabel && (formConfig.thankYou.yesNoQuestion.yesLabel[lang] || formConfig.thankYou.yesNoQuestion.yesLabel.zh || formConfig.thankYou.yesNoQuestion.yesLabel.en)) || (lang === 'en' ? 'Yes' : '是')) %>;
+        const noLabel = <%- JSON.stringify((formConfig.thankYou.yesNoQuestion.noLabel && (formConfig.thankYou.yesNoQuestion.noLabel[lang] || formConfig.thankYou.yesNoQuestion.noLabel.zh || formConfig.thankYou.yesNoQuestion.noLabel.en)) || (lang === 'en' ? 'No' : '否')) %>;
+        <% } else { %>
+        const yesLabel = '<%= lang === "en" ? "Yes" : "是" %>';
+        const noLabel = '<%= lang === "en" ? "No" : "否" %>';
+        <% } %>
+        return isYes ? yesLabel : noLabel;
     }
     function formatAgreementRecordedAtCell(val) {
         if (!val) return '-';
@@ -1798,6 +1847,9 @@ const _US = {
         <% } %>
         <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
             searchableFieldNames.push('agreementAgreed', 'agreementRecordedAt');
+        <% } %>
+        <% if (formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled) { %>
+            searchableFieldNames.push('thankYouYesNo');
         <% } %>
 
         // 條件陣列：{ field: 'name', term: 'john doe' }，須全部符合 (AND)
@@ -3050,6 +3102,9 @@ const _US = {
                     <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
                         newRow.push(formatAgreementAgreedCell(response.agreementAgreed));
                         newRow.push(formatAgreementRecordedAtCell(response.agreementRecordedAt));
+                    <% } %>
+                    <% if (formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled) { %>
+                        newRow.push(formatThankYouYesNoCell(response.thankYouYesNo));
                     <% } %>
                     
                     // 添加 Created At 列

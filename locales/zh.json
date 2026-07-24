@@ -509,6 +509,7 @@
     "emailSettingsBtn": "自動電郵設定",
     "paymentEventLabel": "付費活動", "paymentEventHint": "開啟付費活動功能",
     "colCreatedAt": "建立時間", "colCheckedIn": "已簽到", "colActions": "操作",
+    "colThankYouYesNo": "Yes/No 問題",
     "addUserFormTitle": "新增賓客",
     "batchEmailModalTitle": "批量發送郵件", "selectedCount": "已選擇 {count} 位賓客",
     "selectEmailTypeLabel": "選擇郵件類型", "selectEmailTemplateLabel": "選擇郵件模板",

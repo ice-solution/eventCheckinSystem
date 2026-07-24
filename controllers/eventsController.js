@@ -4843,6 +4843,19 @@ async function buildEventCheckInReportData(event) {
         });
     }
 
+    if (formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled) {
+        const ynq = formConfig.thankYou.yesNoQuestion;
+        const reportLang = (formConfig.defaultLanguage || 'zh');
+        const ynqHeader = (ynq.question && (ynq.question[reportLang] || ynq.question.zh || ynq.question.en))
+            || 'Yes/No';
+        columnDefs.push({
+            header: ynqHeader,
+            key: 'thankYouYesNo',
+            width: Math.min(30, Math.max(12, String(ynqHeader).length || 12)),
+        });
+        fieldKeys.push('thankYouYesNo');
+    }
+
     const ticketColumns = [
         { header: 'Ticket Title (票券)', key: 'ticketTitle', width: 25 },
         { header: 'Ticket Price HKD (票價)', key: 'ticketPrice', width: 14 },
@@ -4883,6 +4896,19 @@ async function buildEventCheckInReportData(event) {
                 row[key] = checkInAtFormat(userObj.checkInAt);
             } else if (key === 'isCheckIn') {
                 row[key] = userObj.isCheckIn ? '✓' : '';
+            } else if (key === 'thankYouYesNo') {
+                const ynq = formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion;
+                const reportLang = (formConfig && formConfig.defaultLanguage) || 'zh';
+                const raw = userObj.thankYouYesNo != null ? String(userObj.thankYouYesNo).trim().toLowerCase() : '';
+                if (!raw) {
+                    row[key] = '';
+                } else if (['yes', 'y', '是', 'true', '1'].includes(raw)) {
+                    row[key] = (ynq && ynq.yesLabel && (ynq.yesLabel[reportLang] || ynq.yesLabel.zh || ynq.yesLabel.en))
+                        || (reportLang === 'en' ? 'Yes' : '是');
+                } else {
+                    row[key] = (ynq && ynq.noLabel && (ynq.noLabel[reportLang] || ynq.noLabel.zh || ynq.noLabel.en))
+                        || (reportLang === 'en' ? 'No' : '否');
+                }
             } else if (Object.prototype.hasOwnProperty.call(ticketInfo, key)) {
                 row[key] = ticketInfo[key] !== undefined && ticketInfo[key] !== null ? String(ticketInfo[key]) : '';
             } else {
