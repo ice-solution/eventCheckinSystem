@@ -117,7 +117,7 @@ router.get('/:event_id/register', async (req, res) => {
 // 路由到註冊成功頁面（session_id 可為 Stripe session_id、Wonder order_id 或 Transaction _id）
 router.get('/:event_id/register/success', async (req, res) => {
     const { event_id } = req.params;
-    const { session_id, lang } = req.query;
+    const { session_id, lang, thankYouYesNo: thankYouYesNoQuery } = req.query;
     let transaction = null;
     if (session_id) {
         const isObjectId = /^[0-9a-fA-F]{24}$/.test(session_id);
@@ -139,11 +139,18 @@ router.get('/:event_id/register/success', async (req, res) => {
         formConfig = formConfigController.getFormConfigForRender(formConfig);
     }
 
+    // Yes/No 答案：query 優先；付費則從 transaction.userFormData 讀
+    let thankYouYesNo = thankYouYesNoQuery || null;
+    if (!thankYouYesNo && transaction && transaction.userFormData) {
+        thankYouYesNo = transaction.userFormData.thankYouYesNo || null;
+    }
+
     res.render('exvent/success', {
         event_id,
         transaction,
         lang: lang || null,
-        formConfig
+        formConfig,
+        thankYouYesNo
     });
 });
 

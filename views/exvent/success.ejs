@@ -113,14 +113,43 @@
         <div class="success-content">
             <% 
                 const ty = (typeof formConfig !== 'undefined' && formConfig && formConfig.thankYou) ? formConfig.thankYou : {};
-                const freeTitleZh = (ty.title && ty.title.zh) ? ty.title.zh : '感謝你參加！';
-                const freeTitleEn = (ty.title && ty.title.en) ? ty.title.en : 'Thank you for participating!';
-                const freeMsgZh = (ty.message && ty.message.zh) ? ty.message.zh : '我們會透過 Email 把資訊發送給你。';
-                const freeMsgEn = (ty.message && ty.message.en) ? ty.message.en : 'We will send the information to you via Email.';
-                const purchaseTitleZh = (ty.purchaseTitle && ty.purchaseTitle.zh) ? ty.purchaseTitle.zh : '感謝您的購票！';
-                const purchaseTitleEn = (ty.purchaseTitle && ty.purchaseTitle.en) ? ty.purchaseTitle.en : 'Thank you for your purchase!';
-                const purchaseMsgZh = (ty.purchaseMessage && ty.purchaseMessage.zh) ? ty.purchaseMessage.zh : '您的付款已成功，以下是您的交易紀錄：';
-                const purchaseMsgEn = (ty.purchaseMessage && ty.purchaseMessage.en) ? ty.purchaseMessage.en : 'Your payment was successful. Here are your transaction details:';
+                const ynq = ty.yesNoQuestion || {};
+                const answerRaw = (typeof thankYouYesNo !== 'undefined' && thankYouYesNo != null)
+                    ? String(thankYouYesNo).trim().toLowerCase()
+                    : '';
+                const answeredYes = ['yes', 'y', '是', 'true', '1'].includes(answerRaw);
+                const answeredNo = answerRaw !== '' && !answeredYes;
+                const useYesCopy = answeredYes && ynq && ynq.enabled;
+                const useNoCopy = answeredNo && ynq && ynq.enabled;
+
+                let freeTitleZh = (ty.title && ty.title.zh) ? ty.title.zh : '感謝你參加！';
+                let freeTitleEn = (ty.title && ty.title.en) ? ty.title.en : 'Thank you for participating!';
+                let freeMsgZh = (ty.message && ty.message.zh) ? ty.message.zh : '我們會透過 Email 把資訊發送給你。';
+                let freeMsgEn = (ty.message && ty.message.en) ? ty.message.en : 'We will send the information to you via Email.';
+                let purchaseTitleZh = (ty.purchaseTitle && ty.purchaseTitle.zh) ? ty.purchaseTitle.zh : '感謝您的購票！';
+                let purchaseTitleEn = (ty.purchaseTitle && ty.purchaseTitle.en) ? ty.purchaseTitle.en : 'Thank you for your purchase!';
+                let purchaseMsgZh = (ty.purchaseMessage && ty.purchaseMessage.zh) ? ty.purchaseMessage.zh : '您的付款已成功，以下是您的交易紀錄：';
+                let purchaseMsgEn = (ty.purchaseMessage && ty.purchaseMessage.en) ? ty.purchaseMessage.en : 'Your payment was successful. Here are your transaction details:';
+
+                if (useYesCopy) {
+                    if (ynq.yesTitle && ynq.yesTitle.zh) freeTitleZh = ynq.yesTitle.zh;
+                    if (ynq.yesTitle && ynq.yesTitle.en) freeTitleEn = ynq.yesTitle.en;
+                    if (ynq.yesMessage && ynq.yesMessage.zh) freeMsgZh = ynq.yesMessage.zh;
+                    if (ynq.yesMessage && ynq.yesMessage.en) freeMsgEn = ynq.yesMessage.en;
+                    if (ynq.yesPurchaseTitle && ynq.yesPurchaseTitle.zh) purchaseTitleZh = ynq.yesPurchaseTitle.zh;
+                    if (ynq.yesPurchaseTitle && ynq.yesPurchaseTitle.en) purchaseTitleEn = ynq.yesPurchaseTitle.en;
+                    if (ynq.yesPurchaseMessage && ynq.yesPurchaseMessage.zh) purchaseMsgZh = ynq.yesPurchaseMessage.zh;
+                    if (ynq.yesPurchaseMessage && ynq.yesPurchaseMessage.en) purchaseMsgEn = ynq.yesPurchaseMessage.en;
+                } else if (useNoCopy) {
+                    if (ynq.noTitle && ynq.noTitle.zh) freeTitleZh = ynq.noTitle.zh;
+                    if (ynq.noTitle && ynq.noTitle.en) freeTitleEn = ynq.noTitle.en;
+                    if (ynq.noMessage && ynq.noMessage.zh) freeMsgZh = ynq.noMessage.zh;
+                    if (ynq.noMessage && ynq.noMessage.en) freeMsgEn = ynq.noMessage.en;
+                    if (ynq.noPurchaseTitle && ynq.noPurchaseTitle.zh) purchaseTitleZh = ynq.noPurchaseTitle.zh;
+                    if (ynq.noPurchaseTitle && ynq.noPurchaseTitle.en) purchaseTitleEn = ynq.noPurchaseTitle.en;
+                    if (ynq.noPurchaseMessage && ynq.noPurchaseMessage.zh) purchaseMsgZh = ynq.noPurchaseMessage.zh;
+                    if (ynq.noPurchaseMessage && ynq.noPurchaseMessage.en) purchaseMsgEn = ynq.noPurchaseMessage.en;
+                }
             %>
             <% if (transaction) { %>
                 <h5 id="thankYouTitle" data-zh="<%= purchaseTitleZh %>" data-en="<%= purchaseTitleEn %>"><%= purchaseTitleZh %></h5>

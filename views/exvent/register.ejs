@@ -47,20 +47,24 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
             word-break: break-word;
             hyphens: auto;
         }
-        .form-header .form-subheader {
+        .form-header .form-subheader,
+        .form-header #formSubHeader {
             color: #34495e;
             font-size: 1.15rem;
             font-weight: 500;
             line-height: 1.4;
-            margin: 0 0 10px;
-            text-align: center;
+            margin: 0 auto 10px;
+            max-width: 36em;
+            text-align: center !important;
             overflow-wrap: anywhere;
             word-break: break-word;
         }
         .form-header #formSubtitle {
             font-size: 0.95rem;
             line-height: 1.5;
-            margin-bottom: 0;
+            margin: 0 auto;
+            max-width: 36em;
+            text-align: center;
         }
         .form-section {
             margin-bottom: 30px;
@@ -105,47 +109,36 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
         }
         .form-row {
             display: flex;
-            align-items: center;
+            flex-direction: column;
+            align-items: stretch;
             margin-bottom: 20px;
             padding: 10px 0;
             border-bottom: 1px solid #f1f3f4;
         }
         .form-label {
-            flex: 0 0 200px;
+            display: block;
+            width: 100%;
             font-weight: 600;
             color: #2c3e50;
-            padding-right: 20px;
-            text-align: right;
-        }
-        .form-input {
-            flex: 1;
-            max-width: 400px;
-        }
-        /* radio / checkbox：題目在上、選項在下；題目與一般欄位 label 同欄右對齊 */
-        .form-row.form-row-stacked {
-            flex-direction: column;
-            align-items: stretch;
-            --form-label-col: 200px;
-            --form-label-gap: 20px;
-            --form-content-offset: calc(var(--form-label-col) + var(--form-label-gap));
-        }
-        .form-row.form-row-stacked .form-label {
-            flex: none;
-            width: var(--form-label-col);
-            max-width: var(--form-label-col);
-            margin-left: 0;
-            text-align: right;
-            padding-right: var(--form-label-gap);
-            margin-bottom: 10px;
+            text-align: left;
+            padding-right: 0;
+            margin-bottom: 8px;
             line-height: 1.5;
             overflow-wrap: anywhere;
             word-break: break-word;
         }
-        /* 選項區維持與一般 input 相同起點 */
+        .form-input {
+            width: 100%;
+            max-width: 100%;
+        }
+        /* radio / checkbox：題目在上、選項在下（與一般欄位相同上下排） */
+        .form-row.form-row-stacked .form-label {
+            margin-bottom: 10px;
+        }
         .form-row.form-row-stacked .form-input {
-            width: calc(100% - var(--form-content-offset));
-            max-width: none;
-            margin-left: var(--form-content-offset);
+            width: 100%;
+            max-width: 100%;
+            margin-left: 0;
         }
         .radio-group,
         .checkbox-group {
@@ -162,7 +155,6 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
             margin: 0;
             min-height: auto;
         }
-        /* stacked 選項沿用一般 flex 排版（起點由 .form-input offset 控制） */
         .radio-group .form-check-input,
         .checkbox-group .form-check-input {
             position: static;
@@ -178,7 +170,7 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
             align-items: flex-start;
         }
         .form-row.form-row-display .form-display-text {
-            flex: 1;
+            width: 100%;
             max-width: none;
             color: #2c3e50;
             line-height: 1.6;
@@ -347,32 +339,6 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
             .form-header h1 {
                 font-size: 100%;
             }
-            .form-row {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            .form-label {
-                flex: none;
-                width: 100%;
-                text-align: left;
-                margin-bottom: 8px;
-                padding-right: 0;
-            }
-            .form-input {
-                width: 100%;
-                max-width: none;
-            }
-            .form-row.form-row-stacked .form-input {
-                margin-left: 0;
-                width: 100%;
-                max-width: none;
-            }
-            .form-row.form-row-stacked .form-label {
-                width: 100%;
-                max-width: none;
-                text-align: left;
-                padding-right: 0;
-            }
             /* responsive：按鈕縮小約 30% */
             .btn {
                 padding: 8px 20px;
@@ -519,7 +485,7 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                                             </div>
                                         </div>
                                         <% } else { %>
-                                        <div class="form-row<%= _isChoiceField ? ' form-row-stacked' : '' %>">
+                                        <div class="form-row form-row-stacked">
                                             <label class="form-label field-label" for="<%= _fieldControlId %>" 
                                                    data-zh="<%= field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '') %>" 
                                                    data-en="<%= field.label && field.label.en ? field.label.en : '' %>">
@@ -814,6 +780,34 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                     zh: (formConfig.agreement.content && formConfig.agreement.content.zh) ? formConfig.agreement.content.zh : '',
                     en: (formConfig.agreement.content && formConfig.agreement.content.en) ? formConfig.agreement.content.en : ''
                 }) %></script>
+            <% } %>
+
+            <!-- Thank You Yes/No 問題 -->
+            <% if (formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled) { %>
+                <% const ynq = formConfig.thankYou.yesNoQuestion; %>
+                <div class="form-section thankyou-yesno-section">
+                    <h3 class="section-title"
+                        data-zh="<%= (ynq.question && ynq.question.zh) ? ynq.question.zh : '請選擇' %>"
+                        data-en="<%= (ynq.question && ynq.question.en) ? ynq.question.en : 'Please choose' %>">
+                        <%= (ynq.question && ynq.question.zh) ? ynq.question.zh : '請選擇' %>
+                    </h3>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="thankYouYesNo" id="thankYouYesNoYes" value="yes" required>
+                        <label class="form-check-label field-label" for="thankYouYesNoYes"
+                               data-zh="<%= (ynq.yesLabel && ynq.yesLabel.zh) ? ynq.yesLabel.zh : '是' %>"
+                               data-en="<%= (ynq.yesLabel && ynq.yesLabel.en) ? ynq.yesLabel.en : 'Yes' %>">
+                            <%= (ynq.yesLabel && ynq.yesLabel.zh) ? ynq.yesLabel.zh : '是' %>
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="thankYouYesNo" id="thankYouYesNoNo" value="no" required>
+                        <label class="form-check-label field-label" for="thankYouYesNoNo"
+                               data-zh="<%= (ynq.noLabel && ynq.noLabel.zh) ? ynq.noLabel.zh : '否' %>"
+                               data-en="<%= (ynq.noLabel && ynq.noLabel.en) ? ynq.noLabel.en : 'No' %>">
+                            <%= (ynq.noLabel && ynq.noLabel.zh) ? ynq.noLabel.zh : '否' %>
+                        </label>
+                    </div>
+                </div>
             <% } %>
 
             <div class="btn-container">
@@ -1560,8 +1554,11 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                     url: '/web/<%= event_id %>/register',
                     data: newUser,
                     success: function(response) {
-                        const langParam = currentLanguage !== 'zh' ? '?lang=' + currentLanguage : '';
-                        window.location.href = `/web/<%= event_id %>/register/success${langParam}`;
+                        const params = new URLSearchParams();
+                        if (currentLanguage && currentLanguage !== 'zh') params.set('lang', currentLanguage);
+                        if (newUser.thankYouYesNo) params.set('thankYouYesNo', newUser.thankYouYesNo);
+                        const qs = params.toString();
+                        window.location.href = `/web/<%= event_id %>/register/success${qs ? '?' + qs : ''}`;
                     },
                     error: function(error) {
                         var errMsg = error.responseJSON.message;

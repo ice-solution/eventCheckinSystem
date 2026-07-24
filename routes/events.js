@@ -77,6 +77,7 @@ router.post('/create', eventsController.createEvent);
 router.get('/create', eventsController.renderCreateEventPage); // 創建事件
 router.get('/', eventsController.getUserEvents);
 router.get('/list', eventsController.renderEventsList);
+router.post('/export-checkin-list', eventsController.exportEventsCheckInList);
 
 
 
@@ -123,6 +124,9 @@ router.post('/:eventId/station-checkin', stationCheckinController.createStation)
 router.get('/:eventId/station-checkin/:stationId', stationCheckinController.renderStationDetailPage);
 router.put('/:eventId/station-checkin/:stationId', stationCheckinController.updateStation);
 router.delete('/:eventId/station-checkin/:stationId', stationCheckinController.deleteStation);
+router.get('/:eventId/station-checkin/:stationId/section-list', stationCheckinController.getStationSectionList);
+router.post('/:eventId/station-checkin/:stationId/section-list', stationCheckinController.addUsersToStationList);
+router.delete('/:eventId/station-checkin/:stationId/section-list/:userId', stationCheckinController.removeUserFromStationList);
 router.post('/:eventId/station-checkin/:stationId/checkin', stationCheckinController.checkInToStation);
 router.delete('/:eventId/station-checkin/:stationId/checkin/:userId', stationCheckinController.uncheckInFromStation);
 router.get('/:eventId/station-checkin/:stationId/records', stationCheckinController.listStationCheckIns);

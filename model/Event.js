@@ -84,6 +84,8 @@ const checkInStationSchema = new mongoose.Schema({
     description: { type: String, default: '' },
     enabled: { type: Boolean, default: true },
     order: { type: Number, default: 0 },
+    /** Section List：此分站允許簽到的 RSVP 用戶；空 = 不限制（全部已進場用戶可簽） */
+    allowedUserIds: [{ type: mongoose.Schema.Types.ObjectId }],
     created_at: { type: Date, default: Date.now },
     modified_at: { type: Date, default: Date.now },
 });

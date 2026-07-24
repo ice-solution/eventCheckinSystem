@@ -217,15 +217,26 @@ function applyFormConfigMetaDefaults(migratedConfig) {
         purchaseMessage: {
             zh: '您的付款已成功，以下是您的交易紀錄：',
             en: 'Your payment was successful. Here are your transaction details:'
+        },
+        yesNoQuestion: {
+            enabled: false,
+            question: { zh: '', en: '' },
+            yesLabel: { zh: '是', en: 'Yes' },
+            noLabel: { zh: '否', en: 'No' },
+            yesEmailTemplateId: '',
+            noEmailTemplateId: '',
+            yesTitle: { zh: '', en: '' },
+            yesMessage: { zh: '', en: '' },
+            yesPurchaseTitle: { zh: '', en: '' },
+            yesPurchaseMessage: { zh: '', en: '' },
+            noTitle: { zh: '', en: '' },
+            noMessage: { zh: '', en: '' },
+            noPurchaseTitle: { zh: '', en: '' },
+            noPurchaseMessage: { zh: '', en: '' }
         }
     };
     if (!migratedConfig.thankYou || typeof migratedConfig.thankYou !== 'object') {
-        migratedConfig.thankYou = {
-            title: { ...defaultThankYou.title },
-            message: { ...defaultThankYou.message },
-            purchaseTitle: { ...defaultThankYou.purchaseTitle },
-            purchaseMessage: { ...defaultThankYou.purchaseMessage }
-        };
+        migratedConfig.thankYou = JSON.parse(JSON.stringify(defaultThankYou));
     } else {
         ['title', 'message', 'purchaseTitle', 'purchaseMessage'].forEach((key) => {
             if (!migratedConfig.thankYou[key] || typeof migratedConfig.thankYou[key] !== 'object') {
@@ -235,6 +246,38 @@ function applyFormConfigMetaDefaults(migratedConfig) {
                 migratedConfig.thankYou[key].en = migratedConfig.thankYou[key].en || defaultThankYou[key].en;
             }
         });
+        const defaultYnq = defaultThankYou.yesNoQuestion;
+        const ynq = migratedConfig.thankYou.yesNoQuestion;
+        if (!ynq || typeof ynq !== 'object') {
+            migratedConfig.thankYou.yesNoQuestion = JSON.parse(JSON.stringify(defaultYnq));
+        } else {
+            const bilingual = (obj) => ({
+                zh: (obj && obj.zh) || '',
+                en: (obj && obj.en) || ''
+            });
+            migratedConfig.thankYou.yesNoQuestion = {
+                enabled: ynq.enabled === true,
+                question: bilingual(ynq.question),
+                yesLabel: {
+                    zh: (ynq.yesLabel && ynq.yesLabel.zh) || defaultYnq.yesLabel.zh,
+                    en: (ynq.yesLabel && ynq.yesLabel.en) || defaultYnq.yesLabel.en
+                },
+                noLabel: {
+                    zh: (ynq.noLabel && ynq.noLabel.zh) || defaultYnq.noLabel.zh,
+                    en: (ynq.noLabel && ynq.noLabel.en) || defaultYnq.noLabel.en
+                },
+                yesEmailTemplateId: ynq.yesEmailTemplateId != null ? String(ynq.yesEmailTemplateId) : '',
+                noEmailTemplateId: ynq.noEmailTemplateId != null ? String(ynq.noEmailTemplateId) : '',
+                yesTitle: bilingual(ynq.yesTitle),
+                yesMessage: bilingual(ynq.yesMessage),
+                yesPurchaseTitle: bilingual(ynq.yesPurchaseTitle),
+                yesPurchaseMessage: bilingual(ynq.yesPurchaseMessage),
+                noTitle: bilingual(ynq.noTitle),
+                noMessage: bilingual(ynq.noMessage),
+                noPurchaseTitle: bilingual(ynq.noPurchaseTitle),
+                noPurchaseMessage: bilingual(ynq.noPurchaseMessage)
+            };
+        }
     }
 
     migratedConfig.paymentTicketUi = normalizePaymentTicketUi(migratedConfig.paymentTicketUi);
@@ -283,6 +326,22 @@ exports.getDefaultFormConfig = () => ({
         purchaseMessage: {
             zh: '您的付款已成功，以下是您的交易紀錄：',
             en: 'Your payment was successful. Here are your transaction details:'
+        },
+        yesNoQuestion: {
+            enabled: false,
+            question: { zh: '', en: '' },
+            yesLabel: { zh: '是', en: 'Yes' },
+            noLabel: { zh: '否', en: 'No' },
+            yesEmailTemplateId: '',
+            noEmailTemplateId: '',
+            yesTitle: { zh: '', en: '' },
+            yesMessage: { zh: '', en: '' },
+            yesPurchaseTitle: { zh: '', en: '' },
+            yesPurchaseMessage: { zh: '', en: '' },
+            noTitle: { zh: '', en: '' },
+            noMessage: { zh: '', en: '' },
+            noPurchaseTitle: { zh: '', en: '' },
+            noPurchaseMessage: { zh: '', en: '' }
         }
     },
     paymentTicketUi: normalizePaymentTicketUi(),
@@ -703,10 +762,16 @@ exports.renderFormConfigPage = async (req, res) => {
         const { getCurrentBannerPreviewUrl } = require('../utils/bannerCache');
         const currentBanner = getCurrentBannerPreviewUrl(eventId);
 
+        const EmailTemplate = require('../model/EmailTemplate');
+        const emailTemplates = await EmailTemplate.find({
+            $or: [{ eventId: eventId }, { eventId: null }]
+        }).select('_id type subject eventId').sort({ type: 1, subject: 1 }).lean();
+
         res.render('admin/form_config', { 
             event: event, 
             formConfig: formConfigForView,
-            currentBanner
+            currentBanner,
+            emailTemplates
         });
         
     } catch (error) {

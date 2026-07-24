@@ -155,6 +155,60 @@ const formConfigSchema = new mongoose.Schema({
         purchaseMessage: {
             zh: { type: String, default: '您的付款已成功，以下是您的交易紀錄：' },
             en: { type: String, default: 'Your payment was successful. Here are your transaction details:' }
+        },
+        /** Yes/No 問題（顯示於報名表；Yes 時可覆寫成功頁文案並發送指定 Email Template） */
+        yesNoQuestion: {
+            enabled: { type: Boolean, default: false },
+            question: {
+                zh: { type: String, default: '' },
+                en: { type: String, default: '' }
+            },
+            yesLabel: {
+                zh: { type: String, default: '是' },
+                en: { type: String, default: 'Yes' }
+            },
+            noLabel: {
+                zh: { type: String, default: '否' },
+                en: { type: String, default: 'No' }
+            },
+            /** 選 Yes 時發送的 EmailTemplate _id（可選） */
+            yesEmailTemplateId: { type: String, default: '' },
+            /** 選 No 時發送的 EmailTemplate _id（可選） */
+            noEmailTemplateId: { type: String, default: '' },
+            /** 選 Yes 時 Thank You 頁標題／說明（覆寫 title/message；付費則另用 yesPurchase*） */
+            yesTitle: {
+                zh: { type: String, default: '' },
+                en: { type: String, default: '' }
+            },
+            yesMessage: {
+                zh: { type: String, default: '' },
+                en: { type: String, default: '' }
+            },
+            yesPurchaseTitle: {
+                zh: { type: String, default: '' },
+                en: { type: String, default: '' }
+            },
+            yesPurchaseMessage: {
+                zh: { type: String, default: '' },
+                en: { type: String, default: '' }
+            },
+            /** 選 No 時 Thank You 頁標題／說明 */
+            noTitle: {
+                zh: { type: String, default: '' },
+                en: { type: String, default: '' }
+            },
+            noMessage: {
+                zh: { type: String, default: '' },
+                en: { type: String, default: '' }
+            },
+            noPurchaseTitle: {
+                zh: { type: String, default: '' },
+                en: { type: String, default: '' }
+            },
+            noPurchaseMessage: {
+                zh: { type: String, default: '' },
+                en: { type: String, default: '' }
+            }
         }
     },
     // 付費票券區塊文案與分類按鈕（Register 頁）

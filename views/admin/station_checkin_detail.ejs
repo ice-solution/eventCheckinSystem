@@ -9,6 +9,11 @@
     .scan-panel { border: 1px solid #e4e9f0; border-radius: 10px; padding: 16px; background: #fff; }
     .status-ok { color: #28a745; font-weight: 600; }
     .status-err { color: #dc3545; font-weight: 600; }
+    .section-list-panel { border: 1px solid #e4e9f0; border-radius: 10px; padding: 16px; background: #fff; margin-bottom: 16px; }
+    .section-list-hint { font-size: 0.875rem; color: #6b7a8d; }
+    .badge-checked { background: #28a745; }
+    .badge-pending { background: #6c757d; }
+    #addUserSelect { max-width: 100%; }
 </style>
 
 <div id="right-panel" class="right-panel">
@@ -29,6 +34,7 @@
                                 <p class="text-muted"><%= station.description %></p>
                             <% } %>
                             <p class="text-muted small"><%= t('station_checkin.requireEntryNote') %></p>
+                            <p class="text-muted small"><%= t('station_checkin.sectionListNote') %></p>
 
                             <div class="row">
                                 <div class="col-md-5 mb-4">
@@ -62,6 +68,85 @@
                                 </div>
 
                                 <div class="col-md-7">
+                                    <div class="section-list-panel">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <h5 class="mb-0">
+                                                <%= t('station_checkin.sectionListTitle') %>
+                                                (<span class="badge badge-info" id="sectionListCount"><%= (sectionListUsers || []).length %></span>
+                                            </h5>
+                                        </div>
+                                        <p class="section-list-hint mb-3"><%= t('station_checkin.sectionListHint') %></p>
+
+                                        <div class="form-row align-items-end mb-3">
+                                            <div class="form-group col-md-8 mb-2 mb-md-0">
+                                                <label for="addUserSelect"><%= t('station_checkin.addToListLabel') %></label>
+                                                <select class="form-control" id="addUserSelect" multiple size="6">
+                                                    <% (addableUsers || []).forEach(function(u) { %>
+                                                        <option value="<%= u._id %>">
+                                                            <%= u.name || '-' %><%= u.email ? ' (' + u.email + ')' : '' %><%= u.isCheckIn ? '' : ' [' + t('station_checkin.notEntered') + ']' %>
+                                                        </option>
+                                                    <% }); %>
+                                                </select>
+                                                <small class="text-muted"><%= t('station_checkin.multiSelectHint') %></small>
+                                            </div>
+                                            <div class="form-group col-md-4 mb-0">
+                                                <button type="button" class="btn btn-primary btn-block" id="addToListBtn">
+                                                    <i class="fa fa-plus"></i> <%= t('station_checkin.addToListBtn') %>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div class="table-responsive">
+                                            <table id="sectionListTable" class="table table-sm table-striped table-bordered mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th><%= t('common.name') %></th>
+                                                        <th><%= t('common.email') %></th>
+                                                        <th><%= t('station_checkin.listStatus') %></th>
+                                                        <th><%= t('common.actions') %></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <% if (!sectionListUsers || sectionListUsers.length === 0) { %>
+                                                        <tr class="empty-row">
+                                                            <td colspan="4" class="text-muted text-center"><%= t('station_checkin.sectionListEmpty') %></td>
+                                                        </tr>
+                                                    <% } else { %>
+                                                        <% sectionListUsers.forEach(function(u) { %>
+                                                            <tr data-user-id="<%= u._id %>">
+                                                                <td><%= u.name || '-' %></td>
+                                                                <td><%= u.email || '-' %></td>
+                                                                <td>
+                                                                    <% if (u.stationCheckedIn) { %>
+                                                                        <span class="badge badge-checked"><%= t('station_checkin.statusCheckedIn') %></span>
+                                                                    <% } else if (!u.isCheckIn) { %>
+                                                                        <span class="badge badge-warning"><%= t('station_checkin.notEntered') %></span>
+                                                                    <% } else { %>
+                                                                        <span class="badge badge-pending"><%= t('station_checkin.statusPending') %></span>
+                                                                    <% } %>
+                                                                </td>
+                                                                <td>
+                                                                    <% if (!u.stationCheckedIn && u.isCheckIn) { %>
+                                                                        <button type="button" class="btn btn-sm btn-success list-checkin-btn"
+                                                                            data-user-id="<%= u._id %>"
+                                                                            data-user-name="<%= u.name || '' %>">
+                                                                            <%= t('station_checkin.checkInBtn') %>
+                                                                        </button>
+                                                                    <% } %>
+                                                                    <button type="button" class="btn btn-sm btn-outline-danger remove-from-list-btn"
+                                                                        data-user-id="<%= u._id %>"
+                                                                        data-user-name="<%= u.name || '' %>">
+                                                                        <%= t('station_checkin.removeFromListBtn') %>
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        <% }); %>
+                                                    <% } %>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
                                     <h5><%= t('station_checkin.recordsTitle') %> (<%= (records || []).length %>)</h5>
                                     <table id="recordsTable" class="table table-striped table-bordered">
                                         <thead>
@@ -107,36 +192,69 @@
 <script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
 <script>
 jQuery(function($) {
-    const eventId = '<%= eventId %>';
-    const stationId = '<%= station._id %>';
-    let html5QrCode = null;
-    let scanning = false;
+    var eventId = '<%= eventId %>';
+    var stationId = '<%= station._id %>';
+    var html5QrCode = null;
+    var scanning = false;
+    var i18n = {
+        notInList: <%- JSON.stringify(t('station_checkin.notInListAlert')) %>,
+        removeConfirm: <%- JSON.stringify(t('station_checkin.removeFromListConfirm')) %>,
+        removeSuccess: <%- JSON.stringify(t('station_checkin.removeFromListSuccess')) %>,
+        addSuccess: <%- JSON.stringify(t('station_checkin.addToListSuccess')) %>,
+        selectAddFirst: <%- JSON.stringify(t('station_checkin.selectAddFirst')) %>,
+        checkInSuccess: <%- JSON.stringify(t('station_checkin.checkInSuccess')) %>,
+        selectUserFirst: <%- JSON.stringify(t('station_checkin.selectUserFirst')) %>,
+        uncheckConfirm: <%- JSON.stringify(t('station_checkin.uncheckConfirm')) %>,
+        uncheckSuccess: <%- JSON.stringify(t('station_checkin.uncheckSuccess')) %>,
+        processing: <%- JSON.stringify(t('station_checkin.processing')) %>
+    };
 
     if ($.fn.DataTable) {
         $('#recordsTable').DataTable({ order: [[2, 'desc']], pageLength: 25 });
     }
 
     function showAlert(type, msg) {
-        const html = '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+        var html = '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
             msg +
             '<button type="button" class="close" data-dismiss="alert"><span>&times;</span></button></div>';
-        const $a = $(html);
+        var $a = $(html);
         $('#alertContainer').append($a);
-        setTimeout(function() { $a.alert('close'); }, 4000);
+        setTimeout(function() { $a.alert('close'); }, 4500);
+    }
+
+    function alertBox(msg) {
+        window.alert(msg);
+        showAlert('danger', msg);
+    }
+
+    function formatNotInListMsg(res) {
+        var name = (res && res.user && res.user.name) ? res.user.name : '';
+        var email = (res && res.user && res.user.email) ? res.user.email : '';
+        var label = name || email || '';
+        return i18n.notInList.replace('{name}', label || '-');
+    }
+
+    function handleCheckInError(xhr) {
+        var body = xhr.responseJSON || {};
+        if (body.code === 'NOT_IN_STATION_LIST') {
+            alertBox(formatNotInListMsg(body));
+            return;
+        }
+        showAlert('danger', body.message || 'Error');
     }
 
     $(document).on('click', '.uncheck-btn', function() {
-        const userId = $(this).data('user-id');
-        const userName = $(this).data('user-name') || userId;
+        var userId = $(this).data('user-id');
+        var userName = $(this).data('user-name') || userId;
         if (!userId) return;
-        if (!confirm('<%= t("station_checkin.uncheckConfirm") %>'.replace('{name}', userName))) return;
+        if (!confirm(i18n.uncheckConfirm.replace('{name}', userName))) return;
 
-        const $btn = $(this).prop('disabled', true);
+        var $btn = $(this).prop('disabled', true);
         $.ajax({
             url: '/events/' + eventId + '/station-checkin/' + stationId + '/checkin/' + userId,
             method: 'DELETE',
             success: function() {
-                showAlert('success', '<%= t("station_checkin.uncheckSuccess") %>');
+                showAlert('success', i18n.uncheckSuccess);
                 setTimeout(function() { location.reload(); }, 600);
             },
             error: function(xhr) {
@@ -146,11 +264,70 @@ jQuery(function($) {
         });
     });
 
+    $('#addToListBtn').on('click', function() {
+        var userIds = $('#addUserSelect').val() || [];
+        if (!userIds.length) {
+            showAlert('warning', i18n.selectAddFirst);
+            return;
+        }
+        var $btn = $(this).prop('disabled', true);
+        $.ajax({
+            url: '/events/' + eventId + '/station-checkin/' + stationId + '/section-list',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ userIds: userIds }),
+            success: function() {
+                showAlert('success', i18n.addSuccess);
+                setTimeout(function() { location.reload(); }, 500);
+            },
+            error: function(xhr) {
+                $btn.prop('disabled', false);
+                showAlert('danger', (xhr.responseJSON && xhr.responseJSON.message) || 'Error');
+            }
+        });
+    });
+
+    $(document).on('click', '.remove-from-list-btn', function() {
+        var userId = $(this).data('user-id');
+        var userName = $(this).data('user-name') || userId;
+        if (!userId) return;
+        if (!confirm(i18n.removeConfirm.replace('{name}', userName))) return;
+
+        var $btn = $(this).prop('disabled', true);
+        $.ajax({
+            url: '/events/' + eventId + '/station-checkin/' + stationId + '/section-list/' + userId,
+            method: 'DELETE',
+            success: function() {
+                showAlert('success', i18n.removeSuccess);
+                setTimeout(function() { location.reload(); }, 500);
+            },
+            error: function(xhr) {
+                $btn.prop('disabled', false);
+                showAlert('danger', (xhr.responseJSON && xhr.responseJSON.message) || 'Error');
+            }
+        });
+    });
+
+    $(document).on('click', '.list-checkin-btn', function() {
+        var userId = $(this).data('user-id');
+        if (!userId) return;
+        var $btn = $(this).prop('disabled', true);
+        doCheckIn(userId)
+            .done(function() {
+                showAlert('success', i18n.checkInSuccess);
+                setTimeout(function() { location.reload(); }, 600);
+            })
+            .fail(function(xhr) {
+                $btn.prop('disabled', false);
+                handleCheckInError(xhr);
+            });
+    });
+
     function parseUserId(decodedText) {
         if (!decodedText) return '';
-        const text = String(decodedText).trim();
+        var text = String(decodedText).trim();
         if (text.includes(',')) {
-            const parts = text.split(',');
+            var parts = text.split(',');
             return (parts[parts.length - 1] || '').trim();
         }
         return text;
@@ -166,19 +343,17 @@ jQuery(function($) {
     }
 
     $('#manualCheckInBtn').on('click', function() {
-        const userId = $('#manualUserSelect').val();
+        var userId = $('#manualUserSelect').val();
         if (!userId) {
-            showAlert('warning', '<%= t("station_checkin.selectUserFirst") %>');
+            showAlert('warning', i18n.selectUserFirst);
             return;
         }
         doCheckIn(userId)
             .done(function() {
-                showAlert('success', '<%= t("station_checkin.checkInSuccess") %>');
+                showAlert('success', i18n.checkInSuccess);
                 setTimeout(function() { location.reload(); }, 800);
             })
-            .fail(function(xhr) {
-                showAlert('danger', (xhr.responseJSON && xhr.responseJSON.message) || 'Error');
-            });
+            .fail(handleCheckInError);
     });
 
     function stopScanner() {
@@ -208,20 +383,26 @@ jQuery(function($) {
             { facingMode: 'environment' },
             { fps: 10, qrbox: { width: 220, height: 220 } },
             function(decodedText) {
-                const userId = parseUserId(decodedText);
+                var userId = parseUserId(decodedText);
                 if (!userId) return;
                 stopScanner();
-                $('#scanResult').html('<span class="status-ok"><%= t("station_checkin.processing") %></span>');
+                $('#scanResult').html('<span class="status-ok">' + i18n.processing + '</span>');
                 doCheckIn(userId)
                     .done(function(res) {
-                        const name = (res.user && res.user.name) || userId;
-                        $('#scanResult').html('<span class="status-ok"><%= t("station_checkin.checkInSuccess") %>: ' + name + '</span>');
+                        var name = (res.user && res.user.name) || userId;
+                        $('#scanResult').html('<span class="status-ok">' + i18n.checkInSuccess + ': ' + name + '</span>');
                         setTimeout(function() { location.reload(); }, 1000);
                     })
                     .fail(function(xhr) {
-                        const msg = (xhr.responseJSON && xhr.responseJSON.message) || 'Error';
+                        var body = xhr.responseJSON || {};
+                        var msg = body.message || 'Error';
+                        if (body.code === 'NOT_IN_STATION_LIST') {
+                            msg = formatNotInListMsg(body);
+                            alertBox(msg);
+                        } else {
+                            showAlert('danger', msg);
+                        }
                         $('#scanResult').html('<span class="status-err">' + msg + '</span>');
-                        showAlert('danger', msg);
                     });
             },
             function() {}

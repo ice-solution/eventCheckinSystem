@@ -488,9 +488,9 @@ exports.addUserToEvent = async (req, res) => {
         const savedUser = event.users[event.users.length - 1]; // 獲取剛剛添加的用戶
         newUser._id = savedUser._id; // 將 _id 添加到 newUser 對象中
 
-        // 根據設置決定是否發送歡迎消息（email/sms/both）
-        if(newUser.role !== 'guest' && event.emailSettings && event.emailSettings.sendWelcomeEmail){
-            await exports.sendWelcomeMessage(newUser, event); // 根據設置發送 email/sms/both
+        // 報名後寄信：有 Yes/No question → 只寄對應 template；否則用 auto welcome
+        if (newUser.role !== 'guest') {
+            await exports.sendPostRegistrationEmailByPolicy(savedUser, event, { mode: 'welcome' });
         }
 
         // 返回新用戶資料（包含 _id），保持向後兼容
@@ -737,6 +737,134 @@ exports.sendEmail = async (user, event) => {
         }
     }
 }
+
+/** 判斷 thankYouYesNo 是否為 Yes */
+function isThankYouYesAnswer(value) {
+    const v = String(value == null ? '' : value).trim().toLowerCase();
+    return v === 'yes' || v === 'y' || v === '是' || v === 'true' || v === '1';
+}
+
+/** 判斷 thankYouYesNo 是否為 No（有明確作答且非 Yes） */
+function isThankYouNoAnswer(value) {
+    if (value == null || String(value).trim() === '') return false;
+    return !isThankYouYesAnswer(value);
+}
+
+/**
+ * FormConfig.thankYou.yesNoQuestion 是否啟用
+ */
+async function loadThankYouYesNoQuestion(eventId) {
+    const FormConfig = require('../model/FormConfig');
+    const formConfigController = require('./formConfigController');
+    let formConfig = await FormConfig.findOne({ eventId });
+    if (!formConfig) return null;
+    formConfig = formConfigController.getFormConfigForRender(formConfig);
+    const ynq = formConfig.thankYou && formConfig.thankYou.yesNoQuestion;
+    if (!ynq || !ynq.enabled) return null;
+    return ynq;
+}
+
+/**
+ * 依 EmailTemplate _id 發送郵件（Thank You Yes/No 等用途）
+ */
+exports.sendEmailByTemplateId = async (user, event, emailTemplateId) => {
+    if (!user || !user.email || !emailTemplateId) return false;
+    if (!mongoose.Types.ObjectId.isValid(String(emailTemplateId))) return false;
+
+    const emailTemplate = await EmailTemplate.findById(emailTemplateId);
+    if (!emailTemplate) {
+        console.warn('sendEmailByTemplateId: template not found', emailTemplateId);
+        return false;
+    }
+
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
+    let subject = emailTemplate.subject || 'Event notification';
+    const additionalVars = buildEmailTemplateAdditionalVars({
+        user,
+        event,
+        emailTemplateId: emailTemplate._id,
+    });
+    let messageBody = replaceTemplateVariables(emailTemplate.content, user, event, additionalVars);
+    if (!messageBody) {
+        messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl);
+    }
+
+    const trackingId = await emailTracking.createEmailRecord({
+        recipient: user.email,
+        subject,
+        emailTemplateId: emailTemplate._id,
+        eventId: event._id,
+        userId: user._id ? user._id.toString() : null
+    });
+
+    messageBody = embedKaitiFontInEmail(messageBody);
+    if (trackingId) {
+        messageBody = emailTracking.addTrackingToEmail(messageBody, trackingId);
+    }
+
+    const result = await ses.sendEmail(user.email, subject, messageBody);
+    if (trackingId && result && result.MessageId) {
+        await emailTracking.updateEmailRecordStatus(trackingId, 'sent', result.MessageId);
+    } else if (trackingId && result instanceof Error) {
+        await emailTracking.updateEmailRecordStatus(trackingId, 'failed');
+    }
+    return true;
+};
+
+/**
+ * 依 Yes/No 答案發送對應 Email Template（ynq 可預先載入）
+ */
+async function sendThankYouYesNoTemplateEmail(user, event, ynq) {
+    if (!user || !user.email || !ynq) return false;
+    let templateId = '';
+    if (isThankYouYesAnswer(user.thankYouYesNo)) {
+        templateId = ynq.yesEmailTemplateId;
+    } else if (isThankYouNoAnswer(user.thankYouYesNo)) {
+        templateId = ynq.noEmailTemplateId;
+    }
+    if (!templateId) return false;
+    return exports.sendEmailByTemplateId(user, event, templateId);
+}
+
+/**
+ * 報名後寄信政策（互斥）：
+ * - 有啟用 Yes/No question → 只寄 Yes/No 對應 template
+ * - 否則 → 沿用 auto welcome / confirmation logic
+ * @param {'welcome'|'confirmation'} mode
+ */
+exports.sendPostRegistrationEmailByPolicy = async (user, event, options = {}) => {
+    const { mode = 'welcome', transaction = null } = options;
+    if (!user || !event) return;
+
+    try {
+        const ynq = await loadThankYouYesNoQuestion(event._id);
+        if (ynq) {
+            await sendThankYouYesNoTemplateEmail(user, event, ynq);
+            return;
+        }
+
+        if (mode === 'confirmation') {
+            if (event.emailSettings && event.emailSettings.sendConfirmationEmail) {
+                await exports.sendPaymentConfirmationEmail(user, event, transaction);
+            }
+            return;
+        }
+
+        // welcome（免費報名 / $0 票）
+        if (user.role !== 'guest' && event.emailSettings && event.emailSettings.sendWelcomeEmail) {
+            await exports.sendWelcomeMessage(user, event);
+        }
+    } catch (err) {
+        console.error('sendPostRegistrationEmailByPolicy error:', err);
+    }
+};
+
+/** @deprecated 保留別名：改走 sendPostRegistrationEmailByPolicy */
+exports.sendThankYouYesEmailIfNeeded = async (user, event) => {
+    const ynq = await loadThankYouYesNoQuestion(event._id);
+    if (!ynq) return false;
+    return sendThankYouYesNoTemplateEmail(user, event, ynq);
+};
 
 // 發送歡迎消息（根據設置決定發送 email/sms/both）
 exports.sendWelcomeMessage = async (user, event) => {
@@ -4155,12 +4283,8 @@ async function completeFreePaymentTicketRegistration(event, ticket, userFormData
     const savedUser = event.users[event.users.length - 1];
     const userForEmail = { ...newUser, _id: savedUser._id };
 
-    if (userForEmail.role !== 'guest' && event.emailSettings && event.emailSettings.sendWelcomeEmail) {
-        try {
-            await exports.sendWelcomeMessage(userForEmail, event);
-        } catch (e) {
-            console.error('Free ticket welcome email error:', e);
-        }
+    if (userForEmail.role !== 'guest') {
+        await exports.sendPostRegistrationEmailByPolicy(userForEmail, event, { mode: 'welcome' });
     }
 
     if (isInvoiceEmailEnabled()) {
@@ -4217,8 +4341,11 @@ exports.stripeCheckout = async (req, res) => {
         // 免費票券（$0）：視作免費登記，不建立付款交易、不導向 Wonder/Stripe
         if (isFreePaymentTicketPrice(ticket.price)) {
             await completeFreePaymentTicketRegistration(event, ticket, userFormData, lang);
-            const langOnlyQuery = lang && lang !== 'zh' ? `?lang=${lang}` : '';
-            const successUrl = `${baseUrl}/web/${event_id}/register/success${langOnlyQuery}`;
+            const params = new URLSearchParams();
+            if (lang && lang !== 'zh') params.set('lang', lang);
+            if (userFormData.thankYouYesNo) params.set('thankYouYesNo', String(userFormData.thankYouYesNo));
+            const qs = params.toString();
+            const successUrl = `${baseUrl}/web/${event_id}/register/success${qs ? `?${qs}` : ''}`;
             return res.json({ url: successUrl });
         }
 
@@ -4422,12 +4549,11 @@ async function markTransactionPaidAndAddUser(transaction) {
     eventDoc.users.push(newUser);
     await eventDoc.save();
     const addedUser = eventDoc.users[eventDoc.users.length - 1];
-    if (addedUser && eventDoc.emailSettings && eventDoc.emailSettings.sendConfirmationEmail) {
-        try {
-            await exports.sendPaymentConfirmationEmail(addedUser, eventDoc, transaction);
-        } catch (e) {
-            console.error('Error sending payment confirmation email:', e);
-        }
+    if (addedUser) {
+        await exports.sendPostRegistrationEmailByPolicy(addedUser, eventDoc, {
+            mode: 'confirmation',
+            transaction,
+        });
     }
 }
 
@@ -4646,110 +4772,148 @@ function resolveUserTicketInfo(userObj, transaction) {
     };
 }
 
+/** Excel sheet 名稱：最多 31 字、禁 \ / ? * [ ]，同名加後綴 */
+function sanitizeExcelSheetName(name, usedNames) {
+    let base = String(name || 'Event')
+        .replace(/[\\/?*[\]:]/g, '_')
+        .replace(/'/g, '')
+        .trim();
+    if (!base) base = 'Event';
+    base = base.substring(0, 31);
+    let candidate = base;
+    let i = 2;
+    const used = usedNames || new Set();
+    while (used.has(candidate.toLowerCase())) {
+        const suffix = ` (${i})`;
+        candidate = (base.substring(0, Math.max(1, 31 - suffix.length)) + suffix).trim();
+        i += 1;
+    }
+    used.add(candidate.toLowerCase());
+    return candidate;
+}
+
+/**
+ * 建立單一 event 的報表欄位與列資料（與 users 頁 Download Report 相同格式）
+ */
+async function buildEventCheckInReportData(event) {
+    const eventId = event._id;
+    const users = event.users || [];
+
+    const transactions = await Transaction.find({ eventId })
+        .sort({ updatedAt: -1 })
+        .lean();
+    const transactionsByEmail = buildTransactionsByEmail(transactions);
+
+    const FormConfig = require('../model/FormConfig');
+    const formConfig = await FormConfig.findOne({ eventId });
+
+    const columnDefs = [{ header: '_id', key: '_id', width: 26 }];
+    const fieldKeys = ['_id'];
+
+    if (formConfig && formConfig.sections && formConfig.sections.length > 0) {
+        const lang = formConfig.defaultLanguage || 'zh';
+        const sections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0));
+        sections.forEach((section) => {
+            if (!section.visible || !section.fields) return;
+            const fields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0));
+            fields.forEach((field) => {
+                if (!field.visible || field.type === 'display') return;
+                const header = (field.label && (field.label[lang] || field.label.zh || field.label.en)) || field.fieldName || '';
+                columnDefs.push({
+                    header,
+                    key: field.fieldName,
+                    width: Math.min(25, Math.max(10, (header && header.length) || 10)),
+                });
+                fieldKeys.push(field.fieldName);
+            });
+        });
+    } else {
+        const defaults = [
+            { header: 'Email', key: 'email', width: 25 },
+            { header: 'Name', key: 'name', width: 20 },
+            { header: 'Table', key: 'table', width: 10 },
+            { header: 'Company', key: 'company', width: 20 },
+            { header: 'Phone', key: 'phone', width: 15 },
+            { header: 'Role', key: 'role', width: 10 },
+            { header: 'Industry', key: 'industry', width: 15 },
+        ];
+        defaults.forEach((col) => {
+            columnDefs.push(col);
+            fieldKeys.push(col.key);
+        });
+    }
+
+    const ticketColumns = [
+        { header: 'Ticket Title (票券)', key: 'ticketTitle', width: 25 },
+        { header: 'Ticket Price HKD (票價)', key: 'ticketPrice', width: 14 },
+        { header: 'Transaction ID', key: 'transactionId', width: 26 },
+        { header: 'Transaction Status (交易狀態)', key: 'transactionStatus', width: 16 },
+        { header: 'Payment Gateway (付款閘道)', key: 'paymentGateway', width: 16 },
+        { header: 'Transaction Date (交易日期)', key: 'transactionDate', width: 22 },
+    ];
+    ticketColumns.forEach((col) => {
+        columnDefs.push(col);
+        fieldKeys.push(col.key);
+    });
+
+    columnDefs.push({ header: 'CheckInAt', key: 'checkInAt', width: 15 });
+    columnDefs.push({ header: '已簽到', key: 'isCheckIn', width: 10 });
+    fieldKeys.push('checkInAt', 'isCheckIn');
+
+    const checkInAtFormat = (date) => (date ? new Date(date).toLocaleString('en-US', {
+        timeZone: 'Asia/Hong_Kong',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+    }) : '');
+
+    const rows = users.map((user) => {
+        const userObj = user.toObject ? user.toObject() : user;
+        const transaction = pickTransactionForUser(userObj.email, transactionsByEmail);
+        const ticketInfo = resolveUserTicketInfo(userObj, transaction);
+        const row = {};
+        fieldKeys.forEach((key) => {
+            if (key === '_id') {
+                row[key] = userObj._id != null ? String(userObj._id) : '';
+            } else if (key === 'checkInAt') {
+                row[key] = checkInAtFormat(userObj.checkInAt);
+            } else if (key === 'isCheckIn') {
+                row[key] = userObj.isCheckIn ? '✓' : '';
+            } else if (Object.prototype.hasOwnProperty.call(ticketInfo, key)) {
+                row[key] = ticketInfo[key] !== undefined && ticketInfo[key] !== null ? String(ticketInfo[key]) : '';
+            } else {
+                const val = userObj[key];
+                row[key] = val !== undefined && val !== null
+                    ? (Array.isArray(val) ? val.join(', ') : String(val))
+                    : '';
+            }
+        });
+        return row;
+    });
+
+    return { columnDefs, rows };
+}
+
+function addEventReportWorksheet(workbook, sheetName, reportData) {
+    const worksheet = workbook.addWorksheet(sheetName);
+    worksheet.columns = reportData.columnDefs;
+    reportData.rows.forEach((row) => worksheet.addRow(row));
+    return worksheet;
+}
+
 exports.outputReport = async (req, res) => {
     const { eventId } = req.params;
     try {
         const event = await Event.findById(eventId);
         if (!event) return res.status(404).send('Event not found');
-        const users = event.users || [];
 
-        const transactions = await Transaction.find({ eventId })
-            .sort({ updatedAt: -1 })
-            .lean();
-        const transactionsByEmail = buildTransactionsByEmail(transactions);
-
-        const FormConfig = require('../model/FormConfig');
-        let formConfig = await FormConfig.findOne({ eventId });
-
-        // Build columns: _id first, then formConfig fields (in order), then CheckInAt, then 已簽到 at the end
-        const columnDefs = [{ header: '_id', key: '_id', width: 26 }];
-        const fieldKeys = ['_id']; // key for each column, for building row data
-
-        if (formConfig && formConfig.sections && formConfig.sections.length > 0) {
-            const lang = formConfig.defaultLanguage || 'zh';
-            const sections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0));
-            sections.forEach(section => {
-                if (!section.visible || !section.fields) return;
-                const fields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0));
-                fields.forEach(field => {
-                    if (!field.visible || field.type === 'display') return;
-                    const header = (field.label && (field.label[lang] || field.label.zh || field.label.en)) || field.fieldName || '';
-                    columnDefs.push({ header, key: field.fieldName, width: Math.min(25, Math.max(10, (header && header.length) || 10)) });
-                    fieldKeys.push(field.fieldName);
-                });
-            });
-        } else {
-            // Fallback when no formConfig: default columns
-            const defaults = [
-                { header: 'Email', key: 'email', width: 25 },
-                { header: 'Name', key: 'name', width: 20 },
-                { header: 'Table', key: 'table', width: 10 },
-                { header: 'Company', key: 'company', width: 20 },
-                { header: 'Phone', key: 'phone', width: 15 },
-                { header: 'Role', key: 'role', width: 10 },
-                { header: 'Industry', key: 'industry', width: 15 }
-            ];
-            defaults.forEach(col => {
-                columnDefs.push(col);
-                fieldKeys.push(col.key);
-            });
-        }
-
-        // Ticket / Transaction（以 email 配對 Transaction，$0 票券可從 user.ticketTitle 補充）
-        const ticketColumns = [
-            { header: 'Ticket Title (票券)', key: 'ticketTitle', width: 25 },
-            { header: 'Ticket Price HKD (票價)', key: 'ticketPrice', width: 14 },
-            { header: 'Transaction ID', key: 'transactionId', width: 26 },
-            { header: 'Transaction Status (交易狀態)', key: 'transactionStatus', width: 16 },
-            { header: 'Payment Gateway (付款閘道)', key: 'paymentGateway', width: 16 },
-            { header: 'Transaction Date (交易日期)', key: 'transactionDate', width: 22 },
-        ];
-        ticketColumns.forEach((col) => {
-            columnDefs.push(col);
-            fieldKeys.push(col.key);
-        });
-
-        // Append CheckInAt and 已簽到 at the end
-        columnDefs.push({ header: 'CheckInAt', key: 'checkInAt', width: 15 });
-        columnDefs.push({ header: '已簽到', key: 'isCheckIn', width: 10 });
-        fieldKeys.push('checkInAt', 'isCheckIn');
-
+        const reportData = await buildEventCheckInReportData(event);
         const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('Users');
-        worksheet.columns = columnDefs;
-
-        const checkInAtFormat = (date) => date ? new Date(date).toLocaleString('en-US', {
-            timeZone: 'Asia/Hong_Kong',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
-        }) : '';
-
-        users.forEach(user => {
-            const userObj = user.toObject ? user.toObject() : user;
-            const transaction = pickTransactionForUser(userObj.email, transactionsByEmail);
-            const ticketInfo = resolveUserTicketInfo(userObj, transaction);
-            const row = {};
-            fieldKeys.forEach(key => {
-                if (key === '_id') {
-                    row[key] = userObj._id != null ? String(userObj._id) : '';
-                } else if (key === 'checkInAt') {
-                    row[key] = checkInAtFormat(userObj.checkInAt);
-                } else if (key === 'isCheckIn') {
-                    row[key] = userObj.isCheckIn ? '✓' : '';
-                } else if (Object.prototype.hasOwnProperty.call(ticketInfo, key)) {
-                    row[key] = ticketInfo[key] !== undefined && ticketInfo[key] !== null ? String(ticketInfo[key]) : '';
-                } else {
-                    const val = userObj[key];
-                    row[key] = val !== undefined && val !== null ? (Array.isArray(val) ? val.join(', ') : String(val)) : '';
-                }
-            });
-            worksheet.addRow(row);
-        });
+        addEventReportWorksheet(workbook, 'Users', reportData);
 
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', 'attachment; filename=event_users.xlsx');
@@ -4758,6 +4922,71 @@ exports.outputReport = async (req, res) => {
     } catch (err) {
         console.error('Export report error:', err);
         res.status(500).send('Report export failed');
+    }
+};
+
+/**
+ * Event List：多選活動匯出 check-in list
+ * Body: { eventIds: string[] }
+ * 一個 sheet = 一個 event，sheet name = event.name
+ */
+exports.exportEventsCheckInList = async (req, res) => {
+    try {
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const rawIds = (req.body && req.body.eventIds) || [];
+        const eventIds = (Array.isArray(rawIds) ? rawIds : [rawIds])
+            .map((id) => String(id || '').trim())
+            .filter((id) => mongoose.Types.ObjectId.isValid(id));
+
+        if (!eventIds.length) {
+            return res.status(400).json({ message: 'Please select at least one event' });
+        }
+
+        const sessionUser = req.session.user;
+        const isAdmin = sessionUser.role === 'admin';
+        const allowed = (sessionUser.allowedEvents || []).map((id) => id && id.toString()).filter(Boolean);
+
+        if (!isAdmin) {
+            const forbidden = eventIds.filter((id) => !allowed.includes(id));
+            if (forbidden.length) {
+                return res.status(403).json({ message: 'No access to one or more selected events' });
+            }
+        }
+
+        const events = await Event.find({ _id: { $in: eventIds } });
+        if (!events.length) {
+            return res.status(404).json({ message: 'No events found' });
+        }
+
+        // 依請求順序輸出 sheet
+        const byId = new Map(events.map((e) => [String(e._id), e]));
+        const ordered = eventIds.map((id) => byId.get(id)).filter(Boolean);
+
+        const workbook = new ExcelJS.Workbook();
+        const usedSheetNames = new Set();
+
+        for (const event of ordered) {
+            const reportData = await buildEventCheckInReportData(event);
+            const sheetName = sanitizeExcelSheetName(event.name, usedSheetNames);
+            addEventReportWorksheet(workbook, sheetName, reportData);
+        }
+
+        const stamp = new Date().toISOString().slice(0, 10);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader(
+            'Content-Disposition',
+            `attachment; filename=events_checkin_list_${stamp}.xlsx`
+        );
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (err) {
+        console.error('Export events check-in list error:', err);
+        if (!res.headersSent) {
+            res.status(500).json({ message: 'Export failed' });
+        }
     }
 };
 
