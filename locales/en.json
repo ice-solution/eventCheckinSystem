@@ -732,7 +732,7 @@
     "agreementContentEnLabel": "Content (EN)",
     "agreementHint": "Tip: Shown as a dialog when clicked; plain text line breaks preserved; HTML supported. Agreement is optional — <code>agreementAgreed</code> (true/false) and <code>agreementRecordedAt</code> are stored in user data.",
 
-    "thankYouHint": "Title and message shown on the registration / purchase success page. Leave blank to use defaults.",
+    "thankYouHint": "Success copy and email logic are mutually exclusive: with Yes/No off, use General copy + Email Settings auto-send; with Yes/No on, use only Yes/No copy and templates — no need to fill both.",
     "thankYouFreeSection": "General registration success",
     "thankYouPurchaseSection": "Paid ticket purchase success",
     "thankYouTitleZhLabel": "Title (ZH)",
@@ -745,7 +745,7 @@
     "thankYouPurchaseMessageEnLabel": "Message (EN)",
     "thankYouYesNoSection": "Yes / No Question",
     "thankYouYesNoEnabled": "Enabled",
-    "thankYouYesNoHint": "When Enabled, the registration form shows Yes/No and emails use the Yes/No templates below (no double-send with Auto Welcome/Confirmation). When disabled, Email Settings auto-send logic applies.",
+    "thankYouYesNoHint": "When enabled: the form shows Yes/No; the success page uses the Yes/No copy below; emails use only the Yes/No templates (no double-send with Auto Welcome/Confirmation).",
     "thankYouYesNoQuestionZh": "Question (ZH)",
     "thankYouYesNoQuestionEn": "Question (EN)",
     "thankYouYesNoQuestionZhPh": "e.g. Would you like to receive future event updates?",

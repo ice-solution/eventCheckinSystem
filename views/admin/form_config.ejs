@@ -296,6 +296,19 @@
                                     <% const ty = (formConfig.thankYou) ? formConfig.thankYou : {}; %>
                                     <% const ynq = (ty.yesNoQuestion) ? ty.yesNoQuestion : {}; %>
                                     <p class="text-muted small mb-3"><%= t('form_config.thankYouHint') %></p>
+
+                                    <h6 class="mb-2"><%= t('form_config.thankYouYesNoSection') %></h6>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="thankYouYesNoEnabled"
+                                               <%= ynq.enabled ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="thankYouYesNoEnabled">
+                                            <%= t('form_config.thankYouYesNoEnabled') %>
+                                        </label>
+                                    </div>
+                                    <p class="text-muted small mb-3"><%= t('form_config.thankYouYesNoHint') %></p>
+
+                                    <div id="thankYouGeneralSettings"<%= ynq.enabled ? ' style="display:none;"' : '' %>>
+                                    <hr class="my-4">
                                     <h6 class="mb-2"><%= t('form_config.thankYouFreeSection') %></h6>
                                     <div class="row">
                                         <div class="col-md-6">
@@ -347,18 +360,10 @@
                                                       placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (ty.purchaseMessage && ty.purchaseMessage.en) ? ty.purchaseMessage.en : 'Your payment was successful. Here are your transaction details:' %></textarea>
                                         </div>
                                     </div>
-
-                                    <hr class="my-4">
-                                    <h6 class="mb-2"><%= t('form_config.thankYouYesNoSection') %></h6>
-                                    <div class="form-check mb-3">
-                                        <input class="form-check-input" type="checkbox" id="thankYouYesNoEnabled"
-                                               <%= ynq.enabled ? 'checked' : '' %>>
-                                        <label class="form-check-label" for="thankYouYesNoEnabled">
-                                            <%= t('form_config.thankYouYesNoEnabled') %>
-                                        </label>
                                     </div>
-                                    <p class="text-muted small mb-3"><%= t('form_config.thankYouYesNoHint') %></p>
-                                    <div id="thankYouYesNoSettings">
+
+                                    <div id="thankYouYesNoSettings"<%= ynq.enabled ? '' : ' style="display:none;"' %>>
+                                    <hr class="my-4">
                                         <div class="row">
                                             <div class="col-md-6">
                                                 <label class="form-label"><%= t('form_config.thankYouYesNoQuestionZh') %></label>
@@ -1056,6 +1061,20 @@
     if (!formConfig.registerSubHeader) {
         formConfig.registerSubHeader = { zh: '', en: '' };
     }
+
+    function syncThankYouModeUI() {
+        const enabled = !!(document.getElementById('thankYouYesNoEnabled') || {}).checked;
+        const general = document.getElementById('thankYouGeneralSettings');
+        const yesNo = document.getElementById('thankYouYesNoSettings');
+        if (general) general.style.display = enabled ? 'none' : '';
+        if (yesNo) yesNo.style.display = enabled ? '' : 'none';
+    }
+    const thankYouYesNoEnabledEl = document.getElementById('thankYouYesNoEnabled');
+    if (thankYouYesNoEnabledEl) {
+        thankYouYesNoEnabledEl.addEventListener('change', syncThankYouModeUI);
+        syncThankYouModeUI();
+    }
+
     if (!formConfig.registerSubtitle) {
         formConfig.registerSubtitle = {
             zh: '請填寫以下資料完成活動報名',

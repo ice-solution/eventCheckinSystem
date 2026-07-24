@@ -731,7 +731,7 @@
     "agreementContentEnLabel": "Content (EN)",
     "agreementHint": "提示：Register 頁點 (agreement) 以彈層顯示；純文字換行會保留；亦支援 HTML。勾選為選填，系統會將 <code>agreementAgreed</code>（true/false）與 <code>agreementRecordedAt</code> 存入用戶資料。",
 
-    "thankYouHint": "顯示於報名／購票成功頁的標題與說明文字。留空則使用預設文案。",
+    "thankYouHint": "成功頁文案與寄信邏輯二選一：未啟用 Yes/No 時用「一般」文案＋ Email Settings auto send；啟用後只用 Yes／No 文案與模板，唔使兩邊都填。",
     "thankYouFreeSection": "一般報名成功",
     "thankYouPurchaseSection": "付費購票成功",
     "thankYouTitleZhLabel": "標題 (ZH)",
@@ -744,7 +744,7 @@
     "thankYouPurchaseMessageEnLabel": "Message (EN)",
     "thankYouYesNoSection": "Yes / No 問題",
     "thankYouYesNoEnabled": "啟用",
-    "thankYouYesNoHint": "勾選「啟用」後，報名表會顯示 Yes/No，並改用下方 Yes／No Email Template（唔會再跟 Auto Welcome／Confirmation double send）。未啟用則沿用 Email Settings 的 auto send 邏輯。",
+    "thankYouYesNoHint": "啟用後：報名表顯示 Yes/No；成功頁改用下方 Yes／No 文案；寄信只用 Yes／No Template（唔會同 Auto Welcome／Confirmation double send）。",
     "thankYouYesNoQuestionZh": "問題 (ZH)",
     "thankYouYesNoQuestionEn": "Question (EN)",
     "thankYouYesNoQuestionZhPh": "例如：是否希望收到後續活動資訊？",
