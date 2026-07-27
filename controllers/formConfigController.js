@@ -84,6 +84,12 @@ const migrateFormConfig = (formConfig) => {
                     migratedField.required = false;
                     delete migratedField.options;
                 }
+                if (migratedField.confirmEmail === undefined) {
+                    migratedField.confirmEmail = false;
+                }
+                if (migratedField.type !== 'email') {
+                    migratedField.confirmEmail = false;
+                }
                 
                 if (field.options && migratedField.type !== 'display') {
                     migratedField.options = field.options.map(option => {

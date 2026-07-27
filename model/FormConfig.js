@@ -18,6 +18,11 @@ const formFieldSchema = new mongoose.Schema({
         type: Boolean, 
         default: false 
     },
+    /** email 類型：啟用後報名頁顯示「確認電子郵件」欄位 */
+    confirmEmail: {
+        type: Boolean,
+        default: false
+    },
     // 是否在註冊頁等前台表單顯示供用戶填寫
     display: {
         type: Boolean,

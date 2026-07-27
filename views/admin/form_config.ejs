@@ -822,6 +822,17 @@
                                                                        value="<%= field.placeholder && field.placeholder.en ? field.placeholder.en : '' %>"
                                                                        onchange="updateFieldPlaceholder(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'en', this.value)">
                                                             </div>
+                                                            <% if (field.type === 'email') { %>
+                                                            <div class="col-md-6">
+                                                                <label class="form-label"><%= t('form_config.confirmEmailLabel') %></label>
+                                                                <div class="form-check mt-1">
+                                                                    <input class="form-check-input" type="checkbox"
+                                                                           <%= field.confirmEmail ? 'checked' : '' %>
+                                                                           onchange="updateFieldProperty(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'confirmEmail', this.checked)">
+                                                                    <label class="form-check-label"><%= t('form_config.confirmEmailHint') %></label>
+                                                                </div>
+                                                            </div>
+                                                            <% } %>
                                                         </div>
                                                         <% } else { %>
                                                         <div class="row mt-2">
@@ -1234,6 +1245,9 @@
                 if (value === 'display') {
                     formConfig.sections[sectionIndex].fields[fieldIndex].required = false;
                 }
+                if (value !== 'email') {
+                    formConfig.sections[sectionIndex].fields[fieldIndex].confirmEmail = false;
+                }
                 
                 // 字段類型切換時立即保存
                 try {
@@ -1343,6 +1357,7 @@
             label: '新字段',
             type: 'text',
             required: false,
+            confirmEmail: false,
             display: true,
             visible: true,
             placeholder: '',
@@ -1488,6 +1503,12 @@
                             html += '<textarea class="form-control" placeholder="' + getMultilingualText(field.placeholder, previewLanguage) + '" disabled></textarea>';
                         } else {
                             html += '<input type="' + field.type + '" class="form-control" placeholder="' + getMultilingualText(field.placeholder, previewLanguage) + '" disabled>';
+                            if (field.type === 'email' && field.confirmEmail) {
+                                html += '<label class="form-label mt-2">' + (previewLanguage === 'zh' ? '確認電子郵件' : 'Confirm Email');
+                                if (field.required) html += ' <span class="text-danger">*</span>';
+                                html += '</label>';
+                                html += '<input type="email" class="form-control" placeholder="' + getMultilingualText(field.placeholder, previewLanguage) + '" disabled>';
+                            }
                         }
                         }
                         html += '</div>';
@@ -1709,6 +1730,7 @@
                         label: field.label,
                         type: field.type,
                         required: field.required,
+                        confirmEmail: !!field.confirmEmail,
                         display: field.display !== undefined ? field.display : field.visible !== false,
                         visible: field.visible,
                         placeholder: field.placeholder,
@@ -1793,6 +1815,7 @@
                             label: field.label || { zh: '', en: '' },
                             type: field.type || 'text',
                             required: field.required || false,
+                            confirmEmail: !!field.confirmEmail,
                             display: disp,
                             visible: disp,
                             placeholder: field.placeholder || { zh: '', en: '' },

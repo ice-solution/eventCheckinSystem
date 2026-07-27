@@ -834,6 +834,8 @@
     "display": "Display",
     "placeholderZh": "Chinese Placeholder",
     "placeholderEn": "English Placeholder",
+    "confirmEmailLabel": "Confirm email",
+    "confirmEmailHint": "When enabled, a confirm email field appears below; both must match to submit.",
     "optionsLabel": "Options",
     "optionValuePh": "Option value",
     "optionLabelZhPh": "Chinese label",

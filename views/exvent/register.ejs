@@ -624,6 +624,28 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                                                 <% } %>
                                             </div>
                                         </div>
+                                        <% if (field.type === 'email' && field.confirmEmail) { %>
+                                        <div class="form-row form-row-stacked email-confirm-row" data-email-field="<%= field.fieldName %>">
+                                            <label class="form-label field-label" for="<%= field.fieldName %>_confirm"
+                                                   data-zh="確認電子郵件"
+                                                   data-en="Confirm Email">
+                                                確認電子郵件
+                                                <% if (field.required) { %>
+                                                    <span class="required">*</span>
+                                                <% } %>
+                                            </label>
+                                            <div class="form-input">
+                                                <input type="email" class="form-control js-email-confirm"
+                                                       id="<%= field.fieldName %>_confirm"
+                                                       data-confirm-for="<%= field.fieldName %>"
+                                                       placeholder="<%= field.placeholder && field.placeholder.zh ? field.placeholder.zh : (typeof field.placeholder === 'string' ? field.placeholder : '') %>"
+                                                       data-placeholder-zh="<%= field.placeholder && field.placeholder.zh ? field.placeholder.zh : '' %>"
+                                                       data-placeholder-en="<%= field.placeholder && field.placeholder.en ? field.placeholder.en : '' %>"
+                                                       autocomplete="off"
+                                                       <%= field.required ? 'required' : '' %>>
+                                            </div>
+                                        </div>
+                                        <% } %>
                                         <% } %>
                                     <% } %>
                                 <% }); %>
@@ -1469,6 +1491,51 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
             $('.js-select-maybe-other').each(function() { syncSelectWithOther(this); });
         });
 
+        function getEmailConfirmMismatchMsg() {
+            return currentLanguage === 'zh'
+                ? '確認電子郵件必須與電子郵件相同。'
+                : 'Confirm email must match the email address.';
+        }
+
+        function validateEmailConfirmPair(emailFieldName) {
+            const emailEl = document.getElementById(emailFieldName);
+            const confirmEl = document.getElementById(emailFieldName + '_confirm');
+            if (!emailEl || !confirmEl) return true;
+            const emailVal = (emailEl.value || '').trim();
+            const confirmVal = (confirmEl.value || '').trim();
+            if (!emailVal && !confirmVal) {
+                confirmEl.setCustomValidity('');
+                return true;
+            }
+            if (emailVal !== confirmVal) {
+                confirmEl.setCustomValidity(getEmailConfirmMismatchMsg());
+                return false;
+            }
+            confirmEl.setCustomValidity('');
+            return true;
+        }
+
+        function validateAllEmailConfirms() {
+            let ok = true;
+            document.querySelectorAll('.js-email-confirm').forEach(function(confirmEl) {
+                const forField = confirmEl.getAttribute('data-confirm-for');
+                if (forField && !validateEmailConfirmPair(forField)) ok = false;
+            });
+            return ok;
+        }
+
+        $(document).on('input change', '.js-email-confirm', function() {
+            const forField = $(this).data('confirm-for');
+            if (forField) validateEmailConfirmPair(forField);
+        });
+        $(document).on('input change', 'input[type="email"]:not(.js-email-confirm)', function() {
+            const id = $(this).attr('id');
+            if (!id) return;
+            $('.js-email-confirm[data-confirm-for="' + id + '"]').each(function() {
+                validateEmailConfirmPair(id);
+            });
+        });
+
         $('#userForm').on('submit', function(e) {
             e.preventDefault(); // 防止表單默認提交
             $('.js-select-maybe-other').each(function() { syncSelectWithOther(this); });
@@ -1490,6 +1557,9 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                     return;
                 }
             }
+            if (typeof validateAllEmailConfirms === 'function') {
+                validateAllEmailConfirms();
+            }
             if (formEl && !formEl.checkValidity()) {
                 formEl.reportValidity();
                 return;
@@ -1501,6 +1571,7 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
             $('#userForm').find('input, select, textarea').each(function() {
                 const fieldName = $(this).attr('name');
                 if (!fieldName || fieldName === 'ticketId' || fieldName === 'agreementAgreed') return;
+                if ($(this).hasClass('js-email-confirm') || String(fieldName).endsWith('_confirm')) return;
                 const type = (this.type || '').toLowerCase();
                 if (type === 'checkbox') {
                     if (!this.checked) return;

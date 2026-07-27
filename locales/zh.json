@@ -833,6 +833,8 @@
     "display": "Display",
     "placeholderZh": "中文佔位符",
     "placeholderEn": "English Placeholder",
+    "confirmEmailLabel": "確認電子郵件",
+    "confirmEmailHint": "啟用後，報名頁會在電子郵件欄下方顯示「確認電子郵件」，兩者必須相同才可提交。",
     "optionsLabel": "選項設定",
     "optionValuePh": "選項值",
     "optionLabelZhPh": "中文標籤",
