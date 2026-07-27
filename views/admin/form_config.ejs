@@ -226,7 +226,15 @@
                                                    value="<%= (formConfig.terms && formConfig.terms.title && formConfig.terms.title.en) ? formConfig.terms.title.en : 'Terms & Conditions' %>">
                                         </div>
                                     </div>
-                                    <div class="row mt-3">
+                                    <div class="form-check form-switch mb-2 mt-3">
+                                        <input class="form-check-input" type="checkbox" id="termsShowLinkLabel"
+                                               <%= (formConfig.terms && formConfig.terms.showLinkLabel !== false) ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="termsShowLinkLabel">
+                                            <%= t('form_config.showLinkLabel') %>
+                                        </label>
+                                    </div>
+                                    <div id="termsLinkLabelWrap">
+                                    <div class="row" id="termsLinkLabelFields">
                                         <div class="col-md-6">
                                             <label class="form-label"><%= t('form_config.termsLinkLabelZhLabel') %></label>
                                             <input type="text" class="form-control" id="termsLinkLabelZh"
@@ -239,6 +247,7 @@
                                         </div>
                                     </div>
                                     <small class="text-muted d-block mt-1 mb-2"><%= t('form_config.termsLinkHint') %></small>
+                                    </div>
                                     <div class="row mt-2">
                                         <div class="col-md-6">
                                             <label class="form-label"><%= t('form_config.checkboxLabelZh') %></label>
@@ -295,7 +304,15 @@
                                                    value="<%= (formConfig.agreement && formConfig.agreement.title && formConfig.agreement.title.en) ? formConfig.agreement.title.en : 'Agreement' %>">
                                         </div>
                                     </div>
-                                    <div class="row mt-3">
+                                    <div class="form-check form-switch mb-2 mt-3">
+                                        <input class="form-check-input" type="checkbox" id="agreementShowLinkLabel"
+                                               <%= (formConfig.agreement && formConfig.agreement.showLinkLabel !== false) ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="agreementShowLinkLabel">
+                                            <%= t('form_config.showLinkLabel') %>
+                                        </label>
+                                    </div>
+                                    <div id="agreementLinkLabelWrap">
+                                    <div class="row" id="agreementLinkLabelFields">
                                         <div class="col-md-6">
                                             <label class="form-label"><%= t('form_config.agreementLinkLabelZhLabel') %></label>
                                             <input type="text" class="form-control" id="agreementLinkLabelZh"
@@ -308,6 +325,7 @@
                                         </div>
                                     </div>
                                     <small class="text-muted d-block mt-1 mb-2"><%= t('form_config.agreementLinkHint') %></small>
+                                    </div>
                                     <div class="row mt-2">
                                         <div class="col-md-6">
                                             <label class="form-label"><%= t('form_config.checkboxLabelZh') %></label>
@@ -1072,6 +1090,7 @@
             enabled: false,
             title: { zh: '條款與細則', en: 'Terms & Conditions' },
             linkLabel: { zh: '(條款)', en: '(terms)' },
+            showLinkLabel: true,
             label: { zh: '', en: '' },
             content: { zh: '', en: '' }
         };
@@ -1081,6 +1100,7 @@
             enabled: false,
             title: { zh: '協議', en: 'Agreement' },
             linkLabel: { zh: '(協議)', en: '(agreement)' },
+            showLinkLabel: true,
             label: { zh: '', en: '' },
             content: { zh: '', en: '' }
         };
@@ -1614,6 +1634,7 @@
                     zh: (document.getElementById('termsLinkLabelZh').value || '').trim() || '(條款)',
                     en: (document.getElementById('termsLinkLabelEn').value || '').trim() || '(terms)'
                 },
+                showLinkLabel: !!document.getElementById('termsShowLinkLabel').checked,
                 label: {
                     zh: document.getElementById('termsLabelZh').value || '',
                     en: document.getElementById('termsLabelEn').value || ''
@@ -1633,6 +1654,7 @@
                     zh: (document.getElementById('agreementLinkLabelZh').value || '').trim() || '(協議)',
                     en: (document.getElementById('agreementLinkLabelEn').value || '').trim() || '(agreement)'
                 },
+                showLinkLabel: !!document.getElementById('agreementShowLinkLabel').checked,
                 label: {
                     zh: document.getElementById('agreementLabelZh').value || '',
                     en: document.getElementById('agreementLabelEn').value || ''
@@ -1793,6 +1815,7 @@
                     enabled: false,
                     title: { zh: '條款與細則', en: 'Terms & Conditions' },
                     linkLabel: { zh: '(條款)', en: '(terms)' },
+                    showLinkLabel: true,
                     label: { zh: '', en: '' },
                     content: { zh: '', en: '' }
                 },
@@ -1800,6 +1823,7 @@
                     enabled: false,
                     title: { zh: '協議', en: 'Agreement' },
                     linkLabel: { zh: '(協議)', en: '(agreement)' },
+                    showLinkLabel: true,
                     label: { zh: '', en: '' },
                     content: { zh: '', en: '' }
                 },
@@ -1882,6 +1906,7 @@
                         enabled: false,
                         title: { zh: '條款與細則', en: 'Terms & Conditions' },
                         linkLabel: { zh: '(條款)', en: '(terms)' },
+                        showLinkLabel: true,
                         label: { zh: '', en: '' },
                         content: { zh: '', en: '' }
                     };
@@ -1889,6 +1914,7 @@
                         enabled: false,
                         title: { zh: '協議', en: 'Agreement' },
                         linkLabel: { zh: '(協議)', en: '(agreement)' },
+                        showLinkLabel: true,
                         label: { zh: '', en: '' },
                         content: { zh: '', en: '' }
                     };
@@ -1960,6 +1986,7 @@
             const enabledEl = document.getElementById('termsEnabled');
             const titleZhEl = document.getElementById('termsTitleZh');
             const titleEnEl = document.getElementById('termsTitleEn');
+            const showLinkEl = document.getElementById('termsShowLinkLabel');
             const linkLabelZhEl = document.getElementById('termsLinkLabelZh');
             const linkLabelEnEl = document.getElementById('termsLinkLabelEn');
             const labelZhEl = document.getElementById('termsLabelZh');
@@ -1970,6 +1997,7 @@
             enabledEl.checked = !!t.enabled;
             if (titleZhEl) titleZhEl.value = (t.title && t.title.zh) ? t.title.zh : titleZhEl.value;
             if (titleEnEl) titleEnEl.value = (t.title && t.title.en) ? t.title.en : titleEnEl.value;
+            if (showLinkEl) showLinkEl.checked = t.showLinkLabel !== false;
             if (linkLabelZhEl) linkLabelZhEl.value = (t.linkLabel && t.linkLabel.zh) ? t.linkLabel.zh : linkLabelZhEl.value;
             if (linkLabelEnEl) linkLabelEnEl.value = (t.linkLabel && t.linkLabel.en) ? t.linkLabel.en : linkLabelEnEl.value;
             if (labelZhEl) labelZhEl.value = (t.label && t.label.zh) ? t.label.zh : labelZhEl.value;
@@ -1986,6 +2014,7 @@
             const enabledEl = document.getElementById('agreementEnabled');
             const titleZhEl = document.getElementById('agreementTitleZh');
             const titleEnEl = document.getElementById('agreementTitleEn');
+            const showLinkEl = document.getElementById('agreementShowLinkLabel');
             const linkLabelZhEl = document.getElementById('agreementLinkLabelZh');
             const linkLabelEnEl = document.getElementById('agreementLinkLabelEn');
             const labelZhEl = document.getElementById('agreementLabelZh');
@@ -1996,6 +2025,7 @@
             enabledEl.checked = !!a.enabled;
             if (titleZhEl) titleZhEl.value = (a.title && a.title.zh) ? a.title.zh : titleZhEl.value;
             if (titleEnEl) titleEnEl.value = (a.title && a.title.en) ? a.title.en : titleEnEl.value;
+            if (showLinkEl) showLinkEl.checked = a.showLinkLabel !== false;
             if (linkLabelZhEl) linkLabelZhEl.value = (a.linkLabel && a.linkLabel.zh) ? a.linkLabel.zh : linkLabelZhEl.value;
             if (linkLabelEnEl) linkLabelEnEl.value = (a.linkLabel && a.linkLabel.en) ? a.linkLabel.en : linkLabelEnEl.value;
             if (labelZhEl) labelZhEl.value = (a.label && a.label.zh) ? a.label.zh : labelZhEl.value;
@@ -2003,6 +2033,21 @@
             if (contentZhEl) contentZhEl.value = (a.content && a.content.zh) ? a.content.zh : contentZhEl.value;
             if (contentEnEl) contentEnEl.value = (a.content && a.content.en) ? a.content.en : contentEnEl.value;
         } catch (_) {}
+    })();
+
+    (function initLinkLabelVisibilityToggles() {
+        function bindToggle(checkboxId, fieldsId) {
+            const checkbox = document.getElementById(checkboxId);
+            const fields = document.getElementById(fieldsId);
+            if (!checkbox || !fields) return;
+            const sync = function() {
+                fields.style.display = checkbox.checked ? '' : 'none';
+            };
+            checkbox.addEventListener('change', sync);
+            sync();
+        }
+        bindToggle('termsShowLinkLabel', 'termsLinkLabelWrap');
+        bindToggle('agreementShowLinkLabel', 'agreementLinkLabelWrap');
     })();
 
     // 初始化 Thank You UI

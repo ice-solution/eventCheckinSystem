@@ -128,6 +128,7 @@ const formConfigSchema = new mongoose.Schema({
             zh: { type: String, default: '(條款)' },
             en: { type: String, default: '(terms)' }
         },
+        showLinkLabel: { type: Boolean, default: true },
         // 勾選框文字（雙語）
         label: {
             zh: { type: String, default: '本人已閱讀並同意上述須知，確認繼續預約及積分扣款程序。' },
@@ -150,6 +151,7 @@ const formConfigSchema = new mongoose.Schema({
             zh: { type: String, default: '(協議)' },
             en: { type: String, default: '(agreement)' }
         },
+        showLinkLabel: { type: Boolean, default: true },
         label: {
             zh: { type: String, default: '本人已閱讀並同意上述協議內容。' },
             en: { type: String, default: 'I have read and agree to the agreement above.' }

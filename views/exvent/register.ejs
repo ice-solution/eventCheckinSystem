@@ -247,6 +247,12 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
         .terms-open-link:hover {
             color: #2980b9;
         }
+        .terms-title-as-link {
+            cursor: pointer;
+        }
+        .terms-title-as-link:hover {
+            color: #3498db;
+        }
         .terms-agree-row.form-check {
             display: flex;
             align-items: flex-start;
@@ -761,14 +767,17 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                 <% const trm = formConfig.terms; %>
                 <% const trmTitle = trm.title || {}; %>
                 <% const trmLink = trm.linkLabel || {}; %>
+                <% const showTrmLink = trm.showLinkLabel !== false; %>
                 <div class="form-section terms-section">
                     <div class="terms-header">
-                        <h3 class="section-title" id="termsSectionTitle"
+                        <h3 class="section-title<%= showTrmLink ? '' : ' terms-title-as-link js-terms-modal-opener' %>" id="termsSectionTitle"
                             data-zh="<%= (trmTitle.zh ? trmTitle.zh : '條款與細則') %>"
                             data-en="<%= (trmTitle.en ? trmTitle.en : 'Terms & Conditions') %>"><%= (trmTitle.zh ? trmTitle.zh : '條款與細則') %></h3>
+                        <% if (showTrmLink) { %>
                         <a href="#" class="terms-open-link lang-text" id="termsOpenLink" role="button"
                            data-zh="<%= (trmLink.zh ? trmLink.zh : '(條款)') %>"
                            data-en="<%= (trmLink.en ? trmLink.en : '(terms)') %>"><%= (trmLink.zh ? trmLink.zh : '(條款)') %></a>
+                        <% } %>
                     </div>
                     <div class="form-check terms-agree-row">
                         <input class="form-check-input" type="checkbox" id="termsAgree" required>
@@ -804,14 +813,17 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                 <% const agr = formConfig.agreement; %>
                 <% const agrTitle = agr.title || {}; %>
                 <% const agrLink = agr.linkLabel || {}; %>
+                <% const showAgrLink = agr.showLinkLabel !== false; %>
                 <div class="form-section agreement-section">
                     <div class="terms-header">
-                        <h3 class="section-title" id="agreementSectionTitle"
+                        <h3 class="section-title<%= showAgrLink ? '' : ' terms-title-as-link js-agreement-modal-opener' %>" id="agreementSectionTitle"
                             data-zh="<%= (agrTitle.zh ? agrTitle.zh : '協議') %>"
                             data-en="<%= (agrTitle.en ? agrTitle.en : 'Agreement') %>"><%= (agrTitle.zh ? agrTitle.zh : '協議') %></h3>
+                        <% if (showAgrLink) { %>
                         <a href="#" class="terms-open-link lang-text" id="agreementOpenLink" role="button"
                            data-zh="<%= (agrLink.zh ? agrLink.zh : '(協議)') %>"
                            data-en="<%= (agrLink.en ? agrLink.en : '(agreement)') %>"><%= (agrLink.zh ? agrLink.zh : '(協議)') %></a>
+                        <% } %>
                     </div>
                     <div class="form-check terms-agree-row">
                         <input class="form-check-input" type="checkbox" id="agreementAgree" name="agreementAgreed" value="true">
@@ -1480,6 +1492,12 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
             }
 
             if (openLink) openLink.addEventListener('click', openOverlay);
+            if (opts.openTitleId) {
+                const openTitle = document.getElementById(opts.openTitleId);
+                if (openTitle && openTitle.classList.contains('terms-title-as-link')) {
+                    openTitle.addEventListener('click', openOverlay);
+                }
+            }
             if (closeBtn) closeBtn.addEventListener('click', closeOverlay);
             if (overlay) {
                 overlay.addEventListener('click', function(e) {
@@ -1509,6 +1527,7 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
         initOverlayAndValidation({
             overlayId: 'termsOverlay',
             openLinkId: 'termsOpenLink',
+            openTitleId: 'termsSectionTitle',
             closeBtnId: 'termsModalClose',
             agreeId: 'termsAgree',
             invalidMsgZh: '請先閱讀並勾選同意條款，才可提交。',
@@ -1519,6 +1538,7 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
         initOverlayAndValidation({
             overlayId: 'agreementOverlay',
             openLinkId: 'agreementOpenLink',
+            openTitleId: 'agreementSectionTitle',
             closeBtnId: 'agreementModalClose',
             agreeId: 'agreementAgree',
             optionalAgree: true
