@@ -267,6 +267,14 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
             margin-left: 0;
             line-height: 1.5;
         }
+        .terms-agree-row .form-check-label a {
+            color: #3498db;
+            text-decoration: underline;
+            word-break: break-all;
+        }
+        .terms-agree-row .form-check-label a:hover {
+            color: #2980b9;
+        }
         .terms-overlay {
             display: none;
             position: fixed;
@@ -750,65 +758,87 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
 
             <!-- Terms & Conditions（需同意才可提交） -->
             <% if (formConfig && formConfig.terms && formConfig.terms.enabled) { %>
+                <% const trm = formConfig.terms; %>
+                <% const trmTitle = trm.title || {}; %>
+                <% const trmLink = trm.linkLabel || {}; %>
                 <div class="form-section terms-section">
                     <div class="terms-header">
-                        <h3 class="section-title" data-zh="條款與細則" data-en="Terms & Conditions">條款與細則</h3>
+                        <h3 class="section-title" id="termsSectionTitle"
+                            data-zh="<%= (trmTitle.zh ? trmTitle.zh : '條款與細則') %>"
+                            data-en="<%= (trmTitle.en ? trmTitle.en : 'Terms & Conditions') %>"><%= (trmTitle.zh ? trmTitle.zh : '條款與細則') %></h3>
                         <a href="#" class="terms-open-link lang-text" id="termsOpenLink" role="button"
-                           data-zh="(條款)" data-en="(terms)">(terms)</a>
+                           data-zh="<%= (trmLink.zh ? trmLink.zh : '(條款)') %>"
+                           data-en="<%= (trmLink.en ? trmLink.en : '(terms)') %>"><%= (trmLink.zh ? trmLink.zh : '(條款)') %></a>
                     </div>
                     <div class="form-check terms-agree-row">
                         <input class="form-check-input" type="checkbox" id="termsAgree" required>
-                        <label class="form-check-label"
+                        <label class="form-check-label terms-checkbox-label"
                                for="termsAgree"
-                               data-zh="<%= (formConfig.terms.label && formConfig.terms.label.zh ? formConfig.terms.label.zh : '') %>"
-                               data-en="<%= (formConfig.terms.label && formConfig.terms.label.en ? formConfig.terms.label.en : '') %>"><%= (formConfig.terms.label && formConfig.terms.label.zh ? formConfig.terms.label.zh : '') %></label>
+                               id="termsAgreeLabel"></label>
                     </div>
                 </div>
 
                 <div id="termsOverlay" class="terms-overlay" aria-hidden="true">
                     <div class="terms-modal" role="dialog" aria-modal="true" aria-labelledby="termsModalTitle">
                         <div class="terms-modal-header">
-                            <h4 id="termsModalTitle" class="lang-text" data-zh="條款與細則" data-en="Terms & Conditions">Terms & Conditions</h4>
+                            <h4 id="termsModalTitle" class="lang-text"
+                                data-zh="<%= (trmTitle.zh ? trmTitle.zh : '條款與細則') %>"
+                                data-en="<%= (trmTitle.en ? trmTitle.en : 'Terms & Conditions') %>"><%= (trmTitle.zh ? trmTitle.zh : '條款與細則') %></h4>
                             <button type="button" class="terms-modal-close" id="termsModalClose" aria-label="Close">&times;</button>
                         </div>
                         <div class="terms-modal-body" id="termsContent"></div>
                     </div>
                 </div>
+                <script type="application/json" id="termsLabelJson"><%- JSON.stringify({
+                    zh: (trm.label && trm.label.zh) ? trm.label.zh : '',
+                    en: (trm.label && trm.label.en) ? trm.label.en : ''
+                }) %></script>
                 <script type="application/json" id="termsContentJson"><%- JSON.stringify({
-                    zh: (formConfig.terms.content && formConfig.terms.content.zh) ? formConfig.terms.content.zh : '',
-                    en: (formConfig.terms.content && formConfig.terms.content.en) ? formConfig.terms.content.en : ''
+                    zh: (trm.content && trm.content.zh) ? trm.content.zh : '',
+                    en: (trm.content && trm.content.en) ? trm.content.en : ''
                 }) %></script>
             <% } %>
 
             <!-- Agreement（非必填，但會記錄勾選狀態） -->
             <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
+                <% const agr = formConfig.agreement; %>
+                <% const agrTitle = agr.title || {}; %>
+                <% const agrLink = agr.linkLabel || {}; %>
                 <div class="form-section agreement-section">
                     <div class="terms-header">
-                        <h3 class="section-title" data-zh="協議" data-en="Agreement">協議</h3>
+                        <h3 class="section-title" id="agreementSectionTitle"
+                            data-zh="<%= (agrTitle.zh ? agrTitle.zh : '協議') %>"
+                            data-en="<%= (agrTitle.en ? agrTitle.en : 'Agreement') %>"><%= (agrTitle.zh ? agrTitle.zh : '協議') %></h3>
                         <a href="#" class="terms-open-link lang-text" id="agreementOpenLink" role="button"
-                           data-zh="(協議)" data-en="(agreement)">(agreement)</a>
+                           data-zh="<%= (agrLink.zh ? agrLink.zh : '(協議)') %>"
+                           data-en="<%= (agrLink.en ? agrLink.en : '(agreement)') %>"><%= (agrLink.zh ? agrLink.zh : '(協議)') %></a>
                     </div>
                     <div class="form-check terms-agree-row">
                         <input class="form-check-input" type="checkbox" id="agreementAgree" name="agreementAgreed" value="true">
-                        <label class="form-check-label"
+                        <label class="form-check-label agreement-checkbox-label"
                                for="agreementAgree"
-                               data-zh="<%= (formConfig.agreement.label && formConfig.agreement.label.zh ? formConfig.agreement.label.zh : '') %>"
-                               data-en="<%= (formConfig.agreement.label && formConfig.agreement.label.en ? formConfig.agreement.label.en : '') %>"><%= (formConfig.agreement.label && formConfig.agreement.label.zh ? formConfig.agreement.label.zh : '') %></label>
+                               id="agreementAgreeLabel"></label>
                     </div>
                 </div>
 
                 <div id="agreementOverlay" class="terms-overlay" aria-hidden="true">
                     <div class="terms-modal" role="dialog" aria-modal="true" aria-labelledby="agreementModalTitle">
                         <div class="terms-modal-header">
-                            <h4 id="agreementModalTitle" class="lang-text" data-zh="協議" data-en="Agreement">Agreement</h4>
+                            <h4 id="agreementModalTitle" class="lang-text"
+                                data-zh="<%= (agrTitle.zh ? agrTitle.zh : '協議') %>"
+                                data-en="<%= (agrTitle.en ? agrTitle.en : 'Agreement') %>"><%= (agrTitle.zh ? agrTitle.zh : '協議') %></h4>
                             <button type="button" class="terms-modal-close" id="agreementModalClose" aria-label="Close">&times;</button>
                         </div>
                         <div class="terms-modal-body" id="agreementContent"></div>
                     </div>
                 </div>
+                <script type="application/json" id="agreementLabelJson"><%- JSON.stringify({
+                    zh: (agr.label && agr.label.zh) ? agr.label.zh : '',
+                    en: (agr.label && agr.label.en) ? agr.label.en : ''
+                }) %></script>
                 <script type="application/json" id="agreementContentJson"><%- JSON.stringify({
-                    zh: (formConfig.agreement.content && formConfig.agreement.content.zh) ? formConfig.agreement.content.zh : '',
-                    en: (formConfig.agreement.content && formConfig.agreement.content.en) ? formConfig.agreement.content.en : ''
+                    zh: (agr.content && agr.content.zh) ? agr.content.zh : '',
+                    en: (agr.content && agr.content.en) ? agr.content.en : ''
                 }) %></script>
             <% } %>
 
@@ -916,8 +946,18 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
             if (!el) return { zh: '', en: '' };
             try { return JSON.parse(el.textContent); } catch (_) { return { zh: '', en: '' }; }
         })();
+        const termsLabelByLang = (function() {
+            const el = document.getElementById('termsLabelJson');
+            if (!el) return { zh: '', en: '' };
+            try { return JSON.parse(el.textContent); } catch (_) { return { zh: '', en: '' }; }
+        })();
         const agreementContentByLang = (function() {
             const el = document.getElementById('agreementContentJson');
+            if (!el) return { zh: '', en: '' };
+            try { return JSON.parse(el.textContent); } catch (_) { return { zh: '', en: '' }; }
+        })();
+        const agreementLabelByLang = (function() {
+            const el = document.getElementById('agreementLabelJson');
             if (!el) return { zh: '', en: '' };
             try { return JSON.parse(el.textContent); } catch (_) { return { zh: '', en: '' }; }
         })();
@@ -1131,6 +1171,15 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
             $termsContent.html(formatTermsContent(raw));
         }
 
+        function renderTermsLabelHtml() {
+            const $label = $('#termsAgreeLabel');
+            if (!$label.length) return;
+            const raw = currentLanguage === 'en'
+                ? (termsLabelByLang.en || termsLabelByLang.zh || '')
+                : (termsLabelByLang.zh || termsLabelByLang.en || '');
+            $label.html(formatTermsContent(raw));
+        }
+
         function renderAgreementContentHtml() {
             const $content = $('#agreementContent');
             if (!$content.length) return;
@@ -1138,6 +1187,15 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                 ? (agreementContentByLang.en || agreementContentByLang.zh || '')
                 : (agreementContentByLang.zh || agreementContentByLang.en || '');
             $content.html(formatTermsContent(raw));
+        }
+
+        function renderAgreementLabelHtml() {
+            const $label = $('#agreementAgreeLabel');
+            if (!$label.length) return;
+            const raw = currentLanguage === 'en'
+                ? (agreementLabelByLang.en || agreementLabelByLang.zh || '')
+                : (agreementLabelByLang.zh || agreementLabelByLang.en || '');
+            $label.html(formatTermsContent(raw));
         }
         
         // 初始化語言按鈕狀態
@@ -1267,8 +1325,8 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                 }
             });
 
-            // 更新 checkbox 和 radio 選項標籤
-            $('.form-check-label').each(function() {
+            // 更新 checkbox 和 radio 選項標籤（T&C / Agreement checkbox 含 HTML，另處理）
+            $('.form-check-label:not(.agreement-checkbox-label):not(.terms-checkbox-label)').each(function() {
                 const $label = $(this);
                 const zhText = $label.data('zh');
                 const enText = $label.data('en');
@@ -1279,9 +1337,11 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                 }
             });
 
-            // 更新 T&C 內容（支援 HTML）
+            // 更新 T&C / Agreement 內容（支援 HTML）
             renderTermsContentHtml();
+            renderTermsLabelHtml();
             renderAgreementContentHtml();
+            renderAgreementLabelHtml();
             if (typeof refreshPaymentTicketUi === 'function') refreshPaymentTicketUi();
 
             // 更新按鈕文字（返回、下一步等）
@@ -1462,6 +1522,11 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
             closeBtnId: 'agreementModalClose',
             agreeId: 'agreementAgree',
             optionalAgree: true
+        });
+
+        // 勾選框 label 內的連結：點擊時不觸發 checkbox 切換
+        $(document).on('mousedown click', '.agreement-checkbox-label a, .terms-checkbox-label a', function(e) {
+            e.stopPropagation();
         });
 
         // stripe public key

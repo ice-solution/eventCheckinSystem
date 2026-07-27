@@ -161,6 +161,8 @@ function applyFormConfigMetaDefaults(migratedConfig) {
     if (!migratedConfig.terms || typeof migratedConfig.terms !== 'object') {
         migratedConfig.terms = {
             enabled: false,
+            title: { zh: '條款與細則', en: 'Terms & Conditions' },
+            linkLabel: { zh: '(條款)', en: '(terms)' },
             label: {
                 zh: '本人已閱讀並同意上述須知，確認繼續預約及積分扣款程序。',
                 en: 'I have read and agree to the terms above, and confirm to proceed.'
@@ -169,6 +171,18 @@ function applyFormConfigMetaDefaults(migratedConfig) {
         };
     } else {
         migratedConfig.terms.enabled = !!migratedConfig.terms.enabled;
+        if (!migratedConfig.terms.title || typeof migratedConfig.terms.title !== 'object') {
+            migratedConfig.terms.title = { zh: '條款與細則', en: 'Terms & Conditions' };
+        } else {
+            migratedConfig.terms.title.zh = migratedConfig.terms.title.zh || '條款與細則';
+            migratedConfig.terms.title.en = migratedConfig.terms.title.en || 'Terms & Conditions';
+        }
+        if (!migratedConfig.terms.linkLabel || typeof migratedConfig.terms.linkLabel !== 'object') {
+            migratedConfig.terms.linkLabel = { zh: '(條款)', en: '(terms)' };
+        } else {
+            migratedConfig.terms.linkLabel.zh = migratedConfig.terms.linkLabel.zh || '(條款)';
+            migratedConfig.terms.linkLabel.en = migratedConfig.terms.linkLabel.en || '(terms)';
+        }
         if (!migratedConfig.terms.label || typeof migratedConfig.terms.label !== 'object') {
             migratedConfig.terms.label = {
                 zh: '本人已閱讀並同意上述須知，確認繼續預約及積分扣款程序。',
@@ -190,6 +204,8 @@ function applyFormConfigMetaDefaults(migratedConfig) {
     if (!migratedConfig.agreement || typeof migratedConfig.agreement !== 'object') {
         migratedConfig.agreement = {
             enabled: false,
+            title: { zh: '協議', en: 'Agreement' },
+            linkLabel: { zh: '(協議)', en: '(agreement)' },
             label: {
                 zh: '本人已閱讀並同意上述協議內容。',
                 en: 'I have read and agree to the agreement above.'
@@ -198,6 +214,18 @@ function applyFormConfigMetaDefaults(migratedConfig) {
         };
     } else {
         migratedConfig.agreement.enabled = !!migratedConfig.agreement.enabled;
+        if (!migratedConfig.agreement.title || typeof migratedConfig.agreement.title !== 'object') {
+            migratedConfig.agreement.title = { zh: '協議', en: 'Agreement' };
+        } else {
+            migratedConfig.agreement.title.zh = migratedConfig.agreement.title.zh || '協議';
+            migratedConfig.agreement.title.en = migratedConfig.agreement.title.en || 'Agreement';
+        }
+        if (!migratedConfig.agreement.linkLabel || typeof migratedConfig.agreement.linkLabel !== 'object') {
+            migratedConfig.agreement.linkLabel = { zh: '(協議)', en: '(agreement)' };
+        } else {
+            migratedConfig.agreement.linkLabel.zh = migratedConfig.agreement.linkLabel.zh || '(協議)';
+            migratedConfig.agreement.linkLabel.en = migratedConfig.agreement.linkLabel.en || '(agreement)';
+        }
         if (!migratedConfig.agreement.label || typeof migratedConfig.agreement.label !== 'object') {
             migratedConfig.agreement.label = {
                 zh: '本人已閱讀並同意上述協議內容。',
@@ -311,6 +339,8 @@ exports.getDefaultFormConfig = () => ({
     },
     terms: {
         enabled: false,
+        title: { zh: '條款與細則', en: 'Terms & Conditions' },
+        linkLabel: { zh: '(條款)', en: '(terms)' },
         label: {
             zh: '本人已閱讀並同意上述須知，確認繼續預約及積分扣款程序。',
             en: 'I have read and agree to the terms above, and confirm to proceed.'
@@ -319,6 +349,8 @@ exports.getDefaultFormConfig = () => ({
     },
     agreement: {
         enabled: false,
+        title: { zh: '協議', en: 'Agreement' },
+        linkLabel: { zh: '(協議)', en: '(agreement)' },
         label: {
             zh: '本人已閱讀並同意上述協議內容。',
             en: 'I have read and agree to the agreement above.'

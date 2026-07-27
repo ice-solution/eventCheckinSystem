@@ -120,6 +120,14 @@ const formConfigSchema = new mongoose.Schema({
     // Terms & Conditions（需同意才可提交）
     terms: {
         enabled: { type: Boolean, default: false },
+        title: {
+            zh: { type: String, default: '條款與細則' },
+            en: { type: String, default: 'Terms & Conditions' }
+        },
+        linkLabel: {
+            zh: { type: String, default: '(條款)' },
+            en: { type: String, default: '(terms)' }
+        },
         // 勾選框文字（雙語）
         label: {
             zh: { type: String, default: '本人已閱讀並同意上述須知，確認繼續預約及積分扣款程序。' },
@@ -134,6 +142,14 @@ const formConfigSchema = new mongoose.Schema({
     // Agreement（功能同 Terms & Conditions）
     agreement: {
         enabled: { type: Boolean, default: false },
+        title: {
+            zh: { type: String, default: '協議' },
+            en: { type: String, default: 'Agreement' }
+        },
+        linkLabel: {
+            zh: { type: String, default: '(協議)' },
+            en: { type: String, default: '(agreement)' }
+        },
         label: {
             zh: { type: String, default: '本人已閱讀並同意上述協議內容。' },
             en: { type: String, default: 'I have read and agree to the agreement above.' }

@@ -214,19 +214,45 @@
                                             <%= t('form_config.termsEnabledLabel') %>
                                         </label>
                                     </div>
-                                    <div class="row">
+                                    <div class="row mt-3">
                                         <div class="col-md-6">
-                                            <label class="form-label"><%= t('form_config.checkboxLabelZh') %></label>
-                                            <input type="text" class="form-control" id="termsLabelZh"
-                                                   value="<%= (formConfig.terms && formConfig.terms.label && formConfig.terms.label.zh) ? formConfig.terms.label.zh : '' %>">
+                                            <label class="form-label"><%= t('form_config.termsTitleZhLabel') %></label>
+                                            <input type="text" class="form-control" id="termsTitleZh"
+                                                   value="<%= (formConfig.terms && formConfig.terms.title && formConfig.terms.title.zh) ? formConfig.terms.title.zh : '條款與細則' %>">
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label"><%= t('form_config.checkboxLabelEn') %></label>
-                                            <input type="text" class="form-control" id="termsLabelEn"
-                                                   value="<%= (formConfig.terms && formConfig.terms.label && formConfig.terms.label.en) ? formConfig.terms.label.en : '' %>">
+                                            <label class="form-label"><%= t('form_config.termsTitleEnLabel') %></label>
+                                            <input type="text" class="form-control" id="termsTitleEn"
+                                                   value="<%= (formConfig.terms && formConfig.terms.title && formConfig.terms.title.en) ? formConfig.terms.title.en : 'Terms & Conditions' %>">
                                         </div>
                                     </div>
                                     <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.termsLinkLabelZhLabel') %></label>
+                                            <input type="text" class="form-control" id="termsLinkLabelZh"
+                                                   value="<%= (formConfig.terms && formConfig.terms.linkLabel && formConfig.terms.linkLabel.zh) ? formConfig.terms.linkLabel.zh : '(條款)' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.termsLinkLabelEnLabel') %></label>
+                                            <input type="text" class="form-control" id="termsLinkLabelEn"
+                                                   value="<%= (formConfig.terms && formConfig.terms.linkLabel && formConfig.terms.linkLabel.en) ? formConfig.terms.linkLabel.en : '(terms)' %>">
+                                        </div>
+                                    </div>
+                                    <small class="text-muted d-block mt-1 mb-2"><%= t('form_config.termsLinkHint') %></small>
+                                    <div class="row mt-2">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.checkboxLabelZh') %></label>
+                                            <textarea class="form-control" id="termsLabelZh" rows="4"
+                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (formConfig.terms && formConfig.terms.label && formConfig.terms.label.zh) ? formConfig.terms.label.zh : '' %></textarea>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.checkboxLabelEn') %></label>
+                                            <textarea class="form-control" id="termsLabelEn" rows="4"
+                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (formConfig.terms && formConfig.terms.label && formConfig.terms.label.en) ? formConfig.terms.label.en : '' %></textarea>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted d-block mt-1 mb-2"><%= t('form_config.termsCheckboxLabelHint') %></small>
+                                    <div class="row mt-2">
                                         <div class="col-md-6">
                                             <label class="form-label"><%= t('form_config.termsContentZhLabel') %></label>
                                             <textarea class="form-control" id="termsContentZh" rows="6"
@@ -257,19 +283,45 @@
                                             <%= t('form_config.agreementEnabledLabel') %>
                                         </label>
                                     </div>
-                                    <div class="row">
+                                    <div class="row mt-3">
                                         <div class="col-md-6">
-                                            <label class="form-label"><%= t('form_config.checkboxLabelZh') %></label>
-                                            <input type="text" class="form-control" id="agreementLabelZh"
-                                                   value="<%= (formConfig.agreement && formConfig.agreement.label && formConfig.agreement.label.zh) ? formConfig.agreement.label.zh : '' %>">
+                                            <label class="form-label"><%= t('form_config.agreementTitleZhLabel') %></label>
+                                            <input type="text" class="form-control" id="agreementTitleZh"
+                                                   value="<%= (formConfig.agreement && formConfig.agreement.title && formConfig.agreement.title.zh) ? formConfig.agreement.title.zh : '協議' %>">
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label"><%= t('form_config.checkboxLabelEn') %></label>
-                                            <input type="text" class="form-control" id="agreementLabelEn"
-                                                   value="<%= (formConfig.agreement && formConfig.agreement.label && formConfig.agreement.label.en) ? formConfig.agreement.label.en : '' %>">
+                                            <label class="form-label"><%= t('form_config.agreementTitleEnLabel') %></label>
+                                            <input type="text" class="form-control" id="agreementTitleEn"
+                                                   value="<%= (formConfig.agreement && formConfig.agreement.title && formConfig.agreement.title.en) ? formConfig.agreement.title.en : 'Agreement' %>">
                                         </div>
                                     </div>
                                     <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.agreementLinkLabelZhLabel') %></label>
+                                            <input type="text" class="form-control" id="agreementLinkLabelZh"
+                                                   value="<%= (formConfig.agreement && formConfig.agreement.linkLabel && formConfig.agreement.linkLabel.zh) ? formConfig.agreement.linkLabel.zh : '(協議)' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.agreementLinkLabelEnLabel') %></label>
+                                            <input type="text" class="form-control" id="agreementLinkLabelEn"
+                                                   value="<%= (formConfig.agreement && formConfig.agreement.linkLabel && formConfig.agreement.linkLabel.en) ? formConfig.agreement.linkLabel.en : '(agreement)' %>">
+                                        </div>
+                                    </div>
+                                    <small class="text-muted d-block mt-1 mb-2"><%= t('form_config.agreementLinkHint') %></small>
+                                    <div class="row mt-2">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.checkboxLabelZh') %></label>
+                                            <textarea class="form-control" id="agreementLabelZh" rows="4"
+                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (formConfig.agreement && formConfig.agreement.label && formConfig.agreement.label.zh) ? formConfig.agreement.label.zh : '' %></textarea>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.checkboxLabelEn') %></label>
+                                            <textarea class="form-control" id="agreementLabelEn" rows="4"
+                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (formConfig.agreement && formConfig.agreement.label && formConfig.agreement.label.en) ? formConfig.agreement.label.en : '' %></textarea>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted d-block mt-1 mb-2"><%= t('form_config.agreementCheckboxLabelHint') %></small>
+                                    <div class="row mt-2">
                                         <div class="col-md-6">
                                             <label class="form-label"><%= t('form_config.agreementContentZhLabel') %></label>
                                             <textarea class="form-control" id="agreementContentZh" rows="6"
@@ -1016,10 +1068,22 @@
 
     // 初始化 T&C 欄位（避免舊資料缺少）
     if (!formConfig.terms) {
-        formConfig.terms = { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } };
+        formConfig.terms = {
+            enabled: false,
+            title: { zh: '條款與細則', en: 'Terms & Conditions' },
+            linkLabel: { zh: '(條款)', en: '(terms)' },
+            label: { zh: '', en: '' },
+            content: { zh: '', en: '' }
+        };
     }
     if (!formConfig.agreement) {
-        formConfig.agreement = { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } };
+        formConfig.agreement = {
+            enabled: false,
+            title: { zh: '協議', en: 'Agreement' },
+            linkLabel: { zh: '(協議)', en: '(agreement)' },
+            label: { zh: '', en: '' },
+            content: { zh: '', en: '' }
+        };
     }
     if (!formConfig.thankYou) {
         formConfig.thankYou = {
@@ -1542,9 +1606,17 @@
             };
             const terms = {
                 enabled: !!document.getElementById('termsEnabled').checked,
+                title: {
+                    zh: (document.getElementById('termsTitleZh').value || '').trim() || '條款與細則',
+                    en: (document.getElementById('termsTitleEn').value || '').trim() || 'Terms & Conditions'
+                },
+                linkLabel: {
+                    zh: (document.getElementById('termsLinkLabelZh').value || '').trim() || '(條款)',
+                    en: (document.getElementById('termsLinkLabelEn').value || '').trim() || '(terms)'
+                },
                 label: {
-                    zh: (document.getElementById('termsLabelZh').value || '').trim(),
-                    en: (document.getElementById('termsLabelEn').value || '').trim()
+                    zh: document.getElementById('termsLabelZh').value || '',
+                    en: document.getElementById('termsLabelEn').value || ''
                 },
                 content: {
                     zh: document.getElementById('termsContentZh').value || '',
@@ -1553,9 +1625,17 @@
             };
             const agreement = {
                 enabled: !!document.getElementById('agreementEnabled').checked,
+                title: {
+                    zh: (document.getElementById('agreementTitleZh').value || '').trim() || '協議',
+                    en: (document.getElementById('agreementTitleEn').value || '').trim() || 'Agreement'
+                },
+                linkLabel: {
+                    zh: (document.getElementById('agreementLinkLabelZh').value || '').trim() || '(協議)',
+                    en: (document.getElementById('agreementLinkLabelEn').value || '').trim() || '(agreement)'
+                },
                 label: {
-                    zh: (document.getElementById('agreementLabelZh').value || '').trim(),
-                    en: (document.getElementById('agreementLabelEn').value || '').trim()
+                    zh: document.getElementById('agreementLabelZh').value || '',
+                    en: document.getElementById('agreementLabelEn').value || ''
                 },
                 content: {
                     zh: document.getElementById('agreementContentZh').value || '',
@@ -1709,8 +1789,20 @@
                     zh: '請填寫以下資料完成活動報名',
                     en: 'Please fill in the following information to complete event registration'
                 },
-                terms: formConfig.terms || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } },
-                agreement: formConfig.agreement || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } },
+                terms: formConfig.terms || {
+                    enabled: false,
+                    title: { zh: '條款與細則', en: 'Terms & Conditions' },
+                    linkLabel: { zh: '(條款)', en: '(terms)' },
+                    label: { zh: '', en: '' },
+                    content: { zh: '', en: '' }
+                },
+                agreement: formConfig.agreement || {
+                    enabled: false,
+                    title: { zh: '協議', en: 'Agreement' },
+                    linkLabel: { zh: '(協議)', en: '(agreement)' },
+                    label: { zh: '', en: '' },
+                    content: { zh: '', en: '' }
+                },
                 thankYou: formConfig.thankYou || {
                     title: { zh: '感謝你參加！', en: 'Thank you for participating!' },
                     message: { zh: '我們會透過 Email 把資訊發送給你。', en: 'We will send the information to you via Email.' },
@@ -1786,8 +1878,20 @@
                     if (typeof importedData.languageSwitcherEnabled === 'boolean') {
                         formConfig.languageSwitcherEnabled = importedData.languageSwitcherEnabled;
                     }
-                    formConfig.terms = importedData.terms || formConfig.terms || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } };
-                    formConfig.agreement = importedData.agreement || formConfig.agreement || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } };
+                    formConfig.terms = importedData.terms || formConfig.terms || {
+                        enabled: false,
+                        title: { zh: '條款與細則', en: 'Terms & Conditions' },
+                        linkLabel: { zh: '(條款)', en: '(terms)' },
+                        label: { zh: '', en: '' },
+                        content: { zh: '', en: '' }
+                    };
+                    formConfig.agreement = importedData.agreement || formConfig.agreement || {
+                        enabled: false,
+                        title: { zh: '協議', en: 'Agreement' },
+                        linkLabel: { zh: '(協議)', en: '(agreement)' },
+                        label: { zh: '', en: '' },
+                        content: { zh: '', en: '' }
+                    };
                     formConfig.thankYou = importedData.thankYou || formConfig.thankYou || {
                         title: { zh: '感謝你參加！', en: 'Thank you for participating!' },
                         message: { zh: '我們會透過 Email 把資訊發送給你。', en: 'We will send the information to you via Email.' },
@@ -1854,12 +1958,20 @@
         try {
             const t = formConfig.terms || {};
             const enabledEl = document.getElementById('termsEnabled');
+            const titleZhEl = document.getElementById('termsTitleZh');
+            const titleEnEl = document.getElementById('termsTitleEn');
+            const linkLabelZhEl = document.getElementById('termsLinkLabelZh');
+            const linkLabelEnEl = document.getElementById('termsLinkLabelEn');
             const labelZhEl = document.getElementById('termsLabelZh');
             const labelEnEl = document.getElementById('termsLabelEn');
             const contentZhEl = document.getElementById('termsContentZh');
             const contentEnEl = document.getElementById('termsContentEn');
             if (!enabledEl) return;
             enabledEl.checked = !!t.enabled;
+            if (titleZhEl) titleZhEl.value = (t.title && t.title.zh) ? t.title.zh : titleZhEl.value;
+            if (titleEnEl) titleEnEl.value = (t.title && t.title.en) ? t.title.en : titleEnEl.value;
+            if (linkLabelZhEl) linkLabelZhEl.value = (t.linkLabel && t.linkLabel.zh) ? t.linkLabel.zh : linkLabelZhEl.value;
+            if (linkLabelEnEl) linkLabelEnEl.value = (t.linkLabel && t.linkLabel.en) ? t.linkLabel.en : linkLabelEnEl.value;
             if (labelZhEl) labelZhEl.value = (t.label && t.label.zh) ? t.label.zh : labelZhEl.value;
             if (labelEnEl) labelEnEl.value = (t.label && t.label.en) ? t.label.en : labelEnEl.value;
             if (contentZhEl) contentZhEl.value = (t.content && t.content.zh) ? t.content.zh : contentZhEl.value;
@@ -1872,12 +1984,20 @@
         try {
             const a = formConfig.agreement || {};
             const enabledEl = document.getElementById('agreementEnabled');
+            const titleZhEl = document.getElementById('agreementTitleZh');
+            const titleEnEl = document.getElementById('agreementTitleEn');
+            const linkLabelZhEl = document.getElementById('agreementLinkLabelZh');
+            const linkLabelEnEl = document.getElementById('agreementLinkLabelEn');
             const labelZhEl = document.getElementById('agreementLabelZh');
             const labelEnEl = document.getElementById('agreementLabelEn');
             const contentZhEl = document.getElementById('agreementContentZh');
             const contentEnEl = document.getElementById('agreementContentEn');
             if (!enabledEl) return;
             enabledEl.checked = !!a.enabled;
+            if (titleZhEl) titleZhEl.value = (a.title && a.title.zh) ? a.title.zh : titleZhEl.value;
+            if (titleEnEl) titleEnEl.value = (a.title && a.title.en) ? a.title.en : titleEnEl.value;
+            if (linkLabelZhEl) linkLabelZhEl.value = (a.linkLabel && a.linkLabel.zh) ? a.linkLabel.zh : linkLabelZhEl.value;
+            if (linkLabelEnEl) linkLabelEnEl.value = (a.linkLabel && a.linkLabel.en) ? a.linkLabel.en : linkLabelEnEl.value;
             if (labelZhEl) labelZhEl.value = (a.label && a.label.zh) ? a.label.zh : labelZhEl.value;
             if (labelEnEl) labelEnEl.value = (a.label && a.label.en) ? a.label.en : labelEnEl.value;
             if (contentZhEl) contentZhEl.value = (a.content && a.content.zh) ? a.content.zh : contentZhEl.value;
