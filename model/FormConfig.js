@@ -236,7 +236,7 @@ const formConfigSchema = new mongoose.Schema({
         },
         buttons: {
             back: { zh: { type: String, default: '返回' }, en: { type: String, default: 'Back' } },
-            next: { zh: { type: String, default: '下一步' }, en: { type: String, default: 'Next' } }
+            next: { zh: { type: String, default: '提交' }, en: { type: String, default: 'Submit' } }
         },
         /** 票券下拉框下方單一提示（全區塊共用，非每張票券） */
         highlightText: {

@@ -248,7 +248,7 @@ function normalizePaymentTicketUi(ui) {
         defaultCategoryLabel: { zh: '其他', en: 'Other' },
         buttons: {
             back: { zh: '返回', en: 'Back' },
-            next: { zh: '下一步', en: 'Next' }
+            next: { zh: '提交', en: 'Submit' }
         },
         highlightText: { zh: '', en: '' },
         categoryButtons: []

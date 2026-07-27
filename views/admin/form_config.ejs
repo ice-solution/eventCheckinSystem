@@ -591,12 +591,12 @@
                                         <div class="col-md-3">
                                             <label class="form-label"><%= t('form_config.ptNextBtnZhLabel') %></label>
                                             <input type="text" class="form-control" id="ptNextBtnZh"
-                                                   value="<%= (ptUi.buttons && ptUi.buttons.next && ptUi.buttons.next.zh) ? ptUi.buttons.next.zh : '下一步' %>">
+                                                   value="<%= (ptUi.buttons && ptUi.buttons.next && ptUi.buttons.next.zh) ? ptUi.buttons.next.zh : '提交' %>">
                                         </div>
                                         <div class="col-md-3">
                                             <label class="form-label"><%= t('form_config.ptNextBtnEnLabel') %></label>
                                             <input type="text" class="form-control" id="ptNextBtnEn"
-                                                   value="<%= (ptUi.buttons && ptUi.buttons.next && ptUi.buttons.next.en) ? ptUi.buttons.next.en : 'Next' %>">
+                                                   value="<%= (ptUi.buttons && ptUi.buttons.next && ptUi.buttons.next.en) ? ptUi.buttons.next.en : 'Submit' %>">
                                         </div>
                                     </div>
                                     <div class="row mt-2">
@@ -1098,7 +1098,7 @@
             categoryLabel: { zh: '選擇類別', en: 'Select Category' },
             ticketLabel: { zh: '選擇票券', en: 'Select Ticket' },
             defaultCategoryLabel: { zh: '其他', en: 'Other' },
-            buttons: { back: { zh: '返回', en: 'Back' }, next: { zh: '下一步', en: 'Next' } },
+            buttons: { back: { zh: '返回', en: 'Back' }, next: { zh: '提交', en: 'Submit' } },
             highlightText: { zh: '', en: '' },
             categoryButtons: []
         };
