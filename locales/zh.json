@@ -721,10 +721,10 @@
     "uploadBannerHint": "上傳後如未即時更新，請重新整理頁面。",
 
     "eventNameZhLabel": "活動名稱 (ZH)",
-    "eventNameZhPlaceholder": "留空則使用 event.name",
+    "eventNameZhPlaceholder": "留空則不顯示標題",
     "eventNameEnLabel": "Event name (EN)",
-    "eventNameEnPlaceholder": "Leave blank to use event.name",
-    "eventNameHint": "Register page header 會依語言顯示此名稱（留空則顯示 event.name）。",
+    "eventNameEnPlaceholder": "Leave blank to hide title",
+    "eventNameHint": "報名頁頂部 H1 標題：有填就顯示；兩邊都留空則不顯示標題。瀏覽器分頁標題在留空時仍會用 event.name。",
     "subHeaderZhLabel": "副標題 (ZH)",
     "subHeaderZhPlaceholder": "活動名稱下方副標題（留空不顯示）",
     "subHeaderEnLabel": "Sub header (EN)",

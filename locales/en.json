@@ -722,10 +722,10 @@
     "uploadBannerHint": "If the banner does not update immediately after upload, please refresh the page.",
 
     "eventNameZhLabel": "Event name (ZH)",
-    "eventNameZhPlaceholder": "Leave blank to use event.name",
+    "eventNameZhPlaceholder": "Leave blank to hide title",
     "eventNameEnLabel": "Event name (EN)",
-    "eventNameEnPlaceholder": "Leave blank to use event.name",
-    "eventNameHint": "The Register page header will display this name based on language (blank = event.name).",
+    "eventNameEnPlaceholder": "Leave blank to hide title",
+    "eventNameHint": "Register page H1 title: shown when filled; leave both ZH/EN blank to hide the title. Browser tab still uses event.name when blank.",
     "subHeaderZhLabel": "Sub header (ZH)",
     "subHeaderZhPlaceholder": "Subtitle below event name (leave blank to hide)",
     "subHeaderEnLabel": "Sub header (EN)",

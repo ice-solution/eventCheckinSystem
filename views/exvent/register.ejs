@@ -1,22 +1,24 @@
 <!DOCTYPE html>
 <%
-function getRegisterEventTitle(formConfig, event, lang) {
+function getRegisterEventTitle(formConfig, event, lang, allowEmpty) {
     var edn = (formConfig && formConfig.eventDisplayName) ? formConfig.eventDisplayName : { zh: '', en: '' };
     var fallback = (event && event.name) ? String(event.name).trim() : 'Event';
     var zh = edn.zh ? String(edn.zh).trim() : '';
     var en = edn.en ? String(edn.en).trim() : '';
-    if (lang === 'en') return en || zh || fallback;
-    return zh || en || fallback;
+    var custom = (lang === 'en') ? (en || zh) : (zh || en);
+    if (allowEmpty) return custom;
+    return custom || fallback;
 }
 var registerPageLang = (formConfig && formConfig.defaultLanguage) ? formConfig.defaultLanguage : 'zh';
-var registerEventTitle = getRegisterEventTitle(formConfig, event, registerPageLang);
+var registerEventTitle = getRegisterEventTitle(formConfig, event, registerPageLang, true);
+var registerBrowserTitle = registerEventTitle || getRegisterEventTitle(formConfig, event, registerPageLang, false);
 var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - 登記';
 %>
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= registerEventTitle %><%= registerPageTitleSuffix %></title>
+    <title><%= registerBrowserTitle %><%= registerPageTitleSuffix %></title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         body {
@@ -460,7 +462,7 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
         %>
         <div class="form-header">
             <br><br>
-            <h1 id="formTitle"><%= registerEventTitle %></h1>
+            <h1 id="formTitle"<%= registerEventTitle ? '' : ' style="display:none;"' %>><%= registerEventTitle %></h1>
             <p id="formSubHeader" class="form-subheader"<%= initSubHeader ? '' : ' style="display:none;"' %>><%= initSubHeader %></p>
             <p class="text-muted" id="formSubtitle"><%= initSubtitle %></p>
         </div>
@@ -928,7 +930,8 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
             return zh || en || fallbackZh || fallbackEn || '';
         }
         function getHeaderEventName(lang) {
-            return getBilingualFormText(formConfigEventName, lang, '', '') || fallbackEventName;
+            // 留空 = 不顯示 H1（唔再 fallback 到 event.name）
+            return getBilingualFormText(formConfigEventName, lang, '', '');
         }
         function getRegisterSubHeader(lang) {
             return getBilingualFormText(formConfigRegisterSubHeader, lang, '', '');
@@ -943,8 +946,13 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
         }
         function updateRegisterHeaderText() {
             var name = getHeaderEventName(currentLanguage);
-            $('#formTitle').text(name);
-            document.title = name + (currentLanguage === 'en' ? ' - Register' : ' - 登記');
+            if (name) {
+                $('#formTitle').text(name).show();
+            } else {
+                $('#formTitle').hide().empty();
+            }
+            // 瀏覽器 tab 標題：無自訂名稱時仍用 event.name，避免空白 tab
+            document.title = (name || fallbackEventName) + (currentLanguage === 'en' ? ' - Register' : ' - 登記');
             const sub = getRegisterSubHeader(currentLanguage);
             if (sub) {
                 $('#formSubHeader').text(sub).show();
