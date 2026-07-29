@@ -774,7 +774,8 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                     <div class="terms-header">
                         <h3 class="section-title<%= showTrmLink ? '' : ' terms-title-as-link js-terms-modal-opener' %>" id="termsSectionTitle"
                             data-zh="<%= (trmTitle.zh ? trmTitle.zh : '條款與細則') %>"
-                            data-en="<%= (trmTitle.en ? trmTitle.en : 'Terms & Conditions') %>"><%= (trmTitle.zh ? trmTitle.zh : '條款與細則') %></h3>
+                            data-en="<%= (trmTitle.en ? trmTitle.en : 'Terms & Conditions') %>"
+                            data-required-mark="1"><%= (trmTitle.zh ? trmTitle.zh : '條款與細則') %><span class="required">*</span></h3>
                         <% if (showTrmLink) { %>
                         <a href="#" class="terms-open-link lang-text" id="termsOpenLink" role="button"
                            data-zh="<%= (trmLink.zh ? trmLink.zh : '(條款)') %>"
@@ -1267,12 +1268,22 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
 
             // 更新區塊標題
             $('.section-title').each(function() {
-                const zhText = $(this).data('zh');
-                const enText = $(this).data('en');
+                const $title = $(this);
+                const zhText = $title.data('zh');
+                const enText = $title.data('en');
+                const requiredMark = $title.data('requiredMark');
                 if (currentLanguage === 'zh' && zhText) {
-                    $(this).text(zhText);
+                    if (requiredMark) {
+                        $title.html(zhText + ' <span class="required">*</span>');
+                    } else {
+                        $title.text(zhText);
+                    }
                 } else if (currentLanguage === 'en' && enText) {
-                    $(this).text(enText);
+                    if (requiredMark) {
+                        $title.html(enText + ' <span class="required">*</span>');
+                    } else {
+                        $title.text(enText);
+                    }
                 }
             });
 

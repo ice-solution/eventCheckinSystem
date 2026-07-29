@@ -45,10 +45,12 @@
             font-weight: 600;
             margin-bottom: 20px;
         }
-        .success-message {
+        .success-message,
+        #emailMessage {
             color: #6c757d;
             font-size: 1.1rem;
             margin-bottom: 30px;
+            white-space: pre-line;
         }
         .btn-container {
             text-align: center;
@@ -152,8 +154,8 @@
                 }
             %>
             <% if (transaction) { %>
-                <h5 id="thankYouTitle" data-zh="<%= purchaseTitleZh %>" data-en="<%= purchaseTitleEn %>"><%= purchaseTitleZh %></h5>
-                <p id="emailMessage" data-zh="<%= purchaseMsgZh %>" data-en="<%= purchaseMsgEn %>"><%= purchaseMsgZh %></p>
+                <h5 id="thankYouTitle"><%= purchaseTitleZh %></h5>
+                <p id="emailMessage"><%= purchaseMsgZh %></p>
                 
                 <div class="transaction-details">
                     <h5 id="transactionTitle" data-zh="交易詳情" data-en="Transaction Details">交易詳情</h5>
@@ -175,9 +177,16 @@
                     </div>
                 </div>
             <% } else { %>
-                <h5 id="thankYouTitle" data-zh="<%= freeTitleZh %>" data-en="<%= freeTitleEn %>"><%= freeTitleZh %></h5>
-                <p id="emailMessage" data-zh="<%= freeMsgZh %>" data-en="<%= freeMsgEn %>"><%= freeMsgZh %></p>
+                <h5 id="thankYouTitle"><%= freeTitleZh %></h5>
+                <p id="emailMessage"><%= freeMsgZh %></p>
             <% } %>
+                <script type="application/json" id="thankYouCopyJson"><%- JSON.stringify({
+                    title: { zh: freeTitleZh, en: freeTitleEn },
+                    message: { zh: freeMsgZh, en: freeMsgEn },
+                    purchaseTitle: { zh: purchaseTitleZh, en: purchaseTitleEn },
+                    purchaseMessage: { zh: purchaseMsgZh, en: purchaseMsgEn },
+                    hasTransaction: !!transaction
+                }) %></script>
 
             <div class="btn-container">
                 <a href="/web/<%= event_id %>/register<%= lang ? '?lang=' + lang : '' %>" class="btn btn-primary" id="backBtn" data-zh="返回主頁" data-en="Return to Homepage">返回主頁</a>
@@ -202,12 +211,17 @@
         const urlLanguage = getLanguageFromURL();
         const currentLanguage = urlLanguage || 'zh';
         
+        const thankYouCopy = (function() {
+            const el = document.getElementById('thankYouCopyJson');
+            if (!el) return null;
+            try { return JSON.parse(el.textContent); } catch (_) { return null; }
+        })();
+
         $(document).ready(function() {
             updatePageLanguage();
         });
         
         function updatePageLanguage() {
-            // 更新所有帶有 data-zh 和 data-en 屬性的元素
             $('[data-zh][data-en]').each(function() {
                 const $el = $(this);
                 const zhText = $el.data('zh');
@@ -219,6 +233,22 @@
                     $el.text(enText);
                 }
             });
+
+            if (thankYouCopy) {
+                const lang = currentLanguage === 'en' ? 'en' : 'zh';
+                const pick = function(obj) {
+                    if (!obj) return '';
+                    return (obj[lang] || obj.zh || obj.en || '').toString();
+                };
+                const title = thankYouCopy.hasTransaction
+                    ? pick(thankYouCopy.purchaseTitle)
+                    : pick(thankYouCopy.title);
+                const message = thankYouCopy.hasTransaction
+                    ? pick(thankYouCopy.purchaseMessage)
+                    : pick(thankYouCopy.message);
+                $('#thankYouTitle').text(title);
+                $('#emailMessage').text(message);
+            }
         }
     </script>
 </body>
