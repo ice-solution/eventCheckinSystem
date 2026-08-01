@@ -189,5 +189,7 @@
 //initializing CalendarApp
 function($) {
     "use strict";
-    $.CalendarApp.init()
+    if ($('#calendar').length) {
+        $.CalendarApp.init();
+    }
 }(window.jQuery);

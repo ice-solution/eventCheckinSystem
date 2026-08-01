@@ -1,0 +1,161 @@
+<%- include("components/header") %>
+<%- include("components/menu", { eventId: eventId }) %>
+<%- include("components/responsive_layout_style") %>
+<link rel="stylesheet" href="/admin/assets/css/style.css">
+<style>
+    .alert-container { position: fixed; top: 72px; left: 12px; right: 12px; z-index: 1050; max-width: 420px; margin-left: auto; }
+    .station-card { border: 1px solid #e4e9f0; border-radius: 10px; padding: 16px; margin-bottom: 12px; background: #fff; }
+    .station-meta { color: #6b7a8d; font-size: 0.9rem; }
+    .add-form { display: none; margin-bottom: 20px; padding: 16px; background: #f8f9fa; border-radius: 8px; }
+    .station-card-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+    }
+    .station-card-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    @media (max-width: 767.98px) {
+        .content { padding-left: 10px; padding-right: 10px; }
+        .card-body { padding: 12px; }
+        .station-card-top { flex-direction: column; align-items: stretch; }
+        .station-card-actions { width: 100%; }
+        .station-card-actions .btn { flex: 1 1 auto; text-align: center; }
+        .alert-container { left: 8px; right: 8px; max-width: none; }
+    }
+</style>
+
+<div id="right-panel" class="right-panel">
+    <%- include("components/rightpanel_header") %>
+    <div class="content">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card">
+                        <div class="card-header card-header-with-action">
+                            <strong class="card-title"><%= t('station_checkin.title') %> - <%= event.name %></strong>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert-container" id="alertContainer"></div>
+                            <p class="text-muted"><%= t('station_checkin.intro') %></p>
+
+                            <button type="button" class="btn btn-primary mb-3" id="showAddBtn">
+                                <i class="fa fa-plus"></i> <%= t('station_checkin.addStationBtn') %>
+                            </button>
+
+                            <div class="add-form" id="addForm">
+                                <h5><%= t('station_checkin.addStationTitle') %></h5>
+                                <form id="createStationForm">
+                                    <div class="form-group">
+                                        <label><%= t('station_checkin.nameLabel') %></label>
+                                        <input type="text" class="form-control" id="stationName" required
+                                               placeholder="<%= t('station_checkin.namePlaceholder') %>">
+                                    </div>
+                                    <div class="form-group">
+                                        <label><%= t('station_checkin.descriptionLabel') %></label>
+                                        <textarea class="form-control" id="stationDescription" rows="2"
+                                                  placeholder="<%= t('station_checkin.descriptionPlaceholder') %>"></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-success"><%= t('station_checkin.createBtn') %></button>
+                                    <button type="button" class="btn btn-secondary" id="cancelAddBtn"><%= t('common.cancel') %></button>
+                                </form>
+                            </div>
+
+                            <div id="stationList">
+                                <% if (!stations || stations.length === 0) { %>
+                                    <p class="text-muted"><%= t('station_checkin.noStations') %></p>
+                                <% } else { %>
+                                    <% stations.forEach(function(s) { %>
+                                        <div class="station-card" data-id="<%= s._id %>">
+                                            <div class="station-card-top">
+                                                <div>
+                                                    <h5 class="mb-1">
+                                                        <%= s.name %>
+                                                        <% if (!s.enabled) { %>
+                                                            <span class="badge badge-secondary"><%= t('common.disabled') %></span>
+                                                        <% } %>
+                                                    </h5>
+                                                    <% if (s.description) { %>
+                                                        <p class="mb-1 station-meta"><%= s.description %></p>
+                                                    <% } %>
+                                                    <p class="mb-0 station-meta">
+                                                        <%= t('station_checkin.checkInCount') %>: <strong><%= s.checkInCount || 0 %></strong>
+                                                        · <%= t('station_checkin.sectionListCount') %>: <strong><%= s.sectionListCount || 0 %></strong>
+                                                    </p>
+                                                </div>
+                                                <div class="station-card-actions">
+                                                    <a href="/events/<%= eventId %>/station-checkin/<%= s._id %>" class="btn btn-sm btn-info">
+                                                        <%= t('station_checkin.openStationBtn') %>
+                                                    </a>
+                                                    <button type="button" class="btn btn-sm btn-danger delete-station" data-id="<%= s._id %>">
+                                                        <%= t('common.delete') %>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <% }); %>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<%- include("components/footer_minimal") %>
+<script>
+jQuery(function($) {
+    const eventId = '<%= eventId %>';
+    const $addForm = $('#addForm');
+
+    $('#showAddBtn').on('click', function() { $addForm.slideDown(); });
+    $('#cancelAddBtn').on('click', function() { $addForm.slideUp(); });
+
+    function showAlert(type, msg) {
+        const html = '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+            msg +
+            '<button type="button" class="close" data-dismiss="alert"><span>&times;</span></button></div>';
+        const $a = $(html);
+        $('#alertContainer').append($a);
+        setTimeout(function() { $a.alert('close'); }, 3500);
+    }
+
+    $('#createStationForm').on('submit', function(e) {
+        e.preventDefault();
+        $.ajax({
+            url: '/events/' + eventId + '/station-checkin',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                name: $('#stationName').val(),
+                description: $('#stationDescription').val()
+            }),
+            success: function() {
+                location.reload();
+            },
+            error: function(xhr) {
+                showAlert('danger', (xhr.responseJSON && xhr.responseJSON.message) || 'Error');
+            }
+        });
+    });
+
+    $(document).on('click', '.delete-station', function() {
+        const id = $(this).data('id');
+        if (!confirm('<%= t("station_checkin.deleteConfirm") %>')) return;
+        $.ajax({
+            url: '/events/' + eventId + '/station-checkin/' + id,
+            method: 'DELETE',
+            success: function() { location.reload(); },
+            error: function(xhr) {
+                showAlert('danger', (xhr.responseJSON && xhr.responseJSON.message) || 'Error');
+            }
+        });
+    });
+});
+</script>

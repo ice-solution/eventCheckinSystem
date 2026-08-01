@@ -146,18 +146,109 @@
         flex: 0 0 100% !important;
         max-width: 100% !important;
     }
+
+    /* Stat cards — same layout as users.ejs */
+    .stat-cards-row {
+        gap: 15px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .stat-card {
+        flex: 1 1 calc(33.333% - 10px);
+        min-width: 280px;
+        margin: 0 !important;
+    }
+    @media (max-width: 992px) {
+        .stat-card {
+            flex: 1 1 calc(50% - 8px);
+            min-width: 250px;
+        }
+    }
+    @media (max-width: 576px) {
+        .stat-card {
+            flex: 1 1 100%;
+            min-width: 0;
+        }
+    }
 </style>
 
 <div id="right-panel" class="right-panel">
     <%- include ("components/rightpanel_header") %>
     <div class="content">
         <div class="animated fadeIn">
+            <%
+                let totalGuests = 0;
+                let checkedInGuests = 0;
+                (events || []).forEach(function(ev) {
+                    const users = ev.users || [];
+                    totalGuests += users.length;
+                    checkedInGuests += users.filter(function(u) { return u.isCheckIn; }).length;
+                });
+                const checkInRate = totalGuests > 0
+                    ? ((checkedInGuests / totalGuests) * 100).toFixed(2)
+                    : '0.00';
+            %>
+            <div class="d-flex stat-cards-row">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <div class="stat-widget-five">
+                            <div class="stat-icon dib flat-color-1">
+                                <i class="pe-7s-user"></i>
+                            </div>
+                            <div class="stat-content">
+                                <div class="text-left dib">
+                                    <div class="stat-text"><span class="count"><%= checkedInGuests %></span></div>
+                                    <div class="stat-heading"><%= t('users.checkedInStat') %></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <div class="stat-widget-five">
+                            <div class="stat-icon dib flat-color-2">
+                                <i class="pe-7s-users"></i>
+                            </div>
+                            <div class="stat-content">
+                                <div class="text-left dib">
+                                    <div class="stat-text"><span class="count"><%= totalGuests %></span></div>
+                                    <div class="stat-heading"><%= t('users.totalStat') %></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <div class="stat-widget-five">
+                            <div class="stat-icon dib flat-color-3">
+                                <i class="pe-7s-calculator"></i>
+                            </div>
+                            <div class="stat-content">
+                                <div class="text-left dib">
+                                    <div class="stat-text"><span class="count"><%= checkInRate %></span>%</div>
+                                    <div class="stat-heading"><%= t('users.checkInRateStat') %></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="row">
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header card-header-with-action">
                             <strong class="card-title"><%= t('events_list.title') %></strong>
                             <div style="display:inline-flex; align-items:center; gap:12px;">
+                                <button type="button" class="btn btn-sm btn-info" id="exportCheckInListBtn">
+                                    <i class="fas fa-download"></i> <%= t('events_list.exportCheckInList') %>
+                                </button>
                                 <a href="/auth/users" title="Login Account Management" data-toggle="tooltip" data-placement="left" style="color:#90a4ae; font-size:1.2em; line-height:1; text-decoration:none;">
                                     <i class="fa fa-users"></i>
                                 </a>
@@ -168,6 +259,9 @@
                             <table id="eventsTable" class="table table-bordered">
                                 <thead>
                                     <tr>
+                                        <th style="width:42px;">
+                                            <input type="checkbox" id="selectAllEvents" title="<%= t('events_list.selectAll') %>">
+                                        </th>
                                         <th><%= t('events_list.eventName') %></th>
                                         <th><%= t('events_list.startTime') %></th>
                                         <th><%= t('events_list.endTime') %></th>
@@ -179,6 +273,9 @@
                                     <% if (events.length > 0) { %>
                                         <% events.forEach(event => { %>
                                             <tr>
+                                                <td>
+                                                    <input type="checkbox" class="event-export-cb" value="<%= event._id %>">
+                                                </td>
                                                 <td><a href="/events/<%= event._id %>"><%= event.name %></a></td>
                                                 <td><%= new Date(event.from).toLocaleString() %></td>
                                                 <td><%= new Date(event.to).toLocaleString() %></td>
@@ -188,7 +285,7 @@
                                         <% }); %>
                                     <% } else { %>
                                         <tr>
-                                            <td colspan="5" class="text-center"><%= t('events_list.noEvents') %></td>
+                                            <td colspan="6" class="text-center"><%= t('events_list.noEvents') %></td>
                                         </tr>
                                     <% } %>
                                 </tbody>
@@ -208,15 +305,24 @@
 $(document).ready(function() {
     $('[data-toggle="tooltip"]').tooltip();
 
-    $('#eventsTable').DataTable({
+    var i18n = {
+        selectFirst: <%- JSON.stringify(t('events_list.selectEventsFirst')) %>,
+        exporting: <%- JSON.stringify(t('events_list.exporting')) %>,
+        exportFailed: <%- JSON.stringify(t('events_list.exportFailed')) %>,
+        exportLabel: <%- JSON.stringify(t('events_list.exportCheckInList')) %>
+    };
+    var selectedIds = {};
+
+    var table = $('#eventsTable').DataTable({
         pageLength: 25,
         dom: 'rtip',
         autoWidth: true,
         columnDefs: [
-            { targets: 3, type: 'num', orderable: true, searchable: false },
-            { targets: 4, type: 'num', orderable: true }
+            { targets: 0, orderable: false, searchable: false },
+            { targets: 4, type: 'num', orderable: true, searchable: false },
+            { targets: 5, type: 'num', orderable: true }
         ],
-        order: [[3, 'desc']],
+        order: [[4, 'desc']],
         initComplete: function() {
             if (!$('#eventsTable').parent().hasClass('events-table-xscroll')) {
                 $('#eventsTable').wrap('<div class="events-table-xscroll"></div>');
@@ -226,6 +332,8 @@ $(document).ready(function() {
         },
         drawCallback: function() {
             fixPaginationArrows();
+            restoreCheckboxState();
+            syncSelectAllState();
         }
     });
 
@@ -241,6 +349,7 @@ $(document).ready(function() {
         if (!el) return;
         let drag = { active: false, x: 0, scroll: 0, moved: false };
         el.addEventListener('mousedown',  function(e) {
+            if (e.target && (e.target.tagName === 'INPUT' || e.target.closest('a'))) return;
             drag = { active: true, x: e.clientX, scroll: el.scrollLeft, moved: false };
             el.classList.add('is-dragging');
         });
@@ -256,5 +365,84 @@ $(document).ready(function() {
             if (drag.moved) { e.preventDefault(); e.stopPropagation(); drag.moved = false; }
         });
     }
+
+    function restoreCheckboxState() {
+        $('#eventsTable tbody .event-export-cb').each(function() {
+            $(this).prop('checked', !!selectedIds[$(this).val()]);
+        });
+    }
+
+    function getSelectedEventIds() {
+        return Object.keys(selectedIds);
+    }
+
+    function syncSelectAllState() {
+        var $boxes = $('#eventsTable tbody .event-export-cb');
+        var total = $boxes.length;
+        var checked = $boxes.filter(':checked').length;
+        $('#selectAllEvents').prop('checked', total > 0 && checked === total);
+    }
+
+    // 全選：目前頁面所有列（含 DataTables 可見列）
+    $('#selectAllEvents').on('change', function() {
+        var checked = $(this).is(':checked');
+        table.rows({ page: 'current' }).nodes().to$().find('.event-export-cb').each(function() {
+            var id = $(this).val();
+            $(this).prop('checked', checked);
+            if (checked) selectedIds[id] = true;
+            else delete selectedIds[id];
+        });
+    });
+
+    $(document).on('change', '#eventsTable .event-export-cb', function() {
+        var id = $(this).val();
+        if ($(this).is(':checked')) selectedIds[id] = true;
+        else delete selectedIds[id];
+        syncSelectAllState();
+    });
+
+    $('#exportCheckInListBtn').on('click', function() {
+        var eventIds = getSelectedEventIds();
+        if (!eventIds.length) {
+            alert(i18n.selectFirst);
+            return;
+        }
+
+        var $btn = $(this).prop('disabled', true);
+        var originalHtml = $btn.html();
+        $btn.html('<i class="fas fa-spinner fa-spin"></i> ' + i18n.exporting);
+
+        fetch('/events/export-checkin-list', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ eventIds: eventIds }),
+            credentials: 'same-origin'
+        }).then(function(res) {
+            if (!res.ok) {
+                return res.json().catch(function() { return {}; }).then(function(body) {
+                    throw new Error((body && body.message) || i18n.exportFailed);
+                });
+            }
+            var disposition = res.headers.get('Content-Disposition') || '';
+            var match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+            var filename = (match && match[1]) ? match[1].replace(/['"]/g, '') : 'events_checkin_list.xlsx';
+            return res.blob().then(function(blob) {
+                return { blob: blob, filename: filename };
+            });
+        }).then(function(result) {
+            var url = URL.createObjectURL(result.blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = result.filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        }).catch(function(err) {
+            alert(err.message || i18n.exportFailed);
+        }).finally(function() {
+            $btn.prop('disabled', false).html(originalHtml);
+        });
+    });
 });
 </script>

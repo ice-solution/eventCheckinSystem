@@ -239,6 +239,17 @@ function getCategoryButtonLabel(categoryKey, paymentTicketUi, lang = 'zh') {
     return categoryKey;
 }
 
+function upgradeLegacySubmitButtonLabel(field) {
+    const out = normalizeBilingualField(field);
+    if (String(out.zh || '').trim() === '下一步') {
+        out.zh = '提交';
+    }
+    if (String(out.en || '').trim() === 'Next') {
+        out.en = 'Submit';
+    }
+    return out;
+}
+
 function normalizePaymentTicketUi(ui) {
     const src = ui && typeof ui === 'object' ? ui : {};
     const def = {
@@ -248,7 +259,7 @@ function normalizePaymentTicketUi(ui) {
         defaultCategoryLabel: { zh: '其他', en: 'Other' },
         buttons: {
             back: { zh: '返回', en: 'Back' },
-            next: { zh: '下一步', en: 'Next' }
+            next: { zh: '提交', en: 'Submit' }
         },
         highlightText: { zh: '', en: '' },
         categoryButtons: []
@@ -260,7 +271,7 @@ function normalizePaymentTicketUi(ui) {
         defaultCategoryLabel: normalizeBilingualField(src.defaultCategoryLabel || def.defaultCategoryLabel),
         buttons: {
             back: normalizeBilingualField((src.buttons && src.buttons.back) || def.buttons.back),
-            next: normalizeBilingualField((src.buttons && src.buttons.next) || def.buttons.next)
+            next: upgradeLegacySubmitButtonLabel((src.buttons && src.buttons.next) || def.buttons.next)
         },
         highlightText: normalizeBilingualField(src.highlightText || def.highlightText || { zh: '', en: '' }),
         categoryButtons: Array.isArray(src.categoryButtons)

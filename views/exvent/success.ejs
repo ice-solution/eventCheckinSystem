@@ -45,10 +45,12 @@
             font-weight: 600;
             margin-bottom: 20px;
         }
-        .success-message {
+        .success-message,
+        #emailMessage {
             color: #6c757d;
             font-size: 1.1rem;
             margin-bottom: 30px;
+            white-space: pre-line;
         }
         .btn-container {
             text-align: center;
@@ -111,9 +113,49 @@
         </div>
 
         <div class="success-content">
+            <% 
+                const ty = (typeof formConfig !== 'undefined' && formConfig && formConfig.thankYou) ? formConfig.thankYou : {};
+                const ynq = ty.yesNoQuestion || {};
+                const answerRaw = (typeof thankYouYesNo !== 'undefined' && thankYouYesNo != null)
+                    ? String(thankYouYesNo).trim().toLowerCase()
+                    : '';
+                const answeredYes = ['yes', 'y', '是', 'true', '1'].includes(answerRaw);
+                const answeredNo = answerRaw !== '' && !answeredYes;
+                const useYesCopy = answeredYes && ynq && ynq.enabled;
+                const useNoCopy = answeredNo && ynq && ynq.enabled;
+
+                let freeTitleZh = (ty.title && ty.title.zh) ? ty.title.zh : '感謝你參加！';
+                let freeTitleEn = (ty.title && ty.title.en) ? ty.title.en : 'Thank you for participating!';
+                let freeMsgZh = (ty.message && ty.message.zh) ? ty.message.zh : '我們會透過 Email 把資訊發送給你。';
+                let freeMsgEn = (ty.message && ty.message.en) ? ty.message.en : 'We will send the information to you via Email.';
+                let purchaseTitleZh = (ty.purchaseTitle && ty.purchaseTitle.zh) ? ty.purchaseTitle.zh : '感謝您的購票！';
+                let purchaseTitleEn = (ty.purchaseTitle && ty.purchaseTitle.en) ? ty.purchaseTitle.en : 'Thank you for your purchase!';
+                let purchaseMsgZh = (ty.purchaseMessage && ty.purchaseMessage.zh) ? ty.purchaseMessage.zh : '您的付款已成功，以下是您的交易紀錄：';
+                let purchaseMsgEn = (ty.purchaseMessage && ty.purchaseMessage.en) ? ty.purchaseMessage.en : 'Your payment was successful. Here are your transaction details:';
+
+                if (useYesCopy) {
+                    if (ynq.yesTitle && ynq.yesTitle.zh) freeTitleZh = ynq.yesTitle.zh;
+                    if (ynq.yesTitle && ynq.yesTitle.en) freeTitleEn = ynq.yesTitle.en;
+                    if (ynq.yesMessage && ynq.yesMessage.zh) freeMsgZh = ynq.yesMessage.zh;
+                    if (ynq.yesMessage && ynq.yesMessage.en) freeMsgEn = ynq.yesMessage.en;
+                    if (ynq.yesPurchaseTitle && ynq.yesPurchaseTitle.zh) purchaseTitleZh = ynq.yesPurchaseTitle.zh;
+                    if (ynq.yesPurchaseTitle && ynq.yesPurchaseTitle.en) purchaseTitleEn = ynq.yesPurchaseTitle.en;
+                    if (ynq.yesPurchaseMessage && ynq.yesPurchaseMessage.zh) purchaseMsgZh = ynq.yesPurchaseMessage.zh;
+                    if (ynq.yesPurchaseMessage && ynq.yesPurchaseMessage.en) purchaseMsgEn = ynq.yesPurchaseMessage.en;
+                } else if (useNoCopy) {
+                    if (ynq.noTitle && ynq.noTitle.zh) freeTitleZh = ynq.noTitle.zh;
+                    if (ynq.noTitle && ynq.noTitle.en) freeTitleEn = ynq.noTitle.en;
+                    if (ynq.noMessage && ynq.noMessage.zh) freeMsgZh = ynq.noMessage.zh;
+                    if (ynq.noMessage && ynq.noMessage.en) freeMsgEn = ynq.noMessage.en;
+                    if (ynq.noPurchaseTitle && ynq.noPurchaseTitle.zh) purchaseTitleZh = ynq.noPurchaseTitle.zh;
+                    if (ynq.noPurchaseTitle && ynq.noPurchaseTitle.en) purchaseTitleEn = ynq.noPurchaseTitle.en;
+                    if (ynq.noPurchaseMessage && ynq.noPurchaseMessage.zh) purchaseMsgZh = ynq.noPurchaseMessage.zh;
+                    if (ynq.noPurchaseMessage && ynq.noPurchaseMessage.en) purchaseMsgEn = ynq.noPurchaseMessage.en;
+                }
+            %>
             <% if (transaction) { %>
-                <h5 id="thankYouTitle" data-zh="感謝您的購票！" data-en="Thank you for your purchase!">感謝您的購票！</h5>
-                <p id="emailMessage" data-zh="您的付款已成功，以下是您的交易紀錄：" data-en="Your payment was successful. Here are your transaction details:">您的付款已成功，以下是您的交易紀錄：</p>
+                <h5 id="thankYouTitle"><%= purchaseTitleZh %></h5>
+                <p id="emailMessage"><%= purchaseMsgZh %></p>
                 
                 <div class="transaction-details">
                     <h5 id="transactionTitle" data-zh="交易詳情" data-en="Transaction Details">交易詳情</h5>
@@ -135,9 +177,16 @@
                     </div>
                 </div>
             <% } else { %>
-                <h5 id="thankYouTitle" data-zh="感謝你參加！" data-en="Thank you for participating!">感謝你參加！</h5>
-                <p id="emailMessage" data-zh="我們會透過 Email 把資訊發送給你。" data-en="We will send the information to you via Email.">我們會透過 Email 把資訊發送給你。</p>
+                <h5 id="thankYouTitle"><%= freeTitleZh %></h5>
+                <p id="emailMessage"><%= freeMsgZh %></p>
             <% } %>
+                <script type="application/json" id="thankYouCopyJson"><%- JSON.stringify({
+                    title: { zh: freeTitleZh, en: freeTitleEn },
+                    message: { zh: freeMsgZh, en: freeMsgEn },
+                    purchaseTitle: { zh: purchaseTitleZh, en: purchaseTitleEn },
+                    purchaseMessage: { zh: purchaseMsgZh, en: purchaseMsgEn },
+                    hasTransaction: !!transaction
+                }) %></script>
 
             <div class="btn-container">
                 <a href="/web/<%= event_id %>/register<%= lang ? '?lang=' + lang : '' %>" class="btn btn-primary" id="backBtn" data-zh="返回主頁" data-en="Return to Homepage">返回主頁</a>
@@ -162,12 +211,17 @@
         const urlLanguage = getLanguageFromURL();
         const currentLanguage = urlLanguage || 'zh';
         
+        const thankYouCopy = (function() {
+            const el = document.getElementById('thankYouCopyJson');
+            if (!el) return null;
+            try { return JSON.parse(el.textContent); } catch (_) { return null; }
+        })();
+
         $(document).ready(function() {
             updatePageLanguage();
         });
         
         function updatePageLanguage() {
-            // 更新所有帶有 data-zh 和 data-en 屬性的元素
             $('[data-zh][data-en]').each(function() {
                 const $el = $(this);
                 const zhText = $el.data('zh');
@@ -179,6 +233,22 @@
                     $el.text(enText);
                 }
             });
+
+            if (thankYouCopy) {
+                const lang = currentLanguage === 'en' ? 'en' : 'zh';
+                const pick = function(obj) {
+                    if (!obj) return '';
+                    return (obj[lang] || obj.zh || obj.en || '').toString();
+                };
+                const title = thankYouCopy.hasTransaction
+                    ? pick(thankYouCopy.purchaseTitle)
+                    : pick(thankYouCopy.title);
+                const message = thankYouCopy.hasTransaction
+                    ? pick(thankYouCopy.purchaseMessage)
+                    : pick(thankYouCopy.message);
+                $('#thankYouTitle').text(title);
+                $('#emailMessage').text(message);
+            }
         }
     </script>
 </body>

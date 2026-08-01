@@ -79,8 +79,19 @@ const migrateFormConfig = (formConfig) => {
                 if (migratedField.visible === undefined) {
                     migratedField.visible = migratedField.display !== false;
                 }
+                // Display 僅輸出文字，不可設為必填、不需 options
+                if (migratedField.type === 'display') {
+                    migratedField.required = false;
+                    delete migratedField.options;
+                }
+                if (migratedField.confirmEmail === undefined) {
+                    migratedField.confirmEmail = false;
+                }
+                if (migratedField.type !== 'email') {
+                    migratedField.confirmEmail = false;
+                }
                 
-                if (field.options) {
+                if (field.options && migratedField.type !== 'display') {
                     migratedField.options = field.options.map(option => {
                         const migratedOption = { ...option };
                         
@@ -150,6 +161,9 @@ function applyFormConfigMetaDefaults(migratedConfig) {
     if (!migratedConfig.terms || typeof migratedConfig.terms !== 'object') {
         migratedConfig.terms = {
             enabled: false,
+            title: { zh: '條款與細則', en: 'Terms & Conditions' },
+            linkLabel: { zh: '(條款)', en: '(terms)' },
+            showLinkLabel: true,
             label: {
                 zh: '本人已閱讀並同意上述須知，確認繼續預約及積分扣款程序。',
                 en: 'I have read and agree to the terms above, and confirm to proceed.'
@@ -158,6 +172,23 @@ function applyFormConfigMetaDefaults(migratedConfig) {
         };
     } else {
         migratedConfig.terms.enabled = !!migratedConfig.terms.enabled;
+        if (!migratedConfig.terms.title || typeof migratedConfig.terms.title !== 'object') {
+            migratedConfig.terms.title = { zh: '條款與細則', en: 'Terms & Conditions' };
+        } else {
+            migratedConfig.terms.title.zh = migratedConfig.terms.title.zh || '條款與細則';
+            migratedConfig.terms.title.en = migratedConfig.terms.title.en || 'Terms & Conditions';
+        }
+        if (!migratedConfig.terms.linkLabel || typeof migratedConfig.terms.linkLabel !== 'object') {
+            migratedConfig.terms.linkLabel = { zh: '(條款)', en: '(terms)' };
+        } else {
+            migratedConfig.terms.linkLabel.zh = migratedConfig.terms.linkLabel.zh || '(條款)';
+            migratedConfig.terms.linkLabel.en = migratedConfig.terms.linkLabel.en || '(terms)';
+        }
+        if (migratedConfig.terms.showLinkLabel === undefined) {
+            migratedConfig.terms.showLinkLabel = true;
+        } else {
+            migratedConfig.terms.showLinkLabel = !!migratedConfig.terms.showLinkLabel;
+        }
         if (!migratedConfig.terms.label || typeof migratedConfig.terms.label !== 'object') {
             migratedConfig.terms.label = {
                 zh: '本人已閱讀並同意上述須知，確認繼續預約及積分扣款程序。',
@@ -179,6 +210,9 @@ function applyFormConfigMetaDefaults(migratedConfig) {
     if (!migratedConfig.agreement || typeof migratedConfig.agreement !== 'object') {
         migratedConfig.agreement = {
             enabled: false,
+            title: { zh: '協議', en: 'Agreement' },
+            linkLabel: { zh: '(協議)', en: '(agreement)' },
+            showLinkLabel: true,
             label: {
                 zh: '本人已閱讀並同意上述協議內容。',
                 en: 'I have read and agree to the agreement above.'
@@ -187,6 +221,23 @@ function applyFormConfigMetaDefaults(migratedConfig) {
         };
     } else {
         migratedConfig.agreement.enabled = !!migratedConfig.agreement.enabled;
+        if (!migratedConfig.agreement.title || typeof migratedConfig.agreement.title !== 'object') {
+            migratedConfig.agreement.title = { zh: '協議', en: 'Agreement' };
+        } else {
+            migratedConfig.agreement.title.zh = migratedConfig.agreement.title.zh || '協議';
+            migratedConfig.agreement.title.en = migratedConfig.agreement.title.en || 'Agreement';
+        }
+        if (!migratedConfig.agreement.linkLabel || typeof migratedConfig.agreement.linkLabel !== 'object') {
+            migratedConfig.agreement.linkLabel = { zh: '(協議)', en: '(agreement)' };
+        } else {
+            migratedConfig.agreement.linkLabel.zh = migratedConfig.agreement.linkLabel.zh || '(協議)';
+            migratedConfig.agreement.linkLabel.en = migratedConfig.agreement.linkLabel.en || '(agreement)';
+        }
+        if (migratedConfig.agreement.showLinkLabel === undefined) {
+            migratedConfig.agreement.showLinkLabel = true;
+        } else {
+            migratedConfig.agreement.showLinkLabel = !!migratedConfig.agreement.showLinkLabel;
+        }
         if (!migratedConfig.agreement.label || typeof migratedConfig.agreement.label !== 'object') {
             migratedConfig.agreement.label = {
                 zh: '本人已閱讀並同意上述協議內容。',
@@ -201,6 +252,77 @@ function applyFormConfigMetaDefaults(migratedConfig) {
         } else {
             migratedConfig.agreement.content.zh = migratedConfig.agreement.content.zh || '';
             migratedConfig.agreement.content.en = migratedConfig.agreement.content.en || '';
+        }
+    }
+
+    // 確保有 thankYou 設定
+    const defaultThankYou = {
+        title: { zh: '感謝你參加！', en: 'Thank you for participating!' },
+        message: { zh: '我們會透過 Email 把資訊發送給你。', en: 'We will send the information to you via Email.' },
+        purchaseTitle: { zh: '感謝您的購票！', en: 'Thank you for your purchase!' },
+        purchaseMessage: {
+            zh: '您的付款已成功，以下是您的交易紀錄：',
+            en: 'Your payment was successful. Here are your transaction details:'
+        },
+        yesNoQuestion: {
+            enabled: false,
+            question: { zh: '', en: '' },
+            yesLabel: { zh: '是', en: 'Yes' },
+            noLabel: { zh: '否', en: 'No' },
+            yesEmailTemplateId: '',
+            noEmailTemplateId: '',
+            yesTitle: { zh: '', en: '' },
+            yesMessage: { zh: '', en: '' },
+            yesPurchaseTitle: { zh: '', en: '' },
+            yesPurchaseMessage: { zh: '', en: '' },
+            noTitle: { zh: '', en: '' },
+            noMessage: { zh: '', en: '' },
+            noPurchaseTitle: { zh: '', en: '' },
+            noPurchaseMessage: { zh: '', en: '' }
+        }
+    };
+    if (!migratedConfig.thankYou || typeof migratedConfig.thankYou !== 'object') {
+        migratedConfig.thankYou = JSON.parse(JSON.stringify(defaultThankYou));
+    } else {
+        ['title', 'message', 'purchaseTitle', 'purchaseMessage'].forEach((key) => {
+            if (!migratedConfig.thankYou[key] || typeof migratedConfig.thankYou[key] !== 'object') {
+                migratedConfig.thankYou[key] = { ...defaultThankYou[key] };
+            } else {
+                migratedConfig.thankYou[key].zh = migratedConfig.thankYou[key].zh || defaultThankYou[key].zh;
+                migratedConfig.thankYou[key].en = migratedConfig.thankYou[key].en || defaultThankYou[key].en;
+            }
+        });
+        const defaultYnq = defaultThankYou.yesNoQuestion;
+        const ynq = migratedConfig.thankYou.yesNoQuestion;
+        if (!ynq || typeof ynq !== 'object') {
+            migratedConfig.thankYou.yesNoQuestion = JSON.parse(JSON.stringify(defaultYnq));
+        } else {
+            const bilingual = (obj) => ({
+                zh: (obj && obj.zh) || '',
+                en: (obj && obj.en) || ''
+            });
+            migratedConfig.thankYou.yesNoQuestion = {
+                enabled: ynq.enabled === true,
+                question: bilingual(ynq.question),
+                yesLabel: {
+                    zh: (ynq.yesLabel && ynq.yesLabel.zh) || defaultYnq.yesLabel.zh,
+                    en: (ynq.yesLabel && ynq.yesLabel.en) || defaultYnq.yesLabel.en
+                },
+                noLabel: {
+                    zh: (ynq.noLabel && ynq.noLabel.zh) || defaultYnq.noLabel.zh,
+                    en: (ynq.noLabel && ynq.noLabel.en) || defaultYnq.noLabel.en
+                },
+                yesEmailTemplateId: ynq.yesEmailTemplateId != null ? String(ynq.yesEmailTemplateId) : '',
+                noEmailTemplateId: ynq.noEmailTemplateId != null ? String(ynq.noEmailTemplateId) : '',
+                yesTitle: bilingual(ynq.yesTitle),
+                yesMessage: bilingual(ynq.yesMessage),
+                yesPurchaseTitle: bilingual(ynq.yesPurchaseTitle),
+                yesPurchaseMessage: bilingual(ynq.yesPurchaseMessage),
+                noTitle: bilingual(ynq.noTitle),
+                noMessage: bilingual(ynq.noMessage),
+                noPurchaseTitle: bilingual(ynq.noPurchaseTitle),
+                noPurchaseMessage: bilingual(ynq.noPurchaseMessage)
+            };
         }
     }
 
@@ -229,6 +351,9 @@ exports.getDefaultFormConfig = () => ({
     },
     terms: {
         enabled: false,
+        title: { zh: '條款與細則', en: 'Terms & Conditions' },
+        linkLabel: { zh: '(條款)', en: '(terms)' },
+        showLinkLabel: true,
         label: {
             zh: '本人已閱讀並同意上述須知，確認繼續預約及積分扣款程序。',
             en: 'I have read and agree to the terms above, and confirm to proceed.'
@@ -237,11 +362,39 @@ exports.getDefaultFormConfig = () => ({
     },
     agreement: {
         enabled: false,
+        title: { zh: '協議', en: 'Agreement' },
+        linkLabel: { zh: '(協議)', en: '(agreement)' },
+        showLinkLabel: true,
         label: {
             zh: '本人已閱讀並同意上述協議內容。',
             en: 'I have read and agree to the agreement above.'
         },
         content: { zh: '', en: '' }
+    },
+    thankYou: {
+        title: { zh: '感謝你參加！', en: 'Thank you for participating!' },
+        message: { zh: '我們會透過 Email 把資訊發送給你。', en: 'We will send the information to you via Email.' },
+        purchaseTitle: { zh: '感謝您的購票！', en: 'Thank you for your purchase!' },
+        purchaseMessage: {
+            zh: '您的付款已成功，以下是您的交易紀錄：',
+            en: 'Your payment was successful. Here are your transaction details:'
+        },
+        yesNoQuestion: {
+            enabled: false,
+            question: { zh: '', en: '' },
+            yesLabel: { zh: '是', en: 'Yes' },
+            noLabel: { zh: '否', en: 'No' },
+            yesEmailTemplateId: '',
+            noEmailTemplateId: '',
+            yesTitle: { zh: '', en: '' },
+            yesMessage: { zh: '', en: '' },
+            yesPurchaseTitle: { zh: '', en: '' },
+            yesPurchaseMessage: { zh: '', en: '' },
+            noTitle: { zh: '', en: '' },
+            noMessage: { zh: '', en: '' },
+            noPurchaseTitle: { zh: '', en: '' },
+            noPurchaseMessage: { zh: '', en: '' }
+        }
     },
     paymentTicketUi: normalizePaymentTicketUi(),
     sections: [
@@ -499,7 +652,7 @@ exports.getFormConfig = async (req, res) => {
 exports.updateFormConfig = async (req, res) => {
     try {
         const { eventId } = req.params;
-        const { sections, defaultLanguage, languageSwitcherEnabled, registerPageEnabled, registerClosedMessage, terms, agreement, eventDisplayName, registerSubHeader, registerSubtitle, paymentTicketUi } = req.body;
+        const { sections, defaultLanguage, languageSwitcherEnabled, registerPageEnabled, registerClosedMessage, terms, agreement, thankYou, eventDisplayName, registerSubHeader, registerSubtitle, paymentTicketUi } = req.body;
         
         // 驗證事件是否存在
         const event = await Event.findById(eventId);
@@ -548,6 +701,10 @@ exports.updateFormConfig = async (req, res) => {
                 const migrated = migrateFormConfig({ sections: formConfig.sections, agreement });
                 formConfig.agreement = migrated.agreement;
             }
+            if (thankYou && typeof thankYou === 'object') {
+                const migrated = migrateFormConfig({ sections: formConfig.sections, thankYou });
+                formConfig.thankYou = migrated.thankYou;
+            }
             if (paymentTicketUi && typeof paymentTicketUi === 'object') {
                 formConfig.paymentTicketUi = normalizePaymentTicketUi(paymentTicketUi);
             }
@@ -577,6 +734,9 @@ exports.updateFormConfig = async (req, res) => {
                 agreement: agreement && typeof agreement === 'object'
                     ? migrateFormConfig({ sections: (sections || defaultConfig.sections), agreement }).agreement
                     : defaultConfig.agreement,
+                thankYou: thankYou && typeof thankYou === 'object'
+                    ? migrateFormConfig({ sections: (sections || defaultConfig.sections), thankYou }).thankYou
+                    : defaultConfig.thankYou,
                 paymentTicketUi: paymentTicketUi && typeof paymentTicketUi === 'object'
                     ? normalizePaymentTicketUi(paymentTicketUi)
                     : defaultConfig.paymentTicketUi
@@ -654,10 +814,16 @@ exports.renderFormConfigPage = async (req, res) => {
         const { getCurrentBannerPreviewUrl } = require('../utils/bannerCache');
         const currentBanner = getCurrentBannerPreviewUrl(eventId);
 
+        const EmailTemplate = require('../model/EmailTemplate');
+        const emailTemplates = await EmailTemplate.find({
+            $or: [{ eventId: eventId }, { eventId: null }]
+        }).select('_id type subject eventId').sort({ type: 1, subject: 1 }).lean();
+
         res.render('admin/form_config', { 
             event: event, 
             formConfig: formConfigForView,
-            currentBanner
+            currentBanner,
+            emailTemplates
         });
         
     } catch (error) {

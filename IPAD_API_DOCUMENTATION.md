@@ -719,6 +719,71 @@ curl -X DELETE "http://localhost:3377/api/ipad/events/$EVENT_ID/users/$USER_ID" 
 
 ---
 
+## 6) Station Check-in（分站簽到）
+
+進場 Check-in（`isCheckIn`）之後，可再針對場內分站（Room A、拍照區等）分別簽到。  
+規則：必須先完成進場簽到；同一用戶在同一分站只能簽到一次。若該分站已設定 Section List（`allowedUserIds`），用戶必須在名單內才能簽到。
+
+### 6a) 取得分站列表
+
+`GET /api/ipad/events/:eventId/stations`
+
+### 6b) 取得分站簽到記錄
+
+`GET /api/ipad/events/:eventId/stations/:stationId/checkins`
+
+### 6c) 分站簽到
+
+`POST /api/ipad/events/:eventId/stations/:stationId/checkin`
+
+Body:
+
+```json
+{ "userId": "USER_OBJECT_ID" }
+```
+
+成功：`200`  
+失敗常見：
+
+- `ENTRY_CHECKIN_REQUIRED`：尚未進場簽到
+- `ALREADY_CHECKED_IN`：此分站已簽到過
+- `NOT_IN_STATION_LIST`：用戶不在該分站 Section List（有設定名單時）
+- `NOT_CHECKED_IN`：取消簽到時找不到記錄
+
+### 6c2) 取消分站簽到（Uncheck）
+
+`DELETE /api/ipad/events/:eventId/stations/:stationId/checkin/:userId`
+
+或：
+
+`POST /api/ipad/events/:eventId/stations/:stationId/uncheck`
+
+Body:
+
+```json
+{ "userId": "USER_OBJECT_ID" }
+```
+
+### 6d) 查詢用戶各分站簽到狀態
+
+`GET /api/ipad/events/:eventId/users/:userId/station-checkins`
+
+### curl 範例（分站簽到）
+
+```bash
+TOKEN="(貼上 login 回傳的 token)"
+EVENT_ID="(event _id)"
+STATION_ID="(station _id)"
+USER_ID="(user _id)"
+
+curl -X POST "http://localhost:3377/api/ipad/events/$EVENT_ID/stations/$STATION_ID/checkin" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"userId\":\"$USER_ID\"}"
+```
+
+---
+
 ## 環境變數（建議）
 
 請在正式環境設定強密鑰：

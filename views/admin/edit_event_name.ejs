@@ -33,46 +33,52 @@
     </div>
 </div>
 
-<%- include("components/footer") %>
+<%- include("components/footer_minimal") %>
 <script>
-    const eventId = '<%= eventId %>';
-    const initialName = <%- JSON.stringify(typeof eventName !== 'undefined' ? eventName : '') %>;
-    $(function() {
-        $('#name').val(initialName);
-        $('#editEventNameForm').on('submit', function(e) {
-            e.preventDefault();
-            const name = $('#name').val().trim();
-            if (!name) {
-                alert('<%= t("edit_event_name.required") %>');
-                return;
+(function($) {
+    var eventId = '<%= eventId %>';
+    var initialName = <%- JSON.stringify(typeof eventName !== 'undefined' ? eventName : '') %>;
+    var saveLabel = '<%= t("common.save") %>';
+    var savingLabel = '<%= t("edit_event_name.saving") %>';
+    var requiredMsg = '<%= t("edit_event_name.required") %>';
+    var savedMsg = '<%= t("edit_event_name.saved") %>';
+    var errorMsg = '<%= t("edit_event_name.error") %>';
+
+    $('#name').val(initialName);
+    $('#editEventNameForm').on('submit', function(e) {
+        e.preventDefault();
+        var name = $('#name').val().trim();
+        if (!name) {
+            alert(requiredMsg);
+            return;
+        }
+        var btn = $(this).find('button[type="submit"]');
+        btn.prop('disabled', true).text(savingLabel);
+        $.ajax({
+            url: '/events/' + eventId + '/name',
+            type: 'PATCH',
+            contentType: 'application/json',
+            data: JSON.stringify({ name: name }),
+            success: function() {
+                $('#alertContainer').html(
+                    '<div class="alert alert-success">' + savedMsg + '</div>'
+                );
+                document.title = name + ' - Edit';
+            },
+            error: function(xhr) {
+                var msg = errorMsg;
+                try {
+                    var j = JSON.parse(xhr.responseText);
+                    if (j.message) msg = j.message;
+                } catch (_) {}
+                $('#alertContainer').html(
+                    '<div class="alert alert-danger">' + msg + '</div>'
+                );
+            },
+            complete: function() {
+                btn.prop('disabled', false).text(saveLabel);
             }
-            const btn = $(this).find('button[type="submit"]');
-            btn.prop('disabled', true).text('<%= t("edit_event_name.saving") %>');
-            $.ajax({
-                url: '/events/' + eventId + '/name',
-                type: 'PATCH',
-                contentType: 'application/json',
-                data: JSON.stringify({ name: name }),
-                success: function() {
-                    $('#alertContainer').html(
-                        '<div class="alert alert-success"><%= t("edit_event_name.saved") %></div>'
-                    );
-                    document.title = name + ' - Edit';
-                },
-                error: function(xhr) {
-                    let msg = '<%= t("edit_event_name.error") %>';
-                    try {
-                        const j = JSON.parse(xhr.responseText);
-                        if (j.message) msg = j.message;
-                    } catch (_) {}
-                    $('#alertContainer').html(
-                        '<div class="alert alert-danger">' + msg + '</div>'
-                    );
-                },
-                complete: function() {
-                    btn.prop('disabled', false).text('<%= t("common.save") %>');
-                }
-            });
         });
     });
+})(jQuery);
 </script>

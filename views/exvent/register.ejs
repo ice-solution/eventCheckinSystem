@@ -1,9 +1,24 @@
 <!DOCTYPE html>
+<%
+function getRegisterEventTitle(formConfig, event, lang, allowEmpty) {
+    var edn = (formConfig && formConfig.eventDisplayName) ? formConfig.eventDisplayName : { zh: '', en: '' };
+    var fallback = (event && event.name) ? String(event.name).trim() : 'Event';
+    var zh = edn.zh ? String(edn.zh).trim() : '';
+    var en = edn.en ? String(edn.en).trim() : '';
+    var custom = (lang === 'en') ? (en || zh) : (zh || en);
+    if (allowEmpty) return custom;
+    return custom || fallback;
+}
+var registerPageLang = (formConfig && formConfig.defaultLanguage) ? formConfig.defaultLanguage : 'zh';
+var registerEventTitle = getRegisterEventTitle(formConfig, event, registerPageLang, true);
+var registerBrowserTitle = registerEventTitle || getRegisterEventTitle(formConfig, event, registerPageLang, false);
+var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - 登記';
+%>
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= event && event.name ? event.name : 'Event' %> - 登記</title>
+    <title><%= registerBrowserTitle %><%= registerPageTitleSuffix %></title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         body {
@@ -34,20 +49,24 @@
             word-break: break-word;
             hyphens: auto;
         }
-        .form-header .form-subheader {
+        .form-header .form-subheader,
+        .form-header #formSubHeader {
             color: #34495e;
             font-size: 1.15rem;
             font-weight: 500;
             line-height: 1.4;
-            margin: 0 0 10px;
-            text-align: center;
+            margin: 0 auto 10px;
+            max-width: 36em;
+            text-align: center !important;
             overflow-wrap: anywhere;
             word-break: break-word;
         }
         .form-header #formSubtitle {
             font-size: 0.95rem;
             line-height: 1.5;
-            margin-bottom: 0;
+            margin: 0 auto;
+            max-width: 36em;
+            text-align: center;
         }
         .form-section {
             margin-bottom: 30px;
@@ -92,47 +111,36 @@
         }
         .form-row {
             display: flex;
-            align-items: center;
+            flex-direction: column;
+            align-items: stretch;
             margin-bottom: 20px;
             padding: 10px 0;
             border-bottom: 1px solid #f1f3f4;
         }
         .form-label {
-            flex: 0 0 200px;
+            display: block;
+            width: 100%;
             font-weight: 600;
             color: #2c3e50;
-            padding-right: 20px;
-            text-align: right;
-        }
-        .form-input {
-            flex: 1;
-            max-width: 400px;
-        }
-        /* radio / checkbox：題目在上、選項在下，題目由左側起全寬顯示 */
-        .form-row.form-row-stacked {
-            flex-direction: column;
-            align-items: stretch;
-            --form-label-col: 200px;
-            --form-label-gap: 20px;
-            --form-content-offset: calc(var(--form-label-col) + var(--form-label-gap));
-        }
-        .form-row.form-row-stacked .form-label {
-            flex: none;
-            width: 100%;
-            max-width: none;
-            margin-left: 0;
             text-align: left;
             padding-right: 0;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             line-height: 1.5;
             overflow-wrap: anywhere;
             word-break: break-word;
         }
-        /* 選項區維持與一般 input 相同起點 */
+        .form-input {
+            width: 100%;
+            max-width: 100%;
+        }
+        /* radio / checkbox：題目在上、選項在下（與一般欄位相同上下排） */
+        .form-row.form-row-stacked .form-label {
+            margin-bottom: 10px;
+        }
         .form-row.form-row-stacked .form-input {
-            width: calc(100% - var(--form-content-offset));
-            max-width: none;
-            margin-left: var(--form-content-offset);
+            width: 100%;
+            max-width: 100%;
+            margin-left: 0;
         }
         .radio-group,
         .checkbox-group {
@@ -149,7 +157,6 @@
             margin: 0;
             min-height: auto;
         }
-        /* stacked 選項沿用一般 flex 排版（起點由 .form-input offset 控制） */
         .radio-group .form-check-input,
         .checkbox-group .form-check-input {
             position: static;
@@ -160,6 +167,19 @@
         .checkbox-group .form-check-label {
             line-height: 1.5;
             padding-left: 0;
+        }
+        .form-row.form-row-display {
+            align-items: flex-start;
+        }
+        .form-row.form-row-display .form-display-text {
+            width: 100%;
+            max-width: none;
+            color: #2c3e50;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            padding: 4px 0;
         }
         .required {
             color: #e74c3c;
@@ -231,6 +251,12 @@
         .terms-open-link:hover {
             color: #2980b9;
         }
+        .terms-title-as-link {
+            cursor: pointer;
+        }
+        .terms-title-as-link:hover {
+            color: #3498db;
+        }
         .terms-agree-row.form-check {
             display: flex;
             align-items: flex-start;
@@ -250,6 +276,14 @@
             padding-left: 0;
             margin-left: 0;
             line-height: 1.5;
+        }
+        .terms-agree-row .form-check-label a {
+            color: #3498db;
+            text-decoration: underline;
+            word-break: break-all;
+        }
+        .terms-agree-row .form-check-label a:hover {
+            color: #2980b9;
         }
         .terms-overlay {
             display: none;
@@ -319,29 +353,17 @@
             margin-bottom: 0.75rem;
             padding-left: 1.25rem;
         }
+        .terms-modal-body a {
+            color: #3498db;
+            text-decoration: underline;
+            word-break: break-all;
+        }
+        .terms-modal-body a:hover {
+            color: #2980b9;
+        }
         @media (max-width: 768px) {
             .form-header h1 {
                 font-size: 100%;
-            }
-            .form-row {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            .form-label {
-                flex: none;
-                width: 100%;
-                text-align: left;
-                margin-bottom: 8px;
-                padding-right: 0;
-            }
-            .form-input {
-                width: 100%;
-                max-width: none;
-            }
-            .form-row.form-row-stacked .form-input {
-                margin-left: 0;
-                width: 100%;
-                max-width: none;
             }
             /* responsive：按鈕縮小約 30% */
             .btn {
@@ -442,7 +464,7 @@
         %>
         <div class="form-header">
             <br><br>
-            <h1 id="formTitle"><%= event && event.name ? event.name : 'Event' %></h1>
+            <h1 id="formTitle"<%= registerEventTitle ? '' : ' style="display:none;"' %>><%= registerEventTitle %></h1>
             <p id="formSubHeader" class="form-subheader"<%= initSubHeader ? '' : ' style="display:none;"' %>><%= initSubHeader %></p>
             <p class="text-muted" id="formSubtitle"><%= initSubtitle %></p>
         </div>
@@ -479,7 +501,17 @@
                                         <% var _selectHasOther = (field.type === 'select' && field.options && field.options.some(function (o) { return o && o.isOther; })); %>
                                         <% var _fieldControlId = (field.type === 'select' && _selectHasOther) ? (field.fieldName + '_sel') : field.fieldName; %>
                                         <% var _isChoiceField = field.type === 'radio' || field.type === 'checkbox'; %>
-                                        <div class="form-row<%= _isChoiceField ? ' form-row-stacked' : '' %>">
+                                        <% var _isDisplayField = field.type === 'display'; %>
+                                        <% if (_isDisplayField) { %>
+                                        <div class="form-row form-row-display">
+                                            <div class="form-display-text field-display-text"
+                                                 data-zh="<%= field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '') %>"
+                                                 data-en="<%= field.label && field.label.en ? field.label.en : '' %>">
+                                                <%= field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '') %>
+                                            </div>
+                                        </div>
+                                        <% } else { %>
+                                        <div class="form-row form-row-stacked">
                                             <label class="form-label field-label" for="<%= _fieldControlId %>" 
                                                    data-zh="<%= field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '') %>" 
                                                    data-en="<%= field.label && field.label.en ? field.label.en : '' %>">
@@ -618,6 +650,29 @@
                                                 <% } %>
                                             </div>
                                         </div>
+                                        <% if (field.type === 'email' && field.confirmEmail) { %>
+                                        <div class="form-row form-row-stacked email-confirm-row" data-email-field="<%= field.fieldName %>">
+                                            <label class="form-label field-label" for="<%= field.fieldName %>_confirm"
+                                                   data-zh="確認電子郵件"
+                                                   data-en="Confirm Email">
+                                                確認電子郵件
+                                                <% if (field.required) { %>
+                                                    <span class="required">*</span>
+                                                <% } %>
+                                            </label>
+                                            <div class="form-input">
+                                                <input type="email" class="form-control js-email-confirm"
+                                                       id="<%= field.fieldName %>_confirm"
+                                                       data-confirm-for="<%= field.fieldName %>"
+                                                       placeholder="<%= field.placeholder && field.placeholder.zh ? field.placeholder.zh : (typeof field.placeholder === 'string' ? field.placeholder : '') %>"
+                                                       data-placeholder-zh="<%= field.placeholder && field.placeholder.zh ? field.placeholder.zh : '' %>"
+                                                       data-placeholder-en="<%= field.placeholder && field.placeholder.en ? field.placeholder.en : '' %>"
+                                                       autocomplete="off"
+                                                       <%= field.required ? 'required' : '' %>>
+                                            </div>
+                                        </div>
+                                        <% } %>
+                                        <% } %>
                                     <% } %>
                                 <% }); %>
                             <% } %>
@@ -713,66 +768,123 @@
 
             <!-- Terms & Conditions（需同意才可提交） -->
             <% if (formConfig && formConfig.terms && formConfig.terms.enabled) { %>
+                <% const trm = formConfig.terms; %>
+                <% const trmTitle = trm.title || {}; %>
+                <% const trmLink = trm.linkLabel || {}; %>
+                <% const showTrmLink = trm.showLinkLabel !== false; %>
                 <div class="form-section terms-section">
                     <div class="terms-header">
-                        <h3 class="section-title" data-zh="條款與細則" data-en="Terms & Conditions">條款與細則</h3>
+                        <h3 class="section-title<%= showTrmLink ? '' : ' terms-title-as-link js-terms-modal-opener' %>" id="termsSectionTitle"
+                            data-zh="<%= (trmTitle.zh ? trmTitle.zh : '條款與細則') %>"
+                            data-en="<%= (trmTitle.en ? trmTitle.en : 'Terms & Conditions') %>"
+                            data-required-mark="1"><%= (trmTitle.zh ? trmTitle.zh : '條款與細則') %><span class="required">*</span></h3>
+                        <% if (showTrmLink) { %>
                         <a href="#" class="terms-open-link lang-text" id="termsOpenLink" role="button"
-                           data-zh="(條款)" data-en="(terms)">(terms)</a>
+                           data-zh="<%= (trmLink.zh ? trmLink.zh : '(條款)') %>"
+                           data-en="<%= (trmLink.en ? trmLink.en : '(terms)') %>"><%= (trmLink.zh ? trmLink.zh : '(條款)') %></a>
+                        <% } %>
                     </div>
                     <div class="form-check terms-agree-row">
                         <input class="form-check-input" type="checkbox" id="termsAgree" required>
-                        <label class="form-check-label"
+                        <label class="form-check-label terms-checkbox-label"
                                for="termsAgree"
-                               data-zh="<%= (formConfig.terms.label && formConfig.terms.label.zh ? formConfig.terms.label.zh : '') %>"
-                               data-en="<%= (formConfig.terms.label && formConfig.terms.label.en ? formConfig.terms.label.en : '') %>"><%= (formConfig.terms.label && formConfig.terms.label.zh ? formConfig.terms.label.zh : '') %></label>
+                               id="termsAgreeLabel"></label>
                     </div>
                 </div>
 
                 <div id="termsOverlay" class="terms-overlay" aria-hidden="true">
                     <div class="terms-modal" role="dialog" aria-modal="true" aria-labelledby="termsModalTitle">
                         <div class="terms-modal-header">
-                            <h4 id="termsModalTitle" class="lang-text" data-zh="條款與細則" data-en="Terms & Conditions">Terms & Conditions</h4>
+                            <h4 id="termsModalTitle" class="lang-text"
+                                data-zh="<%= (trmTitle.zh ? trmTitle.zh : '條款與細則') %>"
+                                data-en="<%= (trmTitle.en ? trmTitle.en : 'Terms & Conditions') %>"><%= (trmTitle.zh ? trmTitle.zh : '條款與細則') %></h4>
                             <button type="button" class="terms-modal-close" id="termsModalClose" aria-label="Close">&times;</button>
                         </div>
                         <div class="terms-modal-body" id="termsContent"></div>
                     </div>
                 </div>
+                <script type="application/json" id="termsLabelJson"><%- JSON.stringify({
+                    zh: (trm.label && trm.label.zh) ? trm.label.zh : '',
+                    en: (trm.label && trm.label.en) ? trm.label.en : ''
+                }) %></script>
                 <script type="application/json" id="termsContentJson"><%- JSON.stringify({
-                    zh: (formConfig.terms.content && formConfig.terms.content.zh) ? formConfig.terms.content.zh : '',
-                    en: (formConfig.terms.content && formConfig.terms.content.en) ? formConfig.terms.content.en : ''
+                    zh: (trm.content && trm.content.zh) ? trm.content.zh : '',
+                    en: (trm.content && trm.content.en) ? trm.content.en : ''
                 }) %></script>
             <% } %>
 
             <!-- Agreement（非必填，但會記錄勾選狀態） -->
             <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
+                <% const agr = formConfig.agreement; %>
+                <% const agrTitle = agr.title || {}; %>
+                <% const agrLink = agr.linkLabel || {}; %>
+                <% const showAgrLink = agr.showLinkLabel !== false; %>
                 <div class="form-section agreement-section">
                     <div class="terms-header">
-                        <h3 class="section-title" data-zh="協議" data-en="Agreement">協議</h3>
+                        <h3 class="section-title<%= showAgrLink ? '' : ' terms-title-as-link js-agreement-modal-opener' %>" id="agreementSectionTitle"
+                            data-zh="<%= (agrTitle.zh ? agrTitle.zh : '協議') %>"
+                            data-en="<%= (agrTitle.en ? agrTitle.en : 'Agreement') %>"><%= (agrTitle.zh ? agrTitle.zh : '協議') %></h3>
+                        <% if (showAgrLink) { %>
                         <a href="#" class="terms-open-link lang-text" id="agreementOpenLink" role="button"
-                           data-zh="(協議)" data-en="(agreement)">(agreement)</a>
+                           data-zh="<%= (agrLink.zh ? agrLink.zh : '(協議)') %>"
+                           data-en="<%= (agrLink.en ? agrLink.en : '(agreement)') %>"><%= (agrLink.zh ? agrLink.zh : '(協議)') %></a>
+                        <% } %>
                     </div>
                     <div class="form-check terms-agree-row">
                         <input class="form-check-input" type="checkbox" id="agreementAgree" name="agreementAgreed" value="true">
-                        <label class="form-check-label"
+                        <label class="form-check-label agreement-checkbox-label"
                                for="agreementAgree"
-                               data-zh="<%= (formConfig.agreement.label && formConfig.agreement.label.zh ? formConfig.agreement.label.zh : '') %>"
-                               data-en="<%= (formConfig.agreement.label && formConfig.agreement.label.en ? formConfig.agreement.label.en : '') %>"><%= (formConfig.agreement.label && formConfig.agreement.label.zh ? formConfig.agreement.label.zh : '') %></label>
+                               id="agreementAgreeLabel"></label>
                     </div>
                 </div>
 
                 <div id="agreementOverlay" class="terms-overlay" aria-hidden="true">
                     <div class="terms-modal" role="dialog" aria-modal="true" aria-labelledby="agreementModalTitle">
                         <div class="terms-modal-header">
-                            <h4 id="agreementModalTitle" class="lang-text" data-zh="協議" data-en="Agreement">Agreement</h4>
+                            <h4 id="agreementModalTitle" class="lang-text"
+                                data-zh="<%= (agrTitle.zh ? agrTitle.zh : '協議') %>"
+                                data-en="<%= (agrTitle.en ? agrTitle.en : 'Agreement') %>"><%= (agrTitle.zh ? agrTitle.zh : '協議') %></h4>
                             <button type="button" class="terms-modal-close" id="agreementModalClose" aria-label="Close">&times;</button>
                         </div>
                         <div class="terms-modal-body" id="agreementContent"></div>
                     </div>
                 </div>
-                <script type="application/json" id="agreementContentJson"><%- JSON.stringify({
-                    zh: (formConfig.agreement.content && formConfig.agreement.content.zh) ? formConfig.agreement.content.zh : '',
-                    en: (formConfig.agreement.content && formConfig.agreement.content.en) ? formConfig.agreement.content.en : ''
+                <script type="application/json" id="agreementLabelJson"><%- JSON.stringify({
+                    zh: (agr.label && agr.label.zh) ? agr.label.zh : '',
+                    en: (agr.label && agr.label.en) ? agr.label.en : ''
                 }) %></script>
+                <script type="application/json" id="agreementContentJson"><%- JSON.stringify({
+                    zh: (agr.content && agr.content.zh) ? agr.content.zh : '',
+                    en: (agr.content && agr.content.en) ? agr.content.en : ''
+                }) %></script>
+            <% } %>
+
+            <!-- Thank You Yes/No 問題 -->
+            <% if (formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled) { %>
+                <% const ynq = formConfig.thankYou.yesNoQuestion; %>
+                <div class="form-section thankyou-yesno-section">
+                    <h3 class="section-title"
+                        data-zh="<%= (ynq.question && ynq.question.zh) ? ynq.question.zh : '請選擇' %>"
+                        data-en="<%= (ynq.question && ynq.question.en) ? ynq.question.en : 'Please choose' %>">
+                        <%= (ynq.question && ynq.question.zh) ? ynq.question.zh : '請選擇' %>
+                    </h3>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="thankYouYesNo" id="thankYouYesNoYes" value="yes" required>
+                        <label class="form-check-label field-label" for="thankYouYesNoYes"
+                               data-zh="<%= (ynq.yesLabel && ynq.yesLabel.zh) ? ynq.yesLabel.zh : '是' %>"
+                               data-en="<%= (ynq.yesLabel && ynq.yesLabel.en) ? ynq.yesLabel.en : 'Yes' %>">
+                            <%= (ynq.yesLabel && ynq.yesLabel.zh) ? ynq.yesLabel.zh : '是' %>
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="thankYouYesNo" id="thankYouYesNoNo" value="no" required>
+                        <label class="form-check-label field-label" for="thankYouYesNoNo"
+                               data-zh="<%= (ynq.noLabel && ynq.noLabel.zh) ? ynq.noLabel.zh : '否' %>"
+                               data-en="<%= (ynq.noLabel && ynq.noLabel.en) ? ynq.noLabel.en : 'No' %>">
+                            <%= (ynq.noLabel && ynq.noLabel.zh) ? ynq.noLabel.zh : '否' %>
+                        </label>
+                    </div>
+                </div>
             <% } %>
 
             <div class="btn-container">
@@ -782,8 +894,8 @@
                         data-en="<%= (regBtnUi.back && regBtnUi.back.en) ? regBtnUi.back.en : 'Back' %>"
                         onclick="history.back()"><%= (regBtnUi.back && regBtnUi.back.zh) ? regBtnUi.back.zh : '返回' %></button>
                 <button type="submit" class="btn btn-primary lang-text" id="registerNextBtn"
-                        data-zh="<%= (regBtnUi.next && regBtnUi.next.zh) ? regBtnUi.next.zh : '下一步' %>"
-                        data-en="<%= (regBtnUi.next && regBtnUi.next.en) ? regBtnUi.next.en : 'Next' %>"><%= (regBtnUi.next && regBtnUi.next.zh) ? regBtnUi.next.zh : '下一步' %></button>
+                        data-zh="<%= (regBtnUi.next && regBtnUi.next.zh) ? regBtnUi.next.zh : '提交' %>"
+                        data-en="<%= (regBtnUi.next && regBtnUi.next.en) ? regBtnUi.next.en : 'Submit' %>"><%= (regBtnUi.next && regBtnUi.next.zh) ? regBtnUi.next.zh : '提交' %></button>
             </div>
         </form>
         
@@ -821,7 +933,8 @@
             return zh || en || fallbackZh || fallbackEn || '';
         }
         function getHeaderEventName(lang) {
-            return getBilingualFormText(formConfigEventName, lang, '', '') || fallbackEventName;
+            // 留空 = 不顯示 H1（唔再 fallback 到 event.name）
+            return getBilingualFormText(formConfigEventName, lang, '', '');
         }
         function getRegisterSubHeader(lang) {
             return getBilingualFormText(formConfigRegisterSubHeader, lang, '', '');
@@ -835,7 +948,14 @@
             );
         }
         function updateRegisterHeaderText() {
-            $('#formTitle').text(getHeaderEventName(currentLanguage));
+            var name = getHeaderEventName(currentLanguage);
+            if (name) {
+                $('#formTitle').text(name).show();
+            } else {
+                $('#formTitle').hide().empty();
+            }
+            // 瀏覽器 tab 標題：無自訂名稱時仍用 event.name，避免空白 tab
+            document.title = (name || fallbackEventName) + (currentLanguage === 'en' ? ' - Register' : ' - 登記');
             const sub = getRegisterSubHeader(currentLanguage);
             if (sub) {
                 $('#formSubHeader').text(sub).show();
@@ -849,8 +969,18 @@
             if (!el) return { zh: '', en: '' };
             try { return JSON.parse(el.textContent); } catch (_) { return { zh: '', en: '' }; }
         })();
+        const termsLabelByLang = (function() {
+            const el = document.getElementById('termsLabelJson');
+            if (!el) return { zh: '', en: '' };
+            try { return JSON.parse(el.textContent); } catch (_) { return { zh: '', en: '' }; }
+        })();
         const agreementContentByLang = (function() {
             const el = document.getElementById('agreementContentJson');
+            if (!el) return { zh: '', en: '' };
+            try { return JSON.parse(el.textContent); } catch (_) { return { zh: '', en: '' }; }
+        })();
+        const agreementLabelByLang = (function() {
+            const el = document.getElementById('agreementLabelJson');
             if (!el) return { zh: '', en: '' };
             try { return JSON.parse(el.textContent); } catch (_) { return { zh: '', en: '' }; }
         })();
@@ -1024,7 +1154,21 @@
 
         /** 是否為區塊級 HTML（p/div/ul 等），此類內容直接渲染 */
         function termsLooksLikeBlockHtml(s) {
-            return /<\s*\/?\s*(p|div|ul|ol|li|h[1-6]|table|tbody|tr|td|th|blockquote|section|article|br)\b/i.test(s);
+            return /<\s*\/?\s*(p|div|ul|ol|li|h[1-6]|table|tbody|tr|td|th|blockquote|section|article|br|a)\b/i.test(s);
+        }
+
+        function escapeTermsHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        /** 純文字中的 http(s) URL 自動變為可點連結 */
+        function linkifyPlainUrls(escapedText) {
+            return escapedText.replace(/(https?:\/\/[^\s<>"']+)/gi, function(url) {
+                const href = url.replace(/"/g, '&quot;');
+                return '<a href="' + href + '" target="_blank" rel="noopener noreferrer">' + url + '</a>';
+            });
         }
 
         /** 純文字或簡單 HTML：保留換行；完整 HTML 區塊則原樣輸出 */
@@ -1038,9 +1182,7 @@
             if (/<[a-z][\s\S]*?>/i.test(normalized)) {
                 return normalized.replace(/\n/g, '<br>');
             }
-            const div = document.createElement('div');
-            div.textContent = normalized;
-            return div.innerHTML.replace(/\n/g, '<br>');
+            return linkifyPlainUrls(escapeTermsHtml(normalized)).replace(/\n/g, '<br>');
         }
 
         function renderTermsContentHtml() {
@@ -1052,6 +1194,15 @@
             $termsContent.html(formatTermsContent(raw));
         }
 
+        function renderTermsLabelHtml() {
+            const $label = $('#termsAgreeLabel');
+            if (!$label.length) return;
+            const raw = currentLanguage === 'en'
+                ? (termsLabelByLang.en || termsLabelByLang.zh || '')
+                : (termsLabelByLang.zh || termsLabelByLang.en || '');
+            $label.html(formatTermsContent(raw));
+        }
+
         function renderAgreementContentHtml() {
             const $content = $('#agreementContent');
             if (!$content.length) return;
@@ -1059,6 +1210,15 @@
                 ? (agreementContentByLang.en || agreementContentByLang.zh || '')
                 : (agreementContentByLang.zh || agreementContentByLang.en || '');
             $content.html(formatTermsContent(raw));
+        }
+
+        function renderAgreementLabelHtml() {
+            const $label = $('#agreementAgreeLabel');
+            if (!$label.length) return;
+            const raw = currentLanguage === 'en'
+                ? (agreementLabelByLang.en || agreementLabelByLang.zh || '')
+                : (agreementLabelByLang.zh || agreementLabelByLang.en || '');
+            $label.html(formatTermsContent(raw));
         }
         
         // 初始化語言按鈕狀態
@@ -1110,12 +1270,22 @@
 
             // 更新區塊標題
             $('.section-title').each(function() {
-                const zhText = $(this).data('zh');
-                const enText = $(this).data('en');
+                const $title = $(this);
+                const zhText = $title.data('zh');
+                const enText = $title.data('en');
+                const requiredMark = $title.data('requiredMark');
                 if (currentLanguage === 'zh' && zhText) {
-                    $(this).text(zhText);
+                    if (requiredMark) {
+                        $title.html(zhText + ' <span class="required">*</span>');
+                    } else {
+                        $title.text(zhText);
+                    }
                 } else if (currentLanguage === 'en' && enText) {
-                    $(this).text(enText);
+                    if (requiredMark) {
+                        $title.html(enText + ' <span class="required">*</span>');
+                    } else {
+                        $title.text(enText);
+                    }
                 }
             });
 
@@ -1141,6 +1311,18 @@
                     } else {
                         $label.text(enText);
                     }
+                }
+            });
+
+            // Display 欄位（純文字）
+            $('.field-display-text').each(function() {
+                const $el = $(this);
+                const zhText = $el.data('zh');
+                const enText = $el.data('en');
+                if (currentLanguage === 'zh' && zhText != null && zhText !== '') {
+                    $el.text(zhText);
+                } else if (currentLanguage === 'en' && enText != null && enText !== '') {
+                    $el.text(enText);
                 }
             });
 
@@ -1176,8 +1358,8 @@
                 }
             });
 
-            // 更新 checkbox 和 radio 選項標籤
-            $('.form-check-label').each(function() {
+            // 更新 checkbox 和 radio 選項標籤（T&C / Agreement checkbox 含 HTML，另處理）
+            $('.form-check-label:not(.agreement-checkbox-label):not(.terms-checkbox-label)').each(function() {
                 const $label = $(this);
                 const zhText = $label.data('zh');
                 const enText = $label.data('en');
@@ -1188,9 +1370,11 @@
                 }
             });
 
-            // 更新 T&C 內容（支援 HTML）
+            // 更新 T&C / Agreement 內容（支援 HTML）
             renderTermsContentHtml();
+            renderTermsLabelHtml();
             renderAgreementContentHtml();
+            renderAgreementLabelHtml();
             if (typeof refreshPaymentTicketUi === 'function') refreshPaymentTicketUi();
 
             // 更新按鈕文字（返回、下一步等）
@@ -1329,6 +1513,12 @@
             }
 
             if (openLink) openLink.addEventListener('click', openOverlay);
+            if (opts.openTitleId) {
+                const openTitle = document.getElementById(opts.openTitleId);
+                if (openTitle && openTitle.classList.contains('terms-title-as-link')) {
+                    openTitle.addEventListener('click', openOverlay);
+                }
+            }
             if (closeBtn) closeBtn.addEventListener('click', closeOverlay);
             if (overlay) {
                 overlay.addEventListener('click', function(e) {
@@ -1358,6 +1548,7 @@
         initOverlayAndValidation({
             overlayId: 'termsOverlay',
             openLinkId: 'termsOpenLink',
+            openTitleId: 'termsSectionTitle',
             closeBtnId: 'termsModalClose',
             agreeId: 'termsAgree',
             invalidMsgZh: '請先閱讀並勾選同意條款，才可提交。',
@@ -1368,9 +1559,15 @@
         initOverlayAndValidation({
             overlayId: 'agreementOverlay',
             openLinkId: 'agreementOpenLink',
+            openTitleId: 'agreementSectionTitle',
             closeBtnId: 'agreementModalClose',
             agreeId: 'agreementAgree',
             optionalAgree: true
+        });
+
+        // 勾選框 label 內的連結：點擊時不觸發 checkbox 切換
+        $(document).on('mousedown click', '.agreement-checkbox-label a, .terms-checkbox-label a', function(e) {
+            e.stopPropagation();
         });
 
         // stripe public key
@@ -1420,6 +1617,51 @@
             $('.js-select-maybe-other').each(function() { syncSelectWithOther(this); });
         });
 
+        function getEmailConfirmMismatchMsg() {
+            return currentLanguage === 'zh'
+                ? '確認電子郵件必須與電子郵件相同。'
+                : 'Confirm email must match the email address.';
+        }
+
+        function validateEmailConfirmPair(emailFieldName) {
+            const emailEl = document.getElementById(emailFieldName);
+            const confirmEl = document.getElementById(emailFieldName + '_confirm');
+            if (!emailEl || !confirmEl) return true;
+            const emailVal = (emailEl.value || '').trim();
+            const confirmVal = (confirmEl.value || '').trim();
+            if (!emailVal && !confirmVal) {
+                confirmEl.setCustomValidity('');
+                return true;
+            }
+            if (emailVal !== confirmVal) {
+                confirmEl.setCustomValidity(getEmailConfirmMismatchMsg());
+                return false;
+            }
+            confirmEl.setCustomValidity('');
+            return true;
+        }
+
+        function validateAllEmailConfirms() {
+            let ok = true;
+            document.querySelectorAll('.js-email-confirm').forEach(function(confirmEl) {
+                const forField = confirmEl.getAttribute('data-confirm-for');
+                if (forField && !validateEmailConfirmPair(forField)) ok = false;
+            });
+            return ok;
+        }
+
+        $(document).on('input change', '.js-email-confirm', function() {
+            const forField = $(this).data('confirm-for');
+            if (forField) validateEmailConfirmPair(forField);
+        });
+        $(document).on('input change', 'input[type="email"]:not(.js-email-confirm)', function() {
+            const id = $(this).attr('id');
+            if (!id) return;
+            $('.js-email-confirm[data-confirm-for="' + id + '"]').each(function() {
+                validateEmailConfirmPair(id);
+            });
+        });
+
         $('#userForm').on('submit', function(e) {
             e.preventDefault(); // 防止表單默認提交
             $('.js-select-maybe-other').each(function() { syncSelectWithOther(this); });
@@ -1441,6 +1683,9 @@
                     return;
                 }
             }
+            if (typeof validateAllEmailConfirms === 'function') {
+                validateAllEmailConfirms();
+            }
             if (formEl && !formEl.checkValidity()) {
                 formEl.reportValidity();
                 return;
@@ -1452,6 +1697,7 @@
             $('#userForm').find('input, select, textarea').each(function() {
                 const fieldName = $(this).attr('name');
                 if (!fieldName || fieldName === 'ticketId' || fieldName === 'agreementAgreed') return;
+                if ($(this).hasClass('js-email-confirm') || String(fieldName).endsWith('_confirm')) return;
                 const type = (this.type || '').toLowerCase();
                 if (type === 'checkbox') {
                     if (!this.checked) return;
@@ -1505,8 +1751,11 @@
                     url: '/web/<%= event_id %>/register',
                     data: newUser,
                     success: function(response) {
-                        const langParam = currentLanguage !== 'zh' ? '?lang=' + currentLanguage : '';
-                        window.location.href = `/web/<%= event_id %>/register/success${langParam}`;
+                        const params = new URLSearchParams();
+                        if (currentLanguage && currentLanguage !== 'zh') params.set('lang', currentLanguage);
+                        if (newUser.thankYouYesNo) params.set('thankYouYesNo', newUser.thankYouYesNo);
+                        const qs = params.toString();
+                        window.location.href = `/web/<%= event_id %>/register/success${qs ? '?' + qs : ''}`;
                     },
                     error: function(error) {
                         var errMsg = error.responseJSON.message;

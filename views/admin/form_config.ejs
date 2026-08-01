@@ -214,19 +214,54 @@
                                             <%= t('form_config.termsEnabledLabel') %>
                                         </label>
                                     </div>
-                                    <div class="row">
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.termsTitleZhLabel') %></label>
+                                            <input type="text" class="form-control" id="termsTitleZh"
+                                                   value="<%= (formConfig.terms && formConfig.terms.title && formConfig.terms.title.zh) ? formConfig.terms.title.zh : '條款與細則' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.termsTitleEnLabel') %></label>
+                                            <input type="text" class="form-control" id="termsTitleEn"
+                                                   value="<%= (formConfig.terms && formConfig.terms.title && formConfig.terms.title.en) ? formConfig.terms.title.en : 'Terms & Conditions' %>">
+                                        </div>
+                                    </div>
+                                    <div class="form-check form-switch mb-2 mt-3">
+                                        <input class="form-check-input" type="checkbox" id="termsShowLinkLabel"
+                                               <%= (formConfig.terms && formConfig.terms.showLinkLabel !== false) ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="termsShowLinkLabel">
+                                            <%= t('form_config.showLinkLabel') %>
+                                        </label>
+                                    </div>
+                                    <div id="termsLinkLabelWrap">
+                                    <div class="row" id="termsLinkLabelFields">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.termsLinkLabelZhLabel') %></label>
+                                            <input type="text" class="form-control" id="termsLinkLabelZh"
+                                                   value="<%= (formConfig.terms && formConfig.terms.linkLabel && formConfig.terms.linkLabel.zh) ? formConfig.terms.linkLabel.zh : '(條款)' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.termsLinkLabelEnLabel') %></label>
+                                            <input type="text" class="form-control" id="termsLinkLabelEn"
+                                                   value="<%= (formConfig.terms && formConfig.terms.linkLabel && formConfig.terms.linkLabel.en) ? formConfig.terms.linkLabel.en : '(terms)' %>">
+                                        </div>
+                                    </div>
+                                    <small class="text-muted d-block mt-1 mb-2"><%= t('form_config.termsLinkHint') %></small>
+                                    </div>
+                                    <div class="row mt-2">
                                         <div class="col-md-6">
                                             <label class="form-label"><%= t('form_config.checkboxLabelZh') %></label>
-                                            <input type="text" class="form-control" id="termsLabelZh"
-                                                   value="<%= (formConfig.terms && formConfig.terms.label && formConfig.terms.label.zh) ? formConfig.terms.label.zh : '' %>">
+                                            <textarea class="form-control" id="termsLabelZh" rows="4"
+                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (formConfig.terms && formConfig.terms.label && formConfig.terms.label.zh) ? formConfig.terms.label.zh : '' %></textarea>
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label"><%= t('form_config.checkboxLabelEn') %></label>
-                                            <input type="text" class="form-control" id="termsLabelEn"
-                                                   value="<%= (formConfig.terms && formConfig.terms.label && formConfig.terms.label.en) ? formConfig.terms.label.en : '' %>">
+                                            <textarea class="form-control" id="termsLabelEn" rows="4"
+                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (formConfig.terms && formConfig.terms.label && formConfig.terms.label.en) ? formConfig.terms.label.en : '' %></textarea>
                                         </div>
                                     </div>
-                                    <div class="row mt-3">
+                                    <small class="text-muted d-block mt-1 mb-2"><%= t('form_config.termsCheckboxLabelHint') %></small>
+                                    <div class="row mt-2">
                                         <div class="col-md-6">
                                             <label class="form-label"><%= t('form_config.termsContentZhLabel') %></label>
                                             <textarea class="form-control" id="termsContentZh" rows="6"
@@ -257,19 +292,54 @@
                                             <%= t('form_config.agreementEnabledLabel') %>
                                         </label>
                                     </div>
-                                    <div class="row">
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.agreementTitleZhLabel') %></label>
+                                            <input type="text" class="form-control" id="agreementTitleZh"
+                                                   value="<%= (formConfig.agreement && formConfig.agreement.title && formConfig.agreement.title.zh) ? formConfig.agreement.title.zh : '協議' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.agreementTitleEnLabel') %></label>
+                                            <input type="text" class="form-control" id="agreementTitleEn"
+                                                   value="<%= (formConfig.agreement && formConfig.agreement.title && formConfig.agreement.title.en) ? formConfig.agreement.title.en : 'Agreement' %>">
+                                        </div>
+                                    </div>
+                                    <div class="form-check form-switch mb-2 mt-3">
+                                        <input class="form-check-input" type="checkbox" id="agreementShowLinkLabel"
+                                               <%= (formConfig.agreement && formConfig.agreement.showLinkLabel !== false) ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="agreementShowLinkLabel">
+                                            <%= t('form_config.showLinkLabel') %>
+                                        </label>
+                                    </div>
+                                    <div id="agreementLinkLabelWrap">
+                                    <div class="row" id="agreementLinkLabelFields">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.agreementLinkLabelZhLabel') %></label>
+                                            <input type="text" class="form-control" id="agreementLinkLabelZh"
+                                                   value="<%= (formConfig.agreement && formConfig.agreement.linkLabel && formConfig.agreement.linkLabel.zh) ? formConfig.agreement.linkLabel.zh : '(協議)' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.agreementLinkLabelEnLabel') %></label>
+                                            <input type="text" class="form-control" id="agreementLinkLabelEn"
+                                                   value="<%= (formConfig.agreement && formConfig.agreement.linkLabel && formConfig.agreement.linkLabel.en) ? formConfig.agreement.linkLabel.en : '(agreement)' %>">
+                                        </div>
+                                    </div>
+                                    <small class="text-muted d-block mt-1 mb-2"><%= t('form_config.agreementLinkHint') %></small>
+                                    </div>
+                                    <div class="row mt-2">
                                         <div class="col-md-6">
                                             <label class="form-label"><%= t('form_config.checkboxLabelZh') %></label>
-                                            <input type="text" class="form-control" id="agreementLabelZh"
-                                                   value="<%= (formConfig.agreement && formConfig.agreement.label && formConfig.agreement.label.zh) ? formConfig.agreement.label.zh : '' %>">
+                                            <textarea class="form-control" id="agreementLabelZh" rows="4"
+                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (formConfig.agreement && formConfig.agreement.label && formConfig.agreement.label.zh) ? formConfig.agreement.label.zh : '' %></textarea>
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label"><%= t('form_config.checkboxLabelEn') %></label>
-                                            <input type="text" class="form-control" id="agreementLabelEn"
-                                                   value="<%= (formConfig.agreement && formConfig.agreement.label && formConfig.agreement.label.en) ? formConfig.agreement.label.en : '' %>">
+                                            <textarea class="form-control" id="agreementLabelEn" rows="4"
+                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (formConfig.agreement && formConfig.agreement.label && formConfig.agreement.label.en) ? formConfig.agreement.label.en : '' %></textarea>
                                         </div>
                                     </div>
-                                    <div class="row mt-3">
+                                    <small class="text-muted d-block mt-1 mb-2"><%= t('form_config.agreementCheckboxLabelHint') %></small>
+                                    <div class="row mt-2">
                                         <div class="col-md-6">
                                             <label class="form-label"><%= t('form_config.agreementContentZhLabel') %></label>
                                             <textarea class="form-control" id="agreementContentZh" rows="6"
@@ -282,6 +352,241 @@
                                         </div>
                                     </div>
                                     <small class="text-muted d-block mt-2"><%- t('form_config.agreementHint') %></small>
+                                </div>
+                                </div>
+                            </div>
+
+                            <!-- Thank You（報名成功頁文案） -->
+                            <div class="card mb-3">
+                                <div class="card-header collapsible-card-header" data-toggle="collapse" data-target="#collapseThankYou" aria-expanded="false">
+                                    <i class="fa fa-plus-circle collapse-icon mr-2 text-primary"></i><h6 class="d-inline mb-0"><%= t('form_config.cardThankYouTitle') %></h6>
+                                </div>
+                                <div id="collapseThankYou" class="collapse">
+                                <div class="card-body">
+                                    <% const ty = (formConfig.thankYou) ? formConfig.thankYou : {}; %>
+                                    <% const ynq = (ty.yesNoQuestion) ? ty.yesNoQuestion : {}; %>
+                                    <p class="text-muted small mb-3"><%= t('form_config.thankYouHint') %></p>
+
+                                    <h6 class="mb-2"><%= t('form_config.thankYouYesNoSection') %></h6>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="thankYouYesNoEnabled"
+                                               <%= ynq.enabled ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="thankYouYesNoEnabled">
+                                            <%= t('form_config.thankYouYesNoEnabled') %>
+                                        </label>
+                                    </div>
+                                    <p class="text-muted small mb-3"><%= t('form_config.thankYouYesNoHint') %></p>
+
+                                    <div id="thankYouGeneralSettings"<%= ynq.enabled ? ' style="display:none;"' : '' %>>
+                                    <hr class="my-4">
+                                    <h6 class="mb-2"><%= t('form_config.thankYouFreeSection') %></h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.thankYouTitleZhLabel') %></label>
+                                            <input type="text" class="form-control" id="thankYouTitleZh"
+                                                   value="<%= (ty.title && ty.title.zh) ? ty.title.zh : '感謝你參加！' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.thankYouTitleEnLabel') %></label>
+                                            <input type="text" class="form-control" id="thankYouTitleEn"
+                                                   value="<%= (ty.title && ty.title.en) ? ty.title.en : 'Thank you for participating!' %>">
+                                        </div>
+                                    </div>
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.thankYouMessageZhLabel') %></label>
+                                            <textarea class="form-control" id="thankYouMessageZh" rows="3"
+                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (ty.message && ty.message.zh) ? ty.message.zh : '我們會透過 Email 把資訊發送給你。' %></textarea>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.thankYouMessageEnLabel') %></label>
+                                            <textarea class="form-control" id="thankYouMessageEn" rows="3"
+                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (ty.message && ty.message.en) ? ty.message.en : 'We will send the information to you via Email.' %></textarea>
+                                        </div>
+                                    </div>
+                                    <hr class="my-4">
+                                    <h6 class="mb-2"><%= t('form_config.thankYouPurchaseSection') %></h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.thankYouPurchaseTitleZhLabel') %></label>
+                                            <input type="text" class="form-control" id="thankYouPurchaseTitleZh"
+                                                   value="<%= (ty.purchaseTitle && ty.purchaseTitle.zh) ? ty.purchaseTitle.zh : '感謝您的購票！' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.thankYouPurchaseTitleEnLabel') %></label>
+                                            <input type="text" class="form-control" id="thankYouPurchaseTitleEn"
+                                                   value="<%= (ty.purchaseTitle && ty.purchaseTitle.en) ? ty.purchaseTitle.en : 'Thank you for your purchase!' %>">
+                                        </div>
+                                    </div>
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.thankYouPurchaseMessageZhLabel') %></label>
+                                            <textarea class="form-control" id="thankYouPurchaseMessageZh" rows="3"
+                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (ty.purchaseMessage && ty.purchaseMessage.zh) ? ty.purchaseMessage.zh : '您的付款已成功，以下是您的交易紀錄：' %></textarea>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.thankYouPurchaseMessageEnLabel') %></label>
+                                            <textarea class="form-control" id="thankYouPurchaseMessageEn" rows="3"
+                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (ty.purchaseMessage && ty.purchaseMessage.en) ? ty.purchaseMessage.en : 'Your payment was successful. Here are your transaction details:' %></textarea>
+                                        </div>
+                                    </div>
+                                    </div>
+
+                                    <div id="thankYouYesNoSettings"<%= ynq.enabled ? '' : ' style="display:none;"' %>>
+                                    <hr class="my-4">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label class="form-label"><%= t('form_config.thankYouYesNoQuestionZh') %></label>
+                                                <input type="text" class="form-control" id="thankYouYesNoQuestionZh"
+                                                       value="<%= (ynq.question && ynq.question.zh) ? ynq.question.zh : '' %>"
+                                                       placeholder="<%= t('form_config.thankYouYesNoQuestionZhPh') %>">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label"><%= t('form_config.thankYouYesNoQuestionEn') %></label>
+                                                <input type="text" class="form-control" id="thankYouYesNoQuestionEn"
+                                                       value="<%= (ynq.question && ynq.question.en) ? ynq.question.en : '' %>"
+                                                       placeholder="<%= t('form_config.thankYouYesNoQuestionEnPh') %>">
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-md-3">
+                                                <label class="form-label"><%= t('form_config.thankYouYesLabelZh') %></label>
+                                                <input type="text" class="form-control" id="thankYouYesLabelZh"
+                                                       value="<%= (ynq.yesLabel && ynq.yesLabel.zh) ? ynq.yesLabel.zh : '是' %>">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label"><%= t('form_config.thankYouYesLabelEn') %></label>
+                                                <input type="text" class="form-control" id="thankYouYesLabelEn"
+                                                       value="<%= (ynq.yesLabel && ynq.yesLabel.en) ? ynq.yesLabel.en : 'Yes' %>">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label"><%= t('form_config.thankYouNoLabelZh') %></label>
+                                                <input type="text" class="form-control" id="thankYouNoLabelZh"
+                                                       value="<%= (ynq.noLabel && ynq.noLabel.zh) ? ynq.noLabel.zh : '否' %>">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label"><%= t('form_config.thankYouNoLabelEn') %></label>
+                                                <input type="text" class="form-control" id="thankYouNoLabelEn"
+                                                       value="<%= (ynq.noLabel && ynq.noLabel.en) ? ynq.noLabel.en : 'No' %>">
+                                            </div>
+                                        </div>
+                                        <div class="form-group mt-3">
+                                            <label class="form-label"><%= t('form_config.thankYouYesEmailTemplate') %></label>
+                                            <select class="form-control" id="thankYouYesEmailTemplateId">
+                                                <option value=""><%= t('form_config.thankYouYesEmailTemplateNone') %></option>
+                                                <% (typeof emailTemplates !== 'undefined' && emailTemplates ? emailTemplates : []).forEach(function(tpl) { %>
+                                                    <option value="<%= tpl._id %>" <%= String(ynq.yesEmailTemplateId || '') === String(tpl._id) ? 'selected' : '' %>>
+                                                        [<%= tpl.type %>] <%= tpl.subject || tpl._id %><%= tpl.eventId ? '' : ' (global)' %>
+                                                    </option>
+                                                <% }); %>
+                                            </select>
+                                            <small class="text-muted d-block"><%= t('form_config.thankYouYesEmailTemplateHint') %></small>
+                                        </div>
+                                        <div class="form-group mt-3">
+                                            <label class="form-label"><%= t('form_config.thankYouNoEmailTemplate') %></label>
+                                            <select class="form-control" id="thankYouNoEmailTemplateId">
+                                                <option value=""><%= t('form_config.thankYouYesEmailTemplateNone') %></option>
+                                                <% (typeof emailTemplates !== 'undefined' && emailTemplates ? emailTemplates : []).forEach(function(tpl) { %>
+                                                    <option value="<%= tpl._id %>" <%= String(ynq.noEmailTemplateId || '') === String(tpl._id) ? 'selected' : '' %>>
+                                                        [<%= tpl.type %>] <%= tpl.subject || tpl._id %><%= tpl.eventId ? '' : ' (global)' %>
+                                                    </option>
+                                                <% }); %>
+                                            </select>
+                                            <small class="text-muted d-block"><%= t('form_config.thankYouNoEmailTemplateHint') %></small>
+                                        </div>
+                                        <h6 class="mt-4 mb-2"><%= t('form_config.thankYouYesMessageSection') %></h6>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label class="form-label"><%= t('form_config.thankYouYesTitleZh') %></label>
+                                                <input type="text" class="form-control" id="thankYouYesTitleZh"
+                                                       value="<%= (ynq.yesTitle && ynq.yesTitle.zh) ? ynq.yesTitle.zh : '' %>">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label"><%= t('form_config.thankYouYesTitleEn') %></label>
+                                                <input type="text" class="form-control" id="thankYouYesTitleEn"
+                                                       value="<%= (ynq.yesTitle && ynq.yesTitle.en) ? ynq.yesTitle.en : '' %>">
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label"><%= t('form_config.thankYouYesMessageZh') %></label>
+                                                <textarea class="form-control" id="thankYouYesMessageZh" rows="3"><%= (ynq.yesMessage && ynq.yesMessage.zh) ? ynq.yesMessage.zh : '' %></textarea>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label"><%= t('form_config.thankYouYesMessageEn') %></label>
+                                                <textarea class="form-control" id="thankYouYesMessageEn" rows="3"><%= (ynq.yesMessage && ynq.yesMessage.en) ? ynq.yesMessage.en : '' %></textarea>
+                                            </div>
+                                        </div>
+                                        <h6 class="mt-4 mb-2"><%= t('form_config.thankYouYesPurchaseMessageSection') %></h6>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label class="form-label"><%= t('form_config.thankYouYesPurchaseTitleZh') %></label>
+                                                <input type="text" class="form-control" id="thankYouYesPurchaseTitleZh"
+                                                       value="<%= (ynq.yesPurchaseTitle && ynq.yesPurchaseTitle.zh) ? ynq.yesPurchaseTitle.zh : '' %>">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label"><%= t('form_config.thankYouYesPurchaseTitleEn') %></label>
+                                                <input type="text" class="form-control" id="thankYouYesPurchaseTitleEn"
+                                                       value="<%= (ynq.yesPurchaseTitle && ynq.yesPurchaseTitle.en) ? ynq.yesPurchaseTitle.en : '' %>">
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label"><%= t('form_config.thankYouYesPurchaseMessageZh') %></label>
+                                                <textarea class="form-control" id="thankYouYesPurchaseMessageZh" rows="3"><%= (ynq.yesPurchaseMessage && ynq.yesPurchaseMessage.zh) ? ynq.yesPurchaseMessage.zh : '' %></textarea>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label"><%= t('form_config.thankYouYesPurchaseMessageEn') %></label>
+                                                <textarea class="form-control" id="thankYouYesPurchaseMessageEn" rows="3"><%= (ynq.yesPurchaseMessage && ynq.yesPurchaseMessage.en) ? ynq.yesPurchaseMessage.en : '' %></textarea>
+                                            </div>
+                                        </div>
+                                        <h6 class="mt-4 mb-2"><%= t('form_config.thankYouNoMessageSection') %></h6>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label class="form-label"><%= t('form_config.thankYouNoTitleZh') %></label>
+                                                <input type="text" class="form-control" id="thankYouNoTitleZh"
+                                                       value="<%= (ynq.noTitle && ynq.noTitle.zh) ? ynq.noTitle.zh : '' %>">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label"><%= t('form_config.thankYouNoTitleEn') %></label>
+                                                <input type="text" class="form-control" id="thankYouNoTitleEn"
+                                                       value="<%= (ynq.noTitle && ynq.noTitle.en) ? ynq.noTitle.en : '' %>">
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label"><%= t('form_config.thankYouNoMessageZh') %></label>
+                                                <textarea class="form-control" id="thankYouNoMessageZh" rows="3"><%= (ynq.noMessage && ynq.noMessage.zh) ? ynq.noMessage.zh : '' %></textarea>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label"><%= t('form_config.thankYouNoMessageEn') %></label>
+                                                <textarea class="form-control" id="thankYouNoMessageEn" rows="3"><%= (ynq.noMessage && ynq.noMessage.en) ? ynq.noMessage.en : '' %></textarea>
+                                            </div>
+                                        </div>
+                                        <h6 class="mt-4 mb-2"><%= t('form_config.thankYouNoPurchaseMessageSection') %></h6>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label class="form-label"><%= t('form_config.thankYouNoPurchaseTitleZh') %></label>
+                                                <input type="text" class="form-control" id="thankYouNoPurchaseTitleZh"
+                                                       value="<%= (ynq.noPurchaseTitle && ynq.noPurchaseTitle.zh) ? ynq.noPurchaseTitle.zh : '' %>">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label"><%= t('form_config.thankYouNoPurchaseTitleEn') %></label>
+                                                <input type="text" class="form-control" id="thankYouNoPurchaseTitleEn"
+                                                       value="<%= (ynq.noPurchaseTitle && ynq.noPurchaseTitle.en) ? ynq.noPurchaseTitle.en : '' %>">
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label"><%= t('form_config.thankYouNoPurchaseMessageZh') %></label>
+                                                <textarea class="form-control" id="thankYouNoPurchaseMessageZh" rows="3"><%= (ynq.noPurchaseMessage && ynq.noPurchaseMessage.zh) ? ynq.noPurchaseMessage.zh : '' %></textarea>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label"><%= t('form_config.thankYouNoPurchaseMessageEn') %></label>
+                                                <textarea class="form-control" id="thankYouNoPurchaseMessageEn" rows="3"><%= (ynq.noPurchaseMessage && ynq.noPurchaseMessage.en) ? ynq.noPurchaseMessage.en : '' %></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 </div>
                             </div>
@@ -356,12 +661,12 @@
                                         <div class="col-md-3">
                                             <label class="form-label"><%= t('form_config.ptNextBtnZhLabel') %></label>
                                             <input type="text" class="form-control" id="ptNextBtnZh"
-                                                   value="<%= (ptUi.buttons && ptUi.buttons.next && ptUi.buttons.next.zh) ? ptUi.buttons.next.zh : '下一步' %>">
+                                                   value="<%= (ptUi.buttons && ptUi.buttons.next && ptUi.buttons.next.zh) ? ptUi.buttons.next.zh : '提交' %>">
                                         </div>
                                         <div class="col-md-3">
                                             <label class="form-label"><%= t('form_config.ptNextBtnEnLabel') %></label>
                                             <input type="text" class="form-control" id="ptNextBtnEn"
-                                                   value="<%= (ptUi.buttons && ptUi.buttons.next && ptUi.buttons.next.en) ? ptUi.buttons.next.en : 'Next' %>">
+                                                   value="<%= (ptUi.buttons && ptUi.buttons.next && ptUi.buttons.next.en) ? ptUi.buttons.next.en : 'Submit' %>">
                                         </div>
                                     </div>
                                     <div class="row mt-2">
@@ -514,15 +819,25 @@
                                                             </div>
                                                             <div class="col-md-2">
                                                                 <label class="form-label"><%= t('form_config.labelZh') %></label>
+                                                                <% if (field.type === 'display') { %>
+                                                                <textarea class="form-control form-control-sm" rows="3"
+                                                                          onchange="updateFieldLabel(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'zh', this.value)"><%= field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '') %></textarea>
+                                                                <% } else { %>
                                                                 <input type="text" class="form-control form-control-sm"
                                                                        value="<%= field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '') %>"
                                                                        onchange="updateFieldLabel(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'zh', this.value)">
+                                                                <% } %>
                                                             </div>
                                                             <div class="col-md-2">
                                                                 <label class="form-label"><%= t('form_config.labelEn') %></label>
+                                                                <% if (field.type === 'display') { %>
+                                                                <textarea class="form-control form-control-sm" rows="3"
+                                                                          onchange="updateFieldLabel(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'en', this.value)"><%= field.label && field.label.en ? field.label.en : '' %></textarea>
+                                                                <% } else { %>
                                                                 <input type="text" class="form-control form-control-sm"
                                                                        value="<%= field.label && field.label.en ? field.label.en : '' %>"
                                                                        onchange="updateFieldLabel(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'en', this.value)">
+                                                                <% } %>
                                                             </div>
                                                             <div class="col-md-2">
                                                                 <label class="form-label"><%= t('form_config.fieldType') %></label>
@@ -535,6 +850,7 @@
                                                                     <option value="textarea" <%= field.type === 'textarea' ? 'selected' : '' %>>Textarea</option>
                                                                     <option value="checkbox" <%= field.type === 'checkbox' ? 'selected' : '' %>>Checkbox</option>
                                                                     <option value="radio" <%= field.type === 'radio' ? 'selected' : '' %>>Radio</option>
+                                                                    <option value="display" <%= field.type === 'display' ? 'selected' : '' %>>Display</option>
                                                                 </select>
                                                             </div>
                                                             <div class="col-md-1">
@@ -542,6 +858,7 @@
                                                                 <div class="form-check">
                                                                     <input class="form-check-input" type="checkbox"
                                                                            <%= field.required ? 'checked' : '' %>
+                                                                           <%= field.type === 'display' ? 'disabled' : '' %>
                                                                            onchange="updateFieldProperty(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'required', this.checked)">
                                                                 </div>
                                                             </div>
@@ -561,6 +878,7 @@
                                                             </div>
                                                         </div>
                                                         
+                                                        <% if (field.type !== 'display') { %>
                                                         <div class="row mt-2">
                                                             <div class="col-md-3">
                                                                 <label class="form-label"><%= t('form_config.placeholderZh') %></label>
@@ -574,7 +892,25 @@
                                                                        value="<%= field.placeholder && field.placeholder.en ? field.placeholder.en : '' %>"
                                                                        onchange="updateFieldPlaceholder(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'en', this.value)">
                                                             </div>
+                                                            <% if (field.type === 'email') { %>
+                                                            <div class="col-md-6">
+                                                                <label class="form-label"><%= t('form_config.confirmEmailLabel') %></label>
+                                                                <div class="form-check mt-1">
+                                                                    <input class="form-check-input" type="checkbox"
+                                                                           <%= field.confirmEmail ? 'checked' : '' %>
+                                                                           onchange="updateFieldProperty(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'confirmEmail', this.checked)">
+                                                                    <label class="form-check-label"><%= t('form_config.confirmEmailHint') %></label>
+                                                                </div>
+                                                            </div>
+                                                            <% } %>
                                                         </div>
+                                                        <% } else { %>
+                                                        <div class="row mt-2">
+                                                            <div class="col-12">
+                                                                <small class="text-muted">Display：僅顯示 Label 文字，不需用戶填寫、不會儲存。</small>
+                                                            </div>
+                                                        </div>
+                                                        <% } %>
                                                         
                                                         <% if ((field.type === 'select' || field.type === 'checkbox' || field.type === 'radio') && field.options) { %>
                                                             <div class="mt-2">
@@ -750,10 +1086,69 @@
 
     // 初始化 T&C 欄位（避免舊資料缺少）
     if (!formConfig.terms) {
-        formConfig.terms = { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } };
+        formConfig.terms = {
+            enabled: false,
+            title: { zh: '條款與細則', en: 'Terms & Conditions' },
+            linkLabel: { zh: '(條款)', en: '(terms)' },
+            showLinkLabel: true,
+            label: { zh: '', en: '' },
+            content: { zh: '', en: '' }
+        };
     }
     if (!formConfig.agreement) {
-        formConfig.agreement = { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } };
+        formConfig.agreement = {
+            enabled: false,
+            title: { zh: '協議', en: 'Agreement' },
+            linkLabel: { zh: '(協議)', en: '(agreement)' },
+            showLinkLabel: true,
+            label: { zh: '', en: '' },
+            content: { zh: '', en: '' }
+        };
+    }
+    if (!formConfig.thankYou) {
+        formConfig.thankYou = {
+            title: { zh: '感謝你參加！', en: 'Thank you for participating!' },
+            message: { zh: '我們會透過 Email 把資訊發送給你。', en: 'We will send the information to you via Email.' },
+            purchaseTitle: { zh: '感謝您的購票！', en: 'Thank you for your purchase!' },
+            purchaseMessage: {
+                zh: '您的付款已成功，以下是您的交易紀錄：',
+                en: 'Your payment was successful. Here are your transaction details:'
+            },
+            yesNoQuestion: {
+                enabled: false,
+                question: { zh: '', en: '' },
+                yesLabel: { zh: '是', en: 'Yes' },
+                noLabel: { zh: '否', en: 'No' },
+                yesEmailTemplateId: '',
+                noEmailTemplateId: '',
+                yesTitle: { zh: '', en: '' },
+                yesMessage: { zh: '', en: '' },
+                yesPurchaseTitle: { zh: '', en: '' },
+                yesPurchaseMessage: { zh: '', en: '' },
+                noTitle: { zh: '', en: '' },
+                noMessage: { zh: '', en: '' },
+                noPurchaseTitle: { zh: '', en: '' },
+                noPurchaseMessage: { zh: '', en: '' }
+            }
+        };
+    }
+    if (!formConfig.thankYou.yesNoQuestion) {
+        formConfig.thankYou.yesNoQuestion = {
+            enabled: false,
+            question: { zh: '', en: '' },
+            yesLabel: { zh: '是', en: 'Yes' },
+            noLabel: { zh: '否', en: 'No' },
+            yesEmailTemplateId: '',
+            noEmailTemplateId: '',
+            yesTitle: { zh: '', en: '' },
+            yesMessage: { zh: '', en: '' },
+            yesPurchaseTitle: { zh: '', en: '' },
+            yesPurchaseMessage: { zh: '', en: '' },
+            noTitle: { zh: '', en: '' },
+            noMessage: { zh: '', en: '' },
+            noPurchaseTitle: { zh: '', en: '' },
+            noPurchaseMessage: { zh: '', en: '' }
+        };
     }
     if (!formConfig.eventDisplayName) {
         formConfig.eventDisplayName = { zh: '', en: '' };
@@ -761,6 +1156,20 @@
     if (!formConfig.registerSubHeader) {
         formConfig.registerSubHeader = { zh: '', en: '' };
     }
+
+    function syncThankYouModeUI() {
+        const enabled = !!(document.getElementById('thankYouYesNoEnabled') || {}).checked;
+        const general = document.getElementById('thankYouGeneralSettings');
+        const yesNo = document.getElementById('thankYouYesNoSettings');
+        if (general) general.style.display = enabled ? 'none' : '';
+        if (yesNo) yesNo.style.display = enabled ? '' : 'none';
+    }
+    const thankYouYesNoEnabledEl = document.getElementById('thankYouYesNoEnabled');
+    if (thankYouYesNoEnabledEl) {
+        thankYouYesNoEnabledEl.addEventListener('change', syncThankYouModeUI);
+        syncThankYouModeUI();
+    }
+
     if (!formConfig.registerSubtitle) {
         formConfig.registerSubtitle = {
             zh: '請填寫以下資料完成活動報名',
@@ -773,7 +1182,7 @@
             categoryLabel: { zh: '選擇類別', en: 'Select Category' },
             ticketLabel: { zh: '選擇票券', en: 'Select Ticket' },
             defaultCategoryLabel: { zh: '其他', en: 'Other' },
-            buttons: { back: { zh: '返回', en: 'Back' }, next: { zh: '下一步', en: 'Next' } },
+            buttons: { back: { zh: '返回', en: 'Back' }, next: { zh: '提交', en: 'Submit' } },
             highlightText: { zh: '', en: '' },
             categoryButtons: []
         };
@@ -916,6 +1325,13 @@
                     // 如果不是需要選項的字段類型，清除選項
                     delete formConfig.sections[sectionIndex].fields[fieldIndex].options;
                 }
+                // Display 僅輸出文字，不可設為必填
+                if (value === 'display') {
+                    formConfig.sections[sectionIndex].fields[fieldIndex].required = false;
+                }
+                if (value !== 'email') {
+                    formConfig.sections[sectionIndex].fields[fieldIndex].confirmEmail = false;
+                }
                 
                 // 字段類型切換時立即保存
                 try {
@@ -1025,6 +1441,7 @@
             label: '新字段',
             type: 'text',
             required: false,
+            confirmEmail: false,
             display: true,
             visible: true,
             placeholder: '',
@@ -1132,6 +1549,9 @@
                 section.fields.forEach(function(field) {
                     if (isFieldDisplayed(field)) {
                         html += '<div class="mb-2">';
+                        if (field.type === 'display') {
+                            html += '<div class="form-text" style="white-space:pre-wrap;color:#2c3e50;">' + getMultilingualText(field.label, previewLanguage) + '</div>';
+                        } else {
                         html += '<label class="form-label">' + getMultilingualText(field.label, previewLanguage);
                         if (field.required) html += ' <span class="text-danger">*</span>';
                         html += '</label>';
@@ -1167,6 +1587,13 @@
                             html += '<textarea class="form-control" placeholder="' + getMultilingualText(field.placeholder, previewLanguage) + '" disabled></textarea>';
                         } else {
                             html += '<input type="' + field.type + '" class="form-control" placeholder="' + getMultilingualText(field.placeholder, previewLanguage) + '" disabled>';
+                            if (field.type === 'email' && field.confirmEmail) {
+                                html += '<label class="form-label mt-2">' + (previewLanguage === 'zh' ? '確認電子郵件' : 'Confirm Email');
+                                if (field.required) html += ' <span class="text-danger">*</span>';
+                                html += '</label>';
+                                html += '<input type="email" class="form-control" placeholder="' + getMultilingualText(field.placeholder, previewLanguage) + '" disabled>';
+                            }
+                        }
                         }
                         html += '</div>';
                     }
@@ -1199,9 +1626,18 @@
             };
             const terms = {
                 enabled: !!document.getElementById('termsEnabled').checked,
+                title: {
+                    zh: (document.getElementById('termsTitleZh').value || '').trim() || '條款與細則',
+                    en: (document.getElementById('termsTitleEn').value || '').trim() || 'Terms & Conditions'
+                },
+                linkLabel: {
+                    zh: (document.getElementById('termsLinkLabelZh').value || '').trim() || '(條款)',
+                    en: (document.getElementById('termsLinkLabelEn').value || '').trim() || '(terms)'
+                },
+                showLinkLabel: !!document.getElementById('termsShowLinkLabel').checked,
                 label: {
-                    zh: (document.getElementById('termsLabelZh').value || '').trim(),
-                    en: (document.getElementById('termsLabelEn').value || '').trim()
+                    zh: document.getElementById('termsLabelZh').value || '',
+                    en: document.getElementById('termsLabelEn').value || ''
                 },
                 content: {
                     zh: document.getElementById('termsContentZh').value || '',
@@ -1210,13 +1646,89 @@
             };
             const agreement = {
                 enabled: !!document.getElementById('agreementEnabled').checked,
+                title: {
+                    zh: (document.getElementById('agreementTitleZh').value || '').trim() || '協議',
+                    en: (document.getElementById('agreementTitleEn').value || '').trim() || 'Agreement'
+                },
+                linkLabel: {
+                    zh: (document.getElementById('agreementLinkLabelZh').value || '').trim() || '(協議)',
+                    en: (document.getElementById('agreementLinkLabelEn').value || '').trim() || '(agreement)'
+                },
+                showLinkLabel: !!document.getElementById('agreementShowLinkLabel').checked,
                 label: {
-                    zh: (document.getElementById('agreementLabelZh').value || '').trim(),
-                    en: (document.getElementById('agreementLabelEn').value || '').trim()
+                    zh: document.getElementById('agreementLabelZh').value || '',
+                    en: document.getElementById('agreementLabelEn').value || ''
                 },
                 content: {
                     zh: document.getElementById('agreementContentZh').value || '',
                     en: document.getElementById('agreementContentEn').value || ''
+                }
+            };
+            const thankYou = {
+                title: {
+                    zh: (document.getElementById('thankYouTitleZh').value || '').trim(),
+                    en: (document.getElementById('thankYouTitleEn').value || '').trim()
+                },
+                message: {
+                    zh: document.getElementById('thankYouMessageZh').value || '',
+                    en: document.getElementById('thankYouMessageEn').value || ''
+                },
+                purchaseTitle: {
+                    zh: (document.getElementById('thankYouPurchaseTitleZh').value || '').trim(),
+                    en: (document.getElementById('thankYouPurchaseTitleEn').value || '').trim()
+                },
+                purchaseMessage: {
+                    zh: document.getElementById('thankYouPurchaseMessageZh').value || '',
+                    en: document.getElementById('thankYouPurchaseMessageEn').value || ''
+                },
+                yesNoQuestion: {
+                    enabled: !!document.getElementById('thankYouYesNoEnabled').checked,
+                    question: {
+                        zh: (document.getElementById('thankYouYesNoQuestionZh').value || '').trim(),
+                        en: (document.getElementById('thankYouYesNoQuestionEn').value || '').trim()
+                    },
+                    yesLabel: {
+                        zh: (document.getElementById('thankYouYesLabelZh').value || '').trim() || '是',
+                        en: (document.getElementById('thankYouYesLabelEn').value || '').trim() || 'Yes'
+                    },
+                    noLabel: {
+                        zh: (document.getElementById('thankYouNoLabelZh').value || '').trim() || '否',
+                        en: (document.getElementById('thankYouNoLabelEn').value || '').trim() || 'No'
+                    },
+                    yesEmailTemplateId: document.getElementById('thankYouYesEmailTemplateId').value || '',
+                    noEmailTemplateId: document.getElementById('thankYouNoEmailTemplateId').value || '',
+                    yesTitle: {
+                        zh: (document.getElementById('thankYouYesTitleZh').value || '').trim(),
+                        en: (document.getElementById('thankYouYesTitleEn').value || '').trim()
+                    },
+                    yesMessage: {
+                        zh: document.getElementById('thankYouYesMessageZh').value || '',
+                        en: document.getElementById('thankYouYesMessageEn').value || ''
+                    },
+                    yesPurchaseTitle: {
+                        zh: (document.getElementById('thankYouYesPurchaseTitleZh').value || '').trim(),
+                        en: (document.getElementById('thankYouYesPurchaseTitleEn').value || '').trim()
+                    },
+                    yesPurchaseMessage: {
+                        zh: document.getElementById('thankYouYesPurchaseMessageZh').value || '',
+                        en: document.getElementById('thankYouYesPurchaseMessageEn').value || ''
+                    },
+                    noTitle: {
+                        zh: (document.getElementById('thankYouNoTitleZh').value || '').trim(),
+                        en: (document.getElementById('thankYouNoTitleEn').value || '').trim()
+                    },
+                    noMessage: {
+                        zh: document.getElementById('thankYouNoMessageZh').value || '',
+                        en: document.getElementById('thankYouNoMessageEn').value || ''
+                    },
+                    noPurchaseTitle: {
+                        zh: (document.getElementById('thankYouNoPurchaseTitleZh').value || '').trim(),
+                        en: (document.getElementById('thankYouNoPurchaseTitleEn').value || '').trim()
+                    },
+                    noPurchaseMessage: {
+                        zh: document.getElementById('thankYouNoPurchaseMessageZh').value || '',
+                        en: document.getElementById('thankYouNoPurchaseMessageEn').value || ''
+                    }
                 }
             };
             const paymentTicketUi = collectPaymentTicketUiFromForm();
@@ -1236,6 +1748,7 @@
                     registerSubtitle,
                     terms,
                     agreement,
+                    thankYou,
                     paymentTicketUi
                 })
             });
@@ -1298,8 +1811,31 @@
                     zh: '請填寫以下資料完成活動報名',
                     en: 'Please fill in the following information to complete event registration'
                 },
-                terms: formConfig.terms || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } },
-                agreement: formConfig.agreement || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } },
+                terms: formConfig.terms || {
+                    enabled: false,
+                    title: { zh: '條款與細則', en: 'Terms & Conditions' },
+                    linkLabel: { zh: '(條款)', en: '(terms)' },
+                    showLinkLabel: true,
+                    label: { zh: '', en: '' },
+                    content: { zh: '', en: '' }
+                },
+                agreement: formConfig.agreement || {
+                    enabled: false,
+                    title: { zh: '協議', en: 'Agreement' },
+                    linkLabel: { zh: '(協議)', en: '(agreement)' },
+                    showLinkLabel: true,
+                    label: { zh: '', en: '' },
+                    content: { zh: '', en: '' }
+                },
+                thankYou: formConfig.thankYou || {
+                    title: { zh: '感謝你參加！', en: 'Thank you for participating!' },
+                    message: { zh: '我們會透過 Email 把資訊發送給你。', en: 'We will send the information to you via Email.' },
+                    purchaseTitle: { zh: '感謝您的購票！', en: 'Thank you for your purchase!' },
+                    purchaseMessage: {
+                        zh: '您的付款已成功，以下是您的交易紀錄：',
+                        en: 'Your payment was successful. Here are your transaction details:'
+                    }
+                },
                 sections: formConfig.sections.map(section => ({
                     sectionName: section.sectionName,
                     sectionTitle: section.sectionTitle,
@@ -1310,6 +1846,7 @@
                         label: field.label,
                         type: field.type,
                         required: field.required,
+                        confirmEmail: !!field.confirmEmail,
                         display: field.display !== undefined ? field.display : field.visible !== false,
                         visible: field.visible,
                         placeholder: field.placeholder,
@@ -1365,8 +1902,31 @@
                     if (typeof importedData.languageSwitcherEnabled === 'boolean') {
                         formConfig.languageSwitcherEnabled = importedData.languageSwitcherEnabled;
                     }
-                    formConfig.terms = importedData.terms || formConfig.terms || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } };
-                    formConfig.agreement = importedData.agreement || formConfig.agreement || { enabled: false, label: { zh: '', en: '' }, content: { zh: '', en: '' } };
+                    formConfig.terms = importedData.terms || formConfig.terms || {
+                        enabled: false,
+                        title: { zh: '條款與細則', en: 'Terms & Conditions' },
+                        linkLabel: { zh: '(條款)', en: '(terms)' },
+                        showLinkLabel: true,
+                        label: { zh: '', en: '' },
+                        content: { zh: '', en: '' }
+                    };
+                    formConfig.agreement = importedData.agreement || formConfig.agreement || {
+                        enabled: false,
+                        title: { zh: '協議', en: 'Agreement' },
+                        linkLabel: { zh: '(協議)', en: '(agreement)' },
+                        showLinkLabel: true,
+                        label: { zh: '', en: '' },
+                        content: { zh: '', en: '' }
+                    };
+                    formConfig.thankYou = importedData.thankYou || formConfig.thankYou || {
+                        title: { zh: '感謝你參加！', en: 'Thank you for participating!' },
+                        message: { zh: '我們會透過 Email 把資訊發送給你。', en: 'We will send the information to you via Email.' },
+                        purchaseTitle: { zh: '感謝您的購票！', en: 'Thank you for your purchase!' },
+                        purchaseMessage: {
+                            zh: '您的付款已成功，以下是您的交易紀錄：',
+                            en: 'Your payment was successful. Here are your transaction details:'
+                        }
+                    };
                     formConfig.eventDisplayName = importedData.eventDisplayName || formConfig.eventDisplayName || { zh: '', en: '' };
                     formConfig.registerSubHeader = importedData.registerSubHeader || formConfig.registerSubHeader || { zh: '', en: '' };
                     formConfig.registerSubtitle = importedData.registerSubtitle || formConfig.registerSubtitle || {
@@ -1385,6 +1945,7 @@
                             label: field.label || { zh: '', en: '' },
                             type: field.type || 'text',
                             required: field.required || false,
+                            confirmEmail: !!field.confirmEmail,
                             display: disp,
                             visible: disp,
                             placeholder: field.placeholder || { zh: '', en: '' },
@@ -1423,12 +1984,22 @@
         try {
             const t = formConfig.terms || {};
             const enabledEl = document.getElementById('termsEnabled');
+            const titleZhEl = document.getElementById('termsTitleZh');
+            const titleEnEl = document.getElementById('termsTitleEn');
+            const showLinkEl = document.getElementById('termsShowLinkLabel');
+            const linkLabelZhEl = document.getElementById('termsLinkLabelZh');
+            const linkLabelEnEl = document.getElementById('termsLinkLabelEn');
             const labelZhEl = document.getElementById('termsLabelZh');
             const labelEnEl = document.getElementById('termsLabelEn');
             const contentZhEl = document.getElementById('termsContentZh');
             const contentEnEl = document.getElementById('termsContentEn');
             if (!enabledEl) return;
             enabledEl.checked = !!t.enabled;
+            if (titleZhEl) titleZhEl.value = (t.title && t.title.zh) ? t.title.zh : titleZhEl.value;
+            if (titleEnEl) titleEnEl.value = (t.title && t.title.en) ? t.title.en : titleEnEl.value;
+            if (showLinkEl) showLinkEl.checked = t.showLinkLabel !== false;
+            if (linkLabelZhEl) linkLabelZhEl.value = (t.linkLabel && t.linkLabel.zh) ? t.linkLabel.zh : linkLabelZhEl.value;
+            if (linkLabelEnEl) linkLabelEnEl.value = (t.linkLabel && t.linkLabel.en) ? t.linkLabel.en : linkLabelEnEl.value;
             if (labelZhEl) labelZhEl.value = (t.label && t.label.zh) ? t.label.zh : labelZhEl.value;
             if (labelEnEl) labelEnEl.value = (t.label && t.label.en) ? t.label.en : labelEnEl.value;
             if (contentZhEl) contentZhEl.value = (t.content && t.content.zh) ? t.content.zh : contentZhEl.value;
@@ -1441,16 +2012,60 @@
         try {
             const a = formConfig.agreement || {};
             const enabledEl = document.getElementById('agreementEnabled');
+            const titleZhEl = document.getElementById('agreementTitleZh');
+            const titleEnEl = document.getElementById('agreementTitleEn');
+            const showLinkEl = document.getElementById('agreementShowLinkLabel');
+            const linkLabelZhEl = document.getElementById('agreementLinkLabelZh');
+            const linkLabelEnEl = document.getElementById('agreementLinkLabelEn');
             const labelZhEl = document.getElementById('agreementLabelZh');
             const labelEnEl = document.getElementById('agreementLabelEn');
             const contentZhEl = document.getElementById('agreementContentZh');
             const contentEnEl = document.getElementById('agreementContentEn');
             if (!enabledEl) return;
             enabledEl.checked = !!a.enabled;
+            if (titleZhEl) titleZhEl.value = (a.title && a.title.zh) ? a.title.zh : titleZhEl.value;
+            if (titleEnEl) titleEnEl.value = (a.title && a.title.en) ? a.title.en : titleEnEl.value;
+            if (showLinkEl) showLinkEl.checked = a.showLinkLabel !== false;
+            if (linkLabelZhEl) linkLabelZhEl.value = (a.linkLabel && a.linkLabel.zh) ? a.linkLabel.zh : linkLabelZhEl.value;
+            if (linkLabelEnEl) linkLabelEnEl.value = (a.linkLabel && a.linkLabel.en) ? a.linkLabel.en : linkLabelEnEl.value;
             if (labelZhEl) labelZhEl.value = (a.label && a.label.zh) ? a.label.zh : labelZhEl.value;
             if (labelEnEl) labelEnEl.value = (a.label && a.label.en) ? a.label.en : labelEnEl.value;
             if (contentZhEl) contentZhEl.value = (a.content && a.content.zh) ? a.content.zh : contentZhEl.value;
             if (contentEnEl) contentEnEl.value = (a.content && a.content.en) ? a.content.en : contentEnEl.value;
+        } catch (_) {}
+    })();
+
+    (function initLinkLabelVisibilityToggles() {
+        function bindToggle(checkboxId, fieldsId) {
+            const checkbox = document.getElementById(checkboxId);
+            const fields = document.getElementById(fieldsId);
+            if (!checkbox || !fields) return;
+            const sync = function() {
+                fields.style.display = checkbox.checked ? '' : 'none';
+            };
+            checkbox.addEventListener('change', sync);
+            sync();
+        }
+        bindToggle('termsShowLinkLabel', 'termsLinkLabelWrap');
+        bindToggle('agreementShowLinkLabel', 'agreementLinkLabelWrap');
+    })();
+
+    // 初始化 Thank You UI
+    (function initThankYouUi() {
+        try {
+            const ty = formConfig.thankYou || {};
+            const setVal = (id, val) => {
+                const el = document.getElementById(id);
+                if (el && val != null) el.value = val;
+            };
+            setVal('thankYouTitleZh', ty.title && ty.title.zh);
+            setVal('thankYouTitleEn', ty.title && ty.title.en);
+            setVal('thankYouMessageZh', ty.message && ty.message.zh);
+            setVal('thankYouMessageEn', ty.message && ty.message.en);
+            setVal('thankYouPurchaseTitleZh', ty.purchaseTitle && ty.purchaseTitle.zh);
+            setVal('thankYouPurchaseTitleEn', ty.purchaseTitle && ty.purchaseTitle.en);
+            setVal('thankYouPurchaseMessageZh', ty.purchaseMessage && ty.purchaseMessage.zh);
+            setVal('thankYouPurchaseMessageEn', ty.purchaseMessage && ty.purchaseMessage.en);
         } catch (_) {}
     })();
 

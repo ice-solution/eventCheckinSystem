@@ -7,6 +7,7 @@ const emailTemplateController = require("../controllers/emailTemplateController"
 const smsTemplateController = require("../controllers/smsTemplateController");
 const badgeController = require('../controllers/badgeController');
 const luckydrawGameConfigController = require('../controllers/luckydrawGameConfigController');
+const stationCheckinController = require('../controllers/stationCheckinController');
 
 const Event = require('../model/Event'); // 引入 Event 模型
 const multer = require('multer');
@@ -76,6 +77,7 @@ router.post('/create', eventsController.createEvent);
 router.get('/create', eventsController.renderCreateEventPage); // 創建事件
 router.get('/', eventsController.getUserEvents);
 router.get('/list', eventsController.renderEventsList);
+router.post('/export-checkin-list', eventsController.exportEventsCheckInList);
 
 
 
@@ -115,6 +117,21 @@ router.post('/:eventId/users/batch-send-email', eventsController.batchSendEmails
 router.post('/:eventId/users/batch-send-sms', eventsController.sendBulkSMS);
 
 router.get('/:eventId/scan', eventsController.scanEventUsers);
+
+// Station Check-in（分站簽到）
+router.get('/:eventId/station-checkin', stationCheckinController.renderStationCheckinPage);
+router.post('/:eventId/station-checkin', stationCheckinController.createStation);
+router.get('/:eventId/station-checkin/:stationId', stationCheckinController.renderStationDetailPage);
+router.put('/:eventId/station-checkin/:stationId', stationCheckinController.updateStation);
+router.delete('/:eventId/station-checkin/:stationId', stationCheckinController.deleteStation);
+router.get('/:eventId/station-checkin/:stationId/section-list', stationCheckinController.getStationSectionList);
+router.get('/:eventId/station-checkin/:stationId/section-list/export', stationCheckinController.exportStationSectionListTemplate);
+router.post('/:eventId/station-checkin/:stationId/section-list/import', stationCheckinController.importStationSectionList);
+router.post('/:eventId/station-checkin/:stationId/section-list', stationCheckinController.addUsersToStationList);
+router.delete('/:eventId/station-checkin/:stationId/section-list/:userId', stationCheckinController.removeUserFromStationList);
+router.post('/:eventId/station-checkin/:stationId/checkin', stationCheckinController.checkInToStation);
+router.delete('/:eventId/station-checkin/:stationId/checkin/:userId', stationCheckinController.uncheckInFromStation);
+router.get('/:eventId/station-checkin/:stationId/records', stationCheckinController.listStationCheckIns);
 
 
 router.get('/:eventId/login', eventsController.renderLoginPage); // 渲染登入頁面
