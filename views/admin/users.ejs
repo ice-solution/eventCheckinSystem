@@ -780,43 +780,43 @@
                             <div class="btn-scroll-row" id="btnScrollRow">
                                 <!-- Group 1: Guest selection & add -->
                                 <button id="selectAllUsersBtn" class="btn btn-primary">
-                                    <i class="fas fa-check-square"></i> <%= t('users.selectAllBtn') %>
+                                    <i class="fa fa-check-square"></i> <%= t('users.selectAllBtn') %>
                                 </button>
                                 <button id="deselectAllUsersBtn" class="btn btn-secondary">
-                                    <i class="fas fa-square"></i> <%= t('users.deselectAllBtn') %>
+                                    <i class="fa fa-square-o"></i> <%= t('users.deselectAllBtn') %>
                                 </button>
                                 <button id="addUserBtn" class="btn btn-primary">
-                                    <i class="fas fa-user-plus"></i> <%= t('users.addUserBtn') %>
+                                    <i class="fa fa-user-plus"></i> <%= t('users.addUserBtn') %>
                                 </button>
                                 <button id="batchDeleteBtn" class="btn btn-danger" style="display: none;">
-                                    <i class="fas fa-trash"></i> <%= t('users.batchDeleteBtn') %>
+                                    <i class="fa fa-trash"></i> <%= t('users.batchDeleteBtn') %>
                                 </button>
                                 <div class="btn-scroll-separator"></div>
                                 <!-- Group 2: Email -->
                                 <button id="emailSettingsBtn" class="btn btn-secondary">
-                                    <i class="fas fa-paper-plane"></i> <%= t('users.emailSettingsBtn') %>
+                                    <i class="fa fa-paper-plane"></i> <%= t('users.emailSettingsBtn') %>
                                 </button>
                                 <a href="/events/<%= event._id %>/email-records" class="btn btn-warning">
-                                    <i class="fas fa-inbox"></i> <%= t('users.emailRecordsBtn') %>
+                                    <i class="fa fa-inbox"></i> <%= t('users.emailRecordsBtn') %>
                                 </a>
                                 <button id="batchSendEmailBtn" class="btn btn-warning" style="display: none;">
-                                    <i class="fas fa-envelope"></i> <%= t('users.batchSendEmailBtn') %>
+                                    <i class="fa fa-envelope"></i> <%= t('users.batchSendEmailBtn') %>
                                 </button>
                                 <button id="batchSendSmsBtn" class="btn btn-primary" style="display: none;">
-                                    <i class="fas fa-comments"></i> <%= t('users.batchSendSmsBtn') %>
+                                    <i class="fa fa-comments"></i> <%= t('users.batchSendSmsBtn') %>
                                 </button>
                                 <div class="btn-scroll-separator"></div>
                                 <!-- Group 3: Import & Report -->
                                 <a href="/events/<%= event._id%>/import" class="btn btn-success">
-                                    <i class="fas fa-upload"></i> <%= t('users.importBtn') %>
+                                    <i class="fa fa-upload"></i> <%= t('users.importBtn') %>
                                 </a>
                                 <a href="/events/<%= event._id %>/report" class="btn btn-info">
-                                    <i class="fas fa-download"></i> <%= t('users.reportBtn') %>
+                                    <i class="fa fa-download"></i> <%= t('users.reportBtn') %>
                                 </a>
                                 <%# HIDDEN: Scan QR Code — reserved for future use %>
                                 <% if (false) { %>
                                 <a href="/events/<%= event._id%>/scan" class="btn btn-secondary">
-                                    <i class="fas fa-qrcode"></i> <%= t('users.scanBtn') %>
+                                    <i class="fa fa-qrcode"></i> <%= t('users.scanBtn') %>
                                 </a>
                                 <% } %>
                             </div>
@@ -851,13 +851,13 @@
                                                 </select>
                                             </div>
                                             <div class="alert alert-info">
-                                                <i class="fas fa-info-circle"></i> <%= t('users.emailWillBeSent') %>
+                                                <i class="fa fa-info-circle"></i> <%= t('users.emailWillBeSent') %>
                                             </div>
                                         </div>
                                         <div class="modal-footer">
                                             <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('common.cancel') %></button>
                                             <button type="button" class="btn btn-primary" id="confirmBatchSendEmail">
-                                                <i class="fas fa-paper-plane"></i> <%= t('users.confirmSend') %>
+                                                <i class="fa fa-paper-plane"></i> <%= t('users.confirmSend') %>
                                             </button>
                                         </div>
                                     </div>
@@ -883,13 +883,13 @@
                                                 </select>
                                             </div>
                                             <div class="alert alert-info">
-                                                <i class="fas fa-info-circle"></i> <%= t('users.smsWillBeSent') %>
+                                                <i class="fa fa-info-circle"></i> <%= t('users.smsWillBeSent') %>
                                             </div>
                                         </div>
                                         <div class="modal-footer">
                                             <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('common.cancel') %></button>
                                             <button type="button" class="btn btn-primary" id="confirmBatchSendSms">
-                                                <i class="fas fa-paper-plane"></i> <%= t('users.confirmSend') %>
+                                                <i class="fa fa-paper-plane"></i> <%= t('users.confirmSend') %>
                                             </button>
                                         </div>
                                     </div>
@@ -932,13 +932,13 @@
                                                 </select>
                                             </div>
                                             <div class="alert alert-info">
-                                                <i class="fas fa-info-circle"></i> <%= t('users.resendEmailWill') %>
+                                                <i class="fa fa-info-circle"></i> <%= t('users.resendEmailWill') %>
                                             </div>
                                         </div>
                                         <div class="modal-footer">
                                             <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('common.cancel') %></button>
                                             <button type="button" class="btn btn-primary" id="confirmResendEmail">
-                                                <i class="fas fa-paper-plane"></i> <%= t('users.confirmSend') %>
+                                                <i class="fa fa-paper-plane"></i> <%= t('users.confirmSend') %>
                                             </button>
                                         </div>
                                     </div>
@@ -982,7 +982,7 @@
                                         </div>
                                         <div class="modal-footer">
                                             <a href="/events/<%= event._id %>/email-records" class="btn btn-info">
-                                                <i class="fas fa-envelope-open"></i> <%= t('users.viewEmailRecords') %>
+                                                <i class="fa fa-envelope-o"></i> <%= t('users.viewEmailRecords') %>
                                             </a>
                                             <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('common.close') %></button>
                                         </div>
@@ -1032,7 +1032,7 @@
                                             </div>
                                         </div>
                                         <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0; display: flex; justify-content: flex-end;">
-                                            <button type="button" class="btn btn-warning" id="saveEmailSettingsBtn"><i class="fas fa-envelope"></i> <%= t('users.saveEmailSettings') %></button>
+                                            <button type="button" class="btn btn-warning" id="saveEmailSettingsBtn"><i class="fa fa-envelope"></i> <%= t('users.saveEmailSettings') %></button>
                                         </div>
                                     </form>
                                         </div>
@@ -1240,7 +1240,7 @@
                                         </div>
                                     <% } %>
                                     <div class="form-group">
-                                        <button type="submit" class="btn btn-success"><i class="fas fa-plus"></i> <%= t('users.addUserBtn') %></button>
+                                        <button type="submit" class="btn btn-success"><i class="fa fa-plus"></i> <%= t('users.addUserBtn') %></button>
                                     </div>
                                 </form>
                             </div>
@@ -1348,7 +1348,7 @@
                                     </div>
                                     <div class="form-row align-items-center flex-wrap">
                                         <div class="col-auto">
-                                            <button type="button" id="advancedSearchAddCondition" class="btn btn-sm btn-primary mr-2"><i class="fas fa-plus"></i> <%= t('users.addCondition') %></button>
+                                            <button type="button" id="advancedSearchAddCondition" class="btn btn-sm btn-primary mr-2"><i class="fa fa-plus"></i> <%= t('users.addCondition') %></button>
                                             <button type="button" id="advancedSearchClear" class="btn btn-sm btn-danger"><%= t('users.clearCondition') %></button>
                                         </div>
                                     </div>
@@ -2528,10 +2528,10 @@ const _US = {
                 }),
                 success: function(response) {
                     $('#batchSendSmsModal').modal('hide');
-                    button.prop('disabled', false).html('<i class="fas fa-paper-plane"></i> ' + _US.confirmSend);
+                    button.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> ' + _US.confirmSend);
                     let resultsHtml = `
                         <div class="alert alert-info">
-                            <h6><i class="fas fa-info-circle"></i> ${_US.batchEmailSummaryTitle}</h6>
+                            <h6><i class="fa fa-info-circle"></i> ${_US.batchEmailSummaryTitle}</h6>
                             <p><strong>${_US.successLabel}:</strong> <span class="badge badge-success">${response.successCount || 0}</span></p>
                             <p><strong>${_US.failedLabel}:</strong> <span class="badge badge-danger">${response.failCount || 0}</span></p>
                             <p><strong>${_US.totalLabel}:</strong> ${response.total || 0}</p>
@@ -2552,7 +2552,7 @@ const _US = {
                     updateBatchSendSmsButton();
                 },
                 error: function(xhr) {
-                    button.prop('disabled', false).html('<i class="fas fa-paper-plane"></i> ' + _US.confirmSend);
+                    button.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> ' + _US.confirmSend);
                     const msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Failed to send SMS.';
                     showAlert('danger', msg);
                 }
@@ -2640,7 +2640,7 @@ const _US = {
                     
                     let resultsHtml = `
                         <div class="alert alert-info">
-                            <h6><i class="fas fa-info-circle"></i> ${_US.batchEmailSummaryTitle}</h6>
+                            <h6><i class="fa fa-info-circle"></i> ${_US.batchEmailSummaryTitle}</h6>
                             <p><strong>${_US.emailTypeResultLabel}:</strong> ${emailType}</p>
                             <p><strong>${_US.successLabel}:</strong> <span class="badge badge-success">${results.success}</span></p>
                             <p><strong>${_US.failedLabel}:</strong> <span class="badge badge-danger">${results.failed}</span></p>

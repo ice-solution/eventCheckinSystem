@@ -26,7 +26,7 @@
                 <% if (eventId && canAccessThisEvent) { %>
                 <% if (can('rsvp')) { %>
                 <li>
-                    <a href="/events/<%=eventId%>" data-tooltip="<%= t('menu.rsvp') %>"> <i class="menu-icon far fa-square-check"></i><%= t('menu.rsvp') %> </a>
+                    <a href="/events/<%=eventId%>" data-tooltip="<%= t('menu.rsvp') %>"> <i class="menu-icon fa fa-check-square-o"></i><%= t('menu.rsvp') %> </a>
                 </li>
                 <% } %>
                 <% if (can('stationCheckin')) { %>
@@ -101,7 +101,7 @@
                 <% } %>
                 <% if (can('votes')) { %>
                 <li>
-                    <a href="/votes/<%=eventId%>/admin" data-tooltip="<%= t('menu.voteManagement') %>"> <i class="menu-icon far fa-square-check"></i><%= t('menu.voteManagement') %></a>
+                    <a href="/votes/<%=eventId%>/admin" data-tooltip="<%= t('menu.voteManagement') %>"> <i class="menu-icon fa fa-check-square-o"></i><%= t('menu.voteManagement') %></a>
                 </li>
                 <% } %>
                 <% if (can('website') || can('formConfig')) { %>
