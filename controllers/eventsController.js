@@ -5636,6 +5636,29 @@ exports.deleteBanner = async (req, res) => {
 const FormConfig = require('../model/FormConfig');
 const formConfigController = require('./formConfigController');
 
+function bilingualFieldLabel(label, fieldName) {
+    if (typeof label === 'string' && label.trim()) return label.trim();
+    if (label && typeof label === 'object') {
+        const zh = label.zh != null ? String(label.zh).trim() : '';
+        const en = label.en != null ? String(label.en).trim() : '';
+        return zh || en || fieldName;
+    }
+    return fieldName;
+}
+
+function bilingualOptionLabel(opt) {
+    if (!opt) return '';
+    if (typeof opt === 'string') return opt;
+    if (opt.label != null) {
+        if (typeof opt.label === 'string') return opt.label;
+        if (typeof opt.label === 'object') {
+            return (opt.label.zh || opt.label.en || '').toString();
+        }
+    }
+    if (opt.zh || opt.en) return String(opt.zh || opt.en);
+    return opt.value != null ? String(opt.value) : '';
+}
+
 function buildSeatingFormFieldOptions(formConfigDoc) {
     const migrated = formConfigController.migrateFormConfig(
         formConfigDoc && typeof formConfigDoc.toObject === 'function' ? formConfigDoc.toObject() : formConfigDoc
@@ -5647,20 +5670,56 @@ function buildSeatingFormFieldOptions(formConfigDoc) {
             section.fields.forEach(field => {
                 if (!field || field.visible === false || !field.fieldName) return;
                 if (fieldMap.has(field.fieldName)) return;
-                let label = '';
-                if (typeof field.label === 'string') label = field.label;
-                else if (field.label && (field.label.zh || field.label.en)) {
-                    label = field.label.zh || field.label.en;
-                } else label = field.fieldName;
-                fieldMap.set(field.fieldName, { fieldName: field.fieldName, label });
+                const fieldName = String(field.fieldName);
+                const label = bilingualFieldLabel(field.label, fieldName);
+                const options = Array.isArray(field.options)
+                    ? field.options.map(opt => {
+                        const value = (opt && opt.value != null)
+                            ? String(opt.value)
+                            : (typeof opt === 'string' ? opt : bilingualOptionLabel(opt));
+                        return { value, label: bilingualOptionLabel(opt) || value };
+                    }).filter(o => o.value !== '')
+                    : [];
+                fieldMap.set(fieldName, {
+                    fieldName,
+                    label,
+                    type: field.type || 'text',
+                    options
+                });
             });
         });
     }
     const list = Array.from(fieldMap.values());
     if (!list.find(f => f.fieldName === 'company')) {
-        list.unshift({ fieldName: 'company', label: '公司' });
+        list.unshift({ fieldName: 'company', label: '公司', type: 'text', options: [] });
+    }
+    if (!list.find(f => f.fieldName === 'name')) {
+        list.unshift({ fieldName: 'name', label: '姓名', type: 'text', options: [] });
     }
     return list;
+}
+
+/** 頂層欄位 + formData 合併，供排桌分類／顯示姓名 */
+function flattenSeatingUser(userDoc) {
+    const o = userDoc && typeof userDoc.toObject === 'function'
+        ? userDoc.toObject({ minimize: false })
+        : (userDoc || {});
+    const formData = (o.formData && typeof o.formData === 'object') ? o.formData : {};
+    const flat = { ...formData, ...o };
+    delete flat.formData;
+    const id = o._id != null ? o._id.toString() : '';
+    const name = (o.name || formData.name || '').toString().trim();
+    const email = (o.email || formData.email || '').toString().trim();
+    const company = (o.company || formData.company || '').toString().trim();
+    const displayName = name || email || id;
+    return {
+        ...flat,
+        _id: id,
+        name,
+        email,
+        company,
+        displayName
+    };
 }
 
 /** 排桌設定頁 */
@@ -5676,17 +5735,7 @@ exports.renderSeatingArrangementPage = async (req, res) => {
             await formConfig.save();
         }
         const fieldOptions = buildSeatingFormFieldOptions(formConfig);
-
-        const users = (event.users || []).map(u => {
-            const o = u.toObject ? u.toObject({ minimize: false }) : u;
-            return {
-                _id: o._id.toString(),
-                name: o.name || '',
-                email: o.email || '',
-                company: o.company || '',
-                ...o
-            };
-        });
+        const users = (event.users || []).map(flattenSeatingUser);
 
         const seating = event.seatingArrangement
             ? (event.seatingArrangement.toObject ? event.seatingArrangement.toObject() : event.seatingArrangement)
@@ -5713,10 +5762,7 @@ exports.getSeatingArrangementApi = async (req, res) => {
         const seating = event.seatingArrangement
             ? (event.seatingArrangement.toObject ? event.seatingArrangement.toObject() : event.seatingArrangement)
             : { categoryFieldName: 'company', companionByUserId: {}, tables: [] };
-        const users = (event.users || []).map(u => {
-            const o = u.toObject ? u.toObject({ minimize: false }) : u;
-            return { _id: o._id.toString(), name: o.name || '', email: o.email || '', company: o.company || '', ...o };
-        });
+        const users = (event.users || []).map(flattenSeatingUser);
         res.json({ seating, users });
     } catch (err) {
         console.error('getSeatingArrangementApi:', err);
@@ -5764,6 +5810,10 @@ exports.saveSeatingArrangementApi = async (req, res) => {
             companionByUserId: safeCompanion,
             tables: safeTables.map(t => ({
                 id: String(t.id),
+                name: (t.name != null ? String(t.name) : '').trim().slice(0, 80),
+                seatLabelPrefix: (t.seatLabelPrefix != null ? String(t.seatLabelPrefix) : '').trim().slice(0, 12),
+                shape: (t.shape === 'square') ? 'square' : 'round',
+                length: Math.max(200, Math.min(900, parseInt(t.length, 10) || 360)),
                 x: typeof t.x === 'number' ? t.x : parseFloat(t.x) || 48,
                 y: typeof t.y === 'number' ? t.y : parseFloat(t.y) || 48,
                 capacity: Math.max(1, parseInt(t.capacity, 10) || 10),

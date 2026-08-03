@@ -27,16 +27,17 @@
         position: relative;
         border: 1px solid #dee2e6;
         border-radius: 8px;
-        background: #e8eaed;
+        background: #f0f2f5 url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><path fill="%23e0e3e8" d="M0 0h1v20H0zm19 0h1v20h-1zM0 0h20v1H0zm0 19h20v1H0z"/></svg>');
+        background-attachment: local;
     }
-    .seating-canvas-scale { display: inline-block; vertical-align: top; }
+    .seating-canvas-scale { display: inline-block; vertical-align: top; min-width: 100%; min-height: 100%; }
     .seating-canvas {
         position: relative;
         width: 1200px;
         height: 900px;
         min-width: 800px;
         min-height: 600px;
-        background: #f0f2f5 url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><path fill="%23e0e3e8" d="M0 0h1v20H0zm19 0h1v20h-1zM0 0h20v1H0zm0 19h20v1H0z"/></svg>');
+        background: transparent;
     }
     .guest-group-title { font-size: 13px; font-weight: 600; color: #495057; margin: 12px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #dee2e6; }
     .guest-row {
@@ -51,26 +52,62 @@
     .companion-stepper button:hover { background: #e9ecef; }
     .companion-stepper span { min-width: 28px; text-align: center; font-size: 13px; }
     .stat-line { font-size: 12px; color: #6c757d; margin-bottom: 10px; }
-    /* 圓桌：環狀坐位 + 中央桌號與佔用率環 */
     .round-table {
-        position: absolute; width: 300px; min-height: 340px;
+        position: absolute; width: 340px; min-height: 420px;
         cursor: move; user-select: none;
+        z-index: 1;
     }
     .round-table.drag-over .rt-plate { box-shadow: 0 0 0 3px rgba(40,167,69,.45); }
     .rt-toolbar {
-        display: flex; align-items: center; justify-content: space-between; gap: 6px;
-        margin-bottom: 6px; font-size: 12px; font-weight: 600; color: #495057;
+        position: relative; z-index: 20;
+        display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap;
+        margin-bottom: 8px; padding: 6px 8px; font-size: 12px; font-weight: 600; color: #495057;
+        background: #fff; border: 1px solid #dee2e6; border-radius: 6px;
+        box-shadow: 0 1px 2px rgba(0,0,0,.04);
     }
-    .rt-toolbar .cap-row { display: flex; align-items: center; gap: 4px; margin: 0; font-weight: normal; }
+    .rt-toolbar .cap-row { display: flex; align-items: center; gap: 4px; margin: 0; font-weight: normal; flex-wrap: wrap; }
+    .rt-toolbar .tbl-name {
+        width: 110px; padding: 2px 6px; font-size: 12px; height: 26px; font-weight: 600;
+    }
+    .rt-toolbar .tbl-seat-prefix {
+        width: 52px; padding: 2px 4px; font-size: 12px; height: 26px; text-align: center; font-weight: 700;
+    }
     .rt-toolbar .cap-row input.tbl-cap {
         width: 52px; padding: 2px 6px; font-size: 12px; height: 26px;
         text-align: center;
         -moz-appearance: textfield;
     }
+    .rt-toolbar .cap-row input.tbl-len {
+        width: 64px; padding: 2px 6px; font-size: 12px; height: 26px;
+        text-align: center;
+        -moz-appearance: textfield;
+    }
     .rt-toolbar .cap-row input.tbl-cap::-webkit-outer-spin-button,
-    .rt-toolbar .cap-row input.tbl-cap::-webkit-inner-spin-button {
+    .rt-toolbar .cap-row input.tbl-cap::-webkit-inner-spin-button,
+    .rt-toolbar .cap-row input.tbl-len::-webkit-outer-spin-button,
+    .rt-toolbar .cap-row input.tbl-len::-webkit-inner-spin-button {
         -webkit-appearance: none;
         margin: 0;
+    }
+    .rt-shape-tag {
+        font-size: 10px; font-weight: 600; color: #6c757d; background: #e9ecef;
+        border-radius: 4px; padding: 1px 6px;
+    }
+    .rt-stage {
+        position: relative;
+        margin: 0 auto;
+        background: transparent;
+    }
+    .rt-stage.rt-stage-round {
+        width: 340px;
+        height: 340px;
+        padding: 36px;
+        box-sizing: border-box;
+    }
+    .rt-stage.rt-stage-square {
+        padding: 64px 16px 64px;
+        box-sizing: border-box;
+        min-height: 268px;
     }
     .rt-plate {
         position: relative; width: 280px; height: 280px; margin: 0 auto;
@@ -78,6 +115,27 @@
         background: radial-gradient(circle at 50% 45%, #fff 0%, #f8f9fb 55%, #eef1f5 100%);
         border: 1px solid #d0d4dc;
         box-shadow: 0 6px 18px rgba(0,0,0,.1), inset 0 0 0 1px rgba(255,255,255,.8);
+        z-index: 1;
+    }
+    .rt-plate.rt-shape-square {
+        border-radius: 10px;
+        height: 120px;
+        background: linear-gradient(180deg, #fff 0%, #f8f9fb 55%, #eef1f5 100%);
+    }
+    .rt-plate.rt-shape-square::before {
+        border-radius: 6px;
+        inset: 10px;
+    }
+    .rt-plate.rt-shape-square .rt-center {
+        width: 72px;
+        height: 72px;
+    }
+    .rt-plate.rt-shape-square .rt-center-num {
+        font-size: 28px;
+    }
+    .rt-plate.rt-shape-square .rt-ring-svg {
+        width: 72px;
+        height: 72px;
     }
     .rt-plate::before {
         content: ''; position: absolute; inset: 14px; border-radius: 50%;
@@ -99,24 +157,31 @@
         transition: stroke-dashoffset .35s ease;
     }
     .rt-seats-layer {
-        position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 3;
+        position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 5;
         pointer-events: none;
     }
     .rt-slot {
-        position: absolute; width: 44px; height: 44px; margin-left: -22px; margin-top: -22px;
+        position: absolute; width: 62px; height: 62px; margin-left: -31px; margin-top: -31px;
         border-radius: 50%; pointer-events: auto;
-        display: flex; align-items: center; justify-content: center;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
         font-size: 11px; font-weight: 600; text-align: center; line-height: 1.1;
         transition: transform .15s ease, box-shadow .15s ease;
     }
+    .rt-slot .rt-seat-no {
+        position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+        min-width: 28px; height: 24px; padding: 0 7px;
+        border-radius: 12px; background: #212529; color: #fff; font-size: 12px; font-weight: 800;
+        line-height: 24px; text-align: center; z-index: 5; box-shadow: 0 1px 3px rgba(0,0,0,.28);
+        pointer-events: none; white-space: nowrap;
+    }
     .rt-slot.empty {
-        border: 2px dashed #b8c0cc; background: rgba(255,255,255,.75); color: #94a0b0;
-        font-size: 16px; font-weight: 400;
+        border: 2px dashed #b8c0cc; background: rgba(255,255,255,.92); color: #6c757d;
+        font-size: 12px; font-weight: 700;
         pointer-events: none;
     }
-    .rt-slot.empty::after { content: '+'; opacity: .55; }
+    .rt-slot.empty .rt-seat-no { background: #6c757d; }
     .rt-slot.guest {
-        padding: 2px; overflow: hidden;
+        padding: 10px 2px 4px; overflow: visible;
         border: 3px solid transparent;
         border-top-color: var(--rt-brd, #c9a227);
         border-right-color: var(--rt-brd, #c9a227);
@@ -125,26 +190,72 @@
         box-shadow: 0 2px 6px rgba(0,0,0,.12);
         cursor: pointer;
     }
+    .rt-slot.guest.rt-swap-pick {
+        box-shadow: 0 0 0 3px #007bff, 0 2px 8px rgba(0,123,255,.35);
+        z-index: 8;
+    }
     .rt-slot.guest .rt-name {
         display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-        font-size: 11px;
+        font-size: 11px; padding: 0 2px; font-weight: 700;
         pointer-events: none;
     }
     .rt-slot.companion {
         background: linear-gradient(180deg, #d9eefc 0%, #c5e3fa 100%);
-        border: 1px solid #9cc8e8; color: #1a5a8a; font-size: 12px; font-weight: 700;
+        border: 1px solid #9cc8e8; color: #1a5a8a; font-size: 10px; font-weight: 700;
         box-shadow: 0 1px 4px rgba(0,0,0,.08);
         pointer-events: none;
+        padding-top: 10px;
+    }
+    .rt-slot.companion .rt-comp-label {
+        display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        font-size: 9px; line-height: 1.1; pointer-events: none;
     }
     .rt-slot .rt-remove {
-        position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; padding: 0;
-        border: none; border-radius: 50%; background: #fff; color: #c00; font-size: 12px; line-height: 1;
-        cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.2); z-index: 4;
-        pointer-events: auto;
+        position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; padding: 0;
+        border: 2px solid #fff; border-radius: 50%; background: #dc3545; color: #fff; font-size: 14px; line-height: 18px;
+        cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,.25); z-index: 6;
+        pointer-events: auto; font-weight: 700;
     }
-    .rt-slot.guest:hover, .rt-slot.companion:hover { transform: scale(1.06); z-index: 5; }
-    .rt-foot { margin-top: 6px; text-align: center; font-size: 11px; color: #6c757d; }
+    .rt-slot .rt-remove:hover { background: #a71d2a; transform: scale(1.08); }
+    .rt-slot.guest:hover { transform: scale(1.06); z-index: 5; }
+    .rt-swap-hint {
+        font-size: 11px; color: #007bff; background: #e7f1ff; border: 1px solid #b8d4ff;
+        border-radius: 4px; padding: 4px 8px; margin-bottom: 6px;
+    }
+    .rt-foot {
+        position: relative; z-index: 20;
+        margin-top: 10px; padding: 6px 8px; text-align: center; font-size: 11px; color: #6c757d;
+        background: #fff; border: 1px solid #dee2e6; border-radius: 6px;
+    }
     .rt-foot .btn { font-size: 11px; padding: 2px 8px; }
+    .rt-assigned {
+        position: relative; z-index: 20;
+        margin-top: 8px; padding: 8px 10px; background: #fff; border: 1px solid #e9ecef; border-radius: 6px;
+        font-size: 12px; max-height: 200px; overflow: auto; text-align: left;
+    }
+    .rt-assigned-title { font-weight: 700; color: #495057; margin-bottom: 6px; font-size: 12px; }
+    .rt-assigned-row {
+        display: flex; align-items: flex-start; gap: 6px; padding: 5px 0; border-bottom: 1px solid #f1f3f5;
+    }
+    .rt-assigned-row:last-child { border-bottom: none; }
+    .rt-assigned-row.rt-swap-pick-row { background: #e7f1ff; border-radius: 4px; padding-left: 4px; padding-right: 4px; }
+    .rt-assigned-row .seat-badge {
+        flex-shrink: 0; min-width: 52px; text-align: center; background: #212529; color: #fff; border-radius: 4px;
+        font-size: 11px; font-weight: 800; padding: 2px 6px; line-height: 1.3;
+    }
+    .rt-assigned-row .meta { flex: 1; min-width: 0; }
+    .rt-assigned-row .name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+    .rt-assigned-row .seats-detail { display: block; color: #6c757d; font-size: 11px; margin-top: 1px; }
+    .rt-assigned-row .actions { flex-shrink: 0; display: flex; flex-direction: column; gap: 2px; }
+    .rt-assigned-row .btn-rm,
+    .rt-assigned-row .btn-swap {
+        border: none; background: transparent; cursor: pointer;
+        font-size: 11px; padding: 0 4px; font-weight: 700; text-align: right;
+    }
+    .rt-assigned-row .btn-rm { color: #dc3545; }
+    .rt-assigned-row .btn-rm:hover { color: #a71d2a; text-decoration: underline; }
+    .rt-assigned-row .btn-swap { color: #007bff; }
+    .rt-assigned-row .btn-swap:hover { text-decoration: underline; }
     .toolbar-top { margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 </style>
 
@@ -163,8 +274,9 @@
                 <div class="card-body">
                     <div class="toolbar-top">
                         <label class="mb-0"><%= t('seating.categoryFieldLabel') %></label>
-                        <select id="categoryField" class="form-control form-control-sm" style="width: 220px;"></select>
+                        <select id="categoryField" class="form-control form-control-sm" style="width: 260px;"></select>
                         <button type="button" class="btn btn-primary btn-sm" id="btnAddTable"><%= t('seating.addTableBtn') %></button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnAddSquareTable"><%= t('seating.addSquareTableBtn') %></button>
                         <span class="stat-line mb-0" id="statUnassignedToolbar"></span>
                     </div>
                     <div id="alertSeating" class="alert alert-danger" style="display:none;"></div>
@@ -176,8 +288,8 @@
                             <div class="seating-canvas-toolbar">
                                 <span class="mb-0 font-weight-bold"><%= t('seating.canvasLabel') %></span>
                                 <label class="mb-0"><%= t('seating.zoomLabel') %></label>
-                                <input type="range" id="canvasZoom" min="25" max="100" step="5" value="75" title="<%= t('seating.zoomLabel') %>">
-                                <span id="canvasZoomPct" class="text-monospace">75%</span>
+                                <input type="range" id="canvasZoom" min="25" max="100" step="5" value="85" title="<%= t('seating.zoomLabel') %>">
+                                <span id="canvasZoomPct" class="text-monospace">85%</span>
                                 <button type="button" class="btn btn-sm btn-outline-secondary" id="btnZoomFit"><%= t('seating.fitWindowBtn') %></button>
                                 <button type="button" class="btn btn-sm btn-outline-primary" id="btnLayoutGrid"><%= t('seating.gridLayoutBtn') %></button>
                                 <button type="button" class="btn btn-sm btn-outline-success" id="btnExportPng"><%= t('seating.exportPngBtn') %></button>
@@ -208,11 +320,29 @@
         unassignedStat: '<%= t("seating.unassignedStat") %>',
         companions: '<%= t("seating.companions") %>',
         tableNum: '<%= t("seating.tableNum") %>',
+        tableNameLabel: '<%= t("seating.tableNameLabel") %>',
+        tableNamePlaceholder: '<%= t("seating.tableNamePlaceholder") %>',
+        seatLabelPrefixLabel: '<%= t("seating.seatLabelPrefixLabel") %>',
+        seatLabelPrefixDefault: '<%= t("seating.seatLabelPrefixDefault") %>',
+        seatLabelPrefixHint: '<%= t("seating.seatLabelPrefixHint") %>',
+        shapeRound: '<%= t("seating.shapeRound") %>',
+        shapeSquare: '<%= t("seating.shapeSquare") %>',
         capacityLabel: '<%= t("seating.capacityLabel") %>',
+        lengthLabel: '<%= t("seating.lengthLabel") %>',
+        seatNum: '<%= t("seating.seatNum") %>',
         emptySlotTitle: '<%= t("seating.emptySlotTitle") %>',
         companionSlotTitle: '<%= t("seating.companionSlotTitle") %>',
         clickToUnassign: '<%= t("seating.clickToUnassign") %>',
         removeFromTable: '<%= t("seating.removeFromTable") %>',
+        swapSeatsBtn: '<%= t("seating.swapSeatsBtn") %>',
+        swapPickHint: '<%= t("seating.swapPickHint") %>',
+        swapDone: '<%= t("seating.swapDone") %>',
+        assignedListTitle: '<%= t("seating.assignedListTitle") %>',
+        seatLabelShort: '<%= t("seating.seatLabelShort") %>',
+        seatRangeLabel: '<%= t("seating.seatRangeLabel") %>',
+        guestSeatDetail: '<%= t("seating.guestSeatDetail") %>',
+        guestSeatDetailSolo: '<%= t("seating.guestSeatDetailSolo") %>',
+        companionOf: '<%= t("seating.companionOf") %>',
         occupiedStat: '<%= t("seating.occupiedStat") %>',
         removeTableBtn: '<%= t("seating.removeTableBtn") %>',
         tableFullError: '<%= t("seating.tableFullError") %>',
@@ -231,16 +361,30 @@
         companionByUserId: {},
         tables: []
     };
-
-    try {
+    (function initState() {
         const initial = <%- seatingJson %>;
-        if (initial && typeof initial === 'object') {
+        if (initial) {
             state.categoryFieldName = initial.categoryFieldName || 'company';
-            state.companionByUserId = initial.companionByUserId && typeof initial.companionByUserId === 'object'
-                ? initial.companionByUserId : {};
-            state.tables = Array.isArray(initial.tables) ? initial.tables : [];
+            // 舊版全場 seatLabelPrefix → 遷移到每桌（若該桌未設）
+            var legacyPrefix = (initial.seatLabelPrefix != null ? String(initial.seatLabelPrefix) : '').trim().slice(0, 12);
+            state.companionByUserId = initial.companionByUserId || {};
+            state.tables = (initial.tables || []).map(function(t) {
+                var p = (t.seatLabelPrefix != null ? String(t.seatLabelPrefix) : '').trim().slice(0, 12);
+                if (!p && legacyPrefix) p = legacyPrefix;
+                return {
+                    id: t.id,
+                    name: (t.name != null ? String(t.name) : '').trim(),
+                    seatLabelPrefix: p,
+                    shape: t.shape === 'square' ? 'square' : 'round',
+                    length: Math.max(200, Math.min(900, parseInt(t.length, 10) || 360)),
+                    x: t.x,
+                    y: t.y,
+                    capacity: t.capacity,
+                    userIds: t.userIds || []
+                };
+            });
         }
-    } catch (e) { console.error(e); }
+    })();
 
     const $cat = document.getElementById('categoryField');
     const $guestMount = document.getElementById('guestListMount');
@@ -250,11 +394,12 @@
     const $canvasZoom = document.getElementById('canvasZoom');
     const $alert = document.getElementById('alertSeating');
 
-    var CANVAS_TABLE_W = 300;
-    var CANVAS_TABLE_H = 360;
+    var CANVAS_TABLE_W = 360;
+    var CANVAS_TABLE_H = 520;
     var CANVAS_PAD = 120;
-    var DEFAULT_CANVAS_ZOOM = 75;
+    var DEFAULT_CANVAS_ZOOM = 85;
     var MIN_CANVAS_ZOOM = 25;
+    var swapPick = null; // { tableId, uid }
 
     function getCanvasZoom() {
         var v = parseInt($canvasZoom.value, 10);
@@ -274,17 +419,29 @@
         state.tables.forEach(function(t) {
             var x = t.x != null ? t.x : 40;
             var y = t.y != null ? t.y : 40;
-            maxR = Math.max(maxR, x + CANVAS_TABLE_W + pad);
-            maxB = Math.max(maxB, y + CANVAS_TABLE_H + pad);
+            var tw = (t.shape === 'square')
+                ? Math.max(200, Math.min(900, parseInt(t.length, 10) || 360)) + 40
+                : CANVAS_TABLE_W;
+            var th = (t.shape === 'square') ? 420 : CANVAS_TABLE_H;
+            maxR = Math.max(maxR, x + tw + pad);
+            maxB = Math.max(maxB, y + th + pad);
         });
+        // Ensure canvas at least fills visible scroll area so grid looks continuous
+        if ($canvasScroll) {
+            maxR = Math.max(maxR, $canvasScroll.clientWidth + 40);
+            maxB = Math.max(maxB, $canvasScroll.clientHeight + 40);
+        }
         $canvas.style.width = maxR + 'px';
         $canvas.style.height = maxB + 'px';
+    }
+    function gridColumnCount(n) {
+        if (n <= 0) return 1;
+        return Math.max(1, Math.ceil(Math.sqrt(n)));
     }
     function layoutTablesGrid() {
         var n = state.tables.length;
         if (n === 0) return;
-        var cols = Math.ceil(Math.sqrt(n));
-        cols = Math.max(4, Math.min(cols, 8));
+        var cols = gridColumnCount(n);
         var gapX = 48;
         var gapY = 48;
         var startX = 80;
@@ -327,30 +484,48 @@
 
     function seatsForUser(uid) {
         const n = parseInt(state.companionByUserId[uid], 10) || 0;
-        return Math.max(0, n) + 1;
+        return 1 + Math.max(0, n);
     }
-
     function assignedUserIds() {
-        const set = {};
+        const map = {};
         state.tables.forEach(t => {
-            (t.userIds || []).forEach(uid => { set[uid] = true; });
+            (t.userIds || []).forEach(id => { map[id] = true; });
         });
-        return set;
+        return map;
     }
-
     function tableSeatsUsed(t) {
         let s = 0;
         (t.userIds || []).forEach(uid => { s += seatsForUser(uid); });
         return s;
     }
-
     function findUser(uid) {
         return users.find(u => u._id === uid);
     }
-
+    function userDisplayName(uOrId) {
+        var u = (typeof uOrId === 'object' && uOrId) ? uOrId : findUser(uOrId);
+        if (!u) return String(uOrId || '');
+        return (u.displayName || u.name || u.email || u._id || '').toString();
+    }
     function categoryLabel(fieldName) {
         const f = formFields.find(x => x.fieldName === fieldName);
         return f ? f.label : fieldName;
+    }
+    function categoryValueLabel(fieldName, raw) {
+        if (raw === undefined || raw === null || String(raw).trim() === '') return _SA.unfilledCategory;
+        const val = String(raw).trim();
+        const f = formFields.find(x => x.fieldName === fieldName);
+        if (f && Array.isArray(f.options) && f.options.length) {
+            const opt = f.options.find(o => String(o.value) === val);
+            if (opt && opt.label) return String(opt.label);
+        }
+        return val;
+    }
+    function userFieldRaw(u, fieldName) {
+        if (!u) return '';
+        if (u[fieldName] !== undefined && u[fieldName] !== null && String(u[fieldName]).trim() !== '') {
+            return u[fieldName];
+        }
+        return '';
     }
 
     function renderCategorySelect() {
@@ -362,9 +537,14 @@
             if (f.fieldName === state.categoryFieldName) opt.selected = true;
             $cat.appendChild(opt);
         });
+        if (!$cat.value && formFields.length) {
+            state.categoryFieldName = formFields[0].fieldName;
+            $cat.value = state.categoryFieldName;
+        }
         $cat.onchange = function() {
             state.categoryFieldName = $cat.value;
             renderGuestList();
+            renderTables();
         };
     }
 
@@ -374,8 +554,8 @@
         const unassigned = users.filter(u => !inTable[u._id]);
         const groups = {};
         unassigned.forEach(u => {
-            const raw = u[field];
-            const key = (raw !== undefined && raw !== null && String(raw).trim() !== '') ? String(raw).trim() : _SA.unfilledCategory;
+            const raw = userFieldRaw(u, field);
+            const key = categoryValueLabel(field, raw);
             if (!groups[key]) groups[key] = [];
             groups[key].push(u);
         });
@@ -387,8 +567,9 @@
             groups[k].forEach(u => {
                 const uid = u._id;
                 const comp = parseInt(state.companionByUserId[uid], 10) || 0;
+                const dn = userDisplayName(u);
                 html += '<div class="guest-row" draggable="true" data-user-id="' + uid + '">' +
-                    '<span class="guest-name" title="' + escapeAttr(u.name || '') + '">' + escapeHtml(u.name || uid) + '</span>' +
+                    '<span class="guest-name" title="' + escapeAttr(dn) + '">' + escapeHtml(dn) + '</span>' +
                     '<span class="text-muted small mr-1">' + _SA.companions + '</span>' +
                     '<div class="companion-stepper" data-user-id="' + uid + '">' +
                     '<button type="button" data-d="-1">−</button>' +
@@ -449,6 +630,7 @@
         state.tables.forEach(t => {
             const cap = Math.max(1, parseInt(t.capacity, 10) || 10);
             t.capacity = cap;
+            if (t.shape !== 'square') t.shape = 'round';
             let used = tableSeatsUsed(t);
             while (used > cap && (t.userIds || []).length > 0) {
                 t.userIds.pop();
@@ -474,31 +656,100 @@
     function categoryColorsForUser(uid) {
         var u = findUser(uid);
         var field = state.categoryFieldName || 'company';
-        var raw = u ? u[field] : '';
-        var key = (raw !== undefined && raw !== null && String(raw).trim() !== '') ? String(raw).trim() : _SA.unfilledCategory;
+        var raw = userFieldRaw(u, field);
+        var key = categoryValueLabel(field, raw);
         var p = RT_PALETTE[hashCat(key) % RT_PALETTE.length];
         return { brd: p.brd, bg: p.bg, label: key };
     }
 
-    /** 將每桌 capacity 個坐位依序填入：每位來賓 1 格本人 + 攜眷格 */
     function buildSeatSlots(t, cap) {
         var slots = [];
         var i;
-        for (i = 0; i < cap; i++) slots.push({ kind: 'empty' });
+        for (i = 0; i < cap; i++) slots.push({ kind: 'empty', seatNo: i + 1 });
         var pos = 0;
         var uids = t.userIds || [];
         for (i = 0; i < uids.length; i++) {
             var uid = uids[i];
             var need = seatsForUser(uid);
             if (pos + need > cap) break;
-            slots[pos] = { kind: 'guest', uid: uid };
+            slots[pos] = { kind: 'guest', uid: uid, seatNo: pos + 1, seatFrom: pos + 1, seatTo: pos + need };
             var k;
             for (k = 1; k < need; k++) {
-                slots[pos + k] = { kind: 'companion', forUid: uid, idx: k };
+                slots[pos + k] = {
+                    kind: 'companion',
+                    forUid: uid,
+                    idx: k,
+                    seatNo: pos + k + 1,
+                    ownerSeatNo: pos + 1
+                };
             }
             pos += need;
         }
         return slots;
+    }
+
+    function guestSeatInfo(slots, uid) {
+        var guest = null;
+        var companionNos = [];
+        slots.forEach(function(s) {
+            if (s.kind === 'guest' && s.uid === uid) guest = s;
+            if (s.kind === 'companion' && s.forUid === uid) companionNos.push(s.seatNo);
+        });
+        if (!guest) return null;
+        return {
+            main: guest.seatNo,
+            from: guest.seatFrom || guest.seatNo,
+            to: guest.seatTo || guest.seatNo,
+            companions: companionNos
+        };
+    }
+
+    function getSeatPrefix(t) {
+        var p = (t && t.seatLabelPrefix != null ? String(t.seatLabelPrefix) : '').trim();
+        if (p) return p.slice(0, 12);
+        return _SA.seatLabelPrefixDefault || '';
+    }
+
+    function applyPrefixTemplate(tpl, map) {
+        var out = String(tpl || '');
+        Object.keys(map).forEach(function(k) {
+            out = out.split('{' + k + '}').join(String(map[k]));
+        });
+        return out;
+    }
+
+    function formatSeatBadge(info, t) {
+        if (!info) return '';
+        var prefix = getSeatPrefix(t);
+        if (info.from === info.to) {
+            return applyPrefixTemplate(_SA.seatLabelShort, { prefix: prefix, num: info.from });
+        }
+        return applyPrefixTemplate(_SA.seatRangeLabel, { prefix: prefix, from: info.from, to: info.to });
+    }
+
+    function formatSeatDetail(info, t) {
+        if (!info) return '';
+        var prefix = getSeatPrefix(t);
+        var mainLabel = applyPrefixTemplate(_SA.seatLabelShort, { prefix: prefix, num: info.main });
+        if (!info.companions || !info.companions.length) {
+            return applyPrefixTemplate(_SA.guestSeatDetailSolo, { mainLabel: mainLabel });
+        }
+        var companionsLabel = info.companions.map(function(n) {
+            return applyPrefixTemplate(_SA.seatLabelShort, { prefix: prefix, num: n });
+        }).join(', ');
+        return applyPrefixTemplate(_SA.guestSeatDetail, {
+            mainLabel: mainLabel,
+            companionsLabel: companionsLabel
+        });
+    }
+
+    function defaultTableName(idx1based) {
+        return _SA.tableNum.replace('{num}', idx1based);
+    }
+
+    function tableDisplayName(t, idx) {
+        var n = (t.name != null ? String(t.name) : '').trim();
+        return n || defaultTableName(idx + 1);
     }
 
     function polarSlotXY(index, total, cx, cy, radius) {
@@ -509,17 +760,134 @@
         };
     }
 
+    /** 方桌：只排上／下兩邊（相對整個 stage，避免蓋住 toolbar／footer） */
+    function squareSlotXY(index, total, stageW, stageH) {
+        var insetX = 32;
+        var edgeY = 30;
+        var topCount = Math.ceil(total / 2);
+        var bottomCount = total - topCount;
+        var onTop = index < topCount;
+        var idxOnSide = onTop ? index : (index - topCount);
+        var count = onTop ? topCount : bottomCount;
+        var frac = count <= 1 ? 0.5 : (idxOnSide + 1) / (count + 1);
+        return {
+            left: insetX + frac * (stageW - 2 * insetX),
+            top: onTop ? edgeY : (stageH - edgeY)
+        };
+    }
+
+    function normalizeTableLength(v) {
+        var n = parseInt(v, 10);
+        if (isNaN(n)) n = 360;
+        return Math.max(200, Math.min(900, n));
+    }
+
+    function clearSwapPick() {
+        swapPick = null;
+    }
+
+    function unassignGuestFromTable(t, uid) {
+        if (swapPick && swapPick.uid === uid) clearSwapPick();
+        t.userIds = (t.userIds || []).filter(function(id) { return id !== uid; });
+        showErr('');
+        renderGuestList();
+        renderTables();
+    }
+
+    function swapGuestsOnTable(t, uidA, uidB) {
+        var ids = (t.userIds || []).slice();
+        var iA = ids.indexOf(uidA);
+        var iB = ids.indexOf(uidB);
+        if (iA < 0 || iB < 0 || iA === iB) return false;
+        ids[iA] = uidB;
+        ids[iB] = uidA;
+        t.userIds = ids;
+        return true;
+    }
+
+    function handleGuestSwapClick(t, uid) {
+        if (!swapPick || swapPick.tableId !== t.id) {
+            swapPick = { tableId: t.id, uid: uid };
+            renderTables();
+            return;
+        }
+        if (swapPick.uid === uid) {
+            clearSwapPick();
+            renderTables();
+            return;
+        }
+        if (swapGuestsOnTable(t, swapPick.uid, uid)) {
+            clearSwapPick();
+            showErr('');
+            var prev = $alert.className;
+            $alert.className = 'alert alert-success';
+            $alert.style.display = 'block';
+            $alert.textContent = _SA.swapDone;
+            setTimeout(function() {
+                $alert.className = prev || 'alert alert-danger';
+                showErr('');
+            }, 1800);
+            renderGuestList();
+            renderTables();
+        } else {
+            clearSwapPick();
+            renderTables();
+        }
+    }
+
+    function nextTablePosition() {
+        var n = state.tables.length + 1;
+        var cols = gridColumnCount(n);
+        var gapX = 48;
+        var gapY = 48;
+        var startX = 80;
+        var startY = 80;
+        var cellW = CANVAS_TABLE_W + gapX;
+        var cellH = CANVAS_TABLE_H + gapY;
+        var i = n - 1;
+        var col = i % cols;
+        var row = Math.floor(i / cols);
+        return { x: startX + col * cellW, y: startY + row * cellH };
+    }
+
+    function addTable(shape) {
+        var id = 'tbl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+        var pos = nextTablePosition();
+        state.tables.push({
+            id: id,
+            name: defaultTableName(state.tables.length + 1),
+            seatLabelPrefix: '',
+            shape: shape === 'square' ? 'square' : 'round',
+            length: 360,
+            x: pos.x,
+            y: pos.y,
+            capacity: 10,
+            userIds: []
+        });
+        renderTables();
+    }
+
     function renderTables() {
         $canvas.innerHTML = '';
-        var R = 118;
-        var cx = 140;
-        var cy = 140;
+        var plateSize = 268;
         var ringR = 48;
         var ringC = 2 * Math.PI * ringR;
 
         state.tables.forEach(function(t, idx) {
+            if (t.shape !== 'square') t.shape = 'round';
+            var isSquare = t.shape === 'square';
+            var tableLen = isSquare ? normalizeTableLength(t.length) : 280;
+            t.length = isSquare ? tableLen : (t.length || 360);
+            var plateW = isSquare ? tableLen : plateSize;
+            var plateH = isSquare ? 140 : plateSize;
+            var stagePadX = isSquare ? 16 : 36;
+            var stagePadY = isSquare ? 64 : 36;
+            var stageW = isSquare ? (plateW + stagePadX * 2) : 340;
+            var stageH = isSquare ? (plateH + stagePadY * 2) : 340;
+
             var div = document.createElement('div');
             div.className = 'round-table';
+            div.style.width = stageW + 'px';
             div.style.left = (t.x || 40) + 'px';
             div.style.top = (t.y || 40) + 'px';
             div.dataset.tableId = t.id;
@@ -528,16 +896,39 @@
             var cap = Math.max(1, parseInt(t.capacity, 10) || 10);
             var pct = cap > 0 ? Math.min(1, used / cap) : 0;
             var dashOff = ringC * (1 - pct);
-
             var slots = buildSeatSlots(t, cap);
+            var isThisTableSwap = swapPick && swapPick.tableId === t.id;
 
             var toolbar = document.createElement('div');
             toolbar.className = 'rt-toolbar';
-            toolbar.innerHTML = '<span>' + _SA.tableNum.replace('{num}', idx + 1) + '</span>' +
-                '<div class="cap-row">' + _SA.capacityLabel + ' <input type="number" min="1" max="999" value="' + cap + '" class="form-control form-control-sm tbl-cap"/></div>';
+            toolbar.innerHTML =
+                '<div class="cap-row">' +
+                '<input type="text" class="form-control form-control-sm tbl-name" maxlength="80" ' +
+                'value="' + escapeAttr(t.name || '') + '" ' +
+                'placeholder="' + escapeAttr(defaultTableName(idx + 1)) + '" ' +
+                'title="' + escapeAttr(_SA.tableNameLabel) + '"/>' +
+                ' <span class="rt-shape-tag">' + (isSquare ? _SA.shapeSquare : _SA.shapeRound) + '</span>' +
+                ' ' + escapeHtml(_SA.seatLabelPrefixLabel) +
+                ' <input type="text" class="form-control form-control-sm tbl-seat-prefix" maxlength="12" ' +
+                'value="' + escapeAttr(t.seatLabelPrefix || '') + '" ' +
+                'placeholder="' + escapeAttr(_SA.seatLabelPrefixDefault) + '" ' +
+                'title="' + escapeAttr(_SA.seatLabelPrefixHint) + '"/>' +
+                '</div>' +
+                '<div class="cap-row">' + _SA.capacityLabel + ' <input type="number" min="1" max="999" value="' + cap + '" class="form-control form-control-sm tbl-cap"/>' +
+                (isSquare
+                    ? (' ' + _SA.lengthLabel + ' <input type="number" min="200" max="900" step="20" value="' + tableLen + '" class="form-control form-control-sm tbl-len"/>')
+                    : '') +
+                '</div>';
+
+            var stage = document.createElement('div');
+            stage.className = 'rt-stage ' + (isSquare ? 'rt-stage-square' : 'rt-stage-round');
+            stage.style.width = stageW + 'px';
+            if (isSquare) stage.style.height = stageH + 'px';
 
             var plate = document.createElement('div');
-            plate.className = 'rt-plate';
+            plate.className = 'rt-plate' + (isSquare ? ' rt-shape-square' : '');
+            plate.style.width = plateW + 'px';
+            plate.style.height = plateH + 'px';
 
             var center = document.createElement('div');
             center.className = 'rt-center';
@@ -548,56 +939,74 @@
                 ' stroke-dasharray="' + ringC + '"' +
                 ' stroke-dashoffset="' + dashOff + '"/>' +
                 '</svg>' +
-                '<div class="rt-center-num">' + (idx + 1) + '</div>';
+                '<div class="rt-center-num" title="' + escapeAttr(tableDisplayName(t, idx)) + '">' + (idx + 1) + '</div>';
 
             var layer = document.createElement('div');
             layer.className = 'rt-seats-layer';
+
+            var seatCx = stageW / 2;
+            var seatCy = stageH / 2;
+            var seatR = Math.min(stageW, stageH) / 2 - 28;
 
             var si;
             for (si = 0; si < cap; si++) {
                 var slotEl = document.createElement('div');
                 var slot = slots[si];
-                var xy = polarSlotXY(si, cap, cx, cy, R);
+                var seatNo = slot.seatNo || (si + 1);
+                var xy = isSquare
+                    ? squareSlotXY(si, cap, stageW, stageH)
+                    : polarSlotXY(si, cap, seatCx, seatCy, seatR);
                 slotEl.style.left = xy.left + 'px';
                 slotEl.style.top = xy.top + 'px';
 
+                var badge = document.createElement('span');
+                badge.className = 'rt-seat-no';
+                badge.textContent = getSeatPrefix(t) + String(seatNo);
+
                 if (slot.kind === 'empty') {
                     slotEl.className = 'rt-slot empty';
-                    slotEl.title = _SA.emptySlotTitle;
+                    slotEl.title = _SA.emptySlotTitle.replace('{num}', seatNo);
+                    slotEl.appendChild(badge);
                 } else if (slot.kind === 'companion') {
+                    var ownerName = userDisplayName(slot.forUid);
                     slotEl.className = 'rt-slot companion';
-                    slotEl.textContent = '+1';
-                    slotEl.title = _SA.companionSlotTitle;
+                    slotEl.title = _SA.companionSlotTitle.replace('{num}', seatNo) +
+                        ' · ' + _SA.companionOf.replace('{name}', ownerName);
+                    slotEl.appendChild(badge);
+                    var compLabel = document.createElement('span');
+                    compLabel.className = 'rt-comp-label';
+                    compLabel.textContent = ownerName;
+                    slotEl.appendChild(compLabel);
                 } else {
                     slotEl.className = 'rt-slot guest';
-                    slotEl.title = _SA.clickToUnassign;
+                    if (isThisTableSwap && swapPick.uid === slot.uid) {
+                        slotEl.classList.add('rt-swap-pick');
+                    }
+                    slotEl.title = _SA.clickToUnassign + ' · ' + _SA.seatNum.replace('{num}', seatNo);
                     var cols = categoryColorsForUser(slot.uid);
                     slotEl.style.setProperty('--rt-brd', cols.brd);
                     slotEl.style.setProperty('--rt-bg', cols.bg);
-                    var u = findUser(slot.uid);
+                    slotEl.appendChild(badge);
                     var nm = document.createElement('span');
                     nm.className = 'rt-name';
-                    nm.textContent = (u && u.name) ? u.name : slot.uid;
+                    nm.textContent = userDisplayName(slot.uid);
                     slotEl.appendChild(nm);
                     var rm = document.createElement('button');
                     rm.type = 'button';
                     rm.className = 'rt-remove';
                     rm.innerHTML = '&times;';
                     rm.title = _SA.removeFromTable;
-                    var unassignThisGuest = function(ev) {
-                        if (ev) {
-                            ev.preventDefault();
-                            ev.stopPropagation();
-                        }
-                        t.userIds = (t.userIds || []).filter(function(id) { return id !== slot.uid; });
-                        showErr('');
-                        renderGuestList();
-                        renderTables();
-                    };
-                    rm.addEventListener('click', unassignThisGuest);
+                    var uidGuest = slot.uid;
+                    rm.addEventListener('click', function(ev) {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        unassignGuestFromTable(t, uidGuest);
+                    });
                     slotEl.addEventListener('click', function(ev) {
                         if (ev.target.closest('.rt-remove')) return;
-                        unassignThisGuest(ev);
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        handleGuestSwapClick(t, uidGuest);
                     });
                     slotEl.appendChild(rm);
                 }
@@ -605,16 +1014,78 @@
             }
 
             plate.appendChild(center);
-            plate.appendChild(layer);
+            stage.appendChild(plate);
+            stage.appendChild(layer);
 
             var foot = document.createElement('div');
             foot.className = 'rt-foot';
             foot.innerHTML = '<span>' + _SA.occupiedStat.replace('{used}', used).replace('{cap}', cap) + '</span> ' +
                 '<button type="button" class="btn btn-sm btn-outline-danger tbl-remove">' + _SA.removeTableBtn + '</button>';
 
+            var assignedBox = document.createElement('div');
+            assignedBox.className = 'rt-assigned';
+            var listHtml = '<div class="rt-assigned-title">' + _SA.assignedListTitle + '</div>';
+            if (isThisTableSwap) {
+                var pickInfo = guestSeatInfo(slots, swapPick.uid);
+                var pickSeats = pickInfo ? formatSeatBadge(pickInfo, t) : String((pickInfo && pickInfo.main) || '');
+                listHtml += '<div class="rt-swap-hint">' +
+                    escapeHtml(_SA.swapPickHint
+                        .replace('{name}', userDisplayName(swapPick.uid))
+                        .replace('{seats}', pickSeats)) +
+                    '</div>';
+            }
+            var guestSlots = slots.filter(function(s) { return s.kind === 'guest'; });
+            if (guestSlots.length === 0) {
+                listHtml += '<div class="text-muted">—</div>';
+            } else {
+                guestSlots.forEach(function(s) {
+                    var info = guestSeatInfo(slots, s.uid);
+                    var pickCls = (isThisTableSwap && swapPick.uid === s.uid) ? ' rt-swap-pick-row' : '';
+                    listHtml += '<div class="rt-assigned-row' + pickCls + '" data-uid="' + escapeAttr(s.uid) + '">' +
+                        '<span class="seat-badge">' + escapeHtml(formatSeatBadge(info, t)) + '</span>' +
+                        '<span class="meta">' +
+                        '<span class="name" title="' + escapeAttr(userDisplayName(s.uid)) + '">' + escapeHtml(userDisplayName(s.uid)) + '</span>' +
+                        '<span class="seats-detail">' + escapeHtml(formatSeatDetail(info, t)) + '</span>' +
+                        '</span>' +
+                        '<span class="actions">' +
+                        '<button type="button" class="btn-swap" title="' + escapeAttr(_SA.swapSeatsBtn) + '">' + _SA.swapSeatsBtn + '</button>' +
+                        '<button type="button" class="btn-rm" title="' + escapeAttr(_SA.removeFromTable) + '">' + _SA.removeFromTable + '</button>' +
+                        '</span>' +
+                        '</div>';
+                });
+            }
+            assignedBox.innerHTML = listHtml;
+            assignedBox.querySelectorAll('.rt-assigned-row .btn-rm').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var row = btn.closest('.rt-assigned-row');
+                    var uid = row && row.getAttribute('data-uid');
+                    if (uid) unassignGuestFromTable(t, uid);
+                });
+            });
+            assignedBox.querySelectorAll('.rt-assigned-row .btn-swap').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var row = btn.closest('.rt-assigned-row');
+                    var uid = row && row.getAttribute('data-uid');
+                    if (uid) handleGuestSwapClick(t, uid);
+                });
+            });
+            assignedBox.querySelectorAll('.rt-assigned-row').forEach(function(row) {
+                row.addEventListener('click', function(e) {
+                    if (e.target.closest('button')) return;
+                    var uid = row.getAttribute('data-uid');
+                    if (uid) handleGuestSwapClick(t, uid);
+                });
+                row.style.cursor = 'pointer';
+            });
+
             div.appendChild(toolbar);
-            div.appendChild(plate);
+            div.appendChild(stage);
             div.appendChild(foot);
+            div.appendChild(assignedBox);
 
             var capInput = div.querySelector('.tbl-cap');
             capInput.addEventListener('change', function() {
@@ -625,8 +1096,42 @@
             });
             capInput.addEventListener('mousedown', function(e) { e.stopPropagation(); });
 
+            var nameInput = div.querySelector('.tbl-name');
+            if (nameInput) {
+                nameInput.addEventListener('change', function() {
+                    t.name = String(nameInput.value || '').trim().slice(0, 80);
+                    nameInput.value = t.name;
+                    var tip = tableDisplayName(t, idx);
+                    var centerNum = div.querySelector('.rt-center-num');
+                    if (centerNum) centerNum.setAttribute('title', tip);
+                });
+                nameInput.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+                nameInput.addEventListener('click', function(e) { e.stopPropagation(); });
+            }
+
+            var prefixInput = div.querySelector('.tbl-seat-prefix');
+            if (prefixInput) {
+                prefixInput.addEventListener('change', function() {
+                    t.seatLabelPrefix = String(prefixInput.value || '').trim().slice(0, 12);
+                    prefixInput.value = t.seatLabelPrefix;
+                    renderTables();
+                });
+                prefixInput.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+                prefixInput.addEventListener('click', function(e) { e.stopPropagation(); });
+            }
+
+            var lenInput = div.querySelector('.tbl-len');
+            if (lenInput) {
+                lenInput.addEventListener('change', function() {
+                    t.length = normalizeTableLength(lenInput.value);
+                    renderTables();
+                });
+                lenInput.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+            }
+
             div.querySelector('.tbl-remove').addEventListener('click', function(e) {
                 e.stopPropagation();
+                if (swapPick && swapPick.tableId === t.id) clearSwapPick();
                 state.tables = state.tables.filter(function(x) { return x.id !== t.id; });
                 renderGuestList();
                 renderTables();
@@ -660,7 +1165,7 @@
 
             var dragTable = false, startX, startY, origX, origY, zoomFactor = 1;
             div.addEventListener('mousedown', function(e) {
-                if (e.target.closest('input') || e.target.closest('button') || e.target.closest('.rt-slot')) return;
+                if (e.target.closest('input') || e.target.closest('button') || e.target.closest('.rt-slot') || e.target.closest('.rt-assigned') || e.target.closest('.rt-toolbar') || e.target.closest('.rt-foot')) return;
                 dragTable = true;
                 zoomFactor = getCanvasZoom();
                 startX = e.clientX;
@@ -676,6 +1181,7 @@
                 t.y = origY + dy / zoomFactor;
                 div.style.left = t.x + 'px';
                 div.style.top = t.y + 'px';
+                sizeCanvasFromTables();
             });
             document.addEventListener('mouseup', function() { dragTable = false; });
 
@@ -684,29 +1190,8 @@
         sizeCanvasFromTables();
     }
 
-    document.getElementById('btnAddTable').addEventListener('click', function() {
-        var id = 'tbl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-        var n = state.tables.length + 1;
-        var cols = Math.ceil(Math.sqrt(n));
-        cols = Math.max(4, Math.min(cols, 8));
-        var gapX = 48;
-        var gapY = 48;
-        var startX = 80;
-        var startY = 80;
-        var cellW = CANVAS_TABLE_W + gapX;
-        var cellH = CANVAS_TABLE_H + gapY;
-        var i = n - 1;
-        var col = i % cols;
-        var row = Math.floor(i / cols);
-        state.tables.push({
-            id: id,
-            x: startX + col * cellW,
-            y: startY + row * cellH,
-            capacity: 10,
-            userIds: []
-        });
-        renderTables();
-    });
+    document.getElementById('btnAddTable').addEventListener('click', function() { addTable('round'); });
+    document.getElementById('btnAddSquareTable').addEventListener('click', function() { addTable('square'); });
 
     $canvasZoom.addEventListener('input', applyCanvasZoom);
     document.getElementById('btnZoomFit').addEventListener('click', zoomFitViewport);
@@ -781,9 +1266,25 @@
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 users = data.users || users;
+                clearSwapPick();
                 state.categoryFieldName = data.seating.categoryFieldName || 'company';
+                var legacyPrefix = (data.seating.seatLabelPrefix != null ? String(data.seating.seatLabelPrefix) : '').trim().slice(0, 12);
                 state.companionByUserId = data.seating.companionByUserId || {};
-                state.tables = data.seating.tables || [];
+                state.tables = (data.seating.tables || []).map(function(t) {
+                    var p = (t.seatLabelPrefix != null ? String(t.seatLabelPrefix) : '').trim().slice(0, 12);
+                    if (!p && legacyPrefix) p = legacyPrefix;
+                    return {
+                        id: t.id,
+                        name: (t.name != null ? String(t.name) : '').trim(),
+                        seatLabelPrefix: p,
+                        shape: t.shape === 'square' ? 'square' : 'round',
+                        length: Math.max(200, Math.min(900, parseInt(t.length, 10) || 360)),
+                        x: t.x,
+                        y: t.y,
+                        capacity: t.capacity,
+                        userIds: t.userIds || []
+                    };
+                });
                 renderCategorySelect();
                 renderGuestList();
                 renderTables();
@@ -794,8 +1295,8 @@
     renderCategorySelect();
     if (!state.tables || state.tables.length === 0) {
         state.tables = [
-            { id: 'tbl_default_1', x: 80, y: 80, capacity: 10, userIds: [] },
-            { id: 'tbl_default_2', x: 340, y: 120, capacity: 10, userIds: [] }
+            { id: 'tbl_default_1', name: defaultTableName(1), seatLabelPrefix: 'A', shape: 'round', length: 360, x: 80, y: 80, capacity: 10, userIds: [] },
+            { id: 'tbl_default_2', name: defaultTableName(2), seatLabelPrefix: 'B', shape: 'round', length: 360, x: 340, y: 120, capacity: 10, userIds: [] }
         ];
     }
     renderGuestList();

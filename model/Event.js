@@ -138,6 +138,13 @@ const eventSchema = new mongoose.Schema({
         companionByUserId: { type: mongoose.Schema.Types.Mixed, default: {} },
         tables: [{
             id: { type: String, required: true },
+            /** 自訂桌名；空白則前端用「第 N 桌」 */
+            name: { type: String, default: '' },
+            /** 此桌座位代號前綴，例如 A、B、VIP；顯示為 A1、B1 */
+            seatLabelPrefix: { type: String, default: '' },
+            shape: { type: String, enum: ['round', 'square'], default: 'round' },
+            /** 方桌長度（像素寬度）；圓桌忽略 */
+            length: { type: Number, default: 360 },
             x: { type: Number, default: 48 },
             y: { type: Number, default: 48 },
             capacity: { type: Number, default: 10 },
