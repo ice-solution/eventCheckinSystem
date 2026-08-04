@@ -5782,9 +5782,31 @@ exports.saveSeatingArrangementApi = async (req, res) => {
         const safeTables = Array.isArray(tables) ? tables : [];
 
         const assigned = new Set();
+        const normalizeShape = (s) => {
+            if (s === 'square' || s === 'row' || s === 'prop') return s;
+            return 'round';
+        };
+        const normalizeScale = (v) => {
+            const n = parseFloat(v);
+            if (isNaN(n)) return 1;
+            return Math.max(0.5, Math.min(2, Math.round(n * 20) / 20));
+        };
+        const normalizePropType = (s) => {
+            const allowed = ['stage', 'buffet', 'bar', 'entrance', 'restroom', 'flower', 'other'];
+            const v = String(s || '').trim();
+            return allowed.includes(v) ? v : 'other';
+        };
+        const normalizePropExportFormat = (s) => {
+            const allowed = ['name', 'type', 'nameType', 'iconName', 'custom'];
+            const v = String(s || '').trim();
+            return allowed.includes(v) ? v : 'nameType';
+        };
+
         for (let ti = 0; ti < safeTables.length; ti++) {
             const t = safeTables[ti];
             if (!t || !t.id) return res.status(400).json({ message: '每張桌必須有 id' });
+            const shape = normalizeShape(t.shape);
+            if (shape === 'prop') continue; // 擺設無座位
             const cap = Math.max(1, parseInt(t.capacity, 10) || 10);
             const uids = Array.isArray(t.userIds) ? t.userIds : [];
             let seats = 0;
@@ -5808,17 +5830,25 @@ exports.saveSeatingArrangementApi = async (req, res) => {
         event.seatingArrangement = {
             categoryFieldName: (categoryFieldName && String(categoryFieldName).trim()) || 'company',
             companionByUserId: safeCompanion,
-            tables: safeTables.map(t => ({
-                id: String(t.id),
-                name: (t.name != null ? String(t.name) : '').trim().slice(0, 80),
-                seatLabelPrefix: (t.seatLabelPrefix != null ? String(t.seatLabelPrefix) : '').trim().slice(0, 12),
-                shape: (t.shape === 'square') ? 'square' : 'round',
-                length: Math.max(200, Math.min(900, parseInt(t.length, 10) || 360)),
-                x: typeof t.x === 'number' ? t.x : parseFloat(t.x) || 48,
-                y: typeof t.y === 'number' ? t.y : parseFloat(t.y) || 48,
-                capacity: Math.max(1, parseInt(t.capacity, 10) || 10),
-                userIds: (Array.isArray(t.userIds) ? t.userIds : []).map(id => String(id))
-            }))
+            tables: safeTables.map(t => {
+                const shape = normalizeShape(t.shape);
+                const isProp = shape === 'prop';
+                return {
+                    id: String(t.id),
+                    name: (t.name != null ? String(t.name) : '').trim().slice(0, 80),
+                    seatLabelPrefix: isProp ? '' : (t.seatLabelPrefix != null ? String(t.seatLabelPrefix) : '').trim().slice(0, 12),
+                    shape,
+                    scale: normalizeScale(t.scale),
+                    length: Math.max(80, Math.min(1200, parseInt(t.length, 10) || (shape === 'row' ? 520 : shape === 'prop' ? 160 : 360))),
+                    propType: isProp ? normalizePropType(t.propType) : '',
+                    propExportFormat: isProp ? normalizePropExportFormat(t.propExportFormat) : '',
+                    propExportText: isProp ? (t.propExportText != null ? String(t.propExportText) : '').trim().slice(0, 120) : '',
+                    x: typeof t.x === 'number' ? t.x : parseFloat(t.x) || 48,
+                    y: typeof t.y === 'number' ? t.y : parseFloat(t.y) || 48,
+                    capacity: isProp ? 0 : Math.max(1, parseInt(t.capacity, 10) || 10),
+                    userIds: isProp ? [] : (Array.isArray(t.userIds) ? t.userIds : []).map(id => String(id))
+                };
+            })
         };
         event.markModified('seatingArrangement');
         await event.save();

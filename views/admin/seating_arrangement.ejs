@@ -67,20 +67,39 @@
     }
     .rt-toolbar .cap-row { display: flex; align-items: center; gap: 4px; margin: 0; font-weight: normal; flex-wrap: wrap; }
     .rt-toolbar .tbl-name {
-        width: 110px; padding: 2px 6px; font-size: 12px; height: 26px; font-weight: 600;
+        width: 110px; padding: 2px 6px; font-size: 12px; height: 30px; line-height: 1.25; font-weight: 600;
     }
     .rt-toolbar .tbl-seat-prefix {
-        width: 52px; padding: 2px 4px; font-size: 12px; height: 26px; text-align: center; font-weight: 700;
+        width: 52px; padding: 2px 4px; font-size: 12px; height: 30px; line-height: 1.25; text-align: center; font-weight: 700;
     }
     .rt-toolbar .cap-row input.tbl-cap {
-        width: 52px; padding: 2px 6px; font-size: 12px; height: 26px;
+        width: 52px; padding: 2px 6px; font-size: 12px; height: 30px; line-height: 1.25;
         text-align: center;
         -moz-appearance: textfield;
     }
     .rt-toolbar .cap-row input.tbl-len {
-        width: 64px; padding: 2px 6px; font-size: 12px; height: 26px;
+        width: 64px; padding: 2px 6px; font-size: 12px; height: 30px; line-height: 1.25;
         text-align: center;
         -moz-appearance: textfield;
+    }
+    .rt-toolbar .tbl-scale {
+        width: 64px; padding: 2px 4px; font-size: 12px; height: 30px; line-height: 1.25; text-align: center;
+    }
+    .rt-toolbar select.tbl-prop-type,
+    .rt-toolbar select.form-control-sm {
+        width: auto;
+        min-width: 96px;
+        height: 30px !important;
+        min-height: 30px !important;
+        padding: 2px 24px 2px 8px !important;
+        font-size: 12px !important;
+        line-height: 1.25 !important;
+        box-sizing: border-box;
+        overflow: visible;
+        vertical-align: middle;
+        appearance: auto;
+        -webkit-appearance: menulist;
+        -moz-appearance: menulist;
     }
     .rt-toolbar .cap-row input.tbl-cap::-webkit-outer-spin-button,
     .rt-toolbar .cap-row input.tbl-cap::-webkit-inner-spin-button,
@@ -256,7 +275,96 @@
     .rt-assigned-row .btn-rm:hover { color: #a71d2a; text-decoration: underline; }
     .rt-assigned-row .btn-swap { color: #007bff; }
     .rt-assigned-row .btn-swap:hover { text-decoration: underline; }
+    .rt-cap-step { display: inline-flex; align-items: center; gap: 2px; }
+    .rt-cap-step button {
+        width: 28px; height: 30px; border: 1px solid #ced4da; border-radius: 4px;
+        background: #f8f9fa; cursor: pointer; font-weight: 700; line-height: 1;
+    }
+    .rt-cap-step button:hover { background: #e9ecef; }
+    .rt-stage.rt-stage-row {
+        padding: 48px 12px 48px; box-sizing: border-box; min-height: 140px;
+    }
+    .rt-plate.rt-shape-row {
+        border-radius: 8px; height: 36px;
+        background: linear-gradient(180deg, #fff 0%, #eef1f5 100%);
+        border: 1px dashed #adb5bd;
+        box-shadow: none;
+    }
+    .rt-plate.rt-shape-row::before { display: none; }
+    .rt-plate.rt-shape-row .rt-center { width: auto; height: auto; }
+    .rt-plate.rt-shape-row .rt-center-num {
+        position: static; transform: none; font-size: 13px; color: #6c757d;
+        white-space: nowrap; padding: 0 8px;
+    }
+    .rt-plate.rt-shape-row .rt-ring-svg { display: none; }
+    .rt-prop {
+        min-width: 120px; max-width: 280px;
+        border: 2px dashed #c9a227; border-radius: 10px;
+        background: repeating-linear-gradient(-45deg, #fffbeb, #fffbeb 8px, #fef3c7 8px, #fef3c7 16px);
+        padding: 10px; cursor: move; user-select: none;
+    }
+    .rt-prop .rt-prop-icon {
+        font-size: 22px; text-align: center; line-height: 1.2; margin-bottom: 4px;
+    }
+    .rt-prop .rt-prop-title {
+        font-weight: 800; font-size: 13px; text-align: center; color: #5B4A43;
+        word-break: break-word;
+    }
+    .rt-prop .rt-prop-tag {
+        display: block; text-align: center; font-size: 10px; color: #92400e;
+        margin-top: 2px; font-weight: 700;
+    }
+    .rt-prop .rt-prop-hint {
+        font-size: 10px; color: #a16207; text-align: center; margin-top: 6px;
+    }
     .toolbar-top { margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+    /* 匯出用：只保留枱面／座位／擺設視覺 */
+    .seating-canvas.export-clean .rt-toolbar,
+    .seating-canvas.export-clean .rt-foot,
+    .seating-canvas.export-clean .rt-assigned,
+    .seating-canvas.export-clean .rt-remove,
+    .seating-canvas.export-clean .rt-swap-hint,
+    .seating-canvas.export-clean .rt-prop-hint {
+        display: none !important;
+    }
+    .seating-canvas.export-clean .round-table {
+        cursor: default;
+    }
+    .seating-canvas.export-clean .rt-slot.guest {
+        cursor: default;
+    }
+    /* Prop 匯出格式 */
+    .seating-canvas.export-clean .rt-prop.fmt-name .rt-prop-icon,
+    .seating-canvas.export-clean .rt-prop.fmt-name .rt-prop-tag,
+    .seating-canvas.export-clean .rt-prop.fmt-type .rt-prop-icon,
+    .seating-canvas.export-clean .rt-prop.fmt-type .rt-prop-title,
+    .seating-canvas.export-clean .rt-prop.fmt-nameType .rt-prop-icon,
+    .seating-canvas.export-clean .rt-prop.fmt-iconName .rt-prop-tag,
+    .seating-canvas.export-clean .rt-prop.fmt-custom .rt-prop-icon,
+    .seating-canvas.export-clean .rt-prop.fmt-custom .rt-prop-tag {
+        display: none !important;
+    }
+    .seating-canvas.export-clean .rt-prop {
+        max-width: none;
+        padding: 14px 18px;
+        background: #fffbeb;
+        border: 2px solid #c9a227;
+    }
+    .seating-canvas.export-clean .rt-prop .rt-prop-title {
+        font-size: 16px;
+    }
+    .seating-canvas.export-clean .rt-prop .rt-prop-tag {
+        font-size: 12px;
+    }
+    #seating-export-host {
+        position: fixed;
+        left: -100000px;
+        top: 0;
+        z-index: -1;
+        background: #f0f2f5;
+        box-sizing: content-box;
+    }
 </style>
 
 <div id="right-panel" class="right-panel">
@@ -277,6 +385,8 @@
                         <select id="categoryField" class="form-control form-control-sm" style="width: 260px;"></select>
                         <button type="button" class="btn btn-primary btn-sm" id="btnAddTable"><%= t('seating.addTableBtn') %></button>
                         <button type="button" class="btn btn-outline-primary btn-sm" id="btnAddSquareTable"><%= t('seating.addSquareTableBtn') %></button>
+                        <button type="button" class="btn btn-outline-info btn-sm" id="btnAddRowTable"><%= t('seating.addRowTableBtn') %></button>
+                        <button type="button" class="btn btn-outline-warning btn-sm" id="btnAddProp"><%= t('seating.addPropBtn') %></button>
                         <span class="stat-line mb-0" id="statUnassignedToolbar"></span>
                     </div>
                     <div id="alertSeating" class="alert alert-danger" style="display:none;"></div>
@@ -292,7 +402,7 @@
                                 <span id="canvasZoomPct" class="text-monospace">85%</span>
                                 <button type="button" class="btn btn-sm btn-outline-secondary" id="btnZoomFit"><%= t('seating.fitWindowBtn') %></button>
                                 <button type="button" class="btn btn-sm btn-outline-primary" id="btnLayoutGrid"><%= t('seating.gridLayoutBtn') %></button>
-                                <button type="button" class="btn btn-sm btn-outline-success" id="btnExportPng"><%= t('seating.exportPngBtn') %></button>
+                                <button type="button" class="btn btn-sm btn-outline-success" id="btnExportZip"><%= t('seating.exportZipBtn') %></button>
                                 <span class="toolbar-hint"><%= t('seating.canvasHint') %></span>
                             </div>
                             <div class="seating-canvas-scroll" id="canvasScroll">
@@ -310,6 +420,8 @@
 
 <%- include ("components/footer") %>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 <script>
 (function() {
@@ -327,8 +439,35 @@
         seatLabelPrefixHint: '<%= t("seating.seatLabelPrefixHint") %>',
         shapeRound: '<%= t("seating.shapeRound") %>',
         shapeSquare: '<%= t("seating.shapeSquare") %>',
+        shapeRow: '<%= t("seating.shapeRow") %>',
+        shapeProp: '<%= t("seating.shapeProp") %>',
+        scaleLabel: '<%= t("seating.scaleLabel") %>',
         capacityLabel: '<%= t("seating.capacityLabel") %>',
         lengthLabel: '<%= t("seating.lengthLabel") %>',
+        propTypeLabel: '<%= t("seating.propTypeLabel") %>',
+        propTypeStage: '<%= t("seating.propTypeStage") %>',
+        propTypeBuffet: '<%= t("seating.propTypeBuffet") %>',
+        propTypeBar: '<%= t("seating.propTypeBar") %>',
+        propTypeEntrance: '<%= t("seating.propTypeEntrance") %>',
+        propTypeRestroom: '<%= t("seating.propTypeRestroom") %>',
+        propTypeFlower: '<%= t("seating.propTypeFlower") %>',
+        propTypeOther: '<%= t("seating.propTypeOther") %>',
+        propDefaultName: '<%= t("seating.propDefaultName") %>',
+        propHint: '<%= t("seating.propHint") %>',
+        removePropBtn: '<%= t("seating.removePropBtn") %>',
+        seatsPlus: '<%= t("seating.seatsPlus") %>',
+        seatsMinus: '<%= t("seating.seatsMinus") %>',
+        propExportFormatLabel: '<%= t("seating.propExportFormatLabel") %>',
+        propExportFormatName: '<%= t("seating.propExportFormatName") %>',
+        propExportFormatType: '<%= t("seating.propExportFormatType") %>',
+        propExportFormatNameType: '<%= t("seating.propExportFormatNameType") %>',
+        propExportFormatIconName: '<%= t("seating.propExportFormatIconName") %>',
+        propExportFormatCustom: '<%= t("seating.propExportFormatCustom") %>',
+        propExportTextLabel: '<%= t("seating.propExportTextLabel") %>',
+        propExportTextPlaceholder: '<%= t("seating.propExportTextPlaceholder") %>',
+        exportCompanionSuffix: '<%= t("seating.exportCompanionSuffix") %>',
+        exportColSeat: '<%= t("seating.exportColSeat") %>',
+        exportColGuest: '<%= t("seating.exportColGuest") %>',
         seatNum: '<%= t("seating.seatNum") %>',
         emptySlotTitle: '<%= t("seating.emptySlotTitle") %>',
         companionSlotTitle: '<%= t("seating.companionSlotTitle") %>',
@@ -349,8 +488,14 @@
         saved: '<%= t("seating.saved") %>',
         saveFailed: '<%= t("seating.saveFailed") %>',
         loadFailed: '<%= t("seating.loadFailed") %>',
+        exportZipBtn: '<%= t("seating.exportZipBtn") %>',
         exportFailed: '<%= t("seating.exportFailed") %>',
         exportLoadError: '<%= t("seating.exportLoadError") %>',
+        exportColTable: '<%= t("seating.exportColTable") %>',
+        exportColCompany: '<%= t("seating.exportColCompany") %>',
+        exportSheetName: '<%= t("seating.exportSheetName") %>',
+        exportEmptyCompany: '<%= t("seating.exportEmptyCompany") %>',
+        exportDone: '<%= t("seating.exportDone") %>',
         gridLayoutConfirm: '<%= t("seating.gridLayoutConfirm") %>',
         noTablesAlert: '<%= t("seating.noTablesAlert") %>'
     };
@@ -371,16 +516,21 @@
             state.tables = (initial.tables || []).map(function(t) {
                 var p = (t.seatLabelPrefix != null ? String(t.seatLabelPrefix) : '').trim().slice(0, 12);
                 if (!p && legacyPrefix) p = legacyPrefix;
+                var shape = (t.shape === 'square' || t.shape === 'row' || t.shape === 'prop') ? t.shape : 'round';
                 return {
                     id: t.id,
                     name: (t.name != null ? String(t.name) : '').trim(),
-                    seatLabelPrefix: p,
-                    shape: t.shape === 'square' ? 'square' : 'round',
-                    length: Math.max(200, Math.min(900, parseInt(t.length, 10) || 360)),
+                    seatLabelPrefix: shape === 'prop' ? '' : p,
+                    shape: shape,
+                    scale: Math.max(0.5, Math.min(2, parseFloat(t.scale) || 1)),
+                    length: Math.max(80, Math.min(1200, parseInt(t.length, 10) || (shape === 'row' ? 520 : shape === 'prop' ? 160 : 360))),
+                    propType: t.propType || (shape === 'prop' ? 'other' : ''),
+                    propExportFormat: t.propExportFormat || (shape === 'prop' ? 'nameType' : ''),
+                    propExportText: (t.propExportText != null ? String(t.propExportText) : '').trim(),
                     x: t.x,
                     y: t.y,
-                    capacity: t.capacity,
-                    userIds: t.userIds || []
+                    capacity: shape === 'prop' ? 0 : (t.capacity || 10),
+                    userIds: shape === 'prop' ? [] : (t.userIds || [])
                 };
             });
         }
@@ -419,10 +569,21 @@
         state.tables.forEach(function(t) {
             var x = t.x != null ? t.x : 40;
             var y = t.y != null ? t.y : 40;
-            var tw = (t.shape === 'square')
-                ? Math.max(200, Math.min(900, parseInt(t.length, 10) || 360)) + 40
-                : CANVAS_TABLE_W;
-            var th = (t.shape === 'square') ? 420 : CANVAS_TABLE_H;
+            var sc = Math.max(0.5, Math.min(2, parseFloat(t.scale) || 1));
+            var tw, th;
+            if (t.shape === 'prop') {
+                tw = (Math.max(80, Math.min(1200, parseInt(t.length, 10) || 160)) + 40) * sc;
+                th = 180 * sc;
+            } else if (t.shape === 'row') {
+                tw = (Math.max(200, Math.min(1200, parseInt(t.length, 10) || 520)) + 40) * sc;
+                th = 360 * sc;
+            } else if (t.shape === 'square') {
+                tw = (Math.max(200, Math.min(1200, parseInt(t.length, 10) || 360)) + 40) * sc;
+                th = 420 * sc;
+            } else {
+                tw = CANVAS_TABLE_W * sc;
+                th = CANVAS_TABLE_H * sc;
+            }
             maxR = Math.max(maxR, x + tw + pad);
             maxB = Math.max(maxB, y + th + pad);
         });
@@ -626,12 +787,58 @@
         if (el2) el2.textContent = txt;
     }
 
+    function normalizeShape(s) {
+        if (s === 'square' || s === 'row' || s === 'prop') return s;
+        return 'round';
+    }
+    function normalizeScale(v) {
+        var n = parseFloat(v);
+        if (isNaN(n)) n = 1;
+        return Math.max(0.5, Math.min(2, Math.round(n * 20) / 20));
+    }
+    function shapeLabel(shape) {
+        if (shape === 'square') return _SA.shapeSquare;
+        if (shape === 'row') return _SA.shapeRow;
+        if (shape === 'prop') return _SA.shapeProp;
+        return _SA.shapeRound;
+    }
+    function propTypeLabel(pt) {
+        var map = {
+            stage: _SA.propTypeStage,
+            buffet: _SA.propTypeBuffet,
+            bar: _SA.propTypeBar,
+            entrance: _SA.propTypeEntrance,
+            restroom: _SA.propTypeRestroom,
+            flower: _SA.propTypeFlower,
+            other: _SA.propTypeOther
+        };
+        return map[pt] || _SA.propTypeOther;
+    }
+    function propTypeIcon(pt) {
+        var map = {
+            stage: '🎭',
+            buffet: '🍽️',
+            bar: '🍸',
+            entrance: '🚪',
+            restroom: '🚻',
+            flower: '🌸',
+            other: '📍'
+        };
+        return map[pt] || '📍';
+    }
     function validateAllTables() {
-        state.tables.forEach(t => {
-            const cap = Math.max(1, parseInt(t.capacity, 10) || 10);
+        state.tables.forEach(function(t) {
+            t.shape = normalizeShape(t.shape);
+            t.scale = normalizeScale(t.scale);
+            if (t.shape === 'prop') {
+                t.capacity = 0;
+                t.userIds = [];
+                t.propType = t.propType || 'other';
+                return;
+            }
+            var cap = Math.max(1, parseInt(t.capacity, 10) || 10);
             t.capacity = cap;
-            if (t.shape !== 'square') t.shape = 'round';
-            let used = tableSeatsUsed(t);
+            var used = tableSeatsUsed(t);
             while (used > cap && (t.userIds || []).length > 0) {
                 t.userIds.pop();
                 used = tableSeatsUsed(t);
@@ -760,7 +967,7 @@
         };
     }
 
-    /** 方桌：只排上／下兩邊（相對整個 stage，避免蓋住 toolbar／footer） */
+    /** 方桌：只排上／下兩邊（相對整個 stage） */
     function squareSlotXY(index, total, stageW, stageH) {
         var insetX = 32;
         var edgeY = 30;
@@ -776,10 +983,22 @@
         };
     }
 
-    function normalizeTableLength(v) {
+    /** 戲院式排座：單一橫排 */
+    function rowSlotXY(index, total, stageW, stageH) {
+        var insetX = 28;
+        var frac = total <= 1 ? 0.5 : (index + 1) / (total + 1);
+        return {
+            left: insetX + frac * (stageW - 2 * insetX),
+            top: stageH / 2
+        };
+    }
+
+    function normalizeTableLength(v, shape) {
         var n = parseInt(v, 10);
-        if (isNaN(n)) n = 360;
-        return Math.max(200, Math.min(900, n));
+        if (isNaN(n)) n = (shape === 'row' ? 520 : shape === 'prop' ? 160 : 360);
+        var min = (shape === 'prop') ? 80 : 200;
+        var max = 1200;
+        return Math.max(min, Math.min(max, n));
     }
 
     function clearSwapPick() {
@@ -853,18 +1072,185 @@
     function addTable(shape) {
         var id = 'tbl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
         var pos = nextTablePosition();
+        var sh = normalizeShape(shape);
+        var isProp = sh === 'prop';
         state.tables.push({
             id: id,
-            name: defaultTableName(state.tables.length + 1),
+            name: isProp ? _SA.propDefaultName : defaultTableName(state.tables.length + 1),
             seatLabelPrefix: '',
-            shape: shape === 'square' ? 'square' : 'round',
-            length: 360,
+            shape: sh,
+            scale: 1,
+            length: sh === 'row' ? 520 : (isProp ? 160 : 360),
+            propType: isProp ? 'stage' : '',
+            propExportFormat: isProp ? 'nameType' : '',
+            propExportText: '',
             x: pos.x,
             y: pos.y,
-            capacity: 10,
+            capacity: isProp ? 0 : (sh === 'row' ? 12 : 10),
             userIds: []
         });
         renderTables();
+    }
+
+    function bindTableDrag(div, t) {
+        var dragTable = false, startX, startY, origX, origY, zoomFactor = 1;
+        div.addEventListener('mousedown', function(e) {
+            if (e.target.closest('input') || e.target.closest('button') || e.target.closest('select') || e.target.closest('.rt-slot') || e.target.closest('.rt-assigned') || e.target.closest('.rt-toolbar') || e.target.closest('.rt-foot')) return;
+            dragTable = true;
+            zoomFactor = getCanvasZoom();
+            startX = e.clientX;
+            startY = e.clientY;
+            origX = t.x || 40;
+            origY = t.y || 40;
+            e.preventDefault();
+        });
+        document.addEventListener('mousemove', function(e) {
+            if (!dragTable) return;
+            var dx = e.clientX - startX, dy = e.clientY - startY;
+            t.x = origX + dx / zoomFactor;
+            t.y = origY + dy / zoomFactor;
+            div.style.left = t.x + 'px';
+            div.style.top = t.y + 'px';
+            sizeCanvasFromTables();
+        });
+        document.addEventListener('mouseup', function() { dragTable = false; });
+    }
+
+    function applyItemScale(div, sc, baseW, baseH) {
+        div.style.transform = 'scale(' + sc + ')';
+        div.style.transformOrigin = 'top left';
+        // transform 不佔 layout 空間，用 margin 補回視覺佔位，避免重疊
+        var mw = Math.max(0, (baseW || 300) * (sc - 1));
+        var mh = Math.max(0, (baseH || 400) * (sc - 1));
+        div.style.marginRight = mw + 'px';
+        div.style.marginBottom = mh + 'px';
+    }
+
+    function normalizePropExportFormat(s) {
+        var allowed = { name: 1, type: 1, nameType: 1, iconName: 1, custom: 1 };
+        var v = String(s || '').trim();
+        return allowed[v] ? v : 'nameType';
+    }
+
+    function renderPropItem(t, idx) {
+        var sc = normalizeScale(t.scale);
+        t.scale = sc;
+        t.length = normalizeTableLength(t.length, 'prop');
+        t.propType = t.propType || 'other';
+        t.propExportFormat = normalizePropExportFormat(t.propExportFormat);
+        t.propExportText = (t.propExportText != null ? String(t.propExportText) : '').trim();
+        var w = t.length;
+        var fmt = t.propExportFormat;
+
+        var div = document.createElement('div');
+        div.className = 'round-table';
+        div.style.width = (w + 24) + 'px';
+        div.style.left = (t.x || 40) + 'px';
+        div.style.top = (t.y || 40) + 'px';
+        div.dataset.tableId = t.id;
+        applyItemScale(div, sc, w + 24, 260);
+
+        var toolbar = document.createElement('div');
+        toolbar.className = 'rt-toolbar';
+        var typeOpts = ['stage', 'buffet', 'bar', 'entrance', 'restroom', 'flower', 'other'].map(function(pt) {
+            return '<option value="' + pt + '"' + (t.propType === pt ? ' selected' : '') + '>' + escapeHtml(propTypeLabel(pt)) + '</option>';
+        }).join('');
+        var fmtOpts = [
+            ['name', _SA.propExportFormatName],
+            ['type', _SA.propExportFormatType],
+            ['nameType', _SA.propExportFormatNameType],
+            ['iconName', _SA.propExportFormatIconName],
+            ['custom', _SA.propExportFormatCustom]
+        ].map(function(pair) {
+            return '<option value="' + pair[0] + '"' + (fmt === pair[0] ? ' selected' : '') + '>' + escapeHtml(pair[1]) + '</option>';
+        }).join('');
+        toolbar.innerHTML =
+            '<div class="cap-row">' +
+            '<input type="text" class="form-control form-control-sm tbl-name" maxlength="80" value="' + escapeAttr(t.name || '') + '" placeholder="' + escapeAttr(_SA.propDefaultName) + '" title="' + escapeAttr(_SA.tableNameLabel) + '"/>' +
+            ' <span class="rt-shape-tag">' + escapeHtml(_SA.shapeProp) + '</span>' +
+            '</div>' +
+            '<div class="cap-row">' +
+            escapeHtml(_SA.propTypeLabel) + ' <select class="form-control form-control-sm tbl-prop-type">' + typeOpts + '</select>' +
+            ' ' + escapeHtml(_SA.scaleLabel) + ' <input type="number" min="0.5" max="2" step="0.05" value="' + sc + '" class="form-control form-control-sm tbl-scale"/>' +
+            ' ' + escapeHtml(_SA.lengthLabel) + ' <input type="number" min="80" max="1200" step="10" value="' + w + '" class="form-control form-control-sm tbl-len"/>' +
+            '</div>' +
+            '<div class="cap-row">' +
+            escapeHtml(_SA.propExportFormatLabel) + ' <select class="form-control form-control-sm tbl-prop-export-fmt">' + fmtOpts + '</select>' +
+            ' ' + escapeHtml(_SA.propExportTextLabel) +
+            ' <input type="text" class="form-control form-control-sm tbl-prop-export-text" maxlength="120" style="width:160px;" ' +
+            'value="' + escapeAttr(t.propExportText || '') + '" placeholder="' + escapeAttr(_SA.propExportTextPlaceholder) + '"/>' +
+            '</div>';
+
+        var exportTitle = (fmt === 'custom' && t.propExportText)
+            ? t.propExportText
+            : (fmt === 'type' ? propTypeLabel(t.propType) : (t.name || _SA.propDefaultName));
+        var body = document.createElement('div');
+        body.className = 'rt-prop fmt-' + fmt;
+        body.style.width = w + 'px';
+        body.innerHTML =
+            '<div class="rt-prop-icon">' + propTypeIcon(t.propType) + '</div>' +
+            '<div class="rt-prop-title">' + escapeHtml(exportTitle) + '</div>' +
+            '<span class="rt-prop-tag">' + escapeHtml(propTypeLabel(t.propType)) + '</span>' +
+            '<div class="rt-prop-hint">' + escapeHtml(_SA.propHint) + '</div>';
+
+        var foot = document.createElement('div');
+        foot.className = 'rt-foot';
+        foot.innerHTML = '<button type="button" class="btn btn-sm btn-outline-danger tbl-remove">' + _SA.removePropBtn + '</button>';
+
+        div.appendChild(toolbar);
+        div.appendChild(body);
+        div.appendChild(foot);
+
+        var nameInput = div.querySelector('.tbl-name');
+        nameInput.addEventListener('change', function() {
+            t.name = String(nameInput.value || '').trim().slice(0, 80);
+            nameInput.value = t.name;
+            renderTables();
+        });
+        nameInput.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+
+        div.querySelector('.tbl-prop-type').addEventListener('change', function(e) {
+            t.propType = e.target.value || 'other';
+            renderTables();
+        });
+        div.querySelector('.tbl-prop-type').addEventListener('mousedown', function(e) { e.stopPropagation(); });
+
+        div.querySelector('.tbl-prop-export-fmt').addEventListener('change', function(e) {
+            t.propExportFormat = normalizePropExportFormat(e.target.value);
+            renderTables();
+        });
+        div.querySelector('.tbl-prop-export-fmt').addEventListener('mousedown', function(e) { e.stopPropagation(); });
+
+        var exportTextInput = div.querySelector('.tbl-prop-export-text');
+        exportTextInput.addEventListener('change', function() {
+            t.propExportText = String(exportTextInput.value || '').trim().slice(0, 120);
+            exportTextInput.value = t.propExportText;
+            if (t.propExportFormat === 'custom') renderTables();
+        });
+        exportTextInput.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+
+        var scaleInput = div.querySelector('.tbl-scale');
+        scaleInput.addEventListener('change', function() {
+            t.scale = normalizeScale(scaleInput.value);
+            renderTables();
+        });
+        scaleInput.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+
+        var lenInput = div.querySelector('.tbl-len');
+        lenInput.addEventListener('change', function() {
+            t.length = normalizeTableLength(lenInput.value, 'prop');
+            renderTables();
+        });
+        lenInput.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+
+        div.querySelector('.tbl-remove').addEventListener('click', function(e) {
+            e.stopPropagation();
+            state.tables = state.tables.filter(function(x) { return x.id !== t.id; });
+            renderTables();
+        });
+
+        bindTableDrag(div, t);
+        $canvas.appendChild(div);
     }
 
     function renderTables() {
@@ -874,16 +1260,25 @@
         var ringC = 2 * Math.PI * ringR;
 
         state.tables.forEach(function(t, idx) {
-            if (t.shape !== 'square') t.shape = 'round';
+            t.shape = normalizeShape(t.shape);
+            t.scale = normalizeScale(t.scale);
+            if (t.shape === 'prop') {
+                renderPropItem(t, idx);
+                return;
+            }
+
             var isSquare = t.shape === 'square';
-            var tableLen = isSquare ? normalizeTableLength(t.length) : 280;
-            t.length = isSquare ? tableLen : (t.length || 360);
-            var plateW = isSquare ? tableLen : plateSize;
-            var plateH = isSquare ? 140 : plateSize;
-            var stagePadX = isSquare ? 16 : 36;
-            var stagePadY = isSquare ? 64 : 36;
-            var stageW = isSquare ? (plateW + stagePadX * 2) : 340;
-            var stageH = isSquare ? (plateH + stagePadY * 2) : 340;
+            var isRow = t.shape === 'row';
+            var tableLen = (isSquare || isRow) ? normalizeTableLength(t.length, t.shape) : 280;
+            if (isSquare || isRow) t.length = tableLen;
+            else t.length = t.length || 360;
+
+            var plateW = (isSquare || isRow) ? tableLen : plateSize;
+            var plateH = isRow ? 36 : (isSquare ? 140 : plateSize);
+            var stagePadX = isRow ? 12 : (isSquare ? 16 : 36);
+            var stagePadY = isRow ? 48 : (isSquare ? 64 : 36);
+            var stageW = (isSquare || isRow) ? (plateW + stagePadX * 2) : 340;
+            var stageH = (isSquare || isRow) ? (plateH + stagePadY * 2) : 340;
 
             var div = document.createElement('div');
             div.className = 'round-table';
@@ -891,9 +1286,11 @@
             div.style.left = (t.x || 40) + 'px';
             div.style.top = (t.y || 40) + 'px';
             div.dataset.tableId = t.id;
+            applyItemScale(div, t.scale, stageW, isRow ? 340 : (isSquare ? 420 : 500));
 
             var used = tableSeatsUsed(t);
             var cap = Math.max(1, parseInt(t.capacity, 10) || 10);
+            t.capacity = cap;
             var pct = cap > 0 ? Math.min(1, used / cap) : 0;
             var dashOff = ringC * (1 - pct);
             var slots = buildSeatSlots(t, cap);
@@ -907,39 +1304,52 @@
                 'value="' + escapeAttr(t.name || '') + '" ' +
                 'placeholder="' + escapeAttr(defaultTableName(idx + 1)) + '" ' +
                 'title="' + escapeAttr(_SA.tableNameLabel) + '"/>' +
-                ' <span class="rt-shape-tag">' + (isSquare ? _SA.shapeSquare : _SA.shapeRound) + '</span>' +
+                ' <span class="rt-shape-tag">' + escapeHtml(shapeLabel(t.shape)) + '</span>' +
                 ' ' + escapeHtml(_SA.seatLabelPrefixLabel) +
                 ' <input type="text" class="form-control form-control-sm tbl-seat-prefix" maxlength="12" ' +
                 'value="' + escapeAttr(t.seatLabelPrefix || '') + '" ' +
                 'placeholder="' + escapeAttr(_SA.seatLabelPrefixDefault) + '" ' +
                 'title="' + escapeAttr(_SA.seatLabelPrefixHint) + '"/>' +
                 '</div>' +
-                '<div class="cap-row">' + _SA.capacityLabel + ' <input type="number" min="1" max="999" value="' + cap + '" class="form-control form-control-sm tbl-cap"/>' +
-                (isSquare
-                    ? (' ' + _SA.lengthLabel + ' <input type="number" min="200" max="900" step="20" value="' + tableLen + '" class="form-control form-control-sm tbl-len"/>')
+                '<div class="cap-row">' +
+                '<span class="rt-cap-step">' +
+                '<button type="button" class="tbl-cap-minus" title="-">' + _SA.seatsMinus + '</button>' +
+                ' ' + escapeHtml(_SA.capacityLabel) +
+                ' <input type="number" min="1" max="999" value="' + cap + '" class="form-control form-control-sm tbl-cap"/>' +
+                ' <button type="button" class="tbl-cap-plus" title="+">' + _SA.seatsPlus + '</button>' +
+                '</span>' +
+                ' ' + escapeHtml(_SA.scaleLabel) +
+                ' <input type="number" min="0.5" max="2" step="0.05" value="' + t.scale + '" class="form-control form-control-sm tbl-scale"/>' +
+                ((isSquare || isRow)
+                    ? (' ' + escapeHtml(_SA.lengthLabel) + ' <input type="number" min="200" max="1200" step="20" value="' + tableLen + '" class="form-control form-control-sm tbl-len"/>')
                     : '') +
                 '</div>';
 
             var stage = document.createElement('div');
-            stage.className = 'rt-stage ' + (isSquare ? 'rt-stage-square' : 'rt-stage-round');
+            stage.className = 'rt-stage ' + (isRow ? 'rt-stage-row' : (isSquare ? 'rt-stage-square' : 'rt-stage-round'));
             stage.style.width = stageW + 'px';
-            if (isSquare) stage.style.height = stageH + 'px';
+            if (isSquare || isRow) stage.style.height = stageH + 'px';
 
             var plate = document.createElement('div');
-            plate.className = 'rt-plate' + (isSquare ? ' rt-shape-square' : '');
+            plate.className = 'rt-plate' + (isRow ? ' rt-shape-row' : (isSquare ? ' rt-shape-square' : ''));
             plate.style.width = plateW + 'px';
             plate.style.height = plateH + 'px';
 
             var center = document.createElement('div');
             center.className = 'rt-center';
-            center.innerHTML =
-                '<svg class="rt-ring-svg" viewBox="0 0 112 112" aria-hidden="true">' +
-                '<circle class="rt-ring-bg" cx="56" cy="56" r="' + ringR + '"/>' +
-                '<circle class="rt-ring-fill" cx="56" cy="56" r="' + ringR + '"' +
-                ' stroke-dasharray="' + ringC + '"' +
-                ' stroke-dashoffset="' + dashOff + '"/>' +
-                '</svg>' +
-                '<div class="rt-center-num" title="' + escapeAttr(tableDisplayName(t, idx)) + '">' + (idx + 1) + '</div>';
+            if (isRow) {
+                center.innerHTML = '<div class="rt-center-num" title="' + escapeAttr(tableDisplayName(t, idx)) + '">' +
+                    escapeHtml(tableDisplayName(t, idx)) + '</div>';
+            } else {
+                center.innerHTML =
+                    '<svg class="rt-ring-svg" viewBox="0 0 112 112" aria-hidden="true">' +
+                    '<circle class="rt-ring-bg" cx="56" cy="56" r="' + ringR + '"/>' +
+                    '<circle class="rt-ring-fill" cx="56" cy="56" r="' + ringR + '"' +
+                    ' stroke-dasharray="' + ringC + '"' +
+                    ' stroke-dashoffset="' + dashOff + '"/>' +
+                    '</svg>' +
+                    '<div class="rt-center-num" title="' + escapeAttr(tableDisplayName(t, idx)) + '">' + (idx + 1) + '</div>';
+            }
 
             var layer = document.createElement('div');
             layer.className = 'rt-seats-layer';
@@ -953,9 +1363,10 @@
                 var slotEl = document.createElement('div');
                 var slot = slots[si];
                 var seatNo = slot.seatNo || (si + 1);
-                var xy = isSquare
-                    ? squareSlotXY(si, cap, stageW, stageH)
-                    : polarSlotXY(si, cap, seatCx, seatCy, seatR);
+                var xy;
+                if (isRow) xy = rowSlotXY(si, cap, stageW, stageH);
+                else if (isSquare) xy = squareSlotXY(si, cap, stageW, stageH);
+                else xy = polarSlotXY(si, cap, seatCx, seatCy, seatR);
                 slotEl.style.left = xy.left + 'px';
                 slotEl.style.top = xy.top + 'px';
 
@@ -1087,14 +1498,23 @@
             div.appendChild(foot);
             div.appendChild(assignedBox);
 
-            var capInput = div.querySelector('.tbl-cap');
-            capInput.addEventListener('change', function() {
-                t.capacity = Math.max(1, parseInt(capInput.value, 10) || 10);
+            function setCapacity(v) {
+                t.capacity = Math.max(1, parseInt(v, 10) || 10);
                 validateAllTables();
                 renderGuestList();
                 renderTables();
-            });
+            }
+            var capInput = div.querySelector('.tbl-cap');
+            capInput.addEventListener('change', function() { setCapacity(capInput.value); });
             capInput.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+            div.querySelector('.tbl-cap-minus').addEventListener('click', function(e) {
+                e.stopPropagation();
+                setCapacity(cap - 1);
+            });
+            div.querySelector('.tbl-cap-plus').addEventListener('click', function(e) {
+                e.stopPropagation();
+                setCapacity(cap + 1);
+            });
 
             var nameInput = div.querySelector('.tbl-name');
             if (nameInput) {
@@ -1103,7 +1523,10 @@
                     nameInput.value = t.name;
                     var tip = tableDisplayName(t, idx);
                     var centerNum = div.querySelector('.rt-center-num');
-                    if (centerNum) centerNum.setAttribute('title', tip);
+                    if (centerNum) {
+                        centerNum.setAttribute('title', tip);
+                        if (isRow) centerNum.textContent = tip;
+                    }
                 });
                 nameInput.addEventListener('mousedown', function(e) { e.stopPropagation(); });
                 nameInput.addEventListener('click', function(e) { e.stopPropagation(); });
@@ -1120,10 +1543,19 @@
                 prefixInput.addEventListener('click', function(e) { e.stopPropagation(); });
             }
 
+            var scaleInput = div.querySelector('.tbl-scale');
+            if (scaleInput) {
+                scaleInput.addEventListener('change', function() {
+                    t.scale = normalizeScale(scaleInput.value);
+                    renderTables();
+                });
+                scaleInput.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+            }
+
             var lenInput = div.querySelector('.tbl-len');
             if (lenInput) {
                 lenInput.addEventListener('change', function() {
-                    t.length = normalizeTableLength(lenInput.value);
+                    t.length = normalizeTableLength(lenInput.value, t.shape);
                     renderTables();
                 });
                 lenInput.addEventListener('mousedown', function(e) { e.stopPropagation(); });
@@ -1163,28 +1595,7 @@
                 renderTables();
             });
 
-            var dragTable = false, startX, startY, origX, origY, zoomFactor = 1;
-            div.addEventListener('mousedown', function(e) {
-                if (e.target.closest('input') || e.target.closest('button') || e.target.closest('.rt-slot') || e.target.closest('.rt-assigned') || e.target.closest('.rt-toolbar') || e.target.closest('.rt-foot')) return;
-                dragTable = true;
-                zoomFactor = getCanvasZoom();
-                startX = e.clientX;
-                startY = e.clientY;
-                origX = t.x || 40;
-                origY = t.y || 40;
-                e.preventDefault();
-            });
-            document.addEventListener('mousemove', function(e) {
-                if (!dragTable) return;
-                var dx = e.clientX - startX, dy = e.clientY - startY;
-                t.x = origX + dx / zoomFactor;
-                t.y = origY + dy / zoomFactor;
-                div.style.left = t.x + 'px';
-                div.style.top = t.y + 'px';
-                sizeCanvasFromTables();
-            });
-            document.addEventListener('mouseup', function() { dragTable = false; });
-
+            bindTableDrag(div, t);
             $canvas.appendChild(div);
         });
         sizeCanvasFromTables();
@@ -1192,6 +1603,8 @@
 
     document.getElementById('btnAddTable').addEventListener('click', function() { addTable('round'); });
     document.getElementById('btnAddSquareTable').addEventListener('click', function() { addTable('square'); });
+    document.getElementById('btnAddRowTable').addEventListener('click', function() { addTable('row'); });
+    document.getElementById('btnAddProp').addEventListener('click', function() { addTable('prop'); });
 
     $canvasZoom.addEventListener('input', applyCanvasZoom);
     document.getElementById('btnZoomFit').addEventListener('click', zoomFitViewport);
@@ -1204,9 +1617,9 @@
         layoutTablesGrid();
         zoomFitViewport();
     });
-    document.getElementById('btnExportPng').addEventListener('click', function() {
-        var btn = document.getElementById('btnExportPng');
-        if (typeof html2canvas === 'undefined') {
+    document.getElementById('btnExportZip').addEventListener('click', function() {
+        var btn = document.getElementById('btnExportZip');
+        if (typeof html2canvas === 'undefined' || typeof ExcelJS === 'undefined' || typeof JSZip === 'undefined') {
             alert(_SA.exportLoadError);
             return;
         }
@@ -1215,27 +1628,225 @@
         var prevZ = $canvasZoom.value;
         $canvasZoom.value = '100';
         applyCanvasZoom();
+
+        function canvasToBlob(canvas) {
+            return new Promise(function(resolve, reject) {
+                if (canvas.toBlob) {
+                    canvas.toBlob(function(blob) {
+                        if (blob) resolve(blob);
+                        else reject(new Error('toBlob failed'));
+                    }, 'image/png');
+                } else {
+                    try {
+                        var dataUrl = canvas.toDataURL('image/png');
+                        var parts = dataUrl.split(',');
+                        var bin = atob(parts[1]);
+                        var arr = new Uint8Array(bin.length);
+                        for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+                        resolve(new Blob([arr], { type: 'image/png' }));
+                    } catch (e) {
+                        reject(e);
+                    }
+                }
+            });
+        }
+
+        function guestCompanyRaw(uid) {
+            var field = state.categoryFieldName || 'company';
+            var u = findUser(uid);
+            var raw = userFieldRaw(u, field);
+            if (raw === undefined || raw === null || String(raw).trim() === '') return '';
+            var label = categoryValueLabel(field, raw);
+            if (!label || label === _SA.unfilledCategory) return '';
+            return label;
+        }
+
+        function safeSheetName(name, idx, used) {
+            var base = String(name || ('Table ' + (idx + 1)))
+                .replace(/[\\\/\?\*\[\]\:]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+            if (!base) base = 'Table ' + (idx + 1);
+            base = base.slice(0, 31);
+            var candidate = base;
+            var n = 2;
+            while (used[candidate]) {
+                var suffix = ' (' + n + ')';
+                candidate = (base.slice(0, Math.max(1, 31 - suffix.length)) + suffix).slice(0, 31);
+                n++;
+            }
+            used[candidate] = true;
+            return candidate;
+        }
+
+        function buildXlsxBlob() {
+            var catField = formFields.find(function(f) { return f.fieldName === (state.categoryFieldName || 'company'); });
+            var companyHeader = (catField && catField.label) ? catField.label : _SA.exportColCompany;
+            var wb = new ExcelJS.Workbook();
+            wb.creator = 'Seating Arrangement';
+            var usedNames = {};
+            var tableCount = 0;
+
+            state.tables.forEach(function(t, idx) {
+                if (normalizeShape(t.shape) === 'prop') return;
+                tableCount++;
+                var tableName = tableDisplayName(t, idx);
+                var sheetName = safeSheetName(tableName, idx, usedNames);
+                var ws = wb.addWorksheet(sheetName);
+
+                var cap = Math.max(1, parseInt(t.capacity, 10) || 10);
+                var slots = buildSeatSlots(t, cap);
+                var seatRows = [];
+                var anyCompany = false;
+                slots.forEach(function(slot) {
+                    if (slot.kind === 'empty') return;
+                    var seatLabel = applyPrefixTemplate(_SA.seatLabelShort, {
+                        prefix: getSeatPrefix(t),
+                        num: slot.seatNo
+                    });
+                    var guestName = '';
+                    var company = '';
+                    if (slot.kind === 'guest') {
+                        guestName = userDisplayName(slot.uid);
+                        company = guestCompanyRaw(slot.uid);
+                    } else if (slot.kind === 'companion') {
+                        guestName = userDisplayName(slot.forUid) + _SA.exportCompanionSuffix;
+                        company = guestCompanyRaw(slot.forUid);
+                    }
+                    if (company) anyCompany = true;
+                    seatRows.push({ seat: seatLabel, guest: guestName, company: company });
+                });
+
+                // Row 1: table name (bold + larger)
+                var titleCell = ws.getCell(1, 1);
+                titleCell.value = tableName;
+                titleCell.font = { bold: true, size: 16, name: 'Calibri' };
+                titleCell.alignment = { vertical: 'middle', horizontal: 'left' };
+                ws.mergeCells(1, 1, 1, anyCompany ? 3 : 2);
+                ws.getRow(1).height = 26;
+
+                // Row 2: blank spacer
+                ws.getRow(2).height = 8;
+
+                // Row 3: headers
+                var headers = [_SA.exportColSeat, _SA.exportColGuest];
+                if (anyCompany) headers.push(companyHeader);
+                var headerRow = ws.getRow(3);
+                headers.forEach(function(h, i) {
+                    var cell = headerRow.getCell(i + 1);
+                    cell.value = h;
+                    cell.font = { bold: true, size: 11 };
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FFF1F3F5' }
+                    };
+                });
+
+                if (!seatRows.length) {
+                    var emptyRow = ws.getRow(4);
+                    emptyRow.getCell(1).value = '—';
+                    emptyRow.getCell(2).value = '—';
+                    if (anyCompany) emptyRow.getCell(3).value = '';
+                } else {
+                    seatRows.forEach(function(r, i) {
+                        var row = ws.getRow(4 + i);
+                        row.getCell(1).value = r.seat;
+                        row.getCell(2).value = r.guest;
+                        if (anyCompany) row.getCell(3).value = r.company || '';
+                    });
+                }
+
+                ws.getColumn(1).width = 12;
+                ws.getColumn(2).width = 24;
+                if (anyCompany) ws.getColumn(3).width = 28;
+            });
+
+            if (tableCount === 0) {
+                var emptyWs = wb.addWorksheet(_SA.exportSheetName.slice(0, 31) || 'Seating');
+                var c = emptyWs.getCell(1, 1);
+                c.value = '—';
+                c.font = { bold: true, size: 16 };
+            }
+
+            return wb.xlsx.writeBuffer().then(function(buf) {
+                return new Blob([buf], {
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                });
+            });
+        }
+
+        function downloadBlob(blob, filename) {
+            var url = URL.createObjectURL(blob);
+            var link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            setTimeout(function() {
+                URL.revokeObjectURL(url);
+                link.remove();
+            }, 1500);
+        }
+
+        var EXPORT_PAD = { top: 140, right: 72, bottom: 100, left: 72 };
+        var exportHost = null;
+
         setTimeout(function() {
-            html2canvas($canvas, {
-                scale: 1,
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: '#f0f2f5',
-                logging: false,
-                width: $canvas.offsetWidth,
-                height: $canvas.offsetHeight
-            }).then(function(canvas) {
-                var link = document.createElement('a');
-                link.download = 'seating-' + eventId + '.png';
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-            }).catch(function(err) {
-                console.error(err);
-                alert(_SA.exportFailed);
-            }).finally(function() {
-                $canvasZoom.value = prevZ;
-                applyCanvasZoom();
-                btn.disabled = false;
+            // 用獨立容器 + 真正 padding（absolute 子元素唔受 canvas padding 影響）
+            exportHost = document.createElement('div');
+            exportHost.id = 'seating-export-host';
+            exportHost.style.padding = EXPORT_PAD.top + 'px ' + EXPORT_PAD.right + 'px ' +
+                EXPORT_PAD.bottom + 'px ' + EXPORT_PAD.left + 'px';
+            exportHost.style.background = '#f0f2f5';
+
+            var clone = $canvas.cloneNode(true);
+            clone.id = 'seatingCanvasExportClone';
+            clone.classList.add('export-clean');
+            clone.style.position = 'relative';
+            clone.style.left = '0';
+            clone.style.top = '0';
+            clone.style.margin = '0';
+            clone.style.transform = 'none';
+            clone.style.background = '#f0f2f5';
+            clone.style.width = ($canvas.offsetWidth || parseInt($canvas.style.width, 10) || 800) + 'px';
+            clone.style.height = ($canvas.offsetHeight || parseInt($canvas.style.height, 10) || 600) + 'px';
+            exportHost.appendChild(clone);
+            document.body.appendChild(exportHost);
+
+            // 等 clone 套用 export-clean（隱藏 toolbar）後再量度，並確保頂部有空間
+            requestAnimationFrame(function() {
+                html2canvas(exportHost, {
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#f0f2f5',
+                    logging: false,
+                    scrollX: 0,
+                    scrollY: 0,
+                    windowWidth: exportHost.scrollWidth,
+                    windowHeight: exportHost.scrollHeight
+                }).then(function(canvas) {
+                    return canvasToBlob(canvas);
+                }).then(function(pngBlob) {
+                    return buildXlsxBlob().then(function(xlsxBlob) {
+                        var zip = new JSZip();
+                        zip.file('seating-layout.png', pngBlob);
+                        zip.file('seating-tables.xlsx', xlsxBlob);
+                        return zip.generateAsync({ type: 'blob' });
+                    });
+                }).then(function(zipBlob) {
+                    downloadBlob(zipBlob, 'seating-' + eventId + '.zip');
+                }).catch(function(err) {
+                    console.error(err);
+                    alert(_SA.exportFailed);
+                }).finally(function() {
+                    if (exportHost && exportHost.parentNode) exportHost.parentNode.removeChild(exportHost);
+                    exportHost = null;
+                    $canvasZoom.value = prevZ;
+                    applyCanvasZoom();
+                    btn.disabled = false;
+                });
             });
         }, 80);
     });
@@ -1273,16 +1884,21 @@
                 state.tables = (data.seating.tables || []).map(function(t) {
                     var p = (t.seatLabelPrefix != null ? String(t.seatLabelPrefix) : '').trim().slice(0, 12);
                     if (!p && legacyPrefix) p = legacyPrefix;
+                    var shape = (t.shape === 'square' || t.shape === 'row' || t.shape === 'prop') ? t.shape : 'round';
                     return {
                         id: t.id,
                         name: (t.name != null ? String(t.name) : '').trim(),
-                        seatLabelPrefix: p,
-                        shape: t.shape === 'square' ? 'square' : 'round',
-                        length: Math.max(200, Math.min(900, parseInt(t.length, 10) || 360)),
+                        seatLabelPrefix: shape === 'prop' ? '' : p,
+                        shape: shape,
+                        scale: Math.max(0.5, Math.min(2, parseFloat(t.scale) || 1)),
+                        length: Math.max(80, Math.min(1200, parseInt(t.length, 10) || (shape === 'row' ? 520 : shape === 'prop' ? 160 : 360))),
+                        propType: t.propType || (shape === 'prop' ? 'other' : ''),
+                        propExportFormat: t.propExportFormat || (shape === 'prop' ? 'nameType' : ''),
+                        propExportText: (t.propExportText != null ? String(t.propExportText) : '').trim(),
                         x: t.x,
                         y: t.y,
-                        capacity: t.capacity,
-                        userIds: t.userIds || []
+                        capacity: shape === 'prop' ? 0 : (t.capacity || 10),
+                        userIds: shape === 'prop' ? [] : (t.userIds || [])
                     };
                 });
                 renderCategorySelect();
@@ -1295,8 +1911,8 @@
     renderCategorySelect();
     if (!state.tables || state.tables.length === 0) {
         state.tables = [
-            { id: 'tbl_default_1', name: defaultTableName(1), seatLabelPrefix: 'A', shape: 'round', length: 360, x: 80, y: 80, capacity: 10, userIds: [] },
-            { id: 'tbl_default_2', name: defaultTableName(2), seatLabelPrefix: 'B', shape: 'round', length: 360, x: 340, y: 120, capacity: 10, userIds: [] }
+            { id: 'tbl_default_1', name: defaultTableName(1), seatLabelPrefix: 'A', shape: 'round', scale: 1, length: 360, x: 80, y: 80, capacity: 10, userIds: [] },
+            { id: 'tbl_default_2', name: defaultTableName(2), seatLabelPrefix: 'B', shape: 'round', scale: 1, length: 360, x: 340, y: 120, capacity: 10, userIds: [] }
         ];
     }
     renderGuestList();

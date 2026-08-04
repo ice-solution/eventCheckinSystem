@@ -142,9 +142,18 @@ const eventSchema = new mongoose.Schema({
             name: { type: String, default: '' },
             /** 此桌座位代號前綴，例如 A、B、VIP；顯示為 A1、B1 */
             seatLabelPrefix: { type: String, default: '' },
-            shape: { type: String, enum: ['round', 'square'], default: 'round' },
-            /** 方桌長度（像素寬度）；圓桌忽略 */
+            /** round=圓桌 square=方桌 row=戲院式一排 prop=擺設／看枱（無座位） */
+            shape: { type: String, enum: ['round', 'square', 'row', 'prop'], default: 'round' },
+            /** 整體縮放 0.5–2（各形狀皆可用） */
+            scale: { type: Number, default: 1 },
+            /** 方桌／排座長度；prop 為寬度（像素） */
             length: { type: Number, default: 360 },
+            /** 擺設類型：stage / buffet / bar / entrance / restroom / flower / other */
+            propType: { type: String, default: '' },
+            /** 匯出時顯示格式：name / type / nameType / iconName / custom */
+            propExportFormat: { type: String, default: 'nameType' },
+            /** 匯出自訂文字（format=custom 時使用） */
+            propExportText: { type: String, default: '' },
             x: { type: Number, default: 48 },
             y: { type: Number, default: 48 },
             capacity: { type: Number, default: 10 },
