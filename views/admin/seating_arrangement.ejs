@@ -86,16 +86,36 @@
         width: 64px; padding: 2px 4px; font-size: 12px; height: 30px; line-height: 1.25; text-align: center;
     }
     .rt-toolbar select.tbl-prop-type,
+    .rt-toolbar select.tbl-prop-export-fmt,
     .rt-toolbar select.form-control-sm {
         width: auto;
         min-width: 96px;
-        height: 30px !important;
-        min-height: 30px !important;
-        padding: 2px 24px 2px 8px !important;
+        height: 32px !important;
+        min-height: 32px !important;
+        padding: 4px 28px 4px 8px !important;
         font-size: 12px !important;
-        line-height: 1.25 !important;
+        line-height: 1.4 !important;
         box-sizing: border-box;
         overflow: visible;
+        vertical-align: middle;
+        appearance: auto;
+        -webkit-appearance: menulist;
+        -moz-appearance: menulist;
+    }
+    .toolbar-top {
+        margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    }
+    .toolbar-top select.form-control,
+    .toolbar-top select.form-control-sm,
+    #categoryField {
+        width: 260px;
+        height: 36px !important;
+        min-height: 36px !important;
+        padding: 6px 28px 6px 10px !important;
+        font-size: 13px !important;
+        line-height: 1.4 !important;
+        box-sizing: border-box !important;
+        overflow: visible !important;
         vertical-align: middle;
         appearance: auto;
         -webkit-appearance: menulist;
@@ -317,7 +337,6 @@
     .rt-prop .rt-prop-hint {
         font-size: 10px; color: #a16207; text-align: center; margin-top: 6px;
     }
-    .toolbar-top { margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
     /* 匯出用：只保留枱面／座位／擺設視覺 */
     .seating-canvas.export-clean .rt-toolbar,
@@ -382,7 +401,7 @@
                 <div class="card-body">
                     <div class="toolbar-top">
                         <label class="mb-0"><%= t('seating.categoryFieldLabel') %></label>
-                        <select id="categoryField" class="form-control form-control-sm" style="width: 260px;"></select>
+                        <select id="categoryField" class="form-control form-control-sm"></select>
                         <button type="button" class="btn btn-primary btn-sm" id="btnAddTable"><%= t('seating.addTableBtn') %></button>
                         <button type="button" class="btn btn-outline-primary btn-sm" id="btnAddSquareTable"><%= t('seating.addSquareTableBtn') %></button>
                         <button type="button" class="btn btn-outline-info btn-sm" id="btnAddRowTable"><%= t('seating.addRowTableBtn') %></button>
