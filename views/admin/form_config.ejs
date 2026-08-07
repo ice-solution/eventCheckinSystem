@@ -935,7 +935,7 @@
                                                                                        value="<%= option.label && option.label.en ? option.label.en : '' %>"
                                                                                        onchange="updateOptionLabel(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>, 'en', this.value)">
                                                                             </div>
-                                                                            <% if (field.type === 'select') { %>
+                                                                            <% if (field.type === 'select' || field.type === 'checkbox' || field.type === 'radio') { %>
                                                                             <div class="col-md-3">
                                                                                 <div class="form-check mb-0">
                                                                                     <input type="checkbox" class="form-check-input" id="opt-other-<%= actualSectionIndex %>-<%= actualFieldIndex %>-<%= optionIndex %>"
@@ -1356,7 +1356,7 @@
         }
     }
 
-    // 更新選項布林欄位（例如 select「其他可自填」）
+    // 更新選項布林欄位（例如 select／checkbox／radio「其他可自填」）
     function updateOptionFlag(sectionIndex, fieldIndex, optionIndex, property, checked) {
         if (formConfig.sections[sectionIndex] && 
             formConfig.sections[sectionIndex].fields[fieldIndex] &&
@@ -1568,18 +1568,22 @@
                         } else if (field.type === 'checkbox' && field.options) {
                             html += '<div class="checkbox-group">';
                             field.options.forEach(function(option) {
+                                var lab = getMultilingualText(option.label, previewLanguage);
+                                if (option.isOther) lab += (previewLanguage === 'zh' ? '（可自填）' : ' (specify)');
                                 html += '<div class="form-check">';
                                 html += '<input class="form-check-input" type="checkbox" value="' + option.value + '" disabled>';
-                                html += '<label class="form-check-label">' + getMultilingualText(option.label, previewLanguage) + '</label>';
+                                html += '<label class="form-check-label">' + lab + '</label>';
                                 html += '</div>';
                             });
                             html += '</div>';
                         } else if (field.type === 'radio' && field.options) {
                             html += '<div class="radio-group">';
                             field.options.forEach(function(option) {
+                                var lab = getMultilingualText(option.label, previewLanguage);
+                                if (option.isOther) lab += (previewLanguage === 'zh' ? '（可自填）' : ' (specify)');
                                 html += '<div class="form-check">';
                                 html += '<input class="form-check-input" type="radio" name="preview_' + field.fieldName + '" value="' + option.value + '" disabled>';
-                                html += '<label class="form-check-label">' + getMultilingualText(option.label, previewLanguage) + '</label>';
+                                html += '<label class="form-check-label">' + lab + '</label>';
                                 html += '</div>';
                             });
                             html += '</div>';
