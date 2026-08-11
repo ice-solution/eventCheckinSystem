@@ -620,9 +620,25 @@ exports.submitApplicationForm = async (req, res) => {
             console.error('submitApplicationForm email error:', mailErr);
         }
 
+        const thankYouYesNo = body.thankYouYesNo ? String(body.thankYouYesNo) : '';
+        const lang = body.lang ? String(body.lang) : '';
+        const successParams = new URLSearchParams();
+        if (lang && lang !== 'zh') successParams.set('lang', lang);
+        if (thankYouYesNo) successParams.set('thankYouYesNo', thankYouYesNo);
+        const successQs = successParams.toString();
+        const successUrl = `/web/${event_id}/register/success${successQs ? `?${successQs}` : ''}`;
+
+        // 非 AJAX（瀏覽器原生 form POST）→ 直接導向 success，避免畫面只顯示 JSON
+        const isAjax = req.xhr === true
+            || String(req.get('X-Requested-With') || '').toLowerCase() === 'xmlhttprequest';
+        if (!isAjax) {
+            return res.redirect(303, successUrl);
+        }
+
         return res.status(200).json({
             _id: userId,
             applicationCompleted: true,
+            redirectUrl: successUrl,
             ...savedObj
         });
     } catch (error) {
