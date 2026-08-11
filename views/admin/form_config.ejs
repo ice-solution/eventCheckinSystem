@@ -1610,150 +1610,223 @@
         preview.innerHTML = html;
     }
 
+    // 從頁面表單收集 meta（terms / agreement / thankYou / paymentTicketUi 等）
+    function collectMetaConfigFromForm() {
+        const val = (id, fallback) => {
+            const el = document.getElementById(id);
+            if (!el) return fallback != null ? fallback : '';
+            return el.value || (fallback != null ? fallback : '');
+        };
+        const trimVal = (id, fallback) => (val(id, fallback) || '').trim() || (fallback != null ? fallback : '');
+        const checked = (id, defaultTrue) => {
+            const el = document.getElementById(id);
+            if (!el) return !!defaultTrue;
+            return !!el.checked;
+        };
+        return {
+            languageSwitcherEnabled: checked('languageSwitcherEnabled', true),
+            registerPageEnabled: checked('registerPageEnabled', true),
+            registerClosedMessage: val('registerClosedMessage', ''),
+            eventDisplayName: {
+                zh: trimVal('eventDisplayNameZh', ''),
+                en: trimVal('eventDisplayNameEn', '')
+            },
+            registerSubHeader: {
+                zh: trimVal('registerSubHeaderZh', ''),
+                en: trimVal('registerSubHeaderEn', '')
+            },
+            registerSubtitle: {
+                zh: trimVal('registerSubtitleZh', '請填寫以下資料完成活動報名'),
+                en: trimVal('registerSubtitleEn', 'Please fill in the following information to complete event registration')
+            },
+            terms: {
+                enabled: checked('termsEnabled', false),
+                title: {
+                    zh: trimVal('termsTitleZh', '條款與細則'),
+                    en: trimVal('termsTitleEn', 'Terms & Conditions')
+                },
+                linkLabel: {
+                    zh: trimVal('termsLinkLabelZh', '(條款)'),
+                    en: trimVal('termsLinkLabelEn', '(terms)')
+                },
+                showLinkLabel: checked('termsShowLinkLabel', true),
+                label: {
+                    zh: val('termsLabelZh', ''),
+                    en: val('termsLabelEn', '')
+                },
+                content: {
+                    zh: val('termsContentZh', ''),
+                    en: val('termsContentEn', '')
+                }
+            },
+            agreement: {
+                enabled: checked('agreementEnabled', false),
+                title: {
+                    zh: trimVal('agreementTitleZh', '協議'),
+                    en: trimVal('agreementTitleEn', 'Agreement')
+                },
+                linkLabel: {
+                    zh: trimVal('agreementLinkLabelZh', '(協議)'),
+                    en: trimVal('agreementLinkLabelEn', '(agreement)')
+                },
+                showLinkLabel: checked('agreementShowLinkLabel', true),
+                label: {
+                    zh: val('agreementLabelZh', ''),
+                    en: val('agreementLabelEn', '')
+                },
+                content: {
+                    zh: val('agreementContentZh', ''),
+                    en: val('agreementContentEn', '')
+                }
+            },
+            thankYou: {
+                title: {
+                    zh: trimVal('thankYouTitleZh', ''),
+                    en: trimVal('thankYouTitleEn', '')
+                },
+                message: {
+                    zh: val('thankYouMessageZh', ''),
+                    en: val('thankYouMessageEn', '')
+                },
+                purchaseTitle: {
+                    zh: trimVal('thankYouPurchaseTitleZh', ''),
+                    en: trimVal('thankYouPurchaseTitleEn', '')
+                },
+                purchaseMessage: {
+                    zh: val('thankYouPurchaseMessageZh', ''),
+                    en: val('thankYouPurchaseMessageEn', '')
+                },
+                yesNoQuestion: {
+                    enabled: checked('thankYouYesNoEnabled', false),
+                    question: {
+                        zh: trimVal('thankYouYesNoQuestionZh', ''),
+                        en: trimVal('thankYouYesNoQuestionEn', '')
+                    },
+                    yesLabel: {
+                        zh: trimVal('thankYouYesLabelZh', '是'),
+                        en: trimVal('thankYouYesLabelEn', 'Yes')
+                    },
+                    noLabel: {
+                        zh: trimVal('thankYouNoLabelZh', '否'),
+                        en: trimVal('thankYouNoLabelEn', 'No')
+                    },
+                    yesEmailTemplateId: val('thankYouYesEmailTemplateId', ''),
+                    noEmailTemplateId: val('thankYouNoEmailTemplateId', ''),
+                    yesTitle: {
+                        zh: trimVal('thankYouYesTitleZh', ''),
+                        en: trimVal('thankYouYesTitleEn', '')
+                    },
+                    yesMessage: {
+                        zh: val('thankYouYesMessageZh', ''),
+                        en: val('thankYouYesMessageEn', '')
+                    },
+                    yesPurchaseTitle: {
+                        zh: trimVal('thankYouYesPurchaseTitleZh', ''),
+                        en: trimVal('thankYouYesPurchaseTitleEn', '')
+                    },
+                    yesPurchaseMessage: {
+                        zh: val('thankYouYesPurchaseMessageZh', ''),
+                        en: val('thankYouYesPurchaseMessageEn', '')
+                    },
+                    noTitle: {
+                        zh: trimVal('thankYouNoTitleZh', ''),
+                        en: trimVal('thankYouNoTitleEn', '')
+                    },
+                    noMessage: {
+                        zh: val('thankYouNoMessageZh', ''),
+                        en: val('thankYouNoMessageEn', '')
+                    },
+                    noPurchaseTitle: {
+                        zh: trimVal('thankYouNoPurchaseTitleZh', ''),
+                        en: trimVal('thankYouNoPurchaseTitleEn', '')
+                    },
+                    noPurchaseMessage: {
+                        zh: val('thankYouNoPurchaseMessageZh', ''),
+                        en: val('thankYouNoPurchaseMessageEn', '')
+                    }
+                }
+            },
+            paymentTicketUi: collectPaymentTicketUiFromForm()
+        };
+    }
+
+    function applyMetaToFormConfig(meta) {
+        if (!meta) return;
+        Object.keys(meta).forEach(function(key) {
+            formConfig[key] = meta[key];
+        });
+    }
+
+    function buildExportableConfig() {
+        const meta = collectMetaConfigFromForm();
+        applyMetaToFormConfig(meta);
+        return {
+            defaultLanguage: formConfig.defaultLanguage || 'zh',
+            languageSwitcherEnabled: meta.languageSwitcherEnabled,
+            registerPageEnabled: meta.registerPageEnabled,
+            registerClosedMessage: meta.registerClosedMessage,
+            eventDisplayName: meta.eventDisplayName,
+            registerSubHeader: meta.registerSubHeader,
+            registerSubtitle: meta.registerSubtitle,
+            terms: meta.terms,
+            agreement: meta.agreement,
+            thankYou: meta.thankYou,
+            paymentTicketUi: meta.paymentTicketUi,
+            sections: (formConfig.sections || []).map(function(section) {
+                return {
+                    sectionName: section.sectionName,
+                    sectionTitle: section.sectionTitle,
+                    visible: section.visible,
+                    order: section.order || 0,
+                    fields: (section.fields || []).map(function(field) {
+                        return {
+                            fieldName: field.fieldName,
+                            label: field.label,
+                            type: field.type,
+                            required: field.required,
+                            confirmEmail: !!field.confirmEmail,
+                            display: field.display !== undefined ? field.display : field.visible !== false,
+                            visible: field.visible,
+                            placeholder: field.placeholder,
+                            options: (field.options || []).map(function(opt) {
+                                return {
+                                    value: opt.value,
+                                    label: opt.label,
+                                    isOther: !!opt.isOther
+                                };
+                            }),
+                            validation: field.validation || {},
+                            order: field.order || 0
+                        };
+                    })
+                };
+            })
+        };
+    }
+
     // 儲存配置
     async function saveConfig() {
         try {
-            const registerPageEnabled = document.getElementById('registerPageEnabled').checked;
-            const languageSwitcherEnabled = document.getElementById('languageSwitcherEnabled').checked;
-            const registerClosedMessage = document.getElementById('registerClosedMessage').value || '';
-            const eventDisplayName = {
-                zh: (document.getElementById('eventDisplayNameZh').value || '').trim(),
-                en: (document.getElementById('eventDisplayNameEn').value || '').trim()
-            };
-            const registerSubHeader = {
-                zh: (document.getElementById('registerSubHeaderZh').value || '').trim(),
-                en: (document.getElementById('registerSubHeaderEn').value || '').trim()
-            };
-            const registerSubtitle = {
-                zh: (document.getElementById('registerSubtitleZh').value || '').trim(),
-                en: (document.getElementById('registerSubtitleEn').value || '').trim()
-            };
-            const terms = {
-                enabled: !!document.getElementById('termsEnabled').checked,
-                title: {
-                    zh: (document.getElementById('termsTitleZh').value || '').trim() || '條款與細則',
-                    en: (document.getElementById('termsTitleEn').value || '').trim() || 'Terms & Conditions'
-                },
-                linkLabel: {
-                    zh: (document.getElementById('termsLinkLabelZh').value || '').trim() || '(條款)',
-                    en: (document.getElementById('termsLinkLabelEn').value || '').trim() || '(terms)'
-                },
-                showLinkLabel: !!document.getElementById('termsShowLinkLabel').checked,
-                label: {
-                    zh: document.getElementById('termsLabelZh').value || '',
-                    en: document.getElementById('termsLabelEn').value || ''
-                },
-                content: {
-                    zh: document.getElementById('termsContentZh').value || '',
-                    en: document.getElementById('termsContentEn').value || ''
-                }
-            };
-            const agreement = {
-                enabled: !!document.getElementById('agreementEnabled').checked,
-                title: {
-                    zh: (document.getElementById('agreementTitleZh').value || '').trim() || '協議',
-                    en: (document.getElementById('agreementTitleEn').value || '').trim() || 'Agreement'
-                },
-                linkLabel: {
-                    zh: (document.getElementById('agreementLinkLabelZh').value || '').trim() || '(協議)',
-                    en: (document.getElementById('agreementLinkLabelEn').value || '').trim() || '(agreement)'
-                },
-                showLinkLabel: !!document.getElementById('agreementShowLinkLabel').checked,
-                label: {
-                    zh: document.getElementById('agreementLabelZh').value || '',
-                    en: document.getElementById('agreementLabelEn').value || ''
-                },
-                content: {
-                    zh: document.getElementById('agreementContentZh').value || '',
-                    en: document.getElementById('agreementContentEn').value || ''
-                }
-            };
-            const thankYou = {
-                title: {
-                    zh: (document.getElementById('thankYouTitleZh').value || '').trim(),
-                    en: (document.getElementById('thankYouTitleEn').value || '').trim()
-                },
-                message: {
-                    zh: document.getElementById('thankYouMessageZh').value || '',
-                    en: document.getElementById('thankYouMessageEn').value || ''
-                },
-                purchaseTitle: {
-                    zh: (document.getElementById('thankYouPurchaseTitleZh').value || '').trim(),
-                    en: (document.getElementById('thankYouPurchaseTitleEn').value || '').trim()
-                },
-                purchaseMessage: {
-                    zh: document.getElementById('thankYouPurchaseMessageZh').value || '',
-                    en: document.getElementById('thankYouPurchaseMessageEn').value || ''
-                },
-                yesNoQuestion: {
-                    enabled: !!document.getElementById('thankYouYesNoEnabled').checked,
-                    question: {
-                        zh: (document.getElementById('thankYouYesNoQuestionZh').value || '').trim(),
-                        en: (document.getElementById('thankYouYesNoQuestionEn').value || '').trim()
-                    },
-                    yesLabel: {
-                        zh: (document.getElementById('thankYouYesLabelZh').value || '').trim() || '是',
-                        en: (document.getElementById('thankYouYesLabelEn').value || '').trim() || 'Yes'
-                    },
-                    noLabel: {
-                        zh: (document.getElementById('thankYouNoLabelZh').value || '').trim() || '否',
-                        en: (document.getElementById('thankYouNoLabelEn').value || '').trim() || 'No'
-                    },
-                    yesEmailTemplateId: document.getElementById('thankYouYesEmailTemplateId').value || '',
-                    noEmailTemplateId: document.getElementById('thankYouNoEmailTemplateId').value || '',
-                    yesTitle: {
-                        zh: (document.getElementById('thankYouYesTitleZh').value || '').trim(),
-                        en: (document.getElementById('thankYouYesTitleEn').value || '').trim()
-                    },
-                    yesMessage: {
-                        zh: document.getElementById('thankYouYesMessageZh').value || '',
-                        en: document.getElementById('thankYouYesMessageEn').value || ''
-                    },
-                    yesPurchaseTitle: {
-                        zh: (document.getElementById('thankYouYesPurchaseTitleZh').value || '').trim(),
-                        en: (document.getElementById('thankYouYesPurchaseTitleEn').value || '').trim()
-                    },
-                    yesPurchaseMessage: {
-                        zh: document.getElementById('thankYouYesPurchaseMessageZh').value || '',
-                        en: document.getElementById('thankYouYesPurchaseMessageEn').value || ''
-                    },
-                    noTitle: {
-                        zh: (document.getElementById('thankYouNoTitleZh').value || '').trim(),
-                        en: (document.getElementById('thankYouNoTitleEn').value || '').trim()
-                    },
-                    noMessage: {
-                        zh: document.getElementById('thankYouNoMessageZh').value || '',
-                        en: document.getElementById('thankYouNoMessageEn').value || ''
-                    },
-                    noPurchaseTitle: {
-                        zh: (document.getElementById('thankYouNoPurchaseTitleZh').value || '').trim(),
-                        en: (document.getElementById('thankYouNoPurchaseTitleEn').value || '').trim()
-                    },
-                    noPurchaseMessage: {
-                        zh: document.getElementById('thankYouNoPurchaseMessageZh').value || '',
-                        en: document.getElementById('thankYouNoPurchaseMessageEn').value || ''
-                    }
-                }
-            };
-            const paymentTicketUi = collectPaymentTicketUiFromForm();
+            const meta = collectMetaConfigFromForm();
+            applyMetaToFormConfig(meta);
             const response = await fetch('/formConfig/' + eventId + '/config', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     sections: formConfig.sections,
                     defaultLanguage: formConfig.defaultLanguage,
-                    languageSwitcherEnabled,
-                    registerPageEnabled: registerPageEnabled,
-                    registerClosedMessage: registerClosedMessage,
-                    eventDisplayName,
-                    registerSubHeader,
-                    registerSubtitle,
-                    terms,
-                    agreement,
-                    thankYou,
-                    paymentTicketUi
+                    languageSwitcherEnabled: meta.languageSwitcherEnabled,
+                    registerPageEnabled: meta.registerPageEnabled,
+                    registerClosedMessage: meta.registerClosedMessage,
+                    eventDisplayName: meta.eventDisplayName,
+                    registerSubHeader: meta.registerSubHeader,
+                    registerSubtitle: meta.registerSubtitle,
+                    terms: meta.terms,
+                    agreement: meta.agreement,
+                    thankYou: meta.thankYou,
+                    paymentTicketUi: meta.paymentTicketUi
                 })
             });
             
@@ -1805,61 +1878,7 @@
     // 導出配置為 JSON
     function exportConfig() {
         try {
-            // 創建要導出的配置對象（移除 MongoDB 相關字段）
-            const exportData = {
-                defaultLanguage: formConfig.defaultLanguage,
-                languageSwitcherEnabled: formConfig.languageSwitcherEnabled !== false,
-                eventDisplayName: formConfig.eventDisplayName || { zh: '', en: '' },
-                registerSubHeader: formConfig.registerSubHeader || { zh: '', en: '' },
-                registerSubtitle: formConfig.registerSubtitle || {
-                    zh: '請填寫以下資料完成活動報名',
-                    en: 'Please fill in the following information to complete event registration'
-                },
-                terms: formConfig.terms || {
-                    enabled: false,
-                    title: { zh: '條款與細則', en: 'Terms & Conditions' },
-                    linkLabel: { zh: '(條款)', en: '(terms)' },
-                    showLinkLabel: true,
-                    label: { zh: '', en: '' },
-                    content: { zh: '', en: '' }
-                },
-                agreement: formConfig.agreement || {
-                    enabled: false,
-                    title: { zh: '協議', en: 'Agreement' },
-                    linkLabel: { zh: '(協議)', en: '(agreement)' },
-                    showLinkLabel: true,
-                    label: { zh: '', en: '' },
-                    content: { zh: '', en: '' }
-                },
-                thankYou: formConfig.thankYou || {
-                    title: { zh: '感謝你參加！', en: 'Thank you for participating!' },
-                    message: { zh: '我們會透過 Email 把資訊發送給你。', en: 'We will send the information to you via Email.' },
-                    purchaseTitle: { zh: '感謝您的購票！', en: 'Thank you for your purchase!' },
-                    purchaseMessage: {
-                        zh: '您的付款已成功，以下是您的交易紀錄：',
-                        en: 'Your payment was successful. Here are your transaction details:'
-                    }
-                },
-                sections: formConfig.sections.map(section => ({
-                    sectionName: section.sectionName,
-                    sectionTitle: section.sectionTitle,
-                    visible: section.visible,
-                    order: section.order || 0,
-                    fields: (section.fields || []).map(field => ({
-                        fieldName: field.fieldName,
-                        label: field.label,
-                        type: field.type,
-                        required: field.required,
-                        confirmEmail: !!field.confirmEmail,
-                        display: field.display !== undefined ? field.display : field.visible !== false,
-                        visible: field.visible,
-                        placeholder: field.placeholder,
-                        options: field.options || [],
-                        validation: field.validation || {},
-                        order: field.order || 0
-                    }))
-                }))
-            };
+            const exportData = buildExportableConfig();
             
             // 轉換為 JSON 字符串
             const jsonString = JSON.stringify(exportData, null, 2);
@@ -1901,10 +1920,16 @@
                 
                 // 確認導入
                 if (confirm('確定要導入此配置嗎？這將覆蓋現有的表單配置。')) {
-                    // 更新 formConfig
+                    // 更新 formConfig meta
                     formConfig.defaultLanguage = importedData.defaultLanguage || formConfig.defaultLanguage;
                     if (typeof importedData.languageSwitcherEnabled === 'boolean') {
                         formConfig.languageSwitcherEnabled = importedData.languageSwitcherEnabled;
+                    }
+                    if (typeof importedData.registerPageEnabled === 'boolean') {
+                        formConfig.registerPageEnabled = importedData.registerPageEnabled;
+                    }
+                    if (typeof importedData.registerClosedMessage === 'string') {
+                        formConfig.registerClosedMessage = importedData.registerClosedMessage;
                     }
                     formConfig.terms = importedData.terms || formConfig.terms || {
                         enabled: false,
@@ -1929,6 +1954,22 @@
                         purchaseMessage: {
                             zh: '您的付款已成功，以下是您的交易紀錄：',
                             en: 'Your payment was successful. Here are your transaction details:'
+                        },
+                        yesNoQuestion: {
+                            enabled: false,
+                            question: { zh: '', en: '' },
+                            yesLabel: { zh: '是', en: 'Yes' },
+                            noLabel: { zh: '否', en: 'No' },
+                            yesEmailTemplateId: '',
+                            noEmailTemplateId: '',
+                            yesTitle: { zh: '', en: '' },
+                            yesMessage: { zh: '', en: '' },
+                            yesPurchaseTitle: { zh: '', en: '' },
+                            yesPurchaseMessage: { zh: '', en: '' },
+                            noTitle: { zh: '', en: '' },
+                            noMessage: { zh: '', en: '' },
+                            noPurchaseTitle: { zh: '', en: '' },
+                            noPurchaseMessage: { zh: '', en: '' }
                         }
                     };
                     formConfig.eventDisplayName = importedData.eventDisplayName || formConfig.eventDisplayName || { zh: '', en: '' };
@@ -1937,6 +1978,9 @@
                         zh: '請填寫以下資料完成活動報名',
                         en: 'Please fill in the following information to complete event registration'
                     };
+                    if (importedData.paymentTicketUi) {
+                        formConfig.paymentTicketUi = importedData.paymentTicketUi;
+                    }
                     formConfig.sections = importedData.sections.map(section => ({
                         sectionName: section.sectionName || '新區塊',
                         sectionTitle: section.sectionTitle || { zh: '新區塊', en: 'New Section' },
@@ -1953,14 +1997,21 @@
                             display: disp,
                             visible: disp,
                             placeholder: field.placeholder || { zh: '', en: '' },
-                            options: field.options || [],
+                            options: (field.options || []).map(function(opt) {
+                                return {
+                                    value: opt.value,
+                                    label: opt.label || { zh: '', en: '' },
+                                    isOther: !!opt.isOther
+                                };
+                            }),
                             validation: field.validation || {},
                             order: field.order || 0
                         };
                         })
                     }));
                     
-                    // 保存配置
+                    // 保存配置（會再從 DOM 收集；先把導入值寫回 DOM）
+                    applyImportedMetaToDom(importedData);
                     saveConfig().then(() => {
                         alert('配置已成功導入！');
                         location.reload();
@@ -1978,6 +2029,129 @@
         reader.readAsText(file);
         // 重置文件輸入，以便可以再次選擇同一個文件
         event.target.value = '';
+    }
+
+    function setInputValue(id, value) {
+        const el = document.getElementById(id);
+        if (!el || value == null) return;
+        if (el.type === 'checkbox') {
+            el.checked = !!value;
+        } else {
+            el.value = value;
+        }
+    }
+
+    function applyImportedMetaToDom(data) {
+        if (!data) return;
+        if (typeof data.languageSwitcherEnabled === 'boolean') setInputValue('languageSwitcherEnabled', data.languageSwitcherEnabled);
+        if (typeof data.registerPageEnabled === 'boolean') setInputValue('registerPageEnabled', data.registerPageEnabled);
+        if (typeof data.registerClosedMessage === 'string') setInputValue('registerClosedMessage', data.registerClosedMessage);
+        const edn = data.eventDisplayName || {};
+        setInputValue('eventDisplayNameZh', edn.zh || '');
+        setInputValue('eventDisplayNameEn', edn.en || '');
+        const rsh = data.registerSubHeader || {};
+        setInputValue('registerSubHeaderZh', rsh.zh || '');
+        setInputValue('registerSubHeaderEn', rsh.en || '');
+        const rst = data.registerSubtitle || {};
+        setInputValue('registerSubtitleZh', rst.zh || '');
+        setInputValue('registerSubtitleEn', rst.en || '');
+
+        const t = data.terms || {};
+        setInputValue('termsEnabled', !!t.enabled);
+        setInputValue('termsTitleZh', (t.title && t.title.zh) || '');
+        setInputValue('termsTitleEn', (t.title && t.title.en) || '');
+        setInputValue('termsShowLinkLabel', t.showLinkLabel !== false);
+        setInputValue('termsLinkLabelZh', (t.linkLabel && t.linkLabel.zh) || '');
+        setInputValue('termsLinkLabelEn', (t.linkLabel && t.linkLabel.en) || '');
+        setInputValue('termsLabelZh', (t.label && t.label.zh) || '');
+        setInputValue('termsLabelEn', (t.label && t.label.en) || '');
+        setInputValue('termsContentZh', (t.content && t.content.zh) || '');
+        setInputValue('termsContentEn', (t.content && t.content.en) || '');
+
+        const a = data.agreement || {};
+        setInputValue('agreementEnabled', !!a.enabled);
+        setInputValue('agreementTitleZh', (a.title && a.title.zh) || '');
+        setInputValue('agreementTitleEn', (a.title && a.title.en) || '');
+        setInputValue('agreementShowLinkLabel', a.showLinkLabel !== false);
+        setInputValue('agreementLinkLabelZh', (a.linkLabel && a.linkLabel.zh) || '');
+        setInputValue('agreementLinkLabelEn', (a.linkLabel && a.linkLabel.en) || '');
+        setInputValue('agreementLabelZh', (a.label && a.label.zh) || '');
+        setInputValue('agreementLabelEn', (a.label && a.label.en) || '');
+        setInputValue('agreementContentZh', (a.content && a.content.zh) || '');
+        setInputValue('agreementContentEn', (a.content && a.content.en) || '');
+
+        const ty = data.thankYou || {};
+        setInputValue('thankYouTitleZh', (ty.title && ty.title.zh) || '');
+        setInputValue('thankYouTitleEn', (ty.title && ty.title.en) || '');
+        setInputValue('thankYouMessageZh', (ty.message && ty.message.zh) || '');
+        setInputValue('thankYouMessageEn', (ty.message && ty.message.en) || '');
+        setInputValue('thankYouPurchaseTitleZh', (ty.purchaseTitle && ty.purchaseTitle.zh) || '');
+        setInputValue('thankYouPurchaseTitleEn', (ty.purchaseTitle && ty.purchaseTitle.en) || '');
+        setInputValue('thankYouPurchaseMessageZh', (ty.purchaseMessage && ty.purchaseMessage.zh) || '');
+        setInputValue('thankYouPurchaseMessageEn', (ty.purchaseMessage && ty.purchaseMessage.en) || '');
+        const ynq = ty.yesNoQuestion || {};
+        setInputValue('thankYouYesNoEnabled', !!ynq.enabled);
+        setInputValue('thankYouYesNoQuestionZh', (ynq.question && ynq.question.zh) || '');
+        setInputValue('thankYouYesNoQuestionEn', (ynq.question && ynq.question.en) || '');
+        setInputValue('thankYouYesLabelZh', (ynq.yesLabel && ynq.yesLabel.zh) || '');
+        setInputValue('thankYouYesLabelEn', (ynq.yesLabel && ynq.yesLabel.en) || '');
+        setInputValue('thankYouNoLabelZh', (ynq.noLabel && ynq.noLabel.zh) || '');
+        setInputValue('thankYouNoLabelEn', (ynq.noLabel && ynq.noLabel.en) || '');
+        setInputValue('thankYouYesEmailTemplateId', ynq.yesEmailTemplateId || '');
+        setInputValue('thankYouNoEmailTemplateId', ynq.noEmailTemplateId || '');
+        setInputValue('thankYouYesTitleZh', (ynq.yesTitle && ynq.yesTitle.zh) || '');
+        setInputValue('thankYouYesTitleEn', (ynq.yesTitle && ynq.yesTitle.en) || '');
+        setInputValue('thankYouYesMessageZh', (ynq.yesMessage && ynq.yesMessage.zh) || '');
+        setInputValue('thankYouYesMessageEn', (ynq.yesMessage && ynq.yesMessage.en) || '');
+        setInputValue('thankYouYesPurchaseTitleZh', (ynq.yesPurchaseTitle && ynq.yesPurchaseTitle.zh) || '');
+        setInputValue('thankYouYesPurchaseTitleEn', (ynq.yesPurchaseTitle && ynq.yesPurchaseTitle.en) || '');
+        setInputValue('thankYouYesPurchaseMessageZh', (ynq.yesPurchaseMessage && ynq.yesPurchaseMessage.zh) || '');
+        setInputValue('thankYouYesPurchaseMessageEn', (ynq.yesPurchaseMessage && ynq.yesPurchaseMessage.en) || '');
+        setInputValue('thankYouNoTitleZh', (ynq.noTitle && ynq.noTitle.zh) || '');
+        setInputValue('thankYouNoTitleEn', (ynq.noTitle && ynq.noTitle.en) || '');
+        setInputValue('thankYouNoMessageZh', (ynq.noMessage && ynq.noMessage.zh) || '');
+        setInputValue('thankYouNoMessageEn', (ynq.noMessage && ynq.noMessage.en) || '');
+        setInputValue('thankYouNoPurchaseTitleZh', (ynq.noPurchaseTitle && ynq.noPurchaseTitle.zh) || '');
+        setInputValue('thankYouNoPurchaseTitleEn', (ynq.noPurchaseTitle && ynq.noPurchaseTitle.en) || '');
+        setInputValue('thankYouNoPurchaseMessageZh', (ynq.noPurchaseMessage && ynq.noPurchaseMessage.zh) || '');
+        setInputValue('thankYouNoPurchaseMessageEn', (ynq.noPurchaseMessage && ynq.noPurchaseMessage.en) || '');
+
+        const pt = data.paymentTicketUi || {};
+        if (pt.sectionTitle) {
+            setInputValue('ptSectionTitleZh', pt.sectionTitle.zh || '');
+            setInputValue('ptSectionTitleEn', pt.sectionTitle.en || '');
+        }
+        if (pt.categoryLabel) {
+            setInputValue('ptCategoryLabelZh', pt.categoryLabel.zh || '');
+            setInputValue('ptCategoryLabelEn', pt.categoryLabel.en || '');
+        }
+        if (pt.ticketLabel) {
+            setInputValue('ptTicketLabelZh', pt.ticketLabel.zh || '');
+            setInputValue('ptTicketLabelEn', pt.ticketLabel.en || '');
+        }
+        if (pt.defaultCategoryLabel) {
+            setInputValue('ptDefaultCategoryZh', pt.defaultCategoryLabel.zh || '');
+            setInputValue('ptDefaultCategoryEn', pt.defaultCategoryLabel.en || '');
+        }
+        if (pt.buttons && pt.buttons.back) {
+            setInputValue('ptBackBtnZh', pt.buttons.back.zh || '');
+            setInputValue('ptBackBtnEn', pt.buttons.back.en || '');
+        }
+        if (pt.buttons && pt.buttons.next) {
+            setInputValue('ptNextBtnZh', pt.buttons.next.zh || '');
+            setInputValue('ptNextBtnEn', pt.buttons.next.en || '');
+        }
+        if (pt.highlightText) {
+            setInputValue('ptHighlightZh', pt.highlightText.zh || '');
+            setInputValue('ptHighlightEn', pt.highlightText.en || '');
+        }
+        if (Array.isArray(pt.categoryButtons)) {
+            formConfig.paymentTicketUi = formConfig.paymentTicketUi || {};
+            formConfig.paymentTicketUi.categoryButtons = pt.categoryButtons;
+            if (typeof renderPtCategoryButtonsList === 'function') {
+                renderPtCategoryButtonsList();
+            }
+        }
     }
 
     // 初始化預覽
