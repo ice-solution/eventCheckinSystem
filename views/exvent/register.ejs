@@ -1878,7 +1878,7 @@ var registerPageTitleSuffix = isApplicationMode
             newUser.ticketId = ticketId;
             <% if (isApplicationMode) { %>
             if (!newUser.token) {
-                newUser.token = <%= JSON.stringify(applicationTokenVal) %>;
+                newUser.token = <%- JSON.stringify(applicationTokenVal) %>;
             }
             newUser.lang = currentLanguage;
             $.ajax({
