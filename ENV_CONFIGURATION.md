@@ -26,6 +26,12 @@
   - ✅ 修改 .env 後**必須重啟** Node（如 nodemon）才會生效
 - **若畫面上仍是 localhost:3377**：請確認 (1) .env 裡是 `DOMAIN=https://demo.brandactivation.hk` (2) 存檔後已重啟服務
 
+### APPLICATION_TOKEN_SECRET / APPLICATION_TOKEN_TTL_DAYS（可選）
+- 專屬 Application 邀請連結（`/web/:eventId/application/:userId?token=`）簽名用
+- 郵件變數：`{{applicationLink}}` / `{{applicationUrl}}`
+- 預設有效期 180 日；可用 `APPLICATION_TOKEN_TTL_DAYS=180` 調整
+- 未設 secret 時會 fallback 其他密鑰；建議正式環境設定 `APPLICATION_TOKEN_SECRET`
+
 ---
 
 ## 🗄️ 資料庫配置

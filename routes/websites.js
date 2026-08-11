@@ -176,6 +176,10 @@ router.get('/email-template/:id', emailTemplateController.renderEmailTemplatePre
 // 公開免費報名（iframe / 前台，不需登入；勿用 /events/.../users）
 router.post('/:event_id/register', eventsController.publicRegister);
 
+// 專屬 Application（已 import 用戶補填；獨立於公開 register）
+router.get('/:event_id/application/:userId', eventsController.renderApplicationForm);
+router.post('/:event_id/application/:userId', eventsController.submitApplicationForm);
+
 // Wonder Payment Checkout（沿用舊路徑以相容前端）
 router.post('/:event_id/stripe-checkout', eventsController.stripeCheckout);
 

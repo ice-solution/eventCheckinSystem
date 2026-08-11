@@ -427,6 +427,210 @@ exports.publicRegister = async (req, res) => {
     }
 };
 
+/**
+ * 專屬 Application：已 import 用戶補填 FormConfig
+ * GET  /web/:event_id/application/:userId?token=
+ * POST /web/:event_id/application/:userId  body + token
+ * 不影響公開 /web/:event_id/register
+ */
+exports.renderApplicationForm = async (req, res) => {
+    const { event_id, userId } = req.params;
+    const token = (req.query.token || req.body.token || '').toString();
+    const {
+        verifyApplicationToken,
+        isUserFieldFilled,
+        getUserFieldValue
+    } = require('../utils/applicationToken');
+
+    if (!/^[0-9a-fA-F]{24}$/.test(event_id) || !/^[0-9a-fA-F]{24}$/.test(userId)) {
+        return res.status(400).send('Invalid link');
+    }
+
+    const verified = verifyApplicationToken(token, event_id, userId);
+    if (!verified.ok) {
+        const msg = verified.reason === 'expired'
+            ? '此申請連結已過期，請聯絡主辦單位重新發送邀請。'
+            : '無效的申請連結。';
+        return res.status(403).render('exvent/application_status', {
+            event_id,
+            status: 'error',
+            message: msg
+        });
+    }
+
+    try {
+        const event = await Event.findById(event_id);
+        if (!event) {
+            return res.status(404).render('exvent/application_status', {
+                event_id,
+                status: 'error',
+                message: '找不到活動。'
+            });
+        }
+        const userDoc = event.users.id(userId);
+        if (!userDoc) {
+            return res.status(404).render('exvent/application_status', {
+                event_id,
+                status: 'error',
+                message: '找不到用戶。'
+            });
+        }
+        const existingUser = userDoc.toObject ? userDoc.toObject({ minimize: false }) : userDoc;
+
+        if (existingUser.applicationCompleted) {
+            return res.render('exvent/application_status', {
+                event_id,
+                event,
+                status: 'completed',
+                message: '您已完成申請，此連結不可再次修改。'
+            });
+        }
+
+        const FormConfig = require('../model/FormConfig');
+        const formConfigController = require('./formConfigController');
+        let formConfig = await FormConfig.findOne({ eventId: event_id });
+        if (!formConfig) {
+            const defaultConfig = formConfigController.getDefaultFormConfig();
+            formConfig = new FormConfig({ eventId: event_id, ...defaultConfig });
+            await formConfig.save();
+        }
+        formConfig = formConfigController.getFormConfigForRender(formConfig);
+
+        const lockedFields = {};
+        const fieldValues = {};
+        (formConfig.sections || []).forEach((section) => {
+            (section.fields || []).forEach((field) => {
+                if (!field || !field.fieldName || field.type === 'display') return;
+                const filled = isUserFieldFilled(existingUser, field.fieldName);
+                lockedFields[field.fieldName] = filled;
+                fieldValues[field.fieldName] = getUserFieldValue(existingUser, field.fieldName);
+            });
+        });
+
+        return res.render('exvent/register', {
+            event_id,
+            event,
+            paymentTickets: [],
+            ticketsUseCategories: false,
+            formConfig,
+            applicationMode: true,
+            applicationToken: token,
+            applicationUserId: userId,
+            existingUser,
+            lockedFields,
+            fieldValues,
+            applicationCompleted: false
+        });
+    } catch (error) {
+        console.error('renderApplicationForm error:', error);
+        return res.status(500).render('exvent/application_status', {
+            event_id,
+            status: 'error',
+            message: '伺服器錯誤，請稍後再試。'
+        });
+    }
+};
+
+exports.submitApplicationForm = async (req, res) => {
+    const { event_id, userId } = req.params;
+    const body = req.body || {};
+    const token = (body.token || req.query.token || '').toString();
+    const {
+        verifyApplicationToken,
+        isUserFieldFilled
+    } = require('../utils/applicationToken');
+    const { normalizeAgreementAgreed } = require('../utils/agreementFields');
+
+    if (!/^[0-9a-fA-F]{24}$/.test(event_id) || !/^[0-9a-fA-F]{24}$/.test(userId)) {
+        return res.status(400).json({ message: 'Invalid link' });
+    }
+
+    const verified = verifyApplicationToken(token, event_id, userId);
+    if (!verified.ok) {
+        const msg = verified.reason === 'expired'
+            ? '此申請連結已過期，請聯絡主辦單位重新發送邀請。'
+            : '無效的申請連結。';
+        return res.status(403).json({ message: msg });
+    }
+
+    try {
+        const event = await Event.findById(event_id);
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+
+        const user = event.users.id(userId);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const userObj = user.toObject ? user.toObject({ minimize: false }) : user;
+        if (userObj.applicationCompleted) {
+            return res.status(409).json({ message: '您已完成申請，不可再次修改。' });
+        }
+
+        const FormConfig = require('../model/FormConfig');
+        const formConfigController = require('./formConfigController');
+        let formConfig = await FormConfig.findOne({ eventId: event_id });
+        if (formConfig) formConfig = formConfigController.getFormConfigForRender(formConfig);
+
+        const allowedFieldNames = new Set();
+        if (formConfig && formConfig.sections) {
+            formConfig.sections.forEach((section) => {
+                (section.fields || []).forEach((field) => {
+                    if (field && field.fieldName && field.type !== 'display') {
+                        allowedFieldNames.add(field.fieldName);
+                    }
+                });
+            });
+        }
+
+        const excluded = new Set([
+            '_id', '__v', 'token', 'ticketId', 'create_at', 'modified_at',
+            'isCheckIn', 'checkInAt', 'point', 'scannedTreasureItems',
+            'applicationCompleted', 'applicationCompletedAt', 'paymentStatus', 'role'
+        ]);
+
+        Object.keys(body).forEach((key) => {
+            if (excluded.has(key)) return;
+            if (allowedFieldNames.size && !allowedFieldNames.has(key) &&
+                key !== 'agreementAgreed' && key !== 'agreementRecordedAt' && key !== 'thankYouYesNo' && key !== 'lang') {
+                return;
+            }
+            // 已有資料的欄位：顯示不可改，伺服器亦拒絕覆寫
+            if (isUserFieldFilled(userObj, key)) return;
+
+            let val = body[key];
+            if (key === 'agreementAgreed') {
+                val = normalizeAgreementAgreed(val);
+            }
+            user.set(key, val);
+        });
+
+        user.applicationCompleted = true;
+        user.applicationCompletedAt = new Date();
+        user.modified_at = new Date();
+        event.markModified('users');
+        await event.save();
+
+        const saved = event.users.id(userId);
+        const savedObj = saved && saved.toObject ? saved.toObject({ minimize: false }) : saved;
+
+        try {
+            if (savedObj && savedObj.role !== 'guest') {
+                await exports.sendPostRegistrationEmailByPolicy(savedObj, event, { mode: 'welcome' });
+            }
+        } catch (mailErr) {
+            console.error('submitApplicationForm email error:', mailErr);
+        }
+
+        return res.status(200).json({
+            _id: userId,
+            applicationCompleted: true,
+            ...savedObj
+        });
+    } catch (error) {
+        console.error('submitApplicationForm error:', error);
+        return res.status(500).json({ message: '伺服器錯誤', error: error.message });
+    }
+};
+
 exports.addUserToEvent = async (req, res) => {
     const { eventId } = req.params; // 獲取事件 ID
     const userData = ensureUserNameField(req.body || {}); // 獲取用戶資料（包括所有動態字段）
@@ -992,12 +1196,12 @@ exports.sendEmailByType = async (user, event, type = 'welcome', emailTemplateId 
         
         // 如果找到了郵件模板，使用模板的內容
         if (emailTemplate) {
-            subject = emailTemplate.subject;
             const additionalVars = buildEmailTemplateAdditionalVars({
                 user,
                 event,
                 emailTemplateId: emailTemplate._id,
             });
+            subject = replaceTemplateVariables(emailTemplate.subject || subject, user, event, additionalVars);
             messageBody = replaceTemplateVariables(emailTemplate.content, user, event, additionalVars);
         }
         
