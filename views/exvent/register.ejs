@@ -515,7 +515,10 @@ var registerPageTitleSuffix = isApplicationMode
             <p class="text-muted" id="formSubtitle"><%= initSubtitle %></p>
         </div>
 
-        <form id="userForm" method="POST">
+        <form id="userForm" method="POST" action="#" onsubmit="return false;">
+            <% if (isApplicationMode) { %>
+            <input type="hidden" name="token" id="applicationTokenField" value="<%= applicationTokenVal %>">
+            <% } %>
             <% if (formConfig && formConfig.sections && formConfig.sections.length > 0) { %>
                 <% 
                 // 根據 order 排序 sections
@@ -648,40 +651,37 @@ var registerPageTitleSuffix = isApplicationMode
                                                     <% if (_fieldLocked) { %><div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Existing data, not editable">已有資料，不可修改</div><% } %>
                                                     <% if (field.required && !_fieldLocked) { %>
                                                         <script>
-                                                            // 驗證至少選擇一個 checkbox
+                                                            // 驗證至少選擇一個 checkbox（勿對 div 呼叫 setCustomValidity，否則會 throw 導致 form 原生 POST）
                                                             (function() {
                                                                 const checkboxes = document.querySelectorAll('#<%= field.fieldName %>-group input[type="checkbox"]');
                                                                 const group = document.getElementById('<%= field.fieldName %>-group');
-                                                                
+                                                                const fieldLabelZh = '<%= field.label && field.label.zh ? field.label.zh : (typeof field.label === "string" ? field.label : "") %>';
+                                                                const fieldLabelEn = '<%= field.label && field.label.en ? field.label.en : "" %>';
+                                                                let invalid = false;
+
                                                                 function validateCheckboxGroup() {
-                                                                    const checked = Array.from(checkboxes).some(cb => cb.checked);
-                                                                    const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh';
-                                                                    const fieldLabelZh = '<%= field.label && field.label.zh ? field.label.zh : (typeof field.label === "string" ? field.label : "") %>';
-                                                                    const fieldLabelEn = '<%= field.label && field.label.en ? field.label.en : "" %>';
-                                                                    
-                                                                    if (!checked) {
-                                                                        if (currentLang === 'en' && fieldLabelEn) {
-                                                                            group.setCustomValidity('Please select at least one option for ' + fieldLabelEn + '.');
-                                                                        } else {
-                                                                            group.setCustomValidity(fieldLabelZh + ' 為必填欄位');
-                                                                        }
-                                                                    } else {
-                                                                        group.setCustomValidity('');
-                                                                    }
+                                                                    invalid = !Array.from(checkboxes).some(cb => cb.checked);
+                                                                    return !invalid;
                                                                 }
-                                                                
+
                                                                 checkboxes.forEach(cb => {
                                                                     cb.addEventListener('change', validateCheckboxGroup);
                                                                 });
-                                                                
-                                                                // 表單提交時驗證
+
                                                                 const form = document.getElementById('userForm');
                                                                 if (form) {
                                                                     form.addEventListener('submit', function(e) {
-                                                                        validateCheckboxGroup();
-                                                                        if (!group.checkValidity()) {
+                                                                        if (!validateCheckboxGroup()) {
                                                                             e.preventDefault();
                                                                             e.stopPropagation();
+                                                                            const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh';
+                                                                            const msg = (currentLang === 'en' && fieldLabelEn)
+                                                                                ? ('Please select at least one option for ' + fieldLabelEn + '.')
+                                                                                : (fieldLabelZh + ' 為必填欄位');
+                                                                            if (group && typeof group.focus === 'function') {
+                                                                                try { group.scrollIntoView({ block: 'center' }); } catch (_) {}
+                                                                            }
+                                                                            alert(msg);
                                                                         }
                                                                     });
                                                                 }
@@ -1799,6 +1799,7 @@ var registerPageTitleSuffix = isApplicationMode
 
         $('#userForm').on('submit', function(e) {
             e.preventDefault(); // 防止表單默認提交
+            e.stopPropagation();
             $('.js-select-maybe-other').each(function() { syncSelectWithOther(this); });
             $('.js-checkbox-other, .js-radio-other').each(function() { syncChoiceOtherInput(this); });
             var formEl = document.getElementById('userForm');
@@ -1833,7 +1834,7 @@ var registerPageTitleSuffix = isApplicationMode
             const newUser = {};
             $('#userForm').find('input, select, textarea').each(function() {
                 const fieldName = $(this).attr('name');
-                if (!fieldName || fieldName === 'ticketId' || fieldName === 'agreementAgreed' || fieldName === 'token') return;
+                if (!fieldName || fieldName === 'ticketId' || fieldName === 'agreementAgreed') return;
                 if ($(this).prop('disabled')) return;
                 if ($(this).hasClass('js-email-confirm') || String(fieldName).endsWith('_confirm')) return;
                 const type = (this.type || '').toLowerCase();
@@ -1876,13 +1877,20 @@ var registerPageTitleSuffix = isApplicationMode
             }
             newUser.ticketId = ticketId;
             <% if (isApplicationMode) { %>
-            newUser.token = <%= JSON.stringify(applicationTokenVal) %>;
+            if (!newUser.token) {
+                newUser.token = <%= JSON.stringify(applicationTokenVal) %>;
+            }
             newUser.lang = currentLanguage;
             $.ajax({
                 type: 'POST',
                 url: '/web/<%= event_id %>/application/<%= applicationUserIdVal %>',
                 data: newUser,
+                dataType: 'json',
                 success: function(response) {
+                    if (response && response.redirectUrl) {
+                        window.location.href = response.redirectUrl;
+                        return;
+                    }
                     const params = new URLSearchParams();
                     if (currentLanguage && currentLanguage !== 'zh') params.set('lang', currentLanguage);
                     if (newUser.thankYouYesNo) params.set('thankYouYesNo', newUser.thankYouYesNo);
