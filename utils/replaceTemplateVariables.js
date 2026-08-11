@@ -60,6 +60,19 @@ function buildEmailTemplateAdditionalVars({ baseUrl, user, event, emailTemplateI
         checkinLink: eventId ? `${base}/events/${eventId}/login` : '',
     };
 
+    // 專屬 Application 補填連結（invitation 等；每人獨立 token，約 180 日）
+    if (eventId && uid) {
+        try {
+            const { buildApplicationLink } = require('./applicationToken');
+            const appLink = buildApplicationLink(base, eventId, uid);
+            vars.applicationLink = appLink;
+            vars.applicationUrl = appLink;
+        } catch (e) {
+            vars.applicationLink = '';
+            vars.applicationUrl = '';
+        }
+    }
+
     if (emailTemplateId && uid) {
         const tplId = String(emailTemplateId);
         let previewUrl = `${base}/emailTemplate/preview/${tplId}?userId=${uid}`;

@@ -118,6 +118,7 @@ If you cannot read this message, please &lt;a href="{{emailPreviewUrl}}" target=
                                 <br>                                後台預覽（建議）：<code>/emailTemplate/preview/<%= template._id %><%= eventId ? ('?eventId=' + eventId) : '?eventId=活動_id' %>&amp;userId=用戶_id</code>
                                 <br>付款憑證（<code>payment_receipt</code><% if (invoiceEmailEnabled) { %>／發票 <code>invoice</code><% } %>）：可加 <code>&amp;transactionId=訂單_id</code>；未加時會用該活動<strong>最新一筆訂單</strong>作範例
                                 <br>變數名稱正確：<code>{{transaction._id}}</code>、<code>{{transaction.ticketTitle}}</code>、<code>{{invoice.currency}}</code> 等
+                                <br><strong>專屬 Application 邀請連結：</strong><code>{{applicationLink}}</code>（同 <code>{{applicationUrl}}</code>；每人獨立、約 180 日有效）
                             </small>
                             <button type="button" class="btn btn-danger" onclick="deleteTemplate()" style="display: none;"><%= t('create_email_template.deleteTemplateBtn') %></button>
                             </form>

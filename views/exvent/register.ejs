@@ -9,10 +9,34 @@ function getRegisterEventTitle(formConfig, event, lang, allowEmpty) {
     if (allowEmpty) return custom;
     return custom || fallback;
 }
+var isApplicationMode = typeof applicationMode !== 'undefined' && !!applicationMode;
+var applicationTokenVal = (typeof applicationToken !== 'undefined' && applicationToken) ? String(applicationToken) : '';
+var applicationUserIdVal = (typeof applicationUserId !== 'undefined' && applicationUserId) ? String(applicationUserId) : '';
+var lockedFieldsMap = (typeof lockedFields !== 'undefined' && lockedFields) ? lockedFields : {};
+var fieldValuesMap = (typeof fieldValues !== 'undefined' && fieldValues) ? fieldValues : {};
+function appIsLocked(fieldName) {
+    return isApplicationMode && !!lockedFieldsMap[fieldName];
+}
+function appVal(fieldName) {
+    if (!fieldValuesMap || fieldValuesMap[fieldName] === undefined || fieldValuesMap[fieldName] === null) return '';
+    return fieldValuesMap[fieldName];
+}
+function appValStr(fieldName) {
+    var v = appVal(fieldName);
+    if (Array.isArray(v)) return v.join(', ');
+    return String(v);
+}
+function appCheckboxChecked(fieldName, optionValue) {
+    var v = appVal(fieldName);
+    if (Array.isArray(v)) return v.map(String).indexOf(String(optionValue)) !== -1;
+    return String(v) === String(optionValue);
+}
 var registerPageLang = (formConfig && formConfig.defaultLanguage) ? formConfig.defaultLanguage : 'zh';
 var registerEventTitle = getRegisterEventTitle(formConfig, event, registerPageLang, true);
 var registerBrowserTitle = registerEventTitle || getRegisterEventTitle(formConfig, event, registerPageLang, false);
-var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - 登記';
+var registerPageTitleSuffix = isApplicationMode
+    ? (registerPageLang === 'en' ? ' - Application' : ' - 申請')
+    : (registerPageLang === 'en' ? ' - Register' : ' - 登記');
 %>
 <html lang="zh-Hant">
 <head>
@@ -206,6 +230,19 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
         .form-control:focus {
             border-color: #3498db;
             box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+        }
+        .form-control[readonly],
+        .form-control:disabled,
+        select.form-control:disabled {
+            background-color: #eef1f4;
+            color: #495057;
+            cursor: not-allowed;
+            opacity: 1;
+        }
+        .application-locked-hint {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-top: 4px;
         }
         .btn-container {
             text-align: center;
@@ -531,15 +568,19 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                                             </label>
                                             <div class="form-input">
                                                 <!-- Debug: field.type = <%= field.type %>, has options = <%= field.options ? 'yes' : 'no' %> -->
+                                                <% var _fieldLocked = appIsLocked(field.fieldName); %>
+                                                <% var _fieldVal = appVal(field.fieldName); %>
                                                 <% if (field.type === 'select' && field.options) { %>
                                                     <% if (_selectHasOther) { %>
                                                         <select class="form-control js-select-maybe-other" id="<%= field.fieldName %>_sel"
                                                                 data-select-other-base="<%= field.fieldName %>"
-                                                                <%= field.required ? 'required' : '' %>>
+                                                                <%= _fieldLocked ? 'disabled' : '' %>
+                                                                <%= (!_fieldLocked && field.required) ? 'required' : '' %>>
                                                             <option value="" class="select-placeholder" data-zh="--- 請選擇 ---" data-en="--- Please select ---">--- 請選擇 ---</option>
                                                             <% field.options.forEach((option) => { %>
                                                                 <option value="<%= option.value %>"
                                                                         data-is-other="<%= option.isOther ? '1' : '' %>"
+                                                                        <%= String(_fieldVal) === String(option.value) ? 'selected' : '' %>
                                                                         data-zh="<%= option.label && option.label.zh ? option.label.zh : option.label %>" 
                                                                         data-en="<%= option.label && option.label.en ? option.label.en : '' %>">
                                                                     <%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>
@@ -550,20 +591,28 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                                                                id="<%= field.fieldName %>_other"
                                                                data-placeholder-zh="請填寫"
                                                                data-placeholder-en="Please specify"
+                                                               <%= _fieldLocked ? 'readonly' : '' %>
                                                                autocomplete="off">
-                                                        <input type="hidden" name="<%= field.fieldName %>" id="<%= field.fieldName %>_hidden" value="">
+                                                        <input type="hidden" name="<%= field.fieldName %>" id="<%= field.fieldName %>_hidden" value="<%= _fieldLocked ? appValStr(field.fieldName) : '' %>">
                                                     <% } else { %>
-                                                        <select class="form-control" id="<%= field.fieldName %>" name="<%= field.fieldName %>" <%= field.required ? 'required' : '' %>>
+                                                        <select class="form-control" id="<%= field.fieldName %>" name="<%= field.fieldName %>"
+                                                                <%= _fieldLocked ? 'disabled' : '' %>
+                                                                <%= (!_fieldLocked && field.required) ? 'required' : '' %>>
                                                             <option value="" class="select-placeholder" data-zh="--- 請選擇 ---" data-en="--- Please select ---">--- 請選擇 ---</option>
                                                             <% field.options.forEach((option) => { %>
-                                                                <option value="<%= option.value %>" 
+                                                                <option value="<%= option.value %>"
+                                                                        <%= String(_fieldVal) === String(option.value) ? 'selected' : '' %>
                                                                         data-zh="<%= option.label && option.label.zh ? option.label.zh : option.label %>" 
                                                                         data-en="<%= option.label && option.label.en ? option.label.en : '' %>">
                                                                     <%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>
                                                                 </option>
                                                             <% }); %>
                                                         </select>
+                                                        <% if (_fieldLocked) { %>
+                                                        <input type="hidden" name="<%= field.fieldName %>" value="<%= appValStr(field.fieldName) %>">
+                                                        <% } %>
                                                     <% } %>
+                                                    <% if (_fieldLocked) { %><div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Existing data, not editable">已有資料，不可修改</div><% } %>
                                                 <% } else if (field.type === 'checkbox' && field.options) { %>
                                                     <div class="checkbox-group" id="<%= field.fieldName %>-group">
                                                         <% field.options.forEach((option, optionIndex) => { %>
@@ -576,7 +625,9 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                                                                            <% if (option.isOther) { %>data-other-input="<%= field.fieldName %>_<%= optionIndex %>_other"<% } %>
                                                                            data-zh="<%= option.label && option.label.zh ? option.label.zh : option.label %>"
                                                                            data-en="<%= option.label && option.label.en ? option.label.en : '' %>"
-                                                                           <%= field.required ? 'data-required="true"' : '' %>>
+                                                                           <%= appCheckboxChecked(field.fieldName, option.value) ? 'checked' : '' %>
+                                                                           <%= _fieldLocked ? 'disabled' : '' %>
+                                                                           <%= (!_fieldLocked && field.required) ? 'data-required="true"' : '' %>>
                                                                     <label class="form-check-label" for="<%= field.fieldName %>_<%= optionIndex %>"
                                                                            data-zh="<%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>"
                                                                            data-en="<%= option.label && option.label.en ? option.label.en : '' %>">
@@ -588,12 +639,14 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                                                                        id="<%= field.fieldName %>_<%= optionIndex %>_other"
                                                                        data-placeholder-zh="請填寫"
                                                                        data-placeholder-en="Please specify"
+                                                                       <%= _fieldLocked ? 'readonly' : '' %>
                                                                        autocomplete="off">
                                                                 <% } %>
                                                             </div>
                                                         <% }); %>
                                                     </div>
-                                                    <% if (field.required) { %>
+                                                    <% if (_fieldLocked) { %><div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Existing data, not editable">已有資料，不可修改</div><% } %>
+                                                    <% if (field.required && !_fieldLocked) { %>
                                                         <script>
                                                             // 驗證至少選擇一個 checkbox
                                                             (function() {
@@ -647,7 +700,9 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                                                                            <% if (option.isOther) { %>data-other-input="<%= field.fieldName %>_<%= optionIndex %>_other"<% } %>
                                                                            data-zh="<%= option.label && option.label.zh ? option.label.zh : option.label %>"
                                                                            data-en="<%= option.label && option.label.en ? option.label.en : '' %>"
-                                                                           <%= field.required ? 'required' : '' %>>
+                                                                           <%= String(_fieldVal) === String(option.value) ? 'checked' : '' %>
+                                                                           <%= _fieldLocked ? 'disabled' : '' %>
+                                                                           <%= (!_fieldLocked && field.required) ? 'required' : '' %>>
                                                                     <label class="form-check-label" for="<%= field.fieldName %>_<%= optionIndex %>"
                                                                            data-zh="<%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>"
                                                                            data-en="<%= option.label && option.label.en ? option.label.en : '' %>">
@@ -659,27 +714,37 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                                                                        id="<%= field.fieldName %>_<%= optionIndex %>_other"
                                                                        data-placeholder-zh="請填寫"
                                                                        data-placeholder-en="Please specify"
+                                                                       <%= _fieldLocked ? 'readonly' : '' %>
                                                                        autocomplete="off">
                                                                 <% } %>
                                                             </div>
                                                         <% }); %>
                                                     </div>
+                                                    <% if (_fieldLocked) { %>
+                                                    <input type="hidden" name="<%= field.fieldName %>" value="<%= appValStr(field.fieldName) %>">
+                                                    <div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Existing data, not editable">已有資料，不可修改</div>
+                                                    <% } %>
                                                 <% } else if (field.type === 'textarea') { %>
                                                     <textarea class="form-control" id="<%= field.fieldName %>" name="<%= field.fieldName %>" 
                                                               placeholder="<%= field.placeholder && field.placeholder.zh ? field.placeholder.zh : (typeof field.placeholder === 'string' ? field.placeholder : '') %>" 
                                                               data-placeholder-zh="<%= field.placeholder && field.placeholder.zh ? field.placeholder.zh : '' %>" 
                                                               data-placeholder-en="<%= field.placeholder && field.placeholder.en ? field.placeholder.en : '' %>" 
-                                                              <%= field.required ? 'required' : '' %> rows="3"></textarea>
+                                                              <%= _fieldLocked ? 'readonly' : '' %>
+                                                              <%= (!_fieldLocked && field.required) ? 'required' : '' %> rows="3"><%= _fieldLocked || isApplicationMode ? appValStr(field.fieldName) : '' %></textarea>
+                                                    <% if (_fieldLocked) { %><div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Existing data, not editable">已有資料，不可修改</div><% } %>
                                                 <% } else { %>
                                                     <input type="<%= field.type %>" class="form-control" id="<%= field.fieldName %>" name="<%= field.fieldName %>" 
                                                            placeholder="<%= field.placeholder && field.placeholder.zh ? field.placeholder.zh : (typeof field.placeholder === 'string' ? field.placeholder : '') %>" 
                                                            data-placeholder-zh="<%= field.placeholder && field.placeholder.zh ? field.placeholder.zh : '' %>" 
                                                            data-placeholder-en="<%= field.placeholder && field.placeholder.en ? field.placeholder.en : '' %>" 
-                                                           <%= field.required ? 'required' : '' %>>
+                                                           value="<%= isApplicationMode ? appValStr(field.fieldName) : '' %>"
+                                                           <%= _fieldLocked ? 'readonly' : '' %>
+                                                           <%= (!_fieldLocked && field.required) ? 'required' : '' %>>
+                                                    <% if (_fieldLocked) { %><div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Existing data, not editable">已有資料，不可修改</div><% } %>
                                                 <% } %>
                                             </div>
                                         </div>
-                                        <% if (field.type === 'email' && field.confirmEmail) { %>
+                                        <% if (field.type === 'email' && field.confirmEmail && !_fieldLocked) { %>
                                         <div class="form-row form-row-stacked email-confirm-row" data-email-field="<%= field.fieldName %>">
                                             <label class="form-label field-label" for="<%= field.fieldName %>_confirm"
                                                    data-zh="確認電子郵件"
@@ -746,8 +811,8 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                 </div>
             <% } %>
 
-            <!-- 票券選擇（如果適用） -->
-            <% if (paymentTickets && paymentTickets.length > 0) {
+            <!-- 票券選擇（如果適用；專屬 Application 不顯示） -->
+            <% if (!isApplicationMode && paymentTickets && paymentTickets.length > 0) {
                 const ptUi = (formConfig && formConfig.paymentTicketUi) ? formConfig.paymentTicketUi : {};
                 const ptSectionZh = (ptUi.sectionTitle && ptUi.sectionTitle.zh) ? ptUi.sectionTitle.zh : '票券選擇';
                 const ptSectionEn = (ptUi.sectionTitle && ptUi.sectionTitle.en) ? ptUi.sectionTitle.en : 'Ticket Selection';
@@ -1768,7 +1833,8 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
             const newUser = {};
             $('#userForm').find('input, select, textarea').each(function() {
                 const fieldName = $(this).attr('name');
-                if (!fieldName || fieldName === 'ticketId' || fieldName === 'agreementAgreed') return;
+                if (!fieldName || fieldName === 'ticketId' || fieldName === 'agreementAgreed' || fieldName === 'token') return;
+                if ($(this).prop('disabled')) return;
                 if ($(this).hasClass('js-email-confirm') || String(fieldName).endsWith('_confirm')) return;
                 const type = (this.type || '').toLowerCase();
                 if (type === 'checkbox') {
@@ -1809,6 +1875,28 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                 newUser.agreementRecordedAt = new Date().toISOString();
             }
             newUser.ticketId = ticketId;
+            <% if (isApplicationMode) { %>
+            newUser.token = <%= JSON.stringify(applicationTokenVal) %>;
+            newUser.lang = currentLanguage;
+            $.ajax({
+                type: 'POST',
+                url: '/web/<%= event_id %>/application/<%= applicationUserIdVal %>',
+                data: newUser,
+                success: function(response) {
+                    const params = new URLSearchParams();
+                    if (currentLanguage && currentLanguage !== 'zh') params.set('lang', currentLanguage);
+                    if (newUser.thankYouYesNo) params.set('thankYouYesNo', newUser.thankYouYesNo);
+                    const qs = params.toString();
+                    window.location.href = `/web/<%= event_id %>/register/success${qs ? '?' + qs : ''}`;
+                },
+                error: function(error) {
+                    var errMsg = (error.responseJSON && error.responseJSON.message) ? error.responseJSON.message : '提交失敗';
+                    $('#errorMessage').html('<div class="alert alert-danger">'+errMsg+'</div>');
+                    $('#successMessage').html('');
+                }
+            });
+            return;
+            <% } %>
             if (ticketId) {
                 // Wonder Payment checkout（沿用舊 API 路徑）
 

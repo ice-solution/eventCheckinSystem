@@ -31,7 +31,10 @@ const userSchema = new mongoose.Schema({
     meal: { type: String }, // 餐飲選擇
     remarks: { type: String }, // 備註
     paymentStatus: { type: String, enum: ['unpaid', 'pending', 'paid', 'failed'], default: 'unpaid' }, // 付款狀態
-    scannedTreasureItems: [{ type: mongoose.Schema.Types.ObjectId }] // 已掃描的 Treasure Hunt 項目 ID 列表
+    scannedTreasureItems: [{ type: mongoose.Schema.Types.ObjectId }], // 已掃描的 Treasure Hunt 項目 ID 列表
+    /** 專屬 Application 連結：已完成補填後不可再開改 */
+    applicationCompleted: { type: Boolean, default: false },
+    applicationCompletedAt: { type: Date }
 }, {
     strict: false // 允許保存 formConfig 中定義的動態字段（如 funcation_unit 等）
 });
