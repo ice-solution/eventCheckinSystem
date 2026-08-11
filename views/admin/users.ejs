@@ -1143,53 +1143,71 @@
                                                                         <% } else if (field.type === 'checkbox' && field.options) { %>
                                                                             <div class="checkbox-group">
                                                                                 <% field.options.forEach((option, optionIndex) => { %>
-                                                                                    <div class="form-check">
-                                                                                        <input class="form-check-input" type="checkbox" 
-                                                                                               id="newUser<%= field.fieldName %>_<%= optionIndex %>" 
-                                                                                               name="<%= field.fieldName %>[]" 
-                                                                                               value="<%= option.value %>">
-                                                                                        <label class="form-check-label" for="newUser<%= field.fieldName %>_<%= optionIndex %>">
-                                                                                            <% 
-                                                                                            let optionLabel = '';
-                                                                                            if (typeof option.label === 'string') {
-                                                                                                optionLabel = option.label;
-                                                                                            } else if (option.label && option.label[lang]) {
-                                                                                                optionLabel = option.label[lang];
-                                                                                            } else if (option.label && option.label.zh) {
-                                                                                                optionLabel = option.label.zh;
-                                                                                            } else {
-                                                                                                optionLabel = option.value || '';
-                                                                                            }
-                                                                                            %>
-                                                                                            <%= optionLabel %>
-                                                                                        </label>
+                                                                                    <div class="choice-option mb-1">
+                                                                                        <div class="form-check">
+                                                                                            <input class="form-check-input<%= option.isOther ? ' js-checkbox-other' : '' %>" type="checkbox"
+                                                                                                   id="newUser<%= field.fieldName %>_<%= optionIndex %>"
+                                                                                                   name="<%= field.fieldName %>[]"
+                                                                                                   value="<%= option.value %>"
+                                                                                                   <% if (option.isOther) { %>data-other-input="newUser<%= field.fieldName %>_<%= optionIndex %>_other"<% } %>>
+                                                                                            <label class="form-check-label" for="newUser<%= field.fieldName %>_<%= optionIndex %>">
+                                                                                                <% 
+                                                                                                let optionLabel = '';
+                                                                                                if (typeof option.label === 'string') {
+                                                                                                    optionLabel = option.label;
+                                                                                                } else if (option.label && option.label[lang]) {
+                                                                                                    optionLabel = option.label[lang];
+                                                                                                } else if (option.label && option.label.zh) {
+                                                                                                    optionLabel = option.label.zh;
+                                                                                                } else {
+                                                                                                    optionLabel = option.value || '';
+                                                                                                }
+                                                                                                %>
+                                                                                                <%= optionLabel %>
+                                                                                            </label>
+                                                                                        </div>
+                                                                                        <% if (option.isOther) { %>
+                                                                                        <input type="text" class="form-control form-control-sm mt-1 d-none js-choice-other-text"
+                                                                                               id="newUser<%= field.fieldName %>_<%= optionIndex %>_other"
+                                                                                               placeholder="<%= lang === 'en' ? 'Please specify' : '請填寫' %>"
+                                                                                               autocomplete="off">
+                                                                                        <% } %>
                                                                                     </div>
                                                                                 <% }); %>
                                                                             </div>
                                                                         <% } else if (field.type === 'radio' && field.options) { %>
                                                                             <div class="radio-group">
                                                                                 <% field.options.forEach((option, optionIndex) => { %>
-                                                                                    <div class="form-check">
-                                                                                        <input class="form-check-input" type="radio" 
-                                                                                               id="newUser<%= field.fieldName %>_<%= optionIndex %>" 
-                                                                                               name="<%= field.fieldName %>" 
-                                                                                               value="<%= option.value %>"
-                                                                                               <%= field.required ? 'required' : '' %>>
-                                                                                        <label class="form-check-label" for="newUser<%= field.fieldName %>_<%= optionIndex %>">
-                                                                                            <% 
-                                                                                            let optionLabel = '';
-                                                                                            if (typeof option.label === 'string') {
-                                                                                                optionLabel = option.label;
-                                                                                            } else if (option.label && option.label[lang]) {
-                                                                                                optionLabel = option.label[lang];
-                                                                                            } else if (option.label && option.label.zh) {
-                                                                                                optionLabel = option.label.zh;
-                                                                                            } else {
-                                                                                                optionLabel = option.value || '';
-                                                                                            }
-                                                                                            %>
-                                                                                            <%= optionLabel %>
-                                                                                        </label>
+                                                                                    <div class="choice-option mb-1">
+                                                                                        <div class="form-check">
+                                                                                            <input class="form-check-input<%= option.isOther ? ' js-radio-other' : '' %>" type="radio"
+                                                                                                   id="newUser<%= field.fieldName %>_<%= optionIndex %>"
+                                                                                                   name="<%= field.fieldName %>"
+                                                                                                   value="<%= option.value %>"
+                                                                                                   <% if (option.isOther) { %>data-other-input="newUser<%= field.fieldName %>_<%= optionIndex %>_other"<% } %>
+                                                                                                   <%= field.required ? 'required' : '' %>>
+                                                                                            <label class="form-check-label" for="newUser<%= field.fieldName %>_<%= optionIndex %>">
+                                                                                                <% 
+                                                                                                let optionLabel = '';
+                                                                                                if (typeof option.label === 'string') {
+                                                                                                    optionLabel = option.label;
+                                                                                                } else if (option.label && option.label[lang]) {
+                                                                                                    optionLabel = option.label[lang];
+                                                                                                } else if (option.label && option.label.zh) {
+                                                                                                    optionLabel = option.label.zh;
+                                                                                                } else {
+                                                                                                    optionLabel = option.value || '';
+                                                                                                }
+                                                                                                %>
+                                                                                                <%= optionLabel %>
+                                                                                            </label>
+                                                                                        </div>
+                                                                                        <% if (option.isOther) { %>
+                                                                                        <input type="text" class="form-control form-control-sm mt-1 d-none js-choice-other-text"
+                                                                                               id="newUser<%= field.fieldName %>_<%= optionIndex %>_other"
+                                                                                               placeholder="<%= lang === 'en' ? 'Please specify' : '請填寫' %>"
+                                                                                               autocomplete="off">
+                                                                                        <% } %>
                                                                                     </div>
                                                                                 <% }); %>
                                                                             </div>
@@ -2996,6 +3014,22 @@ const _US = {
                 hidden.value = selectEl.value || '';
             }
         }
+        function syncChoiceOtherInputAdmin(choiceEl) {
+            if (!choiceEl) return;
+            var otherId = choiceEl.getAttribute('data-other-input');
+            if (!otherId) return;
+            var other = document.getElementById(otherId);
+            if (!other) return;
+            if (choiceEl.checked) {
+                $(other).removeClass('d-none');
+                other.setAttribute('required', 'required');
+            } else {
+                $(other).addClass('d-none');
+                other.removeAttribute('required');
+                other.value = '';
+                other.setCustomValidity('');
+            }
+        }
         $(document).on('change', '#newUserForm .js-select-maybe-other', function() {
             syncSelectWithOtherAdmin(this);
         });
@@ -3006,12 +3040,33 @@ const _US = {
             var sel = document.getElementById(base + '_sel');
             if (sel) syncSelectWithOtherAdmin(sel);
         });
+        $(document).on('change', '#newUserForm .js-checkbox-other, #newUserForm .js-radio-other', function() {
+            if ((this.type || '').toLowerCase() === 'radio') {
+                document.querySelectorAll('#newUserForm input[type="radio"][name="' + this.name + '"].js-radio-other').forEach(function(el) {
+                    syncChoiceOtherInputAdmin(el);
+                });
+            } else {
+                syncChoiceOtherInputAdmin(this);
+            }
+        });
+        $(document).on('change', '#newUserForm input[type="radio"]', function() {
+            if ($(this).hasClass('js-radio-other')) return;
+            var name = this.name;
+            if (!name) return;
+            document.querySelectorAll('#newUserForm input[type="radio"][name="' + name + '"].js-radio-other').forEach(function(el) {
+                syncChoiceOtherInputAdmin(el);
+            });
+        });
+        $(document).on('input', '#newUserForm .js-choice-other-text', function() {
+            this.setCustomValidity('');
+        });
 
         $('#newUserForm').on('submit', function(e) {
             e.preventDefault();
             $('#newUserForm .js-select-maybe-other').each(function() { syncSelectWithOtherAdmin(this); });
+            $('#newUserForm .js-checkbox-other, #newUserForm .js-radio-other').each(function() { syncChoiceOtherInputAdmin(this); });
             var newUserFormEl = document.getElementById('newUserForm');
-            $('#newUserForm .js-select-other-text').each(function() {
+            $('#newUserForm .js-select-other-text, #newUserForm .js-choice-other-text').each(function() {
                 if (!$(this).hasClass('d-none') && this.hasAttribute('required') && !((this.value || '').trim())) {
                     this.setCustomValidity(_US.fieldRequired);
                 } else {
@@ -3042,7 +3097,25 @@ const _US = {
                             checkboxFields[baseName] = [];
                         }
                         if ($field.is(':checked')) {
-                            checkboxFields[baseName].push($field.val());
+                            var cbVal = $field.val();
+                            if ($field.hasClass('js-checkbox-other')) {
+                                var cbOtherId = $field.attr('data-other-input');
+                                var cbOtherEl = cbOtherId ? document.getElementById(cbOtherId) : null;
+                                cbVal = cbOtherEl ? (cbOtherEl.value || '').trim() : '';
+                                if (!cbVal) return;
+                            }
+                            checkboxFields[baseName].push(cbVal);
+                        }
+                    } else if (fieldType === 'radio') {
+                        if ($field.is(':checked')) {
+                            var radioVal = $field.val();
+                            if ($field.hasClass('js-radio-other')) {
+                                var radioOtherId = $field.attr('data-other-input');
+                                var radioOtherEl = radioOtherId ? document.getElementById(radioOtherId) : null;
+                                radioVal = radioOtherEl ? (radioOtherEl.value || '').trim() : '';
+                                if (!radioVal) return;
+                            }
+                            userData[fieldName] = radioVal;
                         }
                     } else {
                         // 處理其他字段類型

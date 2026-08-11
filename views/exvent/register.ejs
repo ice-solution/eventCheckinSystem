@@ -168,6 +168,17 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
             line-height: 1.5;
             padding-left: 0;
         }
+        .radio-group .choice-option,
+        .checkbox-group .choice-option {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .radio-group .js-choice-other-text,
+        .checkbox-group .js-choice-other-text {
+            margin-left: 1.6rem;
+            max-width: calc(100% - 1.6rem);
+        }
         .form-row.form-row-display {
             align-items: flex-start;
         }
@@ -558,19 +569,29 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                                                 <% } else if (field.type === 'checkbox' && field.options) { %>
                                                     <div class="checkbox-group" id="<%= field.fieldName %>-group">
                                                         <% field.options.forEach((option, optionIndex) => { %>
-                                                            <div class="form-check">
-                                                                <input class="form-check-input" type="checkbox" 
-                                                                       id="<%= field.fieldName %>_<%= optionIndex %>" 
-                                                                       name="<%= field.fieldName %>[]" 
-                                                                       value="<%= option.value %>"
-                                                                       data-zh="<%= option.label && option.label.zh ? option.label.zh : option.label %>" 
-                                                                       data-en="<%= option.label && option.label.en ? option.label.en : '' %>"
-                                                                       <%= field.required ? 'data-required="true"' : '' %>>
-                                                                <label class="form-check-label" for="<%= field.fieldName %>_<%= optionIndex %>"
-                                                                       data-zh="<%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>" 
-                                                                       data-en="<%= option.label && option.label.en ? option.label.en : '' %>">
-                                                                    <%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>
-                                                                </label>
+                                                            <div class="choice-option">
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input<%= option.isOther ? ' js-checkbox-other' : '' %>" type="checkbox"
+                                                                           id="<%= field.fieldName %>_<%= optionIndex %>"
+                                                                           name="<%= field.fieldName %>[]"
+                                                                           value="<%= option.value %>"
+                                                                           <% if (option.isOther) { %>data-other-input="<%= field.fieldName %>_<%= optionIndex %>_other"<% } %>
+                                                                           data-zh="<%= option.label && option.label.zh ? option.label.zh : option.label %>"
+                                                                           data-en="<%= option.label && option.label.en ? option.label.en : '' %>"
+                                                                           <%= field.required ? 'data-required="true"' : '' %>>
+                                                                    <label class="form-check-label" for="<%= field.fieldName %>_<%= optionIndex %>"
+                                                                           data-zh="<%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>"
+                                                                           data-en="<%= option.label && option.label.en ? option.label.en : '' %>">
+                                                                        <%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>
+                                                                    </label>
+                                                                </div>
+                                                                <% if (option.isOther) { %>
+                                                                <input type="text" class="form-control d-none js-choice-other-text"
+                                                                       id="<%= field.fieldName %>_<%= optionIndex %>_other"
+                                                                       data-placeholder-zh="請填寫"
+                                                                       data-placeholder-en="Please specify"
+                                                                       autocomplete="off">
+                                                                <% } %>
                                                             </div>
                                                         <% }); %>
                                                     </div>
@@ -619,19 +640,29 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                                                 <% } else if (field.type === 'radio' && field.options) { %>
                                                     <div class="radio-group" id="<%= field.fieldName %>-group">
                                                         <% field.options.forEach((option, optionIndex) => { %>
-                                                            <div class="form-check">
-                                                                <input class="form-check-input" type="radio" 
-                                                                       id="<%= field.fieldName %>_<%= optionIndex %>" 
-                                                                       name="<%= field.fieldName %>" 
-                                                                       value="<%= option.value %>"
-                                                                       data-zh="<%= option.label && option.label.zh ? option.label.zh : option.label %>" 
-                                                                       data-en="<%= option.label && option.label.en ? option.label.en : '' %>"
-                                                                       <%= field.required ? 'required' : '' %>>
-                                                                <label class="form-check-label" for="<%= field.fieldName %>_<%= optionIndex %>"
-                                                                       data-zh="<%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>" 
-                                                                       data-en="<%= option.label && option.label.en ? option.label.en : '' %>">
-                                                                    <%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>
-                                                                </label>
+                                                            <div class="choice-option">
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input<%= option.isOther ? ' js-radio-other' : '' %>" type="radio"
+                                                                           id="<%= field.fieldName %>_<%= optionIndex %>"
+                                                                           name="<%= field.fieldName %>"
+                                                                           value="<%= option.value %>"
+                                                                           <% if (option.isOther) { %>data-other-input="<%= field.fieldName %>_<%= optionIndex %>_other"<% } %>
+                                                                           data-zh="<%= option.label && option.label.zh ? option.label.zh : option.label %>"
+                                                                           data-en="<%= option.label && option.label.en ? option.label.en : '' %>"
+                                                                           <%= field.required ? 'required' : '' %>>
+                                                                    <label class="form-check-label" for="<%= field.fieldName %>_<%= optionIndex %>"
+                                                                           data-zh="<%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>"
+                                                                           data-en="<%= option.label && option.label.en ? option.label.en : '' %>">
+                                                                        <%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>
+                                                                    </label>
+                                                                </div>
+                                                                <% if (option.isOther) { %>
+                                                                <input type="text" class="form-control d-none js-choice-other-text"
+                                                                       id="<%= field.fieldName %>_<%= optionIndex %>_other"
+                                                                       data-placeholder-zh="請填寫"
+                                                                       data-placeholder-en="Please specify"
+                                                                       autocomplete="off">
+                                                                <% } %>
                                                             </div>
                                                         <% }); %>
                                                     </div>
@@ -1336,8 +1367,8 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                     $(this).attr('placeholder', enPlaceholder);
                 }
             });
-            // select「其他」自填欄位佔位符
-            $('.js-select-other-text').each(function() {
+            // select／checkbox／radio「其他」自填欄位佔位符
+            $('.js-select-other-text, .js-choice-other-text').each(function() {
                 const zhPlaceholder = $(this).data('placeholder-zh');
                 const enPlaceholder = $(this).data('placeholder-en');
                 if (currentLanguage === 'zh' && zhPlaceholder) {
@@ -1602,6 +1633,32 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                 hidden.value = selectEl.value || '';
             }
         }
+        function syncChoiceOtherInput(choiceEl) {
+            if (!choiceEl) return;
+            var otherId = choiceEl.getAttribute('data-other-input');
+            if (!otherId) return;
+            var other = document.getElementById(otherId);
+            if (!other) return;
+            if (choiceEl.checked) {
+                $(other).removeClass('d-none');
+                other.setAttribute('required', 'required');
+            } else {
+                $(other).addClass('d-none');
+                other.removeAttribute('required');
+                other.value = '';
+                other.setCustomValidity('');
+            }
+        }
+        function syncAllChoiceOtherInGroup(choiceEl) {
+            if (!choiceEl || !choiceEl.name) return;
+            if ((choiceEl.type || '').toLowerCase() === 'radio') {
+                document.querySelectorAll('input[type="radio"][name="' + choiceEl.name + '"].js-radio-other').forEach(function(el) {
+                    syncChoiceOtherInput(el);
+                });
+            } else {
+                syncChoiceOtherInput(choiceEl);
+            }
+        }
         $(document).on('change', '.js-select-maybe-other', function() {
             syncSelectWithOther(this);
         });
@@ -1613,8 +1670,23 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                 if (sel) syncSelectWithOther(sel);
             }
         });
+        $(document).on('change', '.js-checkbox-other, .js-radio-other', function() {
+            syncAllChoiceOtherInGroup(this);
+        });
+        $(document).on('change', 'input[type="radio"]', function() {
+            if ($(this).hasClass('js-radio-other')) return;
+            var name = this.name;
+            if (!name) return;
+            document.querySelectorAll('input[type="radio"][name="' + name + '"].js-radio-other').forEach(function(el) {
+                syncChoiceOtherInput(el);
+            });
+        });
+        $(document).on('input', '.js-choice-other-text', function() {
+            this.setCustomValidity('');
+        });
         $(function() {
             $('.js-select-maybe-other').each(function() { syncSelectWithOther(this); });
+            $('.js-checkbox-other, .js-radio-other').each(function() { syncChoiceOtherInput(this); });
         });
 
         function getEmailConfirmMismatchMsg() {
@@ -1665,10 +1737,12 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
         $('#userForm').on('submit', function(e) {
             e.preventDefault(); // 防止表單默認提交
             $('.js-select-maybe-other').each(function() { syncSelectWithOther(this); });
+            $('.js-checkbox-other, .js-radio-other').each(function() { syncChoiceOtherInput(this); });
             var formEl = document.getElementById('userForm');
-            $('.js-select-other-text').each(function() {
+            var otherRequiredMsg = currentLanguage === 'zh' ? '請填寫這個欄位。' : 'Please fill in this field.';
+            $('.js-select-other-text, .js-choice-other-text').each(function() {
                 if (!$(this).hasClass('d-none') && this.hasAttribute('required') && !((this.value || '').trim())) {
-                    this.setCustomValidity(currentLanguage === 'zh' ? '請填寫這個欄位。' : 'Please fill in this field.');
+                    this.setCustomValidity(otherRequiredMsg);
                 } else {
                     this.setCustomValidity('');
                 }
@@ -1704,14 +1778,29 @@ var registerPageTitleSuffix = registerPageLang === 'en' ? ' - Register' : ' - �
                     if (fieldName.endsWith('[]')) {
                         const key = fieldName.slice(0, -2);
                         if (!Array.isArray(newUser[key])) newUser[key] = [];
-                        newUser[key].push($(this).val());
+                        var cbVal = $(this).val();
+                        if ($(this).hasClass('js-checkbox-other')) {
+                            var cbOtherId = $(this).attr('data-other-input');
+                            var cbOtherEl = cbOtherId ? document.getElementById(cbOtherId) : null;
+                            cbVal = cbOtherEl ? (cbOtherEl.value || '').trim() : '';
+                            if (!cbVal) return;
+                        }
+                        newUser[key].push(cbVal);
                     } else {
                         newUser[fieldName] = $(this).val();
                     }
                     return;
                 }
                 if (type === 'radio') {
-                    if (this.checked) newUser[fieldName] = $(this).val();
+                    if (!this.checked) return;
+                    var radioVal = $(this).val();
+                    if ($(this).hasClass('js-radio-other')) {
+                        var radioOtherId = $(this).attr('data-other-input');
+                        var radioOtherEl = radioOtherId ? document.getElementById(radioOtherId) : null;
+                        radioVal = radioOtherEl ? (radioOtherEl.value || '').trim() : '';
+                        if (!radioVal) return;
+                    }
+                    newUser[fieldName] = radioVal;
                     return;
                 }
                 newUser[fieldName] = $(this).val();
