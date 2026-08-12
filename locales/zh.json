@@ -766,6 +766,11 @@
     "closedMessageLabel": "關閉時顯示的訊息",
     "closedMessagePlaceholder": "例如：報名已截止，感謝您的關注。",
     "closedMessageHint": "當 Register 版面為 OFF 時，訪客會看到此頁面與上述文字。",
+    "registerSlugLabel": "報名頁 Slug",
+    "registerSlugPlaceholder": "例如：my-event-2026",
+    "registerSlugHint": "設定後可用 {{domain}}/slug 開啟報名頁。僅小寫英文、數字與連字號。舊連結 /web/:eventId/register 仍可使用。",
+    "registerSlugPreview": "公開連結",
+    "registerSlugLegacy": "舊版連結",
 
     "deleteBannerConfirm": "確定要刪除當前的 banner 嗎？",
     "deleteBanner": "移除橫額",

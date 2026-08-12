@@ -97,6 +97,12 @@ const formConfigSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
+    /** 公開報名頁 slug：domain/:slug（留空則僅 /web/:eventId/register） */
+    registerSlug: {
+        type: String,
+        trim: true,
+        lowercase: true
+    },
     // 關閉註冊時顯示的訊息（支援多行）
     registerClosedMessage: {
         type: String,
@@ -285,6 +291,8 @@ formConfigSchema.pre('save', function(next) {
     this.updatedAt = Date.now();
     next();
 });
+
+formConfigSchema.index({ registerSlug: 1 }, { unique: true, sparse: true });
 
 const FormConfig = mongoose.model('FormConfig', formConfigSchema);
 

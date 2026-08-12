@@ -767,6 +767,11 @@
     "closedMessageLabel": "Message when closed",
     "closedMessagePlaceholder": "e.g. Registration is closed. Thank you for your interest.",
     "closedMessageHint": "Visitors will see this message when the Register page is OFF.",
+    "registerSlugLabel": "Registration Page Slug",
+    "registerSlugPlaceholder": "e.g. my-event-2026",
+    "registerSlugHint": "When set, visitors can open the form at {{domain}}/slug. Lowercase letters, numbers, and hyphens only. Legacy URL /web/:eventId/register still works.",
+    "registerSlugPreview": "Public URL",
+    "registerSlugLegacy": "Legacy URL",
 
     "deleteBannerConfirm": "Are you sure you want to delete the current banner?",
     "deleteBanner": "Delete Banner",
