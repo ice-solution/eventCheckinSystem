@@ -171,7 +171,7 @@ exports.renderEmailTemplatePreview = async (req, res) => {
     if (user && event) {
       const userObj = resolveEventUser(event, user)
       const baseUrl = getPublicBaseUrl(req)
-      const additionalVars = buildEmailTemplateAdditionalVars({
+      const additionalVars = await buildEmailTemplateAdditionalVars({
         baseUrl,
         user: userObj,
         event,
@@ -192,7 +192,7 @@ exports.renderEmailTemplatePreview = async (req, res) => {
         email: transaction.userEmail || "guest@example.com",
       }
       const baseUrl = getPublicBaseUrl(req)
-      const additionalVars = buildEmailTemplateAdditionalVars({
+      const additionalVars = await buildEmailTemplateAdditionalVars({
         baseUrl,
         user: userObj,
         event,

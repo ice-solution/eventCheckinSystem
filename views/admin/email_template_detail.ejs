@@ -119,6 +119,7 @@ If you cannot read this message, please &lt;a href="{{emailPreviewUrl}}" target=
                                 <br>付款憑證（<code>payment_receipt</code><% if (invoiceEmailEnabled) { %>／發票 <code>invoice</code><% } %>）：可加 <code>&amp;transactionId=訂單_id</code>；未加時會用該活動<strong>最新一筆訂單</strong>作範例
                                 <br>變數名稱正確：<code>{{transaction._id}}</code>、<code>{{transaction.ticketTitle}}</code>、<code>{{invoice.currency}}</code> 等
                                 <br><strong>專屬 Application 邀請連結：</strong><code>{{applicationLink}}</code>（同 <code>{{applicationUrl}}</code>；每人獨立、約 180 日有效）
+                                <br><strong>Select 選項中英文標籤：</strong><code>{{user.saluation.label.zh}}</code> / <code>{{user.saluation.label.en}}</code>（其他 select／radio／checkbox 欄位同理；無 label 時 fallback 為 option value；<code>{{user.saluation}}</code> 仍為已存 value）
                             </small>
                             <button type="button" class="btn btn-danger" onclick="deleteTemplate()" style="display: none;"><%= t('create_email_template.deleteTemplateBtn') %></button>
                             </form>

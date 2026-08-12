@@ -136,12 +136,12 @@ async function sendInvoiceEmail(transaction, event, emailTemplateId = null) {
         const additionalVars = {
             ...flattenForTemplate(transaction.toObject ? transaction.toObject() : transaction, 'transaction'),
             ...flattenForTemplate(invoiceData, 'invoice'),
-            ...buildEmailTemplateAdditionalVars({
+            ...(await buildEmailTemplateAdditionalVars({
                 user: userLike,
                 event: eventDoc,
                 emailTemplateId: emailTemplate ? emailTemplate._id : null,
                 transaction,
-            }),
+            })),
         };
         const subject = emailTemplate ? emailTemplate.subject : '您的訂單／發票 - ' + (eventDoc.name || '');
         let messageBody = emailTemplate
@@ -181,12 +181,12 @@ async function sendPaymentReceiptEmail(transaction, event, user, emailTemplateId
         const additionalVars = {
             ...flattenForTemplate(transaction.toObject ? transaction.toObject() : transaction, 'transaction'),
             ...flattenForTemplate(invoiceData, 'invoice'),
-            ...buildEmailTemplateAdditionalVars({
+            ...(await buildEmailTemplateAdditionalVars({
                 user: userLike,
                 event: eventDoc,
                 emailTemplateId: emailTemplate ? emailTemplate._id : null,
                 transaction,
-            }),
+            })),
         };
         const subject = emailTemplate ? emailTemplate.subject : '付款憑證 - ' + (eventDoc.name || '');
         let messageBody = emailTemplate
@@ -909,7 +909,7 @@ exports.sendEmail = async (user, event) => {
         // 如果找到了郵件模板，使用模板的內容
         if (emailTemplate) {
             subject = emailTemplate.subject;
-            const additionalVars = buildEmailTemplateAdditionalVars({
+            const additionalVars = await buildEmailTemplateAdditionalVars({
                 user,
                 event,
                 emailTemplateId: emailTemplate._id,
@@ -999,7 +999,7 @@ exports.sendEmailByTemplateId = async (user, event, emailTemplateId) => {
 
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
     let subject = emailTemplate.subject || 'Event notification';
-    const additionalVars = buildEmailTemplateAdditionalVars({
+    const additionalVars = await buildEmailTemplateAdditionalVars({
         user,
         event,
         emailTemplateId: emailTemplate._id,
@@ -1212,7 +1212,7 @@ exports.sendEmailByType = async (user, event, type = 'welcome', emailTemplateId 
         
         // 如果找到了郵件模板，使用模板的內容
         if (emailTemplate) {
-            const additionalVars = buildEmailTemplateAdditionalVars({
+            const additionalVars = await buildEmailTemplateAdditionalVars({
                 user,
                 event,
                 emailTemplateId: emailTemplate._id,
@@ -1276,7 +1276,7 @@ exports.sendPaymentConfirmationEmail = async (user, event, transaction) => {
         // 如果找到了郵件模板，使用模板的內容
         if (emailTemplate) {
             subject = emailTemplate.subject;
-            const additionalVars = buildEmailTemplateAdditionalVars({
+            const additionalVars = await buildEmailTemplateAdditionalVars({
                 user,
                 event,
                 emailTemplateId: emailTemplate._id,
@@ -5491,7 +5491,7 @@ exports.getEmailRecordDetails = async (req, res) => {
         if (emailRecord.emailTemplate && emailRecord.emailTemplate.content && user) {
             try {
                 const userData = typeof user.toObject === 'function' ? user.toObject() : user;
-                const additionalVars = buildEmailTemplateAdditionalVars({
+                const additionalVars = await buildEmailTemplateAdditionalVars({
                     user: userData,
                     event,
                     emailTemplateId: emailRecord.emailTemplate._id,
