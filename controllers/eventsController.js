@@ -289,6 +289,296 @@ exports.createEvent = async (req, res) => {
     }
 };
 
+/** 產生複製活動名稱：原名 (1)、(2)… */
+async function buildCopiedEventName(baseName) {
+    const root = String(baseName || 'Event').trim() || 'Event';
+    for (let n = 1; n <= 999; n++) {
+        const candidate = `${root} (${n})`;
+        const exists = await Event.exists({ name: candidate });
+        if (!exists) return candidate;
+    }
+    return `${root} (${Date.now()})`;
+}
+
+function clonePlainWithoutIds(doc) {
+    if (!doc) return null;
+    const obj = typeof doc.toObject === 'function' ? doc.toObject({ minimize: false }) : { ...doc };
+    delete obj._id;
+    delete obj.__v;
+    delete obj.id;
+    return obj;
+}
+
+function remapFormConfigEmailTemplateIds(formConfigObj, idMap) {
+    if (!formConfigObj || !formConfigObj.thankYou || !formConfigObj.thankYou.yesNoQuestion) return;
+    const ynq = formConfigObj.thankYou.yesNoQuestion;
+    ['yesEmailTemplateId', 'noEmailTemplateId'].forEach((key) => {
+        const oldId = ynq[key];
+        if (oldId && idMap[String(oldId)]) {
+            ynq[key] = idMap[String(oldId)];
+        }
+    });
+}
+
+/**
+ * 複製活動：設定／票券／FormConfig／Email＆SMS 模板／獎品／徽章／抽獎設定／投票定義等
+ * 不複製：報名用戶、Guest List、中獎紀錄、分站簽到紀錄、交易、附件檔、Email 發送紀錄
+ */
+exports.copyEvent = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.status(401).json({ success: false, message: '未授權：請先登入' });
+        }
+        if (!mongoose.Types.ObjectId.isValid(eventId)) {
+            return res.status(400).json({ success: false, message: '無效的活動 ID' });
+        }
+
+        const source = await Event.findById(eventId).lean();
+        if (!source) {
+            return res.status(404).json({ success: false, message: '找不到活動' });
+        }
+
+        const sessionUser = req.session.user;
+        if (sessionUser.role !== 'admin') {
+            const allowed = (sessionUser.allowedEvents || []).map(String);
+            if (!allowed.includes(String(eventId)) && String(source.owner) !== String(sessionUser._id)) {
+                return res.status(403).json({ success: false, message: '無權限複製此活動' });
+            }
+        }
+
+        const FormConfig = require('../model/FormConfig');
+        const Prize = require('../model/Prize');
+        const BadgeConfig = require('../model/BadgeConfig');
+        const LuckydrawGameConfig = require('../model/LuckydrawGameConfig');
+        const Vote = require('../model/Vote');
+
+        const newName = await buildCopiedEventName(source.name);
+        const now = new Date();
+
+        let seating = null;
+        if (source.seatingArrangement && typeof source.seatingArrangement === 'object') {
+            seating = JSON.parse(JSON.stringify(source.seatingArrangement));
+            seating.companionByUserId = {};
+            if (Array.isArray(seating.tables)) {
+                seating.tables = seating.tables.map((t) => ({
+                    ...t,
+                    userIds: []
+                }));
+            }
+        }
+
+        const checkInStations = Array.isArray(source.checkInStations)
+            ? source.checkInStations.map((s) => {
+                const station = { ...s };
+                delete station._id;
+                station.allowedUserIds = [];
+                return station;
+            })
+            : [];
+
+        const newEvent = new Event({
+            name: newName,
+            from: source.from,
+            to: source.to,
+            owner: sessionUser._id,
+            created_at: now,
+            modified_at: now,
+            emailTemplate: undefined,
+            users: [],
+            guestList: [],
+            points: Array.isArray(source.points)
+                ? source.points.map((p) => {
+                    const point = { ...p };
+                    delete point._id;
+                    return point;
+                })
+                : [],
+            winners: [],
+            maxLuckydrawOrder: 0,
+            luckydrawListFieldNames: source.luckydrawListFieldNames || [],
+            luckydrawAwardPassword: source.luckydrawAwardPassword || '',
+            isPaymentEvent: !!source.isPaymentEvent,
+            PaymentTickets: Array.isArray(source.PaymentTickets)
+                ? source.PaymentTickets.map((t) => {
+                    const ticket = { ...t };
+                    delete ticket._id;
+                    return ticket;
+                })
+                : [],
+            gameIds: Array.isArray(source.gameIds) ? [...source.gameIds] : [],
+            scanPointUsers: Array.isArray(source.scanPointUsers)
+                ? source.scanPointUsers.map((u) => {
+                    const user = { ...u };
+                    delete user._id;
+                    return user;
+                })
+                : [],
+            treasureHuntItems: Array.isArray(source.treasureHuntItems)
+                ? source.treasureHuntItems.map((item) => {
+                    const next = { ...item };
+                    delete next._id;
+                    return next;
+                })
+                : [],
+            checkInStations,
+            stationCheckIns: [],
+            emailSettings: source.emailSettings
+                ? JSON.parse(JSON.stringify(source.emailSettings))
+                : undefined,
+            seatingArrangement: seating || undefined,
+            attachments: []
+        });
+
+        await newEvent.save();
+
+        // Email templates（建立 id 對照，供 Event.emailTemplate / FormConfig 重對）
+        const emailIdMap = {};
+        const emailTemplates = await EmailTemplate.find({ eventId: source._id }).lean();
+        for (const tpl of emailTemplates) {
+            const created = await EmailTemplate.create({
+                eventId: newEvent._id,
+                subject: tpl.subject,
+                content: tpl.content,
+                type: tpl.type,
+                created_at: now,
+                modified_at: now
+            });
+            emailIdMap[String(tpl._id)] = String(created._id);
+        }
+        if (source.emailTemplate && emailIdMap[String(source.emailTemplate)]) {
+            newEvent.emailTemplate = emailIdMap[String(source.emailTemplate)];
+            await newEvent.save();
+        }
+
+        // SMS templates
+        const smsTemplates = await SmsTemplate.find({ eventId: source._id }).lean();
+        for (const tpl of smsTemplates) {
+            await SmsTemplate.create({
+                eventId: newEvent._id,
+                content: tpl.content,
+                type: tpl.type,
+                created_at: now,
+                modified_at: now
+            });
+        }
+
+        // FormConfig（清除 registerSlug；重對 thankYou email template id）
+        const srcForm = await FormConfig.findOne({ eventId: source._id }).lean();
+        if (srcForm) {
+            const formObj = clonePlainWithoutIds(srcForm);
+            delete formObj.eventId;
+            delete formObj.createdAt;
+            delete formObj.updatedAt;
+            delete formObj.registerSlug;
+            remapFormConfigEmailTemplateIds(formObj, emailIdMap);
+            await FormConfig.create({
+                ...formObj,
+                eventId: newEvent._id,
+                createdAt: now,
+                updatedAt: now
+            });
+        }
+
+        // Prizes
+        const prizes = await Prize.find({ eventId: source._id }).lean();
+        for (const prize of prizes) {
+            const p = clonePlainWithoutIds(prize);
+            delete p.eventId;
+            await Prize.create({
+                ...p,
+                eventId: newEvent._id,
+                created_at: now,
+                modified_at: now
+            });
+        }
+
+        // Badge configs
+        const badges = await BadgeConfig.find({ eventId: source._id }).lean();
+        for (const badge of badges) {
+            const b = clonePlainWithoutIds(badge);
+            delete b.eventId;
+            delete b.createdAt;
+            delete b.updatedAt;
+            if (Array.isArray(b.elements)) {
+                b.elements = b.elements.map((el) => {
+                    const next = { ...el };
+                    delete next._id;
+                    return next;
+                });
+            }
+            await BadgeConfig.create({
+                ...b,
+                eventId: newEvent._id,
+                createdAt: now,
+                updatedAt: now
+            });
+        }
+
+        // LuckyDraw game config
+        const ldConfig = await LuckydrawGameConfig.findOne({ eventId: source._id }).lean();
+        if (ldConfig) {
+            await LuckydrawGameConfig.create({
+                eventId: newEvent._id,
+                config: ldConfig.config,
+                updatedAt: now
+            });
+        }
+
+        // Votes（複製定義，清空投票紀錄與票數）
+        const votes = await Vote.find({ eventId: source._id }).lean();
+        for (const vote of votes) {
+            const v = clonePlainWithoutIds(vote);
+            delete v.eventId;
+            v.records = [];
+            if (Array.isArray(v.options)) {
+                v.options = v.options.map((opt) => {
+                    const o = { ...opt };
+                    delete o._id;
+                    o.votes = 0;
+                    return o;
+                });
+            }
+            await Vote.create({
+                ...v,
+                eventId: newEvent._id,
+                created_at: now,
+                modified_at: now
+            });
+        }
+
+        // Banner 圖檔（public/exvent/:eventId.jpg）
+        try {
+            const srcBanner = path.join(__dirname, '..', 'public', 'exvent', `${source._id}.jpg`);
+            const destBanner = path.join(__dirname, '..', 'public', 'exvent', `${newEvent._id}.jpg`);
+            if (fs.existsSync(srcBanner)) {
+                fs.copyFileSync(srcBanner, destBanner);
+            }
+        } catch (bannerErr) {
+            console.warn('copyEvent banner copy skipped:', bannerErr.message);
+        }
+
+        if (sessionUser.role !== 'admin') {
+            await grantCreatorEventAccess(sessionUser._id, newEvent._id, sessionUser);
+        }
+
+        return res.status(201).json({
+            success: true,
+            message: '活動已複製',
+            event: {
+                _id: newEvent._id,
+                name: newEvent.name
+            }
+        });
+    } catch (error) {
+        console.error('Error copying event:', error);
+        if (error && error.code === 11000 && error.keyPattern && error.keyPattern.registerSlug) {
+            return res.status(400).json({ success: false, message: 'FormConfig slug 衝突，請稍後再試' });
+        }
+        return res.status(500).json({ success: false, message: error.message || '複製活動失敗' });
+    }
+};
+
 // 獲取用戶的事件
 exports.getUserEvents = async (req, res) => {
     try {

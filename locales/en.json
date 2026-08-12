@@ -111,7 +111,13 @@
     "selectAll": "Select all",
     "selectEventsFirst": "Please select at least one event",
     "exporting": "Exporting…",
-    "exportFailed": "Export failed. Please try again."
+    "exportFailed": "Export failed. Please try again.",
+    "actions": "Actions",
+    "copyEvent": "Copy",
+    "copyConfirm": "Copy this event? Form Config, Email/SMS templates and event settings will be copied (registered users are not).",
+    "copying": "Copying…",
+    "copySuccess": "Copied as: ",
+    "copyFailed": "Copy failed. Please try again."
   },
   "create_event": {
     "title": "Create New Event", "eventName": "Event Name", "startTime": "Event Start Time",
