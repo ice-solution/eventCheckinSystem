@@ -827,7 +827,7 @@
     "agreementHint": "Tip: Click the link text to open the content dialog; plain text line breaks preserved; content supports HTML. Agreement is optional — <code>agreementAgreed</code> (true/false) and <code>agreementRecordedAt</code> are stored in user data.",
 
     "thankYouHint": "Success copy and email logic are mutually exclusive: with Yes/No off, use General copy + Email Settings auto-send; with Yes/No on, use only Yes/No copy and templates — no need to fill both.",
-    "applicationCompletedHint": "Shown when the exclusive application link is opened again after submit. Matching is by user ID in the URL, not email.",
+    "applicationCompletedHint": "Shown when the exclusive application link is opened again after submit. Matching is by user ID in the URL, not email. Message supports HTML, e.g. <a href=\"https://example.com/\" target=\"_blank\">links</a>, <br>, bold text.",
     "applicationCompletedTitleZh": "Title (ZH)",
     "applicationCompletedTitleEn": "Title (EN)",
     "applicationCompletedMessageZh": "Message (ZH)",
