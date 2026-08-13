@@ -825,7 +825,7 @@
     "agreementCheckboxLabelHint": "勾選框文字支援 HTML，可用 <a href=\"https://example.com/\" target=\"_blank\">連結文字</a>；純文字 http(s) 網址亦會自動變連結。",
     "agreementContentZhLabel": "內容 (ZH)",
     "agreementContentEnLabel": "Content (EN)",
-    "agreementHint": "提示：Register 頁點上方連結文字以彈層顯示內容；純文字換行會保留；內容亦支援 HTML。勾選為選填，系統會將 <code>agreementAgreed</code>（true/false）與 <code>agreementRecordedAt</code> 存入用戶資料。",
+    "agreementHint": "提示：頂部標題為所有 Agreement 共用。可用 + 新增多份（各有勾選框與內容，不再重複標題）。Register 頁點連結文字以彈層顯示內容；內容支援 HTML。勾選為選填。",
 
     "thankYouHint": "成功頁文案與寄信邏輯二選一：未啟用 Yes/No 時用「一般」文案＋ Email Settings auto send；啟用後只用 Yes／No 文案與模板，唔使兩邊都填。",
     "thankYouFreeSection": "一般報名成功",

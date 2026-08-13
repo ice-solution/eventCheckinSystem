@@ -981,64 +981,72 @@ var registerPageTitleSuffix = isApplicationMode
                 }) %></script>
             <% } %>
 
-            <!-- Agreement（可多份；非必填，但會記錄勾選狀態） -->
+            <!-- Agreement（可多份；共用一個頂部標題） -->
             <%
                 const _agreementsAll = (formConfig && Array.isArray(formConfig.agreements) && formConfig.agreements.length)
                     ? formConfig.agreements
                     : (formConfig && formConfig.agreement ? [formConfig.agreement] : []);
+                const _agreementsEnabled = _agreementsAll
+                    .map(function(agr, agrIndex) { return { agr: agr, agrIndex: agrIndex }; })
+                    .filter(function(x) { return x.agr && x.agr.enabled; });
+                const _agrSharedTitle = (_agreementsAll[0] && _agreementsAll[0].title) ? _agreementsAll[0].title : {};
             %>
-            <% _agreementsAll.forEach(function(agr, agrIndex) { %>
-            <% if (agr && agr.enabled) { %>
-                <% const agrTitle = agr.title || {}; %>
-                <% const agrLink = agr.linkLabel || {}; %>
-                <% const showAgrLink = agr.showLinkLabel !== false; %>
-                <% const agrId = agrIndex === 0 ? '' : ('_' + (agrIndex + 1)); %>
-                <% const agrAgreedName = agrIndex === 0 ? 'agreementAgreed' : ('agreementAgreed_' + (agrIndex + 1)); %>
-                <% const agrRecordedName = agrIndex === 0 ? 'agreementRecordedAt' : ('agreementRecordedAt_' + (agrIndex + 1)); %>
+            <% if (_agreementsEnabled.length) { %>
                 <div class="form-section agreement-section">
-                    <div class="terms-header">
-                        <h3 class="section-title<%= showAgrLink ? '' : ' terms-title-as-link js-agreement-modal-opener' %>" id="agreementSectionTitle<%= agrId %>"
-                            data-zh="<%= (agrTitle.zh ? agrTitle.zh : '協議') %>"
-                            data-en="<%= (agrTitle.en ? agrTitle.en : 'Agreement') %>"><%= (agrTitle.zh ? agrTitle.zh : '協議') %></h3>
-                        <% if (showAgrLink) { %>
-                        <a href="#" class="terms-open-link lang-text" id="agreementOpenLink<%= agrId %>" role="button"
-                           data-zh="<%= (agrLink.zh ? agrLink.zh : '(協議)') %>"
-                           data-en="<%= (agrLink.en ? agrLink.en : '(agreement)') %>"><%= (agrLink.zh ? agrLink.zh : '(協議)') %></a>
-                        <% } %>
-                    </div>
-                    <div class="form-check terms-agree-row">
-                        <input class="form-check-input js-agreement-agree" type="checkbox"
-                               id="agreementAgree<%= agrId %>"
-                               name="<%= agrAgreedName %>"
-                               data-recorded-at-name="<%= agrRecordedName %>"
-                               value="true">
-                        <label class="form-check-label agreement-checkbox-label js-agreement-label"
-                               for="agreementAgree<%= agrId %>"
-                               id="agreementAgreeLabel<%= agrId %>"></label>
-                    </div>
-                </div>
-
-                <div id="agreementOverlay<%= agrId %>" class="terms-overlay" aria-hidden="true">
-                    <div class="terms-modal" role="dialog" aria-modal="true" aria-labelledby="agreementModalTitle<%= agrId %>">
-                        <div class="terms-modal-header">
-                            <h4 id="agreementModalTitle<%= agrId %>" class="lang-text"
-                                data-zh="<%= (agrTitle.zh ? agrTitle.zh : '協議') %>"
-                                data-en="<%= (agrTitle.en ? agrTitle.en : 'Agreement') %>"><%= (agrTitle.zh ? agrTitle.zh : '協議') %></h4>
-                            <button type="button" class="terms-modal-close" id="agreementModalClose<%= agrId %>" aria-label="Close">&times;</button>
+                    <h3 class="section-title" id="agreementSectionTitle"
+                        data-zh="<%= (_agrSharedTitle.zh ? _agrSharedTitle.zh : '協議') %>"
+                        data-en="<%= (_agrSharedTitle.en ? _agrSharedTitle.en : 'Agreement') %>"><%= (_agrSharedTitle.zh ? _agrSharedTitle.zh : '協議') %></h3>
+                    <% _agreementsEnabled.forEach(function(entry) { %>
+                        <% const agr = entry.agr; %>
+                        <% const agrIndex = entry.agrIndex; %>
+                        <% const agrTitle = agr.title || _agrSharedTitle || {}; %>
+                        <% const agrLink = agr.linkLabel || {}; %>
+                        <% const showAgrLink = agr.showLinkLabel !== false; %>
+                        <% const agrId = agrIndex === 0 ? '' : ('_' + (agrIndex + 1)); %>
+                        <% const agrAgreedName = agrIndex === 0 ? 'agreementAgreed' : ('agreementAgreed_' + (agrIndex + 1)); %>
+                        <% const agrRecordedName = agrIndex === 0 ? 'agreementRecordedAt' : ('agreementRecordedAt_' + (agrIndex + 1)); %>
+                        <div class="agreement-item mb-3">
+                            <% if (showAgrLink) { %>
+                            <div class="terms-header">
+                                <a href="#" class="terms-open-link lang-text" id="agreementOpenLink<%= agrId %>" role="button"
+                                   data-zh="<%= (agrLink.zh ? agrLink.zh : '(協議)') %>"
+                                   data-en="<%= (agrLink.en ? agrLink.en : '(agreement)') %>"><%= (agrLink.zh ? agrLink.zh : '(協議)') %></a>
+                            </div>
+                            <% } %>
+                            <div class="form-check terms-agree-row">
+                                <input class="form-check-input js-agreement-agree" type="checkbox"
+                                       id="agreementAgree<%= agrId %>"
+                                       name="<%= agrAgreedName %>"
+                                       data-recorded-at-name="<%= agrRecordedName %>"
+                                       value="true">
+                                <label class="form-check-label agreement-checkbox-label js-agreement-label<%= showAgrLink ? '' : ' terms-title-as-link js-agreement-modal-opener' %>"
+                                       for="agreementAgree<%= agrId %>"
+                                       id="agreementAgreeLabel<%= agrId %>"></label>
+                            </div>
                         </div>
-                        <div class="terms-modal-body js-agreement-content" id="agreementContent<%= agrId %>"></div>
-                    </div>
+
+                        <div id="agreementOverlay<%= agrId %>" class="terms-overlay" aria-hidden="true">
+                            <div class="terms-modal" role="dialog" aria-modal="true" aria-labelledby="agreementModalTitle<%= agrId %>">
+                                <div class="terms-modal-header">
+                                    <h4 id="agreementModalTitle<%= agrId %>" class="lang-text"
+                                        data-zh="<%= (agrTitle.zh || _agrSharedTitle.zh || '協議') %>"
+                                        data-en="<%= (agrTitle.en || _agrSharedTitle.en || 'Agreement') %>"><%= (agrTitle.zh || _agrSharedTitle.zh || '協議') %></h4>
+                                    <button type="button" class="terms-modal-close" id="agreementModalClose<%= agrId %>" aria-label="Close">&times;</button>
+                                </div>
+                                <div class="terms-modal-body js-agreement-content" id="agreementContent<%= agrId %>"></div>
+                            </div>
+                        </div>
+                        <script type="application/json" class="js-agreement-label-json" data-target="agreementAgreeLabel<%= agrId %>"><%- JSON.stringify({
+                            zh: (agr.label && agr.label.zh) ? agr.label.zh : '',
+                            en: (agr.label && agr.label.en) ? agr.label.en : ''
+                        }) %></script>
+                        <script type="application/json" class="js-agreement-content-json" data-target="agreementContent<%= agrId %>"><%- JSON.stringify({
+                            zh: (agr.content && agr.content.zh) ? agr.content.zh : '',
+                            en: (agr.content && agr.content.en) ? agr.content.en : ''
+                        }) %></script>
+                    <% }); %>
                 </div>
-                <script type="application/json" class="js-agreement-label-json" data-target="agreementAgreeLabel<%= agrId %>"><%- JSON.stringify({
-                    zh: (agr.label && agr.label.zh) ? agr.label.zh : '',
-                    en: (agr.label && agr.label.en) ? agr.label.en : ''
-                }) %></script>
-                <script type="application/json" class="js-agreement-content-json" data-target="agreementContent<%= agrId %>"><%- JSON.stringify({
-                    zh: (agr.content && agr.content.zh) ? agr.content.zh : '',
-                    en: (agr.content && agr.content.en) ? agr.content.en : ''
-                }) %></script>
             <% } %>
-            <% }); %>
 
             <!-- Thank You Yes/No 問題 -->
             <% if (formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled) { %>
@@ -1742,7 +1750,7 @@ var registerPageTitleSuffix = isApplicationMode
             initOverlayAndValidation({
                 overlayId: 'agreementOverlay' + suffix,
                 openLinkId: 'agreementOpenLink' + suffix,
-                openTitleId: 'agreementSectionTitle' + suffix,
+                openTitleId: 'agreementAgreeLabel' + suffix,
                 closeBtnId: 'agreementModalClose' + suffix,
                 agreeId: el.id,
                 optionalAgree: true

@@ -304,6 +304,23 @@
                                 <div id="collapseAgreement" class="collapse">
                                 <div class="card-body">
                                     <p class="text-muted small mb-3"><%- t('form_config.agreementHint') %></p>
+                                    <%
+                                        const _agr0 = (formConfig.agreements && formConfig.agreements[0])
+                                            ? formConfig.agreements[0]
+                                            : (formConfig.agreement || {});
+                                    %>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label" for="agreementTitleZh"><%= t('form_config.agreementTitleZhLabel') %></label>
+                                            <input type="text" class="form-control" id="agreementTitleZh"
+                                                   value="<%= (_agr0.title && _agr0.title.zh) ? _agr0.title.zh : '協議' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label" for="agreementTitleEn"><%= t('form_config.agreementTitleEnLabel') %></label>
+                                            <input type="text" class="form-control" id="agreementTitleEn"
+                                                   value="<%= (_agr0.title && _agr0.title.en) ? _agr0.title.en : 'Agreement' %>">
+                                        </div>
+                                    </div>
                                     <div id="agreementsList"></div>
                                     <button type="button" class="btn btn-sm btn-outline-primary" id="addAgreementBtn">
                                         <i class="fa fa-plus"></i> <%= t('form_config.addAgreement') %>
@@ -1605,14 +1622,15 @@
     }
 
     function collectAgreementsFromDom() {
+        const sharedTitle = {
+            zh: ((document.getElementById('agreementTitleZh') || {}).value || '').trim() || '協議',
+            en: ((document.getElementById('agreementTitleEn') || {}).value || '').trim() || 'Agreement'
+        };
         const rows = [];
         document.querySelectorAll('#agreementsList .js-agreement-item').forEach(function(el) {
             rows.push({
                 enabled: !!(el.querySelector('.js-agr-enabled') || {}).checked,
-                title: {
-                    zh: ((el.querySelector('.js-agr-title-zh') || {}).value || '').trim() || '協議',
-                    en: ((el.querySelector('.js-agr-title-en') || {}).value || '').trim() || 'Agreement'
-                },
+                title: { zh: sharedTitle.zh, en: sharedTitle.en },
                 linkLabel: {
                     zh: ((el.querySelector('.js-agr-link-zh') || {}).value || '').trim() || '(協議)',
                     en: ((el.querySelector('.js-agr-link-en') || {}).value || '').trim() || '(agreement)'
@@ -1628,13 +1646,18 @@
                 }
             });
         });
-        return rows.length ? rows : [defaultAgreementItem()];
+        return rows.length ? rows : [Object.assign(defaultAgreementItem(), { title: sharedTitle })];
     }
 
     function renderAgreementsList(list) {
         const wrap = document.getElementById('agreementsList');
         if (!wrap) return;
         const items = (Array.isArray(list) && list.length) ? list : [defaultAgreementItem()];
+        const first = items[0] || defaultAgreementItem();
+        const titleZhEl = document.getElementById('agreementTitleZh');
+        const titleEnEl = document.getElementById('agreementTitleEn');
+        if (titleZhEl && first.title && first.title.zh) titleZhEl.value = first.title.zh;
+        if (titleEnEl && first.title && first.title.en) titleEnEl.value = first.title.en;
         wrap.innerHTML = items.map(function(item, idx) {
             const a = item || defaultAgreementItem();
             const showLink = a.showLinkLabel !== false;
@@ -1650,13 +1673,7 @@
                         '<input class="form-check-input js-agr-enabled" type="checkbox" ' + (a.enabled ? 'checked' : '') + '>' +
                         '<label class="form-check-label">' + _t.agreementEnabledLabel + '</label>' +
                     '</div>' +
-                    '<div class="row">' +
-                        '<div class="col-md-6"><label class="form-label">' + _t.agreementTitleZhLabel + '</label>' +
-                            '<input type="text" class="form-control js-agr-title-zh" value="' + escapeAttr((a.title && a.title.zh) || '協議') + '"></div>' +
-                        '<div class="col-md-6"><label class="form-label">' + _t.agreementTitleEnLabel + '</label>' +
-                            '<input type="text" class="form-control js-agr-title-en" value="' + escapeAttr((a.title && a.title.en) || 'Agreement') + '"></div>' +
-                    '</div>' +
-                    '<div class="form-check form-switch mb-2 mt-3">' +
+                    '<div class="form-check form-switch mb-2">' +
                         '<input class="form-check-input js-agr-show-link" type="checkbox" ' + (showLink ? 'checked' : '') + '>' +
                         '<label class="form-check-label">' + _t.showLinkLabel + '</label>' +
                     '</div>' +

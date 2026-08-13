@@ -826,7 +826,7 @@
     "agreementCheckboxLabelHint": "Checkbox label supports HTML, e.g. <a href=\"https://example.com/\" target=\"_blank\">link text</a>; plain http(s) URLs are auto-linked.",
     "agreementContentZhLabel": "Content (ZH)",
     "agreementContentEnLabel": "Content (EN)",
-    "agreementHint": "Tip: Click the link text to open the content dialog; plain text line breaks preserved; content supports HTML. Agreement is optional — <code>agreementAgreed</code> (true/false) and <code>agreementRecordedAt</code> are stored in user data.",
+    "agreementHint": "Tip: The title at the top is shared by all Agreements. Use + to add more (each has its own checkbox and content, without a separate title). Click the link text to open the content dialog; content supports HTML. Agreement is optional.",
 
     "thankYouHint": "Success copy and email logic are mutually exclusive: with Yes/No off, use General copy + Email Settings auto-send; with Yes/No on, use only Yes/No copy and templates — no need to fill both.",
     "thankYouFreeSection": "General registration success",
