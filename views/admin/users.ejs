@@ -1085,15 +1085,11 @@
                                                                             }
                                                                             %>
                                                                             <%= fieldLabel %>
-                                                                            <% if (field.required) { %>
-                                                                                <span class="text-danger">*</span>
-                                                                            <% } %>
                                                                         </label>
                                                                         <% if (field.type === 'select' && field.options) { %>
                                                                             <% if (_addUserSelectOther) { %>
                                                                             <select class="form-control js-select-maybe-other" id="newUser_<%= field.fieldName %>_sel"
-                                                                                    data-select-other-base="newUser_<%= field.fieldName %>"
-                                                                                    <%= field.required ? 'required' : '' %>>
+                                                                                    data-select-other-base="newUser_<%= field.fieldName %>">
                                                                                 <option value="">--- Please Select ---</option>
                                                                                 <% field.options.forEach((option) => { %>
                                                                                     <option value="<%= option.value %>" data-is-other="<%= option.isOther ? '1' : '' %>">
@@ -1119,7 +1115,7 @@
                                                                                    autocomplete="off">
                                                                             <input type="hidden" name="<%= field.fieldName %>" id="newUser_<%= field.fieldName %>_hidden" value="">
                                                                             <% } else { %>
-                                                                            <select class="form-control" id="newUser<%= field.fieldName %>" name="<%= field.fieldName %>" <%= field.required ? 'required' : '' %>>
+                                                                            <select class="form-control" id="newUser<%= field.fieldName %>" name="<%= field.fieldName %>">
                                                                                 <option value="">--- Please Select ---</option>
                                                                                 <% field.options.forEach((option) => { %>
                                                                                     <option value="<%= option.value %>">
@@ -1184,8 +1180,7 @@
                                                                                                    id="newUser<%= field.fieldName %>_<%= optionIndex %>"
                                                                                                    name="<%= field.fieldName %>"
                                                                                                    value="<%= option.value %>"
-                                                                                                   <% if (option.isOther) { %>data-other-input="newUser<%= field.fieldName %>_<%= optionIndex %>_other"<% } %>
-                                                                                                   <%= field.required ? 'required' : '' %>>
+                                                                                                   <% if (option.isOther) { %>data-other-input="newUser<%= field.fieldName %>_<%= optionIndex %>_other"<% } %>>
                                                                                             <label class="form-check-label" for="newUser<%= field.fieldName %>_<%= optionIndex %>">
                                                                                                 <% 
                                                                                                 let optionLabel = '';
@@ -1213,10 +1208,10 @@
                                                                             </div>
                                                                         <% } else if (field.type === 'textarea') { %>
                                                                             <textarea class="form-control" id="newUser<%= field.fieldName %>" name="<%= field.fieldName %>" 
-                                                                                      placeholder="<%= (typeof field.placeholder === 'string' ? field.placeholder : (field.placeholder && field.placeholder[lang] ? field.placeholder[lang] : (field.placeholder && field.placeholder.zh ? field.placeholder.zh : ''))) || '' %>" <%= field.required ? 'required' : '' %> rows="3"></textarea>
+                                                                                      placeholder="<%= (typeof field.placeholder === 'string' ? field.placeholder : (field.placeholder && field.placeholder[lang] ? field.placeholder[lang] : (field.placeholder && field.placeholder.zh ? field.placeholder.zh : ''))) || '' %>" rows="3"></textarea>
                                                                         <% } else { %>
-                                                                            <input type="<%= field.type %>" class="form-control" id="newUser<%= field.fieldName %>" name="<%= field.fieldName %>" 
-                                                                                   placeholder="<%= (typeof field.placeholder === 'string' ? field.placeholder : (field.placeholder && field.placeholder[lang] ? field.placeholder[lang] : (field.placeholder && field.placeholder.zh ? field.placeholder.zh : ''))) || '' %>" <%= field.required ? 'required' : '' %>>
+                                                                            <input type="<%= field.type === 'email' ? 'text' : field.type %>" class="form-control" id="newUser<%= field.fieldName %>" name="<%= field.fieldName %>" 
+                                                                                   placeholder="<%= (typeof field.placeholder === 'string' ? field.placeholder : (field.placeholder && field.placeholder[lang] ? field.placeholder[lang] : (field.placeholder && field.placeholder.zh ? field.placeholder.zh : ''))) || '' %>">
                                                                         <% } %>
                                                                     </div>
                                                                 </div>
@@ -1227,18 +1222,18 @@
                                             <% } %>
                                         <% }); %>
                                     <% } else { %>
-                                        <!-- 預設表單字段（如果沒有formConfig） -->
+                                        <!-- 預設表單字段（如果沒有formConfig）；後台新增允許空白 -->
                                         <div class="row">
                                             <div class="col-md-6">
                                                 <div class="form-group">
-                                                    <label for="newUserEmail">Email *</label>
-                                                    <input type="email" class="form-control" id="newUserEmail" name="email" required>
+                                                    <label for="newUserEmail">Email</label>
+                                                    <input type="text" class="form-control" id="newUserEmail" name="email">
                                                 </div>
                                             </div>
                                             <div class="col-md-6">
                                                 <div class="form-group">
-                                                    <label for="newUserName">Name *</label>
-                                                    <input type="text" class="form-control" id="newUserName" name="name" required>
+                                                    <label for="newUserName">Name</label>
+                                                    <input type="text" class="form-control" id="newUserName" name="name">
                                                 </div>
                                             </div>
                                         </div>
@@ -3003,8 +2998,7 @@ const _US = {
             var isOther = opt && opt.getAttribute('data-is-other') === '1';
             if (isOther) {
                 $(other).removeClass('d-none');
-                if (selectEl.hasAttribute('required')) other.setAttribute('required', 'required');
-                else other.removeAttribute('required');
+                other.removeAttribute('required');
                 hidden.value = (other.value || '').trim();
             } else {
                 $(other).addClass('d-none');
@@ -3022,7 +3016,7 @@ const _US = {
             if (!other) return;
             if (choiceEl.checked) {
                 $(other).removeClass('d-none');
-                other.setAttribute('required', 'required');
+                other.removeAttribute('required');
             } else {
                 $(other).addClass('d-none');
                 other.removeAttribute('required');
@@ -3063,20 +3057,13 @@ const _US = {
 
         $('#newUserForm').on('submit', function(e) {
             e.preventDefault();
+            // 後台 Add Guest：無視 FormConfig required，允許空白欄位
             $('#newUserForm .js-select-maybe-other').each(function() { syncSelectWithOtherAdmin(this); });
             $('#newUserForm .js-checkbox-other, #newUserForm .js-radio-other').each(function() { syncChoiceOtherInputAdmin(this); });
-            var newUserFormEl = document.getElementById('newUserForm');
+            $('#newUserForm [required]').removeAttr('required');
             $('#newUserForm .js-select-other-text, #newUserForm .js-choice-other-text').each(function() {
-                if (!$(this).hasClass('d-none') && this.hasAttribute('required') && !((this.value || '').trim())) {
-                    this.setCustomValidity(_US.fieldRequired);
-                } else {
-                    this.setCustomValidity('');
-                }
+                this.setCustomValidity('');
             });
-            if (newUserFormEl && !newUserFormEl.checkValidity()) {
-                newUserFormEl.reportValidity();
-                return;
-            }
             
             // Dynamically collect form data
             const userData = {
