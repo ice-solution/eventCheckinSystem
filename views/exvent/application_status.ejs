@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="<%= typeof lang !== 'undefined' && lang === 'en' ? 'en' : 'zh-Hant' %>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= status === 'completed' ? '申請已完成' : '申請連結' %></title>
+    <title><%= title || (status === 'completed' ? '申請已完成' : '申請連結') %></title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         body { background: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -17,7 +17,7 @@
             text-align: center;
         }
         .box h1 { font-size: 1.5rem; color: #2c3e50; margin-bottom: 12px; }
-        .box p { color: #555; margin: 0; line-height: 1.6; }
+        .box p { color: #555; margin: 0; line-height: 1.6; white-space: pre-wrap; }
         .ok { color: #1e7e34; }
         .err { color: #c0392b; }
     </style>
@@ -25,7 +25,7 @@
 <body>
     <div class="box">
         <h1 class="<%= status === 'completed' ? 'ok' : 'err' %>">
-            <%= status === 'completed' ? '申請已完成' : '無法開啟申請表' %>
+            <%= title || (status === 'completed' ? '申請已完成' : '無法開啟申請表') %>
         </h1>
         <p><%= message || '' %></p>
     </div>

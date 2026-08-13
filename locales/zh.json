@@ -765,6 +765,7 @@
     "cardTermsTitle": "Terms & Conditions (T&C)",
     "cardAgreementTitle": "Agreement",
     "cardThankYouTitle": "Thank You（報名成功頁）",
+    "cardApplicationCompletedTitle": "專屬申請已完成頁",
     "cardPaymentTicketTitle": "付費票券（報名頁文案與分類按鈕）",
     "cardLanguageTitle": "語言設置",
 
@@ -825,6 +826,11 @@
     "agreementHint": "提示：Register 頁點上方連結文字以彈層顯示內容；純文字換行會保留；內容亦支援 HTML。勾選為選填，系統會將 <code>agreementAgreed</code>（true/false）與 <code>agreementRecordedAt</code> 存入用戶資料。",
 
     "thankYouHint": "成功頁文案與寄信邏輯二選一：未啟用 Yes/No 時用「一般」文案＋ Email Settings auto send；啟用後只用 Yes／No 文案與模板，唔使兩邊都填。",
+    "applicationCompletedHint": "當用戶已用專屬 Application 連結提交後，再開同一條連結會看到此頁。判斷依據是 URL 內的用戶 ID（不是 email）。",
+    "applicationCompletedTitleZh": "標題 (ZH)",
+    "applicationCompletedTitleEn": "Title (EN)",
+    "applicationCompletedMessageZh": "說明文字 (ZH)",
+    "applicationCompletedMessageEn": "Message (EN)",
     "thankYouFreeSection": "一般報名成功",
     "thankYouPurchaseSection": "付費購票成功",
     "thankYouTitleZhLabel": "標題 (ZH)",

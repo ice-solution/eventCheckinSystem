@@ -609,6 +609,43 @@
                                 </div>
                             </div>
 
+                            <!-- 專屬申請已完成頁文案 -->
+                            <div class="card mb-3">
+                                <div class="card-header collapsible-card-header" data-toggle="collapse" data-target="#collapseApplicationCompleted" aria-expanded="false">
+                                    <i class="fa fa-plus-circle collapse-icon mr-2 text-primary"></i><h6 class="d-inline mb-0"><%= t('form_config.cardApplicationCompletedTitle') %></h6>
+                                </div>
+                                <div id="collapseApplicationCompleted" class="collapse">
+                                <div class="card-body">
+                                    <% const acp = (formConfig.applicationCompletedPage) ? formConfig.applicationCompletedPage : {}; %>
+                                    <p class="text-muted small mb-3"><%= t('form_config.applicationCompletedHint') %></p>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.applicationCompletedTitleZh') %></label>
+                                            <input type="text" class="form-control" id="applicationCompletedTitleZh"
+                                                   value="<%= (acp.title && acp.title.zh) ? acp.title.zh : '申請已完成' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.applicationCompletedTitleEn') %></label>
+                                            <input type="text" class="form-control" id="applicationCompletedTitleEn"
+                                                   value="<%= (acp.title && acp.title.en) ? acp.title.en : 'Application completed' %>">
+                                        </div>
+                                    </div>
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.applicationCompletedMessageZh') %></label>
+                                            <textarea class="form-control" id="applicationCompletedMessageZh" rows="3"
+                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (acp.message && acp.message.zh) ? acp.message.zh : '您已完成申請，此連結不可再次修改。' %></textarea>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.applicationCompletedMessageEn') %></label>
+                                            <textarea class="form-control" id="applicationCompletedMessageEn" rows="3"
+                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (acp.message && acp.message.en) ? acp.message.en : 'You have already completed this application. This link cannot be used to make further changes.' %></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                                </div>
+                            </div>
+
                             <!-- 付費票券 Register UI -->
                             <div class="card mb-3">
                                 <div class="card-header collapsible-card-header" data-toggle="collapse" data-target="#collapsePaymentTicket" aria-expanded="false">
@@ -1765,6 +1802,16 @@
                     }
                 }
             },
+            applicationCompletedPage: {
+                title: {
+                    zh: trimVal('applicationCompletedTitleZh', '申請已完成'),
+                    en: trimVal('applicationCompletedTitleEn', 'Application completed')
+                },
+                message: {
+                    zh: val('applicationCompletedMessageZh', '您已完成申請，此連結不可再次修改。'),
+                    en: val('applicationCompletedMessageEn', 'You have already completed this application. This link cannot be used to make further changes.')
+                }
+            },
             paymentTicketUi: collectPaymentTicketUiFromForm()
         };
     }
@@ -1791,6 +1838,7 @@
             terms: meta.terms,
             agreement: meta.agreement,
             thankYou: meta.thankYou,
+            applicationCompletedPage: meta.applicationCompletedPage,
             paymentTicketUi: meta.paymentTicketUi,
             sections: (formConfig.sections || []).map(function(section) {
                 return {
@@ -1847,6 +1895,7 @@
                     terms: meta.terms,
                     agreement: meta.agreement,
                     thankYou: meta.thankYou,
+                    applicationCompletedPage: meta.applicationCompletedPage,
                     paymentTicketUi: meta.paymentTicketUi
                 })
             });
@@ -2004,6 +2053,13 @@
                             noPurchaseMessage: { zh: '', en: '' }
                         }
                     };
+                    formConfig.applicationCompletedPage = importedData.applicationCompletedPage || formConfig.applicationCompletedPage || {
+                        title: { zh: '申請已完成', en: 'Application completed' },
+                        message: {
+                            zh: '您已完成申請，此連結不可再次修改。',
+                            en: 'You have already completed this application. This link cannot be used to make further changes.'
+                        }
+                    };
                     formConfig.eventDisplayName = importedData.eventDisplayName || formConfig.eventDisplayName || { zh: '', en: '' };
                     formConfig.registerSubHeader = importedData.registerSubHeader || formConfig.registerSubHeader || { zh: '', en: '' };
                     formConfig.registerSubtitle = importedData.registerSubtitle || formConfig.registerSubtitle || {
@@ -2149,6 +2205,12 @@
         setInputValue('thankYouNoPurchaseTitleEn', (ynq.noPurchaseTitle && ynq.noPurchaseTitle.en) || '');
         setInputValue('thankYouNoPurchaseMessageZh', (ynq.noPurchaseMessage && ynq.noPurchaseMessage.zh) || '');
         setInputValue('thankYouNoPurchaseMessageEn', (ynq.noPurchaseMessage && ynq.noPurchaseMessage.en) || '');
+
+        const acp = data.applicationCompletedPage || {};
+        setInputValue('applicationCompletedTitleZh', (acp.title && acp.title.zh) || '');
+        setInputValue('applicationCompletedTitleEn', (acp.title && acp.title.en) || '');
+        setInputValue('applicationCompletedMessageZh', (acp.message && acp.message.zh) || '');
+        setInputValue('applicationCompletedMessageEn', (acp.message && acp.message.en) || '');
 
         const pt = data.paymentTicketUi || {};
         if (pt.sectionTitle) {

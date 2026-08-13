@@ -767,15 +767,6 @@ exports.renderApplicationForm = async (req, res) => {
         }
         const existingUser = userDoc.toObject ? userDoc.toObject({ minimize: false }) : userDoc;
 
-        if (existingUser.applicationCompleted) {
-            return res.render('exvent/application_status', {
-                event_id,
-                event,
-                status: 'completed',
-                message: '您已完成申請，此連結不可再次修改。'
-            });
-        }
-
         const FormConfig = require('../model/FormConfig');
         const formConfigController = require('./formConfigController');
         let formConfig = await FormConfig.findOne({ eventId: event_id });
@@ -785,6 +776,23 @@ exports.renderApplicationForm = async (req, res) => {
             await formConfig.save();
         }
         formConfig = formConfigController.getFormConfigForRender(formConfig);
+
+        if (existingUser.applicationCompleted) {
+            const lang = ((req.query.lang || formConfig.defaultLanguage || 'zh') + '').toLowerCase() === 'en' ? 'en' : 'zh';
+            const acp = formConfig.applicationCompletedPage || {};
+            const completedTitle = (acp.title && (acp.title[lang] || acp.title.zh)) || (lang === 'en' ? 'Application completed' : '申請已完成');
+            const completedMessage = (acp.message && (acp.message[lang] || acp.message.zh)) || (lang === 'en'
+                ? 'You have already completed this application. This link cannot be used to make further changes.'
+                : '您已完成申請，此連結不可再次修改。');
+            return res.render('exvent/application_status', {
+                event_id,
+                event,
+                status: 'completed',
+                lang,
+                title: completedTitle,
+                message: completedMessage
+            });
+        }
 
         const lockedFields = {};
         const fieldValues = {};

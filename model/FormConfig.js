@@ -240,6 +240,17 @@ const formConfigSchema = new mongoose.Schema({
             }
         }
     },
+    /** 專屬 Application 連結：已完成時顯示的標題／說明 */
+    applicationCompletedPage: {
+        title: {
+            zh: { type: String, default: '申請已完成' },
+            en: { type: String, default: 'Application completed' }
+        },
+        message: {
+            zh: { type: String, default: '您已完成申請，此連結不可再次修改。' },
+            en: { type: String, default: 'You have already completed this application. This link cannot be used to make further changes.' }
+        }
+    },
     // 付費票券區塊文案與分類按鈕（Register 頁）
     paymentTicketUi: {
         sectionTitle: {
