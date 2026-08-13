@@ -7,6 +7,7 @@ const Auth = require('../model/Auth');
 // Event 功能鍵（與路由對應）
 const EVENT_FUNCTIONS = [
     { key: 'rsvp', label: 'RSVP / User List', pathMatch: /^\/events\/[^/]+\/?$/ },
+    { key: 'rsvp', label: 'Copy Event', pathMatch: /^\/events\/[^/]+\/copy/ },
     { key: 'rsvp', label: 'Edit Event Name', pathMatch: /^\/events\/[^/]+\/edit-name/ },
     { key: 'rsvp', label: 'Update Event Name', pathMatch: /^\/events\/[^/]+\/name$/ },
     { key: 'stationCheckin', label: 'Station Check-in', pathMatch: /^\/events\/[^/]+\/station-checkin/ },

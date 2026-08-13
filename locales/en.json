@@ -111,7 +111,13 @@
     "selectAll": "Select all",
     "selectEventsFirst": "Please select at least one event",
     "exporting": "Exporting…",
-    "exportFailed": "Export failed. Please try again."
+    "exportFailed": "Export failed. Please try again.",
+    "actions": "Actions",
+    "copyEvent": "Copy",
+    "copyConfirm": "Copy this event? Form Config, Email/SMS templates and event settings will be copied (registered users are not).",
+    "copying": "Copying…",
+    "copySuccess": "Copied as: ",
+    "copyFailed": "Copy failed. Please try again."
   },
   "create_event": {
     "title": "Create New Event", "eventName": "Event Name", "startTime": "Event Start Time",
@@ -767,6 +773,11 @@
     "closedMessageLabel": "Message when closed",
     "closedMessagePlaceholder": "e.g. Registration is closed. Thank you for your interest.",
     "closedMessageHint": "Visitors will see this message when the Register page is OFF.",
+    "registerSlugLabel": "Registration Page Slug",
+    "registerSlugPlaceholder": "e.g. my-event-2026",
+    "registerSlugHint": "When set, visitors can open the form at {{domain}}/slug. Lowercase letters, numbers, and hyphens only. Legacy URL /web/:eventId/register still works.",
+    "registerSlugPreview": "Public URL",
+    "registerSlugLegacy": "Legacy URL",
 
     "deleteBannerConfirm": "Are you sure you want to delete the current banner?",
     "deleteBanner": "Delete Banner",

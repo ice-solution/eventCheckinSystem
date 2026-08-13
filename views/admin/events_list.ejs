@@ -267,6 +267,7 @@
                                         <th><%= t('events_list.endTime') %></th>
                                         <th><%= t('events_list.createdAt') %></th>
                                         <th><%= t('events_list.userCount') %></th>
+                                        <th><%= t('events_list.actions') %></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -281,11 +282,19 @@
                                                 <td><%= new Date(event.to).toLocaleString() %></td>
                                                 <td data-order="<%= new Date(event.created_at).getTime() %>"><%= new Date(event.created_at).toLocaleString() %></td>
                                                 <td><%= event.users.length %></td>
+                                                <td>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary copy-event-btn"
+                                                            data-event-id="<%= event._id %>"
+                                                            data-event-name="<%= String(event.name || '').replace(/"/g, '&quot;') %>"
+                                                            title="<%= t('events_list.copyEvent') %>">
+                                                        <i class="fa fa-copy"></i> <%= t('events_list.copyEvent') %>
+                                                    </button>
+                                                </td>
                                             </tr>
                                         <% }); %>
                                     <% } else { %>
                                         <tr>
-                                            <td colspan="6" class="text-center"><%= t('events_list.noEvents') %></td>
+                                            <td colspan="7" class="text-center"><%= t('events_list.noEvents') %></td>
                                         </tr>
                                     <% } %>
                                 </tbody>
@@ -309,7 +318,12 @@ $(document).ready(function() {
         selectFirst: <%- JSON.stringify(t('events_list.selectEventsFirst')) %>,
         exporting: <%- JSON.stringify(t('events_list.exporting')) %>,
         exportFailed: <%- JSON.stringify(t('events_list.exportFailed')) %>,
-        exportLabel: <%- JSON.stringify(t('events_list.exportCheckInList')) %>
+        exportLabel: <%- JSON.stringify(t('events_list.exportCheckInList')) %>,
+        copyConfirm: <%- JSON.stringify(t('events_list.copyConfirm')) %>,
+        copying: <%- JSON.stringify(t('events_list.copying')) %>,
+        copySuccess: <%- JSON.stringify(t('events_list.copySuccess')) %>,
+        copyFailed: <%- JSON.stringify(t('events_list.copyFailed')) %>,
+        copyLabel: <%- JSON.stringify(t('events_list.copyEvent')) %>
     };
     var selectedIds = {};
 
@@ -320,7 +334,8 @@ $(document).ready(function() {
         columnDefs: [
             { targets: 0, orderable: false, searchable: false },
             { targets: 4, type: 'num', orderable: true, searchable: false },
-            { targets: 5, type: 'num', orderable: true }
+            { targets: 5, type: 'num', orderable: true },
+            { targets: 6, orderable: false, searchable: false }
         ],
         order: [[4, 'desc']],
         initComplete: function() {
@@ -349,7 +364,7 @@ $(document).ready(function() {
         if (!el) return;
         let drag = { active: false, x: 0, scroll: 0, moved: false };
         el.addEventListener('mousedown',  function(e) {
-            if (e.target && (e.target.tagName === 'INPUT' || e.target.closest('a'))) return;
+            if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('a') || e.target.closest('button'))) return;
             drag = { active: true, x: e.clientX, scroll: el.scrollLeft, moved: false };
             el.classList.add('is-dragging');
         });
@@ -441,6 +456,36 @@ $(document).ready(function() {
         }).catch(function(err) {
             alert(err.message || i18n.exportFailed);
         }).finally(function() {
+            $btn.prop('disabled', false).html(originalHtml);
+        });
+    });
+
+    $(document).on('click', '.copy-event-btn', function() {
+        var $btn = $(this);
+        var eventId = $btn.data('event-id');
+        if (!eventId) return;
+        if (!confirm(i18n.copyConfirm)) return;
+
+        var originalHtml = $btn.html();
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> ' + i18n.copying);
+
+        fetch('/events/' + eventId + '/copy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin'
+        }).then(function(res) {
+            return res.json().then(function(body) {
+                if (!res.ok || !body.success) {
+                    throw new Error((body && body.message) || i18n.copyFailed);
+                }
+                return body;
+            });
+        }).then(function(body) {
+            var name = (body.event && body.event.name) || '';
+            alert(i18n.copySuccess + name);
+            window.location.reload();
+        }).catch(function(err) {
+            alert(err.message || i18n.copyFailed);
             $btn.prop('disabled', false).html(originalHtml);
         });
     });

@@ -1,5 +1,10 @@
 /**
  * 郵件 / SMS 模板變數替換（{{user.name}}、{{event.name}}、{{qrCodeUrl}} 等）
+ *
+ * Select／radio／checkbox 欄位另支援：
+ *   {{user.fieldName}}              → 儲存的 option value（向後相容）
+ *   {{user.fieldName.label.zh}}     → FormConfig option 中文 label（無則 fallback value）
+ *   {{user.fieldName.label.en}}     → FormConfig option 英文 label（無則 fallback value）
  */
 
 function getPublicBaseUrlFromEnv() {
@@ -38,11 +43,109 @@ function resolveEventUser(event, user) {
     return found.toObject ? found.toObject() : found;
 }
 
+function getOptionLabelText(option, lang) {
+    if (!option) return '';
+    const fallback = option.value != null ? String(option.value) : '';
+    const label = option.label;
+    if (label == null || label === '') return fallback;
+    if (typeof label === 'string') return label || fallback;
+    if (typeof label !== 'object') return fallback;
+    if (lang === 'en') {
+        const t = (label.en || label.zh || '').toString().trim();
+        return t || fallback;
+    }
+    const t = (label.zh || label.en || '').toString().trim();
+    return t || fallback;
+}
+
+function findFieldWithOptions(formConfig, fieldName) {
+    if (!formConfig || !fieldName) return null;
+    const sections = formConfig.sections || [];
+    for (let i = 0; i < sections.length; i++) {
+        const fields = (sections[i] && sections[i].fields) || [];
+        for (let j = 0; j < fields.length; j++) {
+            const field = fields[j];
+            if (field && field.fieldName === fieldName && Array.isArray(field.options) && field.options.length) {
+                return field;
+            }
+        }
+    }
+    return null;
+}
+
+function getUserRawFieldValue(userObj, fieldName) {
+    if (!userObj || !fieldName) return undefined;
+    let v = userObj[fieldName];
+    if (v === undefined || v === null || v === '') {
+        if (userObj.formData && typeof userObj.formData === 'object') {
+            v = userObj.formData[fieldName];
+        }
+    }
+    return v;
+}
+
+function resolveOptionValueToLabel(options, rawValue, lang) {
+    if (rawValue === undefined || rawValue === null || rawValue === '') return '';
+    if (Array.isArray(rawValue)) {
+        return rawValue
+            .map((v) => resolveOptionValueToLabel(options, v, lang))
+            .filter((s) => s !== '')
+            .join(', ');
+    }
+    const valueStr = String(rawValue);
+    const opt = (options || []).find((o) => o && String(o.value) === valueStr);
+    if (!opt) return valueStr; // 無對應 option → 用已存 value
+    return getOptionLabelText(opt, lang) || valueStr;
+}
+
 /**
- * 發信／預覽共用的額外變數（含網頁版郵件連結）
+ * 依 FormConfig options 產生 {{user.field.label.zh|en}} 變數
+ * 無 label 時 fallback 為 option value／已存值
+ */
+function buildUserOptionLabelVars(user, formConfig) {
+    const vars = {};
+    if (!user || !formConfig || !Array.isArray(formConfig.sections)) return vars;
+    const userObj = user.toObject ? user.toObject({ minimize: false }) : user;
+
+    formConfig.sections.forEach((section) => {
+        (section.fields || []).forEach((field) => {
+            if (!field || !field.fieldName || !Array.isArray(field.options) || !field.options.length) return;
+            if (field.type === 'display') return;
+            const name = field.fieldName;
+            const raw = getUserRawFieldValue(userObj, name);
+            vars[`user.${name}.label.zh`] = resolveOptionValueToLabel(field.options, raw, 'zh');
+            vars[`user.${name}.label.en`] = resolveOptionValueToLabel(field.options, raw, 'en');
+        });
+    });
+    return vars;
+}
+
+async function loadFormConfigForEvent(eventId) {
+    if (!eventId) return null;
+    try {
+        const FormConfig = require('../model/FormConfig');
+        const formConfigController = require('../controllers/formConfigController');
+        let formConfig = await FormConfig.findOne({ eventId });
+        if (!formConfig) return null;
+        return formConfigController.getFormConfigForRender(formConfig);
+    } catch (e) {
+        console.warn('loadFormConfigForEvent failed:', e && e.message ? e.message : e);
+        return null;
+    }
+}
+
+/**
+ * 發信／預覽共用的額外變數（含網頁版郵件連結、select label）
  * 模板內請用 {{emailPreviewUrl}} 或 {{contentUrl}}，勿寫死 URL
  */
-function buildEmailTemplateAdditionalVars({ baseUrl, user, event, emailTemplateId, transaction = null } = {}) {
+async function buildEmailTemplateAdditionalVars({
+    baseUrl,
+    user,
+    event,
+    emailTemplateId,
+    transaction = null,
+    formConfig = null
+} = {}) {
     const userObj = resolveEventUser(event, user);
     const eventObj = event && (event.toObject ? event.toObject() : event);
     const base = (baseUrl || getPublicBaseUrlFromEnv()).replace(/\/+$/, '');
@@ -99,6 +202,15 @@ function buildEmailTemplateAdditionalVars({ baseUrl, user, event, emailTemplateI
         Object.assign(vars, flattenForTemplate(invoiceData, 'invoice'));
     }
 
+    // select／radio／checkbox：{{user.field.label.zh|en}}
+    let fc = formConfig;
+    if (!fc && eventId) {
+        fc = await loadFormConfigForEvent(eventId);
+    }
+    if (fc && userObj) {
+        Object.assign(vars, buildUserOptionLabelVars(userObj, fc));
+    }
+
     return vars;
 }
 
@@ -122,17 +234,22 @@ function replaceTemplateVariables(content, user, event, additionalVars = {}) {
 
     Object.keys(userObj).forEach((key) => {
         if (key.startsWith('_')) return;
+        // 跳過物件／陣列頂層，避免把 [object Object] 寫進 {{user.xxx}}；
+        // 陣列／label 由 additionalVars（user.xxx.label.*）處理
+        const value = userObj[key];
+        if (value !== null && typeof value === 'object' && !(value instanceof Date)) return;
         const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regex = new RegExp(`\\{\\{user\\.${escapedKey}\\}\\}`, 'g');
-        const value = userObj[key];
         const replacement = value !== undefined && value !== null ? String(value) : '';
         result = result.replace(regex, replacement);
     });
 
-    Object.keys(additionalVars).forEach((key) => {
+    Object.keys(additionalVars || {}).forEach((key) => {
+        if (key.startsWith('__')) return;
         const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regex = new RegExp(`\\{\\{${escapedKey}\\}\\}`, 'g');
-        result = result.replace(regex, additionalVars[key] || '');
+        const val = additionalVars[key];
+        result = result.replace(regex, val != null ? String(val) : '');
     });
 
     return result;
@@ -141,7 +258,9 @@ function replaceTemplateVariables(content, user, event, additionalVars = {}) {
 module.exports = {
     replaceTemplateVariables,
     buildEmailTemplateAdditionalVars,
+    buildUserOptionLabelVars,
     resolveEventUser,
     flattenForTemplate,
     getPublicBaseUrlFromEnv,
+    loadFormConfigForEvent,
 };

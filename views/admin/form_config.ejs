@@ -102,6 +102,24 @@
                                                   placeholder="<%= t('form_config.closedMessagePlaceholder') %>"><%= (formConfig.registerClosedMessage || '') %></textarea>
                                         <small class="text-muted"><%= t('form_config.closedMessageHint') %></small>
                                     </div>
+                                    <div class="mb-2">
+                                        <label class="form-label" for="registerSlug"><%= t('form_config.registerSlugLabel') %></label>
+                                        <input type="text" class="form-control" id="registerSlug"
+                                               value="<%= (formConfig.registerSlug || '') %>"
+                                               placeholder="<%= t('form_config.registerSlugPlaceholder') %>"
+                                               pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+                                               autocomplete="off">
+                                        <small class="text-muted d-block mt-1"><%= t('form_config.registerSlugHint').replace('{{domain}}', (typeof publicDomain !== 'undefined' && publicDomain) ? publicDomain.replace(/\/$/, '') : '') %></small>
+                                        <div class="mt-2 small">
+                                            <div><strong><%= t('form_config.registerSlugLegacy') %>:</strong>
+                                                <a href="/web/<%= event._id %>/register" target="_blank" rel="noopener">/web/<%= event._id %>/register</a>
+                                            </div>
+                                            <div id="registerSlugPreviewRow" class="<%= (formConfig.registerSlug) ? '' : 'd-none' %>">
+                                                <strong><%= t('form_config.registerSlugPreview') %>:</strong>
+                                                <a id="registerSlugPreviewLink" href="/<%= formConfig.registerSlug || '' %>" target="_blank" rel="noopener">/<%= formConfig.registerSlug || '' %></a>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 </div>
                             </div>
@@ -1627,6 +1645,7 @@
             languageSwitcherEnabled: checked('languageSwitcherEnabled', true),
             registerPageEnabled: checked('registerPageEnabled', true),
             registerClosedMessage: val('registerClosedMessage', ''),
+            registerSlug: trimVal('registerSlug', '').toLowerCase().replace(/\s+/g, '-'),
             eventDisplayName: {
                 zh: trimVal('eventDisplayNameZh', ''),
                 en: trimVal('eventDisplayNameEn', '')
@@ -1765,6 +1784,7 @@
             languageSwitcherEnabled: meta.languageSwitcherEnabled,
             registerPageEnabled: meta.registerPageEnabled,
             registerClosedMessage: meta.registerClosedMessage,
+            registerSlug: meta.registerSlug,
             eventDisplayName: meta.eventDisplayName,
             registerSubHeader: meta.registerSubHeader,
             registerSubtitle: meta.registerSubtitle,
@@ -1820,6 +1840,7 @@
                     languageSwitcherEnabled: meta.languageSwitcherEnabled,
                     registerPageEnabled: meta.registerPageEnabled,
                     registerClosedMessage: meta.registerClosedMessage,
+                    registerSlug: meta.registerSlug,
                     eventDisplayName: meta.eventDisplayName,
                     registerSubHeader: meta.registerSubHeader,
                     registerSubtitle: meta.registerSubtitle,
@@ -1835,6 +1856,14 @@
                 if (result.formConfig && typeof result.formConfig.languageSwitcherEnabled === 'boolean') {
                     formConfig.languageSwitcherEnabled = result.formConfig.languageSwitcherEnabled;
                 }
+                if (result.formConfig && typeof result.formConfig.registerSlug === 'string') {
+                    formConfig.registerSlug = result.formConfig.registerSlug;
+                    setInputValue('registerSlug', result.formConfig.registerSlug);
+                } else if (result.formConfig && !result.formConfig.registerSlug) {
+                    formConfig.registerSlug = '';
+                    setInputValue('registerSlug', '');
+                }
+                updateRegisterSlugPreview();
                 showAlert('success', '<%= t("form_config.savedSuccess") %>');
             } else {
                 console.error('儲存失敗：' + result.message);
@@ -1930,6 +1959,9 @@
                     }
                     if (typeof importedData.registerClosedMessage === 'string') {
                         formConfig.registerClosedMessage = importedData.registerClosedMessage;
+                    }
+                    if (typeof importedData.registerSlug === 'string') {
+                        formConfig.registerSlug = importedData.registerSlug;
                     }
                     formConfig.terms = importedData.terms || formConfig.terms || {
                         enabled: false,
@@ -2046,6 +2078,8 @@
         if (typeof data.languageSwitcherEnabled === 'boolean') setInputValue('languageSwitcherEnabled', data.languageSwitcherEnabled);
         if (typeof data.registerPageEnabled === 'boolean') setInputValue('registerPageEnabled', data.registerPageEnabled);
         if (typeof data.registerClosedMessage === 'string') setInputValue('registerClosedMessage', data.registerClosedMessage);
+        if (typeof data.registerSlug === 'string') setInputValue('registerSlug', data.registerSlug);
+        updateRegisterSlugPreview();
         const edn = data.eventDisplayName || {};
         setInputValue('eventDisplayNameZh', edn.zh || '');
         setInputValue('eventDisplayNameEn', edn.en || '');
@@ -2344,6 +2378,34 @@
             if (enEl) enEl.value = n.en || enEl.value;
         } catch (_) {}
     })();
+
+    function normalizeRegisterSlugInput(raw) {
+        return (raw || '').trim().toLowerCase().replace(/\s+/g, '-');
+    }
+
+    function updateRegisterSlugPreview() {
+        const slugEl = document.getElementById('registerSlug');
+        const row = document.getElementById('registerSlugPreviewRow');
+        const link = document.getElementById('registerSlugPreviewLink');
+        if (!slugEl || !row || !link) return;
+        const slug = normalizeRegisterSlugInput(slugEl.value);
+        if (slug) {
+            row.classList.remove('d-none');
+            link.textContent = '/' + slug;
+            link.href = '/' + slug;
+        } else {
+            row.classList.add('d-none');
+            link.textContent = '';
+            link.href = '#';
+        }
+    }
+
+    document.getElementById('registerSlug')?.addEventListener('input', updateRegisterSlugPreview);
+    document.getElementById('registerSlug')?.addEventListener('blur', function() {
+        this.value = normalizeRegisterSlugInput(this.value);
+        updateRegisterSlugPreview();
+    });
+    updateRegisterSlugPreview();
 </script>
 
 <%- include ("components/footer") %>

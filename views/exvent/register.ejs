@@ -26,10 +26,76 @@ function appValStr(fieldName) {
     if (Array.isArray(v)) return v.join(', ');
     return String(v);
 }
-function appCheckboxChecked(fieldName, optionValue) {
+function appHasStoredValue(v) {
+    if (v === undefined || v === null) return false;
+    if (Array.isArray(v)) return v.length > 0;
+    return String(v).trim() !== '';
+}
+function appNormalizeValueList(v) {
+    if (!appHasStoredValue(v)) return [];
+    if (Array.isArray(v)) return v.map(function (x) { return String(x); });
+    return [String(v)];
+}
+function appStandardOptionValueSet(allOptions) {
+    var standard = {};
+    (allOptions || []).forEach(function (o) {
+        if (!o || o.isOther) return;
+        if (o.value === undefined || o.value === null) return;
+        var s = String(o.value);
+        if (s === '') return;
+        standard[s] = true;
+    });
+    return standard;
+}
+/** Application 預填：有真實已存資料先剔；option value 空白唔好當匹配空資料 */
+function appCheckboxChecked(fieldName, optionValue, optionIsOther, allOptions) {
+    if (!isApplicationMode) return false;
+    var list = appNormalizeValueList(appVal(fieldName));
+    if (!list.length) return false;
+    var optVal = (optionValue === undefined || optionValue === null) ? '' : String(optionValue);
+    if (optVal !== '' && list.indexOf(optVal) !== -1) return true;
+    // Other：已存值唔喺一般 option value 內（即用戶自填文字）→ 剔中 Other
+    if (optionIsOther) {
+        var standard = appStandardOptionValueSet(allOptions);
+        return list.some(function (item) {
+            return item !== '' && !standard[item];
+        });
+    }
+    // option value 空白：唔好用空字串去 match 空資料（會全剔）
+    return false;
+}
+function appRadioChecked(fieldName, optionValue, optionIsOther, allOptions) {
+    if (!isApplicationMode) return false;
     var v = appVal(fieldName);
-    if (Array.isArray(v)) return v.map(String).indexOf(String(optionValue)) !== -1;
-    return String(v) === String(optionValue);
+    if (!appHasStoredValue(v) || Array.isArray(v)) {
+        // radio 通常係單值；若誤存陣列取第一個
+        if (!Array.isArray(v) || !v.length) return false;
+        v = v[0];
+    }
+    var stored = String(v);
+    if (!stored) return false;
+    var optVal = (optionValue === undefined || optionValue === null) ? '' : String(optionValue);
+    if (optVal !== '' && stored === optVal) return true;
+    if (optionIsOther) {
+        var standard = appStandardOptionValueSet(allOptions);
+        return !standard[stored];
+    }
+    return false;
+}
+/** Other 自填文字：DB 存嘅係自填內容（唔係 "Other" value） */
+function appOtherTextValue(fieldName, optionValue, optionIsOther, allOptions) {
+    if (!isApplicationMode || !optionIsOther) return '';
+    var list = appNormalizeValueList(appVal(fieldName));
+    if (!list.length) return '';
+    var optVal = (optionValue === undefined || optionValue === null) ? '' : String(optionValue);
+    var standard = appStandardOptionValueSet(allOptions);
+    var customs = list.filter(function (item) {
+        if (!item) return false;
+        if (optVal && item === optVal) return false; // 淨剔 Other、未填文字
+        if (standard[item]) return false;
+        return true;
+    });
+    return customs.join(', ');
 }
 var registerPageLang = (formConfig && formConfig.defaultLanguage) ? formConfig.defaultLanguage : 'zh';
 var registerEventTitle = getRegisterEventTitle(formConfig, event, registerPageLang, true);
@@ -621,6 +687,8 @@ var registerPageTitleSuffix = isApplicationMode
                                                 <% } else if (field.type === 'checkbox' && field.options) { %>
                                                     <div class="checkbox-group" id="<%= field.fieldName %>-group">
                                                         <% field.options.forEach((option, optionIndex) => { %>
+                                                            <% var _cbChecked = appCheckboxChecked(field.fieldName, option.value, !!option.isOther, field.options); %>
+                                                            <% var _otherText = appOtherTextValue(field.fieldName, option.value, !!option.isOther, field.options); %>
                                                             <div class="choice-option">
                                                                 <div class="form-check">
                                                                     <input class="form-check-input<%= option.isOther ? ' js-checkbox-other' : '' %>" type="checkbox"
@@ -630,7 +698,7 @@ var registerPageTitleSuffix = isApplicationMode
                                                                            <% if (option.isOther) { %>data-other-input="<%= field.fieldName %>_<%= optionIndex %>_other"<% } %>
                                                                            data-zh="<%= option.label && option.label.zh ? option.label.zh : option.label %>"
                                                                            data-en="<%= option.label && option.label.en ? option.label.en : '' %>"
-                                                                           <%= appCheckboxChecked(field.fieldName, option.value) ? 'checked' : '' %>
+                                                                           <%= _cbChecked ? 'checked' : '' %>
                                                                            <%= _fieldLocked ? 'disabled' : '' %>
                                                                            <%= (!_fieldLocked && field.required) ? 'data-required="true"' : '' %>>
                                                                     <label class="form-check-label" for="<%= field.fieldName %>_<%= optionIndex %>"
@@ -640,11 +708,13 @@ var registerPageTitleSuffix = isApplicationMode
                                                                     </label>
                                                                 </div>
                                                                 <% if (option.isOther) { %>
-                                                                <input type="text" class="form-control d-none js-choice-other-text"
+                                                                <input type="text" class="form-control js-choice-other-text<%= _cbChecked ? '' : ' d-none' %>"
                                                                        id="<%= field.fieldName %>_<%= optionIndex %>_other"
                                                                        data-placeholder-zh="請填寫"
                                                                        data-placeholder-en="Please specify"
+                                                                       value="<%= _otherText %>"
                                                                        <%= _fieldLocked ? 'readonly' : '' %>
+                                                                       <%= (_cbChecked && !_fieldLocked) ? 'required' : '' %>
                                                                        autocomplete="off">
                                                                 <% } %>
                                                             </div>
@@ -693,6 +763,8 @@ var registerPageTitleSuffix = isApplicationMode
                                                 <% } else if (field.type === 'radio' && field.options) { %>
                                                     <div class="radio-group" id="<%= field.fieldName %>-group">
                                                         <% field.options.forEach((option, optionIndex) => { %>
+                                                            <% var _radioChecked = appRadioChecked(field.fieldName, option.value, !!option.isOther, field.options); %>
+                                                            <% var _radioOtherText = appOtherTextValue(field.fieldName, option.value, !!option.isOther, field.options); %>
                                                             <div class="choice-option">
                                                                 <div class="form-check">
                                                                     <input class="form-check-input<%= option.isOther ? ' js-radio-other' : '' %>" type="radio"
@@ -702,7 +774,7 @@ var registerPageTitleSuffix = isApplicationMode
                                                                            <% if (option.isOther) { %>data-other-input="<%= field.fieldName %>_<%= optionIndex %>_other"<% } %>
                                                                            data-zh="<%= option.label && option.label.zh ? option.label.zh : option.label %>"
                                                                            data-en="<%= option.label && option.label.en ? option.label.en : '' %>"
-                                                                           <%= String(_fieldVal) === String(option.value) ? 'checked' : '' %>
+                                                                           <%= _radioChecked ? 'checked' : '' %>
                                                                            <%= _fieldLocked ? 'disabled' : '' %>
                                                                            <%= (!_fieldLocked && field.required) ? 'required' : '' %>>
                                                                     <label class="form-check-label" for="<%= field.fieldName %>_<%= optionIndex %>"
@@ -712,11 +784,13 @@ var registerPageTitleSuffix = isApplicationMode
                                                                     </label>
                                                                 </div>
                                                                 <% if (option.isOther) { %>
-                                                                <input type="text" class="form-control d-none js-choice-other-text"
+                                                                <input type="text" class="form-control js-choice-other-text<%= _radioChecked ? '' : ' d-none' %>"
                                                                        id="<%= field.fieldName %>_<%= optionIndex %>_other"
                                                                        data-placeholder-zh="請填寫"
                                                                        data-placeholder-en="Please specify"
+                                                                       value="<%= _radioOtherText %>"
                                                                        <%= _fieldLocked ? 'readonly' : '' %>
+                                                                       <%= (_radioChecked && !_fieldLocked) ? 'required' : '' %>
                                                                        autocomplete="off">
                                                                 <% } %>
                                                             </div>
@@ -1707,6 +1781,7 @@ var registerPageTitleSuffix = isApplicationMode
             if (choiceEl.checked) {
                 $(other).removeClass('d-none');
                 other.setAttribute('required', 'required');
+                // 唔清已有 value（Application 預填自填文字要保留）
             } else {
                 $(other).addClass('d-none');
                 other.removeAttribute('required');

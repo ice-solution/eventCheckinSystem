@@ -24,6 +24,7 @@ const ipadApiRouter = require('./routes/ipadApi'); // iPad API (JWT)
 
 const eventsController = require('./controllers/eventsController');
 const luckydrawGameConfigController = require('./controllers/luckydrawGameConfigController');
+const registerPageController = require('./controllers/registerPageController');
 
 const Auth = require('./model/Auth'); // 引入 Auth 模型
 const { isInvoiceEmailEnabled } = require('./utils/featureFlags');
@@ -265,6 +266,9 @@ app.get('/qrcode', async (req, res) => {
         res.status(500).send('生成 QR 碼時出錯');
     }
 });
+
+// 公開報名頁 slug：domain/:slug（須在 / 之前；非 slug 則交給後續路由）
+app.get('/:slug', registerPageController.renderRegisterPageBySlug);
 
 
 app.get('/',isAuthenticated, async function (req, res){

@@ -1,6 +1,31 @@
 const FormConfig = require('../model/FormConfig');
 const Event = require('../model/Event');
 const { normalizePaymentTicketUi } = require('../utils/paymentTicket');
+const { normalizeRegisterSlug, validateRegisterSlug } = require('../utils/registerSlug');
+
+async function applyRegisterSlugToFormConfig(formConfig, rawSlug, eventId) {
+    if (rawSlug === undefined) {
+        return { ok: true };
+    }
+    const normalized = normalizeRegisterSlug(rawSlug);
+    const validation = validateRegisterSlug(normalized);
+    if (!validation.valid) {
+        return { ok: false, message: validation.message };
+    }
+    if (!normalized) {
+        formConfig.registerSlug = undefined;
+        return { ok: true, unset: true };
+    }
+    const existing = await FormConfig.findOne({
+        registerSlug: normalized,
+        eventId: { $ne: eventId }
+    }).select({ _id: 1, eventId: 1 });
+    if (existing) {
+        return { ok: false, message: '此 slug 已被其他活動使用' };
+    }
+    formConfig.registerSlug = normalized;
+    return { ok: true, unset: false };
+}
 
 /** Mongoose document → plain object（供 migrate / render 使用） */
 function toPlainFormConfig(formConfig) {
@@ -131,6 +156,11 @@ function applyFormConfigMetaDefaults(migratedConfig) {
     }
     if (typeof migratedConfig.languageSwitcherEnabled !== 'boolean') {
         migratedConfig.languageSwitcherEnabled = true;
+    }
+    if (migratedConfig.registerSlug != null && migratedConfig.registerSlug !== '') {
+        migratedConfig.registerSlug = normalizeRegisterSlug(migratedConfig.registerSlug);
+    } else {
+        delete migratedConfig.registerSlug;
     }
 
     // 確保有 eventDisplayName
@@ -652,7 +682,7 @@ exports.getFormConfig = async (req, res) => {
 exports.updateFormConfig = async (req, res) => {
     try {
         const { eventId } = req.params;
-        const { sections, defaultLanguage, languageSwitcherEnabled, registerPageEnabled, registerClosedMessage, terms, agreement, thankYou, eventDisplayName, registerSubHeader, registerSubtitle, paymentTicketUi } = req.body;
+        const { sections, defaultLanguage, languageSwitcherEnabled, registerPageEnabled, registerClosedMessage, registerSlug, terms, agreement, thankYou, eventDisplayName, registerSubHeader, registerSubtitle, paymentTicketUi } = req.body;
         
         // 驗證事件是否存在
         const event = await Event.findById(eventId);
@@ -680,6 +710,10 @@ exports.updateFormConfig = async (req, res) => {
             }
             if (typeof registerClosedMessage === 'string') {
                 formConfig.registerClosedMessage = registerClosedMessage;
+            }
+            const slugResult = await applyRegisterSlugToFormConfig(formConfig, registerSlug, eventId);
+            if (!slugResult.ok) {
+                return res.status(400).json({ success: false, message: slugResult.message });
             }
             if (eventDisplayName && typeof eventDisplayName === 'object') {
                 const migrated = migrateFormConfig({ sections: formConfig.sections, eventDisplayName });
@@ -709,6 +743,9 @@ exports.updateFormConfig = async (req, res) => {
                 formConfig.paymentTicketUi = normalizePaymentTicketUi(paymentTicketUi);
             }
             await formConfig.save();
+            if (slugResult.unset && formConfig._id) {
+                await FormConfig.updateOne({ _id: formConfig._id }, { $unset: { registerSlug: 1 } });
+            }
         } else {
             // 創建新配置
             const defaultConfig = getDefaultFormConfig();
@@ -741,17 +778,35 @@ exports.updateFormConfig = async (req, res) => {
                     ? normalizePaymentTicketUi(paymentTicketUi)
                     : defaultConfig.paymentTicketUi
             });
+            const slugResult = await applyRegisterSlugToFormConfig(formConfig, registerSlug, eventId);
+            if (!slugResult.ok) {
+                return res.status(400).json({ success: false, message: slugResult.message });
+            }
+            if (slugResult.unset) {
+                formConfig.registerSlug = undefined;
+            }
             await formConfig.save();
+            if (slugResult.unset && formConfig._id) {
+                await FormConfig.updateOne({ _id: formConfig._id }, { $unset: { registerSlug: 1 } });
+            }
         }
+        
+        const savedConfig = await FormConfig.findOne({ eventId });
         
         res.json({
             success: true,
             message: '表單配置已更新',
-            formConfig: formConfig
+            formConfig: savedConfig
         });
         
     } catch (error) {
         console.error('更新表單配置錯誤:', error);
+        if (error && error.code === 11000 && error.keyPattern && error.keyPattern.registerSlug) {
+            return res.status(400).json({
+                success: false,
+                message: '此 slug 已被其他活動使用'
+            });
+        }
         res.status(500).json({
             success: false,
             message: '更新表單配置失敗'
@@ -823,7 +878,8 @@ exports.renderFormConfigPage = async (req, res) => {
             event: event, 
             formConfig: formConfigForView,
             currentBanner,
-            emailTemplates
+            emailTemplates,
+            publicDomain: (process.env.DOMAIN || '').replace(/\/$/, '')
         });
         
     } catch (error) {

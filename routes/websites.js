@@ -4,9 +4,10 @@ const router = express.Router();
 const path = require('path');
 const Event = require('../model/Event');
 const eventsController = require('../controllers/eventsController');
+const registerPageController = require('../controllers/registerPageController');
 const Transaction = require('../model/Transaction');
 const { getBannerRenderData } = require('../utils/bannerCache');
-const { normalizeTicketsForView, ticketsUseCategories, isFreePaymentTicketPrice } = require('../utils/paymentTicket');
+const { isFreePaymentTicketPrice } = require('../utils/paymentTicket');
 
 function getWebApiKeys() {
     const raw = (process.env.WEB_SITE_API_KEYS || process.env.WEB_API_KEYS || '').toString().trim();
@@ -69,51 +70,7 @@ router.get('/:event_id/users/:userId', requireWebApiKey, async (req, res) => {
 });
 
 // 路由到 event_website/register.ejs
-router.get('/:event_id/register', async (req, res) => {
-    const { event_id } = req.params;
-    const event = await Event.findById(event_id);
-    let paymentTickets = [];
-    if (event && event.isPaymentEvent && Array.isArray(event.PaymentTickets)) {
-        paymentTickets = normalizeTicketsForView(event.PaymentTickets);
-    }
-    
-    // 獲取表單配置
-    const FormConfig = require('../model/FormConfig');
-    let formConfig = await FormConfig.findOne({ eventId: event_id });
-    
-    // 如果沒有配置，使用預設配置
-    if (!formConfig) {
-        const formConfigController = require('../controllers/formConfigController');
-        // 使用完整的預設配置
-        const defaultConfig = formConfigController.getDefaultFormConfig();
-        formConfig = new FormConfig({
-            eventId: event_id,
-            ...defaultConfig
-        });
-        await formConfig.save();
-    }
-
-    const formConfigController = require('../controllers/formConfigController');
-    formConfig = formConfigController.getFormConfigForRender(formConfig);
-    
-    // Register 版面關閉時顯示關閉頁，否則顯示註冊表單
-    if (formConfig.registerPageEnabled === false) {
-        return res.render('exvent/register_closed', {
-            event_id,
-            event,
-            message: formConfig.registerClosedMessage || 'Registration is currently closed.'
-        });
-    }
-    
-    const ticketsForView = paymentTickets;
-    res.render('exvent/register', {
-        event_id,
-        event,
-        paymentTickets: ticketsForView,
-        ticketsUseCategories: ticketsUseCategories(ticketsForView),
-        formConfig: formConfig
-    });
-});
+router.get('/:event_id/register', registerPageController.renderRegisterPageByEventId);
 // 路由到註冊成功頁面（session_id 可為 Stripe session_id、Wonder order_id 或 Transaction _id）
 router.get('/:event_id/register/success', async (req, res) => {
     const { event_id } = req.params;
