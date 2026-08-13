@@ -1689,6 +1689,7 @@ var registerPageTitleSuffix = isApplicationMode
             function openOverlay(e) {
                 if (e) e.preventDefault();
                 if (!overlay) return;
+                if (typeof opts.shouldOpen === 'function' && !opts.shouldOpen()) return;
                 overlay.classList.add('is-open');
                 overlay.setAttribute('aria-hidden', 'false');
                 document.body.style.overflow = 'hidden';
@@ -1744,7 +1745,20 @@ var registerPageTitleSuffix = isApplicationMode
             invalidMsgEn: 'Please agree to the terms before submitting.'
         });
 
-        // Agreement（可多份；非必填，僅彈層；勾選狀態於 submit 時寫入）
+        // Agreement（可多份；內容空白則唔開彈層）
+        function agreementHasContent(suffix) {
+            const jsonEl = document.querySelector('.js-agreement-content-json[data-target="agreementContent' + suffix + '"]');
+            if (!jsonEl) return false;
+            try {
+                const parsed = JSON.parse(jsonEl.textContent || '{}');
+                const raw = currentLanguage === 'en'
+                    ? (parsed.en || parsed.zh || '')
+                    : (parsed.zh || parsed.en || '');
+                return String(raw).replace(/<[^>]*>/g, '').trim().length > 0;
+            } catch (_) {
+                return false;
+            }
+        }
         document.querySelectorAll('.js-agreement-agree').forEach(function(el) {
             const suffix = (el.id || '').replace(/^agreementAgree/, '');
             initOverlayAndValidation({
@@ -1753,7 +1767,8 @@ var registerPageTitleSuffix = isApplicationMode
                 openTitleId: 'agreementAgreeLabel' + suffix,
                 closeBtnId: 'agreementModalClose' + suffix,
                 agreeId: el.id,
-                optionalAgree: true
+                optionalAgree: true,
+                shouldOpen: function() { return agreementHasContent(suffix); }
             });
         });
 
