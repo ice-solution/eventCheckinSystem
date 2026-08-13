@@ -1019,9 +1019,9 @@ var registerPageTitleSuffix = isApplicationMode
                                        name="<%= agrAgreedName %>"
                                        data-recorded-at-name="<%= agrRecordedName %>"
                                        value="true">
-                                <label class="form-check-label agreement-checkbox-label js-agreement-label<%= showAgrLink ? '' : ' terms-title-as-link js-agreement-modal-opener' %>"
-                                       for="agreementAgree<%= agrId %>"
-                                       id="agreementAgreeLabel<%= agrId %>"></label>
+                                <label class="form-check-label agreement-checkbox-label js-agreement-label"
+                                       id="agreementAgreeLabel<%= agrId %>"
+                                       data-checkbox-id="agreementAgree<%= agrId %>"></label>
                             </div>
                         </div>
 
@@ -1745,7 +1745,7 @@ var registerPageTitleSuffix = isApplicationMode
             invalidMsgEn: 'Please agree to the terms before submitting.'
         });
 
-        // Agreement（可多份；內容空白則唔開彈層）
+        // Agreement：只有「顯示連結文字」時，用 link text 開 content；否則只當 tickbox
         function agreementHasContent(suffix) {
             const jsonEl = document.querySelector('.js-agreement-content-json[data-target="agreementContent' + suffix + '"]');
             if (!jsonEl) return false;
@@ -1761,10 +1761,12 @@ var registerPageTitleSuffix = isApplicationMode
         }
         document.querySelectorAll('.js-agreement-agree').forEach(function(el) {
             const suffix = (el.id || '').replace(/^agreementAgree/, '');
+            const openLink = document.getElementById('agreementOpenLink' + suffix);
+            // 冇 show link text → 完全唔綁開框；有 link 先綁
+            if (!openLink) return;
             initOverlayAndValidation({
                 overlayId: 'agreementOverlay' + suffix,
                 openLinkId: 'agreementOpenLink' + suffix,
-                openTitleId: 'agreementAgreeLabel' + suffix,
                 closeBtnId: 'agreementModalClose' + suffix,
                 agreeId: el.id,
                 optionalAgree: true,
@@ -1772,8 +1774,20 @@ var registerPageTitleSuffix = isApplicationMode
             });
         });
 
-        // 勾選框 label 內的連結：點擊時不觸發 checkbox 切換
-        $(document).on('mousedown click', '.agreement-checkbox-label a, .terms-checkbox-label a', function(e) {
+        // 勾選框 label：點文字 = tick；點 URL = 正常開啟連結（唔 tick、唔開 content）
+        $(document).on('click', '.agreement-checkbox-label', function(e) {
+            if ($(e.target).closest('a').length) return;
+            e.preventDefault();
+            const cbId = this.getAttribute('data-checkbox-id');
+            const cb = cbId ? document.getElementById(cbId) : null;
+            if (!cb || cb.disabled) return;
+            cb.checked = !cb.checked;
+            $(cb).trigger('change');
+        });
+        $(document).on('click', '.agreement-checkbox-label a, .terms-checkbox-label a', function(e) {
+            e.stopPropagation();
+        });
+        $(document).on('mousedown', '.agreement-checkbox-label a, .terms-checkbox-label a', function(e) {
             e.stopPropagation();
         });
 
