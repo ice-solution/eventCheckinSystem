@@ -683,7 +683,7 @@ var registerPageTitleSuffix = isApplicationMode
                                                         <input type="hidden" name="<%= field.fieldName %>" value="<%= appValStr(field.fieldName) %>">
                                                         <% } %>
                                                     <% } %>
-                                                    <% if (_fieldLocked) { %><div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Existing data, not editable">已有資料，不可修改</div><% } %>
+                                                    <% if (_fieldLocked) { %><div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Data cannot be changed">已有資料，不可修改</div><% } %>
                                                 <% } else if (field.type === 'checkbox' && field.options) { %>
                                                     <div class="checkbox-group" id="<%= field.fieldName %>-group">
                                                         <% field.options.forEach((option, optionIndex) => { %>
@@ -720,7 +720,7 @@ var registerPageTitleSuffix = isApplicationMode
                                                             </div>
                                                         <% }); %>
                                                     </div>
-                                                    <% if (_fieldLocked) { %><div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Existing data, not editable">已有資料，不可修改</div><% } %>
+                                                    <% if (_fieldLocked) { %><div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Data cannot be changed">已有資料，不可修改</div><% } %>
                                                     <% if (field.required && !_fieldLocked) { %>
                                                         <script>
                                                             // 驗證至少選擇一個 checkbox（勿對 div 呼叫 setCustomValidity，否則會 throw 導致 form 原生 POST）
@@ -798,7 +798,7 @@ var registerPageTitleSuffix = isApplicationMode
                                                     </div>
                                                     <% if (_fieldLocked) { %>
                                                     <input type="hidden" name="<%= field.fieldName %>" value="<%= appValStr(field.fieldName) %>">
-                                                    <div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Existing data, not editable">已有資料，不可修改</div>
+                                                    <div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Data cannot be changed">已有資料，不可修改</div>
                                                     <% } %>
                                                 <% } else if (field.type === 'textarea') { %>
                                                     <textarea class="form-control" id="<%= field.fieldName %>" name="<%= field.fieldName %>" 
@@ -807,7 +807,7 @@ var registerPageTitleSuffix = isApplicationMode
                                                               data-placeholder-en="<%= field.placeholder && field.placeholder.en ? field.placeholder.en : '' %>" 
                                                               <%= _fieldLocked ? 'readonly' : '' %>
                                                               <%= (!_fieldLocked && field.required) ? 'required' : '' %> rows="3"><%= _fieldLocked || isApplicationMode ? appValStr(field.fieldName) : '' %></textarea>
-                                                    <% if (_fieldLocked) { %><div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Existing data, not editable">已有資料，不可修改</div><% } %>
+                                                    <% if (_fieldLocked) { %><div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Data cannot be changed">已有資料，不可修改</div><% } %>
                                                 <% } else { %>
                                                     <input type="<%= field.type %>" class="form-control" id="<%= field.fieldName %>" name="<%= field.fieldName %>" 
                                                            placeholder="<%= field.placeholder && field.placeholder.zh ? field.placeholder.zh : (typeof field.placeholder === 'string' ? field.placeholder : '') %>" 
@@ -816,7 +816,7 @@ var registerPageTitleSuffix = isApplicationMode
                                                            value="<%= isApplicationMode ? appValStr(field.fieldName) : '' %>"
                                                            <%= _fieldLocked ? 'readonly' : '' %>
                                                            <%= (!_fieldLocked && field.required) ? 'required' : '' %>>
-                                                    <% if (_fieldLocked) { %><div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Existing data, not editable">已有資料，不可修改</div><% } %>
+                                                    <% if (_fieldLocked) { %><div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Data cannot be changed">已有資料，不可修改</div><% } %>
                                                 <% } %>
                                             </div>
                                         </div>
@@ -1555,6 +1555,18 @@ var registerPageTitleSuffix = isApplicationMode
                     $(this).text(zhText);
                 } else if (currentLanguage === 'en' && enText) {
                     $(this).text(enText);
+                }
+            });
+
+            // Application 已鎖定欄位提示
+            $('.application-locked-hint').each(function() {
+                const $el = $(this);
+                const zhText = $el.data('zh');
+                const enText = $el.data('en');
+                if (currentLanguage === 'en' && enText) {
+                    $el.text(enText);
+                } else if (zhText) {
+                    $el.text(zhText);
                 }
             });
 
