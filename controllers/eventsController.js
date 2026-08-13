@@ -25,7 +25,7 @@ const { getSocket } = require('../socket'); // 引入 socket 以發送實時更�
 const { embedKaitiFontInEmail } = require('../utils/embedEmailFonts'); // 引入字型嵌入功能
 const { replaceTemplateVariables, buildEmailTemplateAdditionalVars, flattenForTemplate } = require('../utils/replaceTemplateVariables');
 const { isInvoiceEmailEnabled } = require('../utils/featureFlags');
-const { normalizeAgreementAgreed, formatAgreementAgreedLabel, agreementAgreedSortOrder } = require('../utils/agreementFields');
+const { normalizeAgreementAgreed, formatAgreementAgreedLabel, agreementAgreedSortOrder, getEnabledAgreements, isAgreementMetaKey } = require('../utils/agreementFields');
 const { resolveUserDisplayName, ensureUserNameField } = require('../utils/userDisplayName');
 
 /** 取得對外 base URL（依 DOMAIN/domain，缺協議時自動補 https://） */
@@ -659,6 +659,7 @@ exports.getEventUsersByEventID = async (req, res) => {
             formConfig,
             formatAgreementAgreedLabel,
             agreementAgreedSortOrder,
+            enabledAgreements: getEnabledAgreements(formConfig),
         });
     } catch (error) {
         console.error('Error fetching event:', error);
@@ -880,14 +881,14 @@ exports.submitApplicationForm = async (req, res) => {
         Object.keys(body).forEach((key) => {
             if (excluded.has(key)) return;
             if (allowedFieldNames.size && !allowedFieldNames.has(key) &&
-                key !== 'agreementAgreed' && key !== 'agreementRecordedAt' && key !== 'thankYouYesNo' && key !== 'lang') {
+                !isAgreementMetaKey(key) && key !== 'thankYouYesNo' && key !== 'lang') {
                 return;
             }
             // 已有資料的欄位：顯示不可改，伺服器亦拒絕覆寫
             if (isUserFieldFilled(userObj, key)) return;
 
             let val = body[key];
-            if (key === 'agreementAgreed') {
+            if (/^agreementAgreed(_\d+)?$/.test(key)) {
                 val = normalizeAgreementAgreed(val);
             }
             user.set(key, val);
@@ -978,7 +979,7 @@ exports.addUserToEvent = async (req, res) => {
             }
             // 添加字段值（包括空字符串和 null，但不包括 undefined）
             else if (userData[key] !== undefined) {
-                if (key === 'agreementAgreed') {
+                if (key === 'agreementAgreed' || /^agreementAgreed(_\d+)?$/.test(key)) {
                     newUser[key] = normalizeAgreementAgreed(userData[key]);
                 } else {
                     newUser[key] = userData[key];
@@ -4774,7 +4775,7 @@ async function completeFreePaymentTicketRegistration(event, ticket, userFormData
     Object.keys(userFormData).forEach((key) => {
         if (excludedFields.includes(key)) return;
         const val = userFormData[key];
-        if (key === 'agreementAgreed') {
+        if (key === 'agreementAgreed' || /^agreementAgreed(_\d+)?$/.test(key)) {
             newUser[key] = normalizeAgreementAgreed(val);
             return;
         }
@@ -5031,7 +5032,7 @@ async function markTransactionPaidAndAddUser(transaction) {
         Object.keys(transaction.userFormData).forEach(key => {
             if (excludedFields.includes(key)) return;
             const val = transaction.userFormData[key];
-            if (key === 'agreementAgreed') {
+            if (key === 'agreementAgreed' || /^agreementAgreed(_\d+)?$/.test(key)) {
                 newUser[key] = normalizeAgreementAgreed(val);
                 return;
             }

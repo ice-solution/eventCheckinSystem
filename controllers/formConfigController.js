@@ -2,6 +2,7 @@ const FormConfig = require('../model/FormConfig');
 const Event = require('../model/Event');
 const { normalizePaymentTicketUi } = require('../utils/paymentTicket');
 const { normalizeRegisterSlug, validateRegisterSlug } = require('../utils/registerSlug');
+const { syncAgreementsOnConfig, cloneDefaultAgreement } = require('../utils/agreementFields');
 
 async function applyRegisterSlugToFormConfig(formConfig, rawSlug, eventId) {
     if (rawSlug === undefined) {
@@ -236,54 +237,8 @@ function applyFormConfigMetaDefaults(migratedConfig) {
         }
     }
 
-    // 確保有 agreement 設定
-    if (!migratedConfig.agreement || typeof migratedConfig.agreement !== 'object') {
-        migratedConfig.agreement = {
-            enabled: false,
-            title: { zh: '協議', en: 'Agreement' },
-            linkLabel: { zh: '(協議)', en: '(agreement)' },
-            showLinkLabel: true,
-            label: {
-                zh: '本人已閱讀並同意上述協議內容。',
-                en: 'I have read and agree to the agreement above.'
-            },
-            content: { zh: '', en: '' }
-        };
-    } else {
-        migratedConfig.agreement.enabled = !!migratedConfig.agreement.enabled;
-        if (!migratedConfig.agreement.title || typeof migratedConfig.agreement.title !== 'object') {
-            migratedConfig.agreement.title = { zh: '協議', en: 'Agreement' };
-        } else {
-            migratedConfig.agreement.title.zh = migratedConfig.agreement.title.zh || '協議';
-            migratedConfig.agreement.title.en = migratedConfig.agreement.title.en || 'Agreement';
-        }
-        if (!migratedConfig.agreement.linkLabel || typeof migratedConfig.agreement.linkLabel !== 'object') {
-            migratedConfig.agreement.linkLabel = { zh: '(協議)', en: '(agreement)' };
-        } else {
-            migratedConfig.agreement.linkLabel.zh = migratedConfig.agreement.linkLabel.zh || '(協議)';
-            migratedConfig.agreement.linkLabel.en = migratedConfig.agreement.linkLabel.en || '(agreement)';
-        }
-        if (migratedConfig.agreement.showLinkLabel === undefined) {
-            migratedConfig.agreement.showLinkLabel = true;
-        } else {
-            migratedConfig.agreement.showLinkLabel = !!migratedConfig.agreement.showLinkLabel;
-        }
-        if (!migratedConfig.agreement.label || typeof migratedConfig.agreement.label !== 'object') {
-            migratedConfig.agreement.label = {
-                zh: '本人已閱讀並同意上述協議內容。',
-                en: 'I have read and agree to the agreement above.'
-            };
-        } else {
-            migratedConfig.agreement.label.zh = migratedConfig.agreement.label.zh || '本人已閱讀並同意上述協議內容。';
-            migratedConfig.agreement.label.en = migratedConfig.agreement.label.en || 'I have read and agree to the agreement above.';
-        }
-        if (!migratedConfig.agreement.content || typeof migratedConfig.agreement.content !== 'object') {
-            migratedConfig.agreement.content = { zh: '', en: '' };
-        } else {
-            migratedConfig.agreement.content.zh = migratedConfig.agreement.content.zh || '';
-            migratedConfig.agreement.content.en = migratedConfig.agreement.content.en || '';
-        }
-    }
+    // 確保有 agreement / agreements（舊單一 agreement 會遷成陣列第一份）
+    syncAgreementsOnConfig(migratedConfig);
 
     // 確保有 thankYou 設定
     const defaultThankYou = {
@@ -390,17 +345,8 @@ exports.getDefaultFormConfig = () => ({
         },
         content: { zh: '', en: '' }
     },
-    agreement: {
-        enabled: false,
-        title: { zh: '協議', en: 'Agreement' },
-        linkLabel: { zh: '(協議)', en: '(agreement)' },
-        showLinkLabel: true,
-        label: {
-            zh: '本人已閱讀並同意上述協議內容。',
-            en: 'I have read and agree to the agreement above.'
-        },
-        content: { zh: '', en: '' }
-    },
+    agreement: cloneDefaultAgreement(),
+    agreements: [cloneDefaultAgreement()],
     thankYou: {
         title: { zh: '感謝你參加！', en: 'Thank you for participating!' },
         message: { zh: '我們會透過 Email 把資訊發送給你。', en: 'We will send the information to you via Email.' },
@@ -682,7 +628,7 @@ exports.getFormConfig = async (req, res) => {
 exports.updateFormConfig = async (req, res) => {
     try {
         const { eventId } = req.params;
-        const { sections, defaultLanguage, languageSwitcherEnabled, registerPageEnabled, registerClosedMessage, registerSlug, terms, agreement, thankYou, eventDisplayName, registerSubHeader, registerSubtitle, paymentTicketUi } = req.body;
+        const { sections, defaultLanguage, languageSwitcherEnabled, registerPageEnabled, registerClosedMessage, registerSlug, terms, agreement, agreements, thankYou, eventDisplayName, registerSubHeader, registerSubtitle, paymentTicketUi } = req.body;
         
         // 驗證事件是否存在
         const event = await Event.findById(eventId);
@@ -731,8 +677,13 @@ exports.updateFormConfig = async (req, res) => {
                 const migrated = migrateFormConfig({ sections: formConfig.sections, terms });
                 formConfig.terms = migrated.terms;
             }
-            if (agreement && typeof agreement === 'object') {
-                const migrated = migrateFormConfig({ sections: formConfig.sections, agreement });
+            if ((Array.isArray(agreements) && agreements.length) || (agreement && typeof agreement === 'object')) {
+                const migrated = migrateFormConfig({
+                    sections: formConfig.sections,
+                    agreements: Array.isArray(agreements) && agreements.length ? agreements : [agreement],
+                    agreement: Array.isArray(agreements) && agreements.length ? agreements[0] : agreement
+                });
+                formConfig.agreements = migrated.agreements;
                 formConfig.agreement = migrated.agreement;
             }
             if (thankYou && typeof thankYou === 'object') {
@@ -768,9 +719,8 @@ exports.updateFormConfig = async (req, res) => {
                 terms: terms && typeof terms === 'object'
                     ? migrateFormConfig({ sections: (sections || defaultConfig.sections), terms }).terms
                     : defaultConfig.terms,
-                agreement: agreement && typeof agreement === 'object'
-                    ? migrateFormConfig({ sections: (sections || defaultConfig.sections), agreement }).agreement
-                    : defaultConfig.agreement,
+                agreement: defaultConfig.agreement,
+                agreements: defaultConfig.agreements,
                 thankYou: thankYou && typeof thankYou === 'object'
                     ? migrateFormConfig({ sections: (sections || defaultConfig.sections), thankYou }).thankYou
                     : defaultConfig.thankYou,
@@ -778,6 +728,15 @@ exports.updateFormConfig = async (req, res) => {
                     ? normalizePaymentTicketUi(paymentTicketUi)
                     : defaultConfig.paymentTicketUi
             });
+            if ((Array.isArray(agreements) && agreements.length) || (agreement && typeof agreement === 'object')) {
+                const migrated = migrateFormConfig({
+                    sections: formConfig.sections,
+                    agreements: Array.isArray(agreements) && agreements.length ? agreements : [agreement],
+                    agreement: Array.isArray(agreements) && agreements.length ? agreements[0] : agreement
+                });
+                formConfig.agreements = migrated.agreements;
+                formConfig.agreement = migrated.agreement;
+            }
             const slugResult = await applyRegisterSlugToFormConfig(formConfig, registerSlug, eventId);
             if (!slugResult.ok) {
                 return res.status(400).json({ success: false, message: slugResult.message });

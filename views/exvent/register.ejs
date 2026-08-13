@@ -981,51 +981,64 @@ var registerPageTitleSuffix = isApplicationMode
                 }) %></script>
             <% } %>
 
-            <!-- Agreement（非必填，但會記錄勾選狀態） -->
-            <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
-                <% const agr = formConfig.agreement; %>
+            <!-- Agreement（可多份；非必填，但會記錄勾選狀態） -->
+            <%
+                const _agreementsAll = (formConfig && Array.isArray(formConfig.agreements) && formConfig.agreements.length)
+                    ? formConfig.agreements
+                    : (formConfig && formConfig.agreement ? [formConfig.agreement] : []);
+            %>
+            <% _agreementsAll.forEach(function(agr, agrIndex) { %>
+            <% if (agr && agr.enabled) { %>
                 <% const agrTitle = agr.title || {}; %>
                 <% const agrLink = agr.linkLabel || {}; %>
                 <% const showAgrLink = agr.showLinkLabel !== false; %>
+                <% const agrId = agrIndex === 0 ? '' : ('_' + (agrIndex + 1)); %>
+                <% const agrAgreedName = agrIndex === 0 ? 'agreementAgreed' : ('agreementAgreed_' + (agrIndex + 1)); %>
+                <% const agrRecordedName = agrIndex === 0 ? 'agreementRecordedAt' : ('agreementRecordedAt_' + (agrIndex + 1)); %>
                 <div class="form-section agreement-section">
                     <div class="terms-header">
-                        <h3 class="section-title<%= showAgrLink ? '' : ' terms-title-as-link js-agreement-modal-opener' %>" id="agreementSectionTitle"
+                        <h3 class="section-title<%= showAgrLink ? '' : ' terms-title-as-link js-agreement-modal-opener' %>" id="agreementSectionTitle<%= agrId %>"
                             data-zh="<%= (agrTitle.zh ? agrTitle.zh : '協議') %>"
                             data-en="<%= (agrTitle.en ? agrTitle.en : 'Agreement') %>"><%= (agrTitle.zh ? agrTitle.zh : '協議') %></h3>
                         <% if (showAgrLink) { %>
-                        <a href="#" class="terms-open-link lang-text" id="agreementOpenLink" role="button"
+                        <a href="#" class="terms-open-link lang-text" id="agreementOpenLink<%= agrId %>" role="button"
                            data-zh="<%= (agrLink.zh ? agrLink.zh : '(協議)') %>"
                            data-en="<%= (agrLink.en ? agrLink.en : '(agreement)') %>"><%= (agrLink.zh ? agrLink.zh : '(協議)') %></a>
                         <% } %>
                     </div>
                     <div class="form-check terms-agree-row">
-                        <input class="form-check-input" type="checkbox" id="agreementAgree" name="agreementAgreed" value="true">
-                        <label class="form-check-label agreement-checkbox-label"
-                               for="agreementAgree"
-                               id="agreementAgreeLabel"></label>
+                        <input class="form-check-input js-agreement-agree" type="checkbox"
+                               id="agreementAgree<%= agrId %>"
+                               name="<%= agrAgreedName %>"
+                               data-recorded-at-name="<%= agrRecordedName %>"
+                               value="true">
+                        <label class="form-check-label agreement-checkbox-label js-agreement-label"
+                               for="agreementAgree<%= agrId %>"
+                               id="agreementAgreeLabel<%= agrId %>"></label>
                     </div>
                 </div>
 
-                <div id="agreementOverlay" class="terms-overlay" aria-hidden="true">
-                    <div class="terms-modal" role="dialog" aria-modal="true" aria-labelledby="agreementModalTitle">
+                <div id="agreementOverlay<%= agrId %>" class="terms-overlay" aria-hidden="true">
+                    <div class="terms-modal" role="dialog" aria-modal="true" aria-labelledby="agreementModalTitle<%= agrId %>">
                         <div class="terms-modal-header">
-                            <h4 id="agreementModalTitle" class="lang-text"
+                            <h4 id="agreementModalTitle<%= agrId %>" class="lang-text"
                                 data-zh="<%= (agrTitle.zh ? agrTitle.zh : '協議') %>"
                                 data-en="<%= (agrTitle.en ? agrTitle.en : 'Agreement') %>"><%= (agrTitle.zh ? agrTitle.zh : '協議') %></h4>
-                            <button type="button" class="terms-modal-close" id="agreementModalClose" aria-label="Close">&times;</button>
+                            <button type="button" class="terms-modal-close" id="agreementModalClose<%= agrId %>" aria-label="Close">&times;</button>
                         </div>
-                        <div class="terms-modal-body" id="agreementContent"></div>
+                        <div class="terms-modal-body js-agreement-content" id="agreementContent<%= agrId %>"></div>
                     </div>
                 </div>
-                <script type="application/json" id="agreementLabelJson"><%- JSON.stringify({
+                <script type="application/json" class="js-agreement-label-json" data-target="agreementAgreeLabel<%= agrId %>"><%- JSON.stringify({
                     zh: (agr.label && agr.label.zh) ? agr.label.zh : '',
                     en: (agr.label && agr.label.en) ? agr.label.en : ''
                 }) %></script>
-                <script type="application/json" id="agreementContentJson"><%- JSON.stringify({
+                <script type="application/json" class="js-agreement-content-json" data-target="agreementContent<%= agrId %>"><%- JSON.stringify({
                     zh: (agr.content && agr.content.zh) ? agr.content.zh : '',
                     en: (agr.content && agr.content.en) ? agr.content.en : ''
                 }) %></script>
             <% } %>
+            <% }); %>
 
             <!-- Thank You Yes/No 問題 -->
             <% if (formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled) { %>
@@ -1139,16 +1152,6 @@ var registerPageTitleSuffix = isApplicationMode
         })();
         const termsLabelByLang = (function() {
             const el = document.getElementById('termsLabelJson');
-            if (!el) return { zh: '', en: '' };
-            try { return JSON.parse(el.textContent); } catch (_) { return { zh: '', en: '' }; }
-        })();
-        const agreementContentByLang = (function() {
-            const el = document.getElementById('agreementContentJson');
-            if (!el) return { zh: '', en: '' };
-            try { return JSON.parse(el.textContent); } catch (_) { return { zh: '', en: '' }; }
-        })();
-        const agreementLabelByLang = (function() {
-            const el = document.getElementById('agreementLabelJson');
             if (!el) return { zh: '', en: '' };
             try { return JSON.parse(el.textContent); } catch (_) { return { zh: '', en: '' }; }
         })();
@@ -1372,21 +1375,31 @@ var registerPageTitleSuffix = isApplicationMode
         }
 
         function renderAgreementContentHtml() {
-            const $content = $('#agreementContent');
-            if (!$content.length) return;
-            const raw = currentLanguage === 'en'
-                ? (agreementContentByLang.en || agreementContentByLang.zh || '')
-                : (agreementContentByLang.zh || agreementContentByLang.en || '');
-            $content.html(formatTermsContent(raw));
+            document.querySelectorAll('.js-agreement-content-json').forEach(function(el) {
+                const targetId = el.getAttribute('data-target');
+                const $content = targetId ? $('#' + targetId) : $();
+                if (!$content.length) return;
+                let parsed = { zh: '', en: '' };
+                try { parsed = JSON.parse(el.textContent); } catch (_) {}
+                const raw = currentLanguage === 'en'
+                    ? (parsed.en || parsed.zh || '')
+                    : (parsed.zh || parsed.en || '');
+                $content.html(formatTermsContent(raw));
+            });
         }
 
         function renderAgreementLabelHtml() {
-            const $label = $('#agreementAgreeLabel');
-            if (!$label.length) return;
-            const raw = currentLanguage === 'en'
-                ? (agreementLabelByLang.en || agreementLabelByLang.zh || '')
-                : (agreementLabelByLang.zh || agreementLabelByLang.en || '');
-            $label.html(formatTermsContent(raw));
+            document.querySelectorAll('.js-agreement-label-json').forEach(function(el) {
+                const targetId = el.getAttribute('data-target');
+                const $label = targetId ? $('#' + targetId) : $();
+                if (!$label.length) return;
+                let parsed = { zh: '', en: '' };
+                try { parsed = JSON.parse(el.textContent); } catch (_) {}
+                const raw = currentLanguage === 'en'
+                    ? (parsed.en || parsed.zh || '')
+                    : (parsed.zh || parsed.en || '');
+                $label.html(formatTermsContent(raw));
+            });
         }
         
         // 初始化語言按鈕狀態
@@ -1723,14 +1736,17 @@ var registerPageTitleSuffix = isApplicationMode
             invalidMsgEn: 'Please agree to the terms before submitting.'
         });
 
-        // Agreement（非必填，僅彈層；勾選狀態於 submit 時寫入 agreementAgreed）
-        initOverlayAndValidation({
-            overlayId: 'agreementOverlay',
-            openLinkId: 'agreementOpenLink',
-            openTitleId: 'agreementSectionTitle',
-            closeBtnId: 'agreementModalClose',
-            agreeId: 'agreementAgree',
-            optionalAgree: true
+        // Agreement（可多份；非必填，僅彈層；勾選狀態於 submit 時寫入）
+        document.querySelectorAll('.js-agreement-agree').forEach(function(el) {
+            const suffix = (el.id || '').replace(/^agreementAgree/, '');
+            initOverlayAndValidation({
+                overlayId: 'agreementOverlay' + suffix,
+                openLinkId: 'agreementOpenLink' + suffix,
+                openTitleId: 'agreementSectionTitle' + suffix,
+                closeBtnId: 'agreementModalClose' + suffix,
+                agreeId: el.id,
+                optionalAgree: true
+            });
         });
 
         // 勾選框 label 內的連結：點擊時不觸發 checkbox 切換
@@ -1909,7 +1925,7 @@ var registerPageTitleSuffix = isApplicationMode
             const newUser = {};
             $('#userForm').find('input, select, textarea').each(function() {
                 const fieldName = $(this).attr('name');
-                if (!fieldName || fieldName === 'ticketId' || fieldName === 'agreementAgreed') return;
+                if (!fieldName || fieldName === 'ticketId' || /^(agreementAgreed|agreementRecordedAt)(_\d+)?$/.test(fieldName)) return;
                 if ($(this).prop('disabled')) return;
                 if ($(this).hasClass('js-email-confirm') || String(fieldName).endsWith('_confirm')) return;
                 const type = (this.type || '').toLowerCase();
@@ -1945,11 +1961,12 @@ var registerPageTitleSuffix = isApplicationMode
                 }
                 newUser[fieldName] = $(this).val();
             });
-            const agreementEl = document.getElementById('agreementAgree');
-            if (agreementEl) {
-                newUser.agreementAgreed = agreementEl.checked;
-                newUser.agreementRecordedAt = new Date().toISOString();
-            }
+            document.querySelectorAll('.js-agreement-agree').forEach(function(agreementEl) {
+                const agreedName = agreementEl.getAttribute('name');
+                const recordedName = agreementEl.getAttribute('data-recorded-at-name');
+                if (agreedName) newUser[agreedName] = agreementEl.checked;
+                if (recordedName) newUser[recordedName] = new Date().toISOString();
+            });
             newUser.ticketId = ticketId;
             <% if (isApplicationMode) { %>
             if (!newUser.token) {

@@ -814,6 +814,9 @@
     "termsHint": "提示：Register 頁點上方連結文字以彈層顯示條款內容；純文字換行會保留，http(s) 網址會自動變連結；HTML 請注意 href 要用雙引號完整包住網址；未勾選同意無法提交。",
 
     "agreementEnabledLabel": "啟用 Agreement（非必填；會記錄訪客是否勾選同意）",
+    "addAgreement": "新增 Agreement",
+    "removeAgreement": "刪除此 Agreement",
+    "agreementItemHeading": "Agreement",
     "agreementTitleZhLabel": "標題 (ZH)",
     "agreementTitleEnLabel": "Title (EN)",
     "agreementLinkLabelZhLabel": "連結文字 (ZH)",

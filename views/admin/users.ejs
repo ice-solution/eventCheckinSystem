@@ -1309,9 +1309,11 @@
                                                     <option value="company">Company</option>
                                                     <option value="phone">Phone</option>
                                                 <% } %>
-                                                <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
-                                                    <option value="agreementAgreed">協議同意 (agreementAgreed)</option>
-                                                    <option value="agreementRecordedAt">協議記錄時間 (agreementRecordedAt)</option>
+                                                <% if (typeof enabledAgreements !== 'undefined' && enabledAgreements && enabledAgreements.length) { %>
+                                                    <% enabledAgreements.forEach(function(agr) { %>
+                                                    <option value="<%= agr.agreedField %>"><%= agr.columnLabel %> 同意 (<%= agr.agreedField %>)</option>
+                                                    <option value="<%= agr.recordedAtField %>"><%= agr.columnLabel %> 記錄時間 (<%= agr.recordedAtField %>)</option>
+                                                    <% }); %>
                                                 <% } %>
                                                 <% if (formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled) { %>
                                                     <option value="thankYouYesNo"><%= t('users.colThankYouYesNo') %> (thankYouYesNo)</option>
@@ -1349,9 +1351,11 @@
                                                     <option value="company">Company</option>
                                                     <option value="phone">Phone</option>
                                                 <% } %>
-                                                <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
-                                                    <option value="agreementAgreed">協議同意 (agreementAgreed)</option>
-                                                    <option value="agreementRecordedAt">協議記錄時間 (agreementRecordedAt)</option>
+                                                <% if (typeof enabledAgreements !== 'undefined' && enabledAgreements && enabledAgreements.length) { %>
+                                                    <% enabledAgreements.forEach(function(agr) { %>
+                                                    <option value="<%= agr.agreedField %>"><%= agr.columnLabel %> 同意 (<%= agr.agreedField %>)</option>
+                                                    <option value="<%= agr.recordedAtField %>"><%= agr.columnLabel %> 記錄時間 (<%= agr.recordedAtField %>)</option>
+                                                    <% }); %>
                                                 <% } %>
                                                 <% if (formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled) { %>
                                                     <option value="thankYouYesNo"><%= t('users.colThankYouYesNo') %> (thankYouYesNo)</option>
@@ -1427,9 +1431,11 @@
                                             <th data-field-name="company">Company</th>
                                             <th data-field-name="phone">Phone</th>
                                         <% } %>
-                                        <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
-                                            <th data-field-name="agreementAgreed">協議同意</th>
-                                            <th data-field-name="agreementRecordedAt">協議記錄時間</th>
+                                        <% if (typeof enabledAgreements !== 'undefined' && enabledAgreements && enabledAgreements.length) { %>
+                                            <% enabledAgreements.forEach(function(agr) { %>
+                                            <th data-field-name="<%= agr.agreedField %>"><%= agr.columnLabel %> 同意</th>
+                                            <th data-field-name="<%= agr.recordedAtField %>"><%= agr.columnLabel %> 記錄時間</th>
+                                            <% }); %>
                                         <% } %>
                                         <% if (formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled) { %>
                                             <%
@@ -1471,13 +1477,14 @@
                                             <td data-field-name="company"><%= userRow.company %></td>
                                             <td data-field-name="phone"><%= userRow.phone %></td>
                                             <% } %>
-                                            <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
-                                            <td class="agreement-meta-cell" data-field-name="agreementAgreed" data-order="<%= agreementAgreedSortOrder(userRow.agreementAgreed) %>">
-                                                <%= formatAgreementAgreedLabel(userRow.agreementAgreed) %>
+                                            <% if (typeof enabledAgreements !== 'undefined' && enabledAgreements && enabledAgreements.length) { %>
+                                            <% enabledAgreements.forEach(function(agr) { %>
+                                            <td class="agreement-meta-cell" data-field-name="<%= agr.agreedField %>" data-order="<%= agreementAgreedSortOrder(userRow[agr.agreedField]) %>">
+                                                <%= formatAgreementAgreedLabel(userRow[agr.agreedField]) %>
                                             </td>
-                                            <td class="agreement-meta-cell" data-field-name="agreementRecordedAt" data-order="<%= userRow.agreementRecordedAt ? new Date(userRow.agreementRecordedAt).getTime() : 0 %>">
-                                                <% if (userRow.agreementRecordedAt) {
-                                                    const agreementDate = new Date(userRow.agreementRecordedAt);
+                                            <td class="agreement-meta-cell" data-field-name="<%= agr.recordedAtField %>" data-order="<%= userRow[agr.recordedAtField] ? new Date(userRow[agr.recordedAtField]).getTime() : 0 %>">
+                                                <% if (userRow[agr.recordedAtField]) {
+                                                    const agreementDate = new Date(userRow[agr.recordedAtField]);
                                                     if (!isNaN(agreementDate.getTime())) { %>
                                                     <%= agreementDate.toLocaleString('zh-TW', {
                                                         timeZone: 'Asia/Hong_Kong',
@@ -1492,6 +1499,7 @@
                                                 <% } else { %>-<% }
                                                 } else { %>-<% } %>
                                             </td>
+                                            <% }); %>
                                             <% } %>
                                             <% if (formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled) { %>
                                             <%
@@ -1863,8 +1871,10 @@ const _US = {
         <% } else { %>
             searchableFieldNames.push('email', 'name', 'company', 'phone');
         <% } %>
-        <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
-            searchableFieldNames.push('agreementAgreed', 'agreementRecordedAt');
+        <% if (typeof enabledAgreements !== 'undefined' && enabledAgreements && enabledAgreements.length) { %>
+            <% enabledAgreements.forEach(function(agr) { %>
+            searchableFieldNames.push('<%= agr.agreedField %>', '<%= agr.recordedAtField %>');
+            <% }); %>
         <% } %>
         <% if (formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled) { %>
             searchableFieldNames.push('thankYouYesNo');
@@ -3172,9 +3182,11 @@ const _US = {
                         newRow.push(userData.company || '-');
                         newRow.push(userData.phone || '-');
                     <% } %>
-                    <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
-                        newRow.push(formatAgreementAgreedCell(response.agreementAgreed));
-                        newRow.push(formatAgreementRecordedAtCell(response.agreementRecordedAt));
+                    <% if (typeof enabledAgreements !== 'undefined' && enabledAgreements && enabledAgreements.length) { %>
+                        <% enabledAgreements.forEach(function(agr) { %>
+                        newRow.push(formatAgreementAgreedCell(response['<%= agr.agreedField %>']));
+                        newRow.push(formatAgreementRecordedAtCell(response['<%= agr.recordedAtField %>']));
+                        <% }); %>
                     <% } %>
                     <% if (formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled) { %>
                         newRow.push(formatThankYouYesNoCell(response.thankYouYesNo));

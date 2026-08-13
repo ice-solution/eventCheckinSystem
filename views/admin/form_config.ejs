@@ -296,80 +296,18 @@
                                 </div>
                             </div>
 
-                            <!-- Agreement（功能同 T&C） -->
+                            <!-- Agreement（可新增多份） -->
                             <div class="card mb-3">
                                 <div class="card-header collapsible-card-header" data-toggle="collapse" data-target="#collapseAgreement" aria-expanded="false">
                                     <i class="fa fa-plus-circle collapse-icon mr-2 text-primary"></i><h6 class="d-inline mb-0"><%= t('form_config.cardAgreementTitle') %></h6>
                                 </div>
                                 <div id="collapseAgreement" class="collapse">
                                 <div class="card-body">
-                                    <div class="form-check form-switch mb-3">
-                                        <input class="form-check-input" type="checkbox" id="agreementEnabled"
-                                               <%= (formConfig.agreement && formConfig.agreement.enabled) ? 'checked' : '' %>>
-                                        <label class="form-check-label" for="agreementEnabled">
-                                            <%= t('form_config.agreementEnabledLabel') %>
-                                        </label>
-                                    </div>
-                                    <div class="row mt-3">
-                                        <div class="col-md-6">
-                                            <label class="form-label"><%= t('form_config.agreementTitleZhLabel') %></label>
-                                            <input type="text" class="form-control" id="agreementTitleZh"
-                                                   value="<%= (formConfig.agreement && formConfig.agreement.title && formConfig.agreement.title.zh) ? formConfig.agreement.title.zh : '協議' %>">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label"><%= t('form_config.agreementTitleEnLabel') %></label>
-                                            <input type="text" class="form-control" id="agreementTitleEn"
-                                                   value="<%= (formConfig.agreement && formConfig.agreement.title && formConfig.agreement.title.en) ? formConfig.agreement.title.en : 'Agreement' %>">
-                                        </div>
-                                    </div>
-                                    <div class="form-check form-switch mb-2 mt-3">
-                                        <input class="form-check-input" type="checkbox" id="agreementShowLinkLabel"
-                                               <%= (formConfig.agreement && formConfig.agreement.showLinkLabel !== false) ? 'checked' : '' %>>
-                                        <label class="form-check-label" for="agreementShowLinkLabel">
-                                            <%= t('form_config.showLinkLabel') %>
-                                        </label>
-                                    </div>
-                                    <div id="agreementLinkLabelWrap">
-                                    <div class="row" id="agreementLinkLabelFields">
-                                        <div class="col-md-6">
-                                            <label class="form-label"><%= t('form_config.agreementLinkLabelZhLabel') %></label>
-                                            <input type="text" class="form-control" id="agreementLinkLabelZh"
-                                                   value="<%= (formConfig.agreement && formConfig.agreement.linkLabel && formConfig.agreement.linkLabel.zh) ? formConfig.agreement.linkLabel.zh : '(協議)' %>">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label"><%= t('form_config.agreementLinkLabelEnLabel') %></label>
-                                            <input type="text" class="form-control" id="agreementLinkLabelEn"
-                                                   value="<%= (formConfig.agreement && formConfig.agreement.linkLabel && formConfig.agreement.linkLabel.en) ? formConfig.agreement.linkLabel.en : '(agreement)' %>">
-                                        </div>
-                                    </div>
-                                    <small class="text-muted d-block mt-1 mb-2"><%= t('form_config.agreementLinkHint') %></small>
-                                    </div>
-                                    <div class="row mt-2">
-                                        <div class="col-md-6">
-                                            <label class="form-label"><%= t('form_config.checkboxLabelZh') %></label>
-                                            <textarea class="form-control" id="agreementLabelZh" rows="4"
-                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (formConfig.agreement && formConfig.agreement.label && formConfig.agreement.label.zh) ? formConfig.agreement.label.zh : '' %></textarea>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label"><%= t('form_config.checkboxLabelEn') %></label>
-                                            <textarea class="form-control" id="agreementLabelEn" rows="4"
-                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (formConfig.agreement && formConfig.agreement.label && formConfig.agreement.label.en) ? formConfig.agreement.label.en : '' %></textarea>
-                                        </div>
-                                    </div>
-                                    <small class="text-muted d-block mt-1 mb-2"><%= t('form_config.agreementCheckboxLabelHint') %></small>
-                                    <div class="row mt-2">
-                                        <div class="col-md-6">
-                                            <label class="form-label"><%= t('form_config.agreementContentZhLabel') %></label>
-                                            <textarea class="form-control" id="agreementContentZh" rows="6"
-                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (formConfig.agreement && formConfig.agreement.content && formConfig.agreement.content.zh) ? formConfig.agreement.content.zh : '' %></textarea>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label"><%= t('form_config.agreementContentEnLabel') %></label>
-                                            <textarea class="form-control" id="agreementContentEn" rows="6"
-                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (formConfig.agreement && formConfig.agreement.content && formConfig.agreement.content.en) ? formConfig.agreement.content.en : '' %></textarea>
-                                        </div>
-                                    </div>
-                                    <small class="text-muted d-block mt-2"><%- t('form_config.agreementHint') %></small>
+                                    <p class="text-muted small mb-3"><%- t('form_config.agreementHint') %></p>
+                                    <div id="agreementsList"></div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="addAgreementBtn">
+                                        <i class="fa fa-plus"></i> <%= t('form_config.addAgreement') %>
+                                    </button>
                                 </div>
                                 </div>
                             </div>
@@ -1083,7 +1021,23 @@
         ptCategoryKeyPh: '<%= t("form_config.ptCategoryKeyPh") %>',
         ptCategoryLabelZhPh: '<%= t("form_config.ptCategoryLabelZhPh") %>',
         ptCategoryLabelEnPh: '<%= t("form_config.ptCategoryLabelEnPh") %>',
-        ptCategoryDelete: '<%= t("form_config.ptCategoryDelete") %>'
+        ptCategoryDelete: '<%= t("form_config.ptCategoryDelete") %>',
+        addAgreement: '<%= t("form_config.addAgreement") %>',
+        removeAgreement: '<%= t("form_config.removeAgreement") %>',
+        agreementItemHeading: '<%= t("form_config.agreementItemHeading") %>',
+        agreementEnabledLabel: '<%= t("form_config.agreementEnabledLabel") %>',
+        agreementTitleZhLabel: '<%= t("form_config.agreementTitleZhLabel") %>',
+        agreementTitleEnLabel: '<%= t("form_config.agreementTitleEnLabel") %>',
+        showLinkLabel: '<%= t("form_config.showLinkLabel") %>',
+        agreementLinkLabelZhLabel: '<%= t("form_config.agreementLinkLabelZhLabel") %>',
+        agreementLinkLabelEnLabel: '<%= t("form_config.agreementLinkLabelEnLabel") %>',
+        agreementLinkHint: '<%= t("form_config.agreementLinkHint") %>',
+        checkboxLabelZh: '<%= t("form_config.checkboxLabelZh") %>',
+        checkboxLabelEn: '<%= t("form_config.checkboxLabelEn") %>',
+        agreementCheckboxLabelHint: '<%= t("form_config.agreementCheckboxLabelHint") %>',
+        agreementContentZhLabel: '<%= t("form_config.agreementContentZhLabel") %>',
+        agreementContentEnLabel: '<%= t("form_config.agreementContentEnLabel") %>',
+        multilinePlaceholder: '<%= t("form_config.multilinePlaceholder") %>'
     };
 
     // 可摺疊 card：展開/收合時切換 icon 旋轉
@@ -1122,6 +1076,9 @@
             label: { zh: '', en: '' },
             content: { zh: '', en: '' }
         };
+    }
+    if (!Array.isArray(formConfig.agreements) || !formConfig.agreements.length) {
+        formConfig.agreements = [JSON.parse(JSON.stringify(formConfig.agreement))];
     }
     if (!formConfig.thankYou) {
         formConfig.thankYou = {
@@ -1629,6 +1586,107 @@
     }
 
     // 從頁面表單收集 meta（terms / agreement / thankYou / paymentTicketUi 等）
+    function defaultAgreementItem() {
+        return {
+            enabled: false,
+            title: { zh: '協議', en: 'Agreement' },
+            linkLabel: { zh: '(協議)', en: '(agreement)' },
+            showLinkLabel: true,
+            label: { zh: '', en: '' },
+            content: { zh: '', en: '' }
+        };
+    }
+
+    function escapeAttr(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;');
+    }
+
+    function collectAgreementsFromDom() {
+        const rows = [];
+        document.querySelectorAll('#agreementsList .js-agreement-item').forEach(function(el) {
+            rows.push({
+                enabled: !!(el.querySelector('.js-agr-enabled') || {}).checked,
+                title: {
+                    zh: ((el.querySelector('.js-agr-title-zh') || {}).value || '').trim() || '協議',
+                    en: ((el.querySelector('.js-agr-title-en') || {}).value || '').trim() || 'Agreement'
+                },
+                linkLabel: {
+                    zh: ((el.querySelector('.js-agr-link-zh') || {}).value || '').trim() || '(協議)',
+                    en: ((el.querySelector('.js-agr-link-en') || {}).value || '').trim() || '(agreement)'
+                },
+                showLinkLabel: !!(el.querySelector('.js-agr-show-link') || {}).checked,
+                label: {
+                    zh: (el.querySelector('.js-agr-label-zh') || {}).value || '',
+                    en: (el.querySelector('.js-agr-label-en') || {}).value || ''
+                },
+                content: {
+                    zh: (el.querySelector('.js-agr-content-zh') || {}).value || '',
+                    en: (el.querySelector('.js-agr-content-en') || {}).value || ''
+                }
+            });
+        });
+        return rows.length ? rows : [defaultAgreementItem()];
+    }
+
+    function renderAgreementsList(list) {
+        const wrap = document.getElementById('agreementsList');
+        if (!wrap) return;
+        const items = (Array.isArray(list) && list.length) ? list : [defaultAgreementItem()];
+        wrap.innerHTML = items.map(function(item, idx) {
+            const a = item || defaultAgreementItem();
+            const showLink = a.showLinkLabel !== false;
+            return (
+                '<div class="border rounded p-3 mb-3 js-agreement-item">' +
+                    '<div class="d-flex justify-content-between align-items-center mb-2">' +
+                        '<strong>' + _t.agreementItemHeading + ' ' + (idx + 1) + '</strong>' +
+                        (items.length > 1
+                            ? '<button type="button" class="btn btn-sm btn-outline-danger js-agr-remove">' + _t.removeAgreement + '</button>'
+                            : '') +
+                    '</div>' +
+                    '<div class="form-check form-switch mb-3">' +
+                        '<input class="form-check-input js-agr-enabled" type="checkbox" ' + (a.enabled ? 'checked' : '') + '>' +
+                        '<label class="form-check-label">' + _t.agreementEnabledLabel + '</label>' +
+                    '</div>' +
+                    '<div class="row">' +
+                        '<div class="col-md-6"><label class="form-label">' + _t.agreementTitleZhLabel + '</label>' +
+                            '<input type="text" class="form-control js-agr-title-zh" value="' + escapeAttr((a.title && a.title.zh) || '協議') + '"></div>' +
+                        '<div class="col-md-6"><label class="form-label">' + _t.agreementTitleEnLabel + '</label>' +
+                            '<input type="text" class="form-control js-agr-title-en" value="' + escapeAttr((a.title && a.title.en) || 'Agreement') + '"></div>' +
+                    '</div>' +
+                    '<div class="form-check form-switch mb-2 mt-3">' +
+                        '<input class="form-check-input js-agr-show-link" type="checkbox" ' + (showLink ? 'checked' : '') + '>' +
+                        '<label class="form-check-label">' + _t.showLinkLabel + '</label>' +
+                    '</div>' +
+                    '<div class="js-agr-link-wrap" style="' + (showLink ? '' : 'display:none;') + '">' +
+                        '<div class="row">' +
+                            '<div class="col-md-6"><label class="form-label">' + _t.agreementLinkLabelZhLabel + '</label>' +
+                                '<input type="text" class="form-control js-agr-link-zh" value="' + escapeAttr((a.linkLabel && a.linkLabel.zh) || '(協議)') + '"></div>' +
+                            '<div class="col-md-6"><label class="form-label">' + _t.agreementLinkLabelEnLabel + '</label>' +
+                                '<input type="text" class="form-control js-agr-link-en" value="' + escapeAttr((a.linkLabel && a.linkLabel.en) || '(agreement)') + '"></div>' +
+                        '</div>' +
+                        '<small class="text-muted d-block mt-1 mb-2">' + _t.agreementLinkHint + '</small>' +
+                    '</div>' +
+                    '<div class="row mt-2">' +
+                        '<div class="col-md-6"><label class="form-label">' + _t.checkboxLabelZh + '</label>' +
+                            '<textarea class="form-control js-agr-label-zh" rows="4" placeholder="' + _t.multilinePlaceholder + '">' + escapeAttr((a.label && a.label.zh) || '') + '</textarea></div>' +
+                        '<div class="col-md-6"><label class="form-label">' + _t.checkboxLabelEn + '</label>' +
+                            '<textarea class="form-control js-agr-label-en" rows="4" placeholder="' + _t.multilinePlaceholder + '">' + escapeAttr((a.label && a.label.en) || '') + '</textarea></div>' +
+                    '</div>' +
+                    '<small class="text-muted d-block mt-1 mb-2">' + _t.agreementCheckboxLabelHint + '</small>' +
+                    '<div class="row mt-2">' +
+                        '<div class="col-md-6"><label class="form-label">' + _t.agreementContentZhLabel + '</label>' +
+                            '<textarea class="form-control js-agr-content-zh" rows="6" placeholder="' + _t.multilinePlaceholder + '">' + escapeAttr((a.content && a.content.zh) || '') + '</textarea></div>' +
+                        '<div class="col-md-6"><label class="form-label">' + _t.agreementContentEnLabel + '</label>' +
+                            '<textarea class="form-control js-agr-content-en" rows="6" placeholder="' + _t.multilinePlaceholder + '">' + escapeAttr((a.content && a.content.en) || '') + '</textarea></div>' +
+                    '</div>' +
+                '</div>'
+            );
+        }).join('');
+    }
+
     function collectMetaConfigFromForm() {
         const val = (id, fallback) => {
             const el = document.getElementById(id);
@@ -1678,26 +1736,15 @@
                     en: val('termsContentEn', '')
                 }
             },
-            agreement: {
-                enabled: checked('agreementEnabled', false),
-                title: {
-                    zh: trimVal('agreementTitleZh', '協議'),
-                    en: trimVal('agreementTitleEn', 'Agreement')
-                },
-                linkLabel: {
-                    zh: trimVal('agreementLinkLabelZh', '(協議)'),
-                    en: trimVal('agreementLinkLabelEn', '(agreement)')
-                },
-                showLinkLabel: checked('agreementShowLinkLabel', true),
-                label: {
-                    zh: val('agreementLabelZh', ''),
-                    en: val('agreementLabelEn', '')
-                },
-                content: {
-                    zh: val('agreementContentZh', ''),
-                    en: val('agreementContentEn', '')
-                }
+            agreement: collectAgreementsFromDom()[0] || {
+                enabled: false,
+                title: { zh: '協議', en: 'Agreement' },
+                linkLabel: { zh: '(協議)', en: '(agreement)' },
+                showLinkLabel: true,
+                label: { zh: '', en: '' },
+                content: { zh: '', en: '' }
             },
+            agreements: collectAgreementsFromDom(),
             thankYou: {
                 title: {
                     zh: trimVal('thankYouTitleZh', ''),
@@ -1790,6 +1837,7 @@
             registerSubtitle: meta.registerSubtitle,
             terms: meta.terms,
             agreement: meta.agreement,
+            agreements: meta.agreements,
             thankYou: meta.thankYou,
             paymentTicketUi: meta.paymentTicketUi,
             sections: (formConfig.sections || []).map(function(section) {
@@ -1846,6 +1894,7 @@
                     registerSubtitle: meta.registerSubtitle,
                     terms: meta.terms,
                     agreement: meta.agreement,
+                    agreements: meta.agreements,
                     thankYou: meta.thankYou,
                     paymentTicketUi: meta.paymentTicketUi
                 })
@@ -1979,6 +2028,11 @@
                         label: { zh: '', en: '' },
                         content: { zh: '', en: '' }
                     };
+                    if (Array.isArray(importedData.agreements) && importedData.agreements.length) {
+                        formConfig.agreements = importedData.agreements;
+                    } else {
+                        formConfig.agreements = [JSON.parse(JSON.stringify(formConfig.agreement))];
+                    }
                     formConfig.thankYou = importedData.thankYou || formConfig.thankYou || {
                         title: { zh: '感謝你參加！', en: 'Thank you for participating!' },
                         message: { zh: '我們會透過 Email 把資訊發送給你。', en: 'We will send the information to you via Email.' },
@@ -2102,17 +2156,8 @@
         setInputValue('termsContentZh', (t.content && t.content.zh) || '');
         setInputValue('termsContentEn', (t.content && t.content.en) || '');
 
-        const a = data.agreement || {};
-        setInputValue('agreementEnabled', !!a.enabled);
-        setInputValue('agreementTitleZh', (a.title && a.title.zh) || '');
-        setInputValue('agreementTitleEn', (a.title && a.title.en) || '');
-        setInputValue('agreementShowLinkLabel', a.showLinkLabel !== false);
-        setInputValue('agreementLinkLabelZh', (a.linkLabel && a.linkLabel.zh) || '');
-        setInputValue('agreementLinkLabelEn', (a.linkLabel && a.linkLabel.en) || '');
-        setInputValue('agreementLabelZh', (a.label && a.label.zh) || '');
-        setInputValue('agreementLabelEn', (a.label && a.label.en) || '');
-        setInputValue('agreementContentZh', (a.content && a.content.zh) || '');
-        setInputValue('agreementContentEn', (a.content && a.content.en) || '');
+        const a = data.agreements && data.agreements.length ? data.agreements : (data.agreement ? [data.agreement] : [defaultAgreementItem()]);
+        renderAgreementsList(a);
 
         const ty = data.thankYou || {};
         setInputValue('thankYouTitleZh', (ty.title && ty.title.zh) || '');
@@ -2220,32 +2265,28 @@
     })();
 
     // 初始化 Agreement UI
-    (function initAgreementUi() {
-        try {
-            const a = formConfig.agreement || {};
-            const enabledEl = document.getElementById('agreementEnabled');
-            const titleZhEl = document.getElementById('agreementTitleZh');
-            const titleEnEl = document.getElementById('agreementTitleEn');
-            const showLinkEl = document.getElementById('agreementShowLinkLabel');
-            const linkLabelZhEl = document.getElementById('agreementLinkLabelZh');
-            const linkLabelEnEl = document.getElementById('agreementLinkLabelEn');
-            const labelZhEl = document.getElementById('agreementLabelZh');
-            const labelEnEl = document.getElementById('agreementLabelEn');
-            const contentZhEl = document.getElementById('agreementContentZh');
-            const contentEnEl = document.getElementById('agreementContentEn');
-            if (!enabledEl) return;
-            enabledEl.checked = !!a.enabled;
-            if (titleZhEl) titleZhEl.value = (a.title && a.title.zh) ? a.title.zh : titleZhEl.value;
-            if (titleEnEl) titleEnEl.value = (a.title && a.title.en) ? a.title.en : titleEnEl.value;
-            if (showLinkEl) showLinkEl.checked = a.showLinkLabel !== false;
-            if (linkLabelZhEl) linkLabelZhEl.value = (a.linkLabel && a.linkLabel.zh) ? a.linkLabel.zh : linkLabelZhEl.value;
-            if (linkLabelEnEl) linkLabelEnEl.value = (a.linkLabel && a.linkLabel.en) ? a.linkLabel.en : linkLabelEnEl.value;
-            if (labelZhEl) labelZhEl.value = (a.label && a.label.zh) ? a.label.zh : labelZhEl.value;
-            if (labelEnEl) labelEnEl.value = (a.label && a.label.en) ? a.label.en : labelEnEl.value;
-            if (contentZhEl) contentZhEl.value = (a.content && a.content.zh) ? a.content.zh : contentZhEl.value;
-            if (contentEnEl) contentEnEl.value = (a.content && a.content.en) ? a.content.en : contentEnEl.value;
-        } catch (_) {}
-    })();
+    renderAgreementsList(formConfig.agreements);
+    document.getElementById('addAgreementBtn')?.addEventListener('click', function() {
+        const list = collectAgreementsFromDom();
+        list.push(defaultAgreementItem());
+        renderAgreementsList(list);
+    });
+    document.getElementById('agreementsList')?.addEventListener('click', function(e) {
+        const btn = e.target.closest('.js-agr-remove');
+        if (!btn) return;
+        const list = collectAgreementsFromDom();
+        const row = btn.closest('.js-agreement-item');
+        const idx = Array.prototype.indexOf.call(document.querySelectorAll('#agreementsList .js-agreement-item'), row);
+        if (idx >= 0 && list.length > 1) {
+            list.splice(idx, 1);
+            renderAgreementsList(list);
+        }
+    });
+    document.getElementById('agreementsList')?.addEventListener('change', function(e) {
+        if (!e.target.classList.contains('js-agr-show-link')) return;
+        const wrap = e.target.closest('.js-agreement-item')?.querySelector('.js-agr-link-wrap');
+        if (wrap) wrap.style.display = e.target.checked ? '' : 'none';
+    });
 
     (function initLinkLabelVisibilityToggles() {
         function bindToggle(checkboxId, fieldsId) {
@@ -2259,7 +2300,6 @@
             sync();
         }
         bindToggle('termsShowLinkLabel', 'termsLinkLabelWrap');
-        bindToggle('agreementShowLinkLabel', 'agreementLinkLabelWrap');
     })();
 
     // 初始化 Thank You UI

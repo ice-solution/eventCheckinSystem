@@ -146,7 +146,7 @@ const formConfigSchema = new mongoose.Schema({
             en: { type: String, default: '' }
         }
     },
-    // Agreement（功能同 Terms & Conditions）
+    // Agreement（功能同 Terms & Conditions；第一份同步寫入 agreement 以相容舊資料）
     agreement: {
         enabled: { type: Boolean, default: false },
         title: {
@@ -167,6 +167,26 @@ const formConfigSchema = new mongoose.Schema({
             en: { type: String, default: '' }
         }
     },
+    agreements: [{
+        enabled: { type: Boolean, default: false },
+        title: {
+            zh: { type: String, default: '協議' },
+            en: { type: String, default: 'Agreement' }
+        },
+        linkLabel: {
+            zh: { type: String, default: '(協議)' },
+            en: { type: String, default: '(agreement)' }
+        },
+        showLinkLabel: { type: Boolean, default: true },
+        label: {
+            zh: { type: String, default: '本人已閱讀並同意上述協議內容。' },
+            en: { type: String, default: 'I have read and agree to the agreement above.' }
+        },
+        content: {
+            zh: { type: String, default: '' },
+            en: { type: String, default: '' }
+        }
+    }],
     // 報名成功頁 Thank You 文案
     thankYou: {
         title: {

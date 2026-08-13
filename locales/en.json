@@ -815,6 +815,9 @@
     "termsHint": "Tip: Click the link text to open the terms dialog; plain text line breaks preserved and http(s) URLs become links; use complete quoted href for HTML links; visitors cannot submit without agreeing.",
 
     "agreementEnabledLabel": "Enable Agreement (optional; records whether visitor agrees)",
+    "addAgreement": "Add Agreement",
+    "removeAgreement": "Remove this Agreement",
+    "agreementItemHeading": "Agreement",
     "agreementTitleZhLabel": "Title (ZH)",
     "agreementTitleEnLabel": "Title (EN)",
     "agreementLinkLabelZhLabel": "Link text (ZH)",
