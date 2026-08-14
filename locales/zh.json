@@ -915,6 +915,7 @@
     "fieldType": "Field Type",
     "required": "Required",
     "display": "Display",
+    "displayHint": "關閉後，報名／申請頁不顯示此欄，後台 RSVP 仍可填寫。",
     "placeholderZh": "中文佔位符",
     "placeholderEn": "English Placeholder",
     "confirmEmailLabel": "確認電子郵件",

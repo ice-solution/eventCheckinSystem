@@ -613,7 +613,7 @@ var registerPageTitleSuffix = isApplicationMode
                                 });
                                 %>
                                 <% sortedFields.forEach((field, fieldIndex) => { %>
-                                    <% const fieldDisplayed = field.display !== undefined ? field.display : field.visible !== false; %>
+                                    <% const fieldDisplayed = (field.visible !== false) && (field.display !== undefined ? field.display : true); %>
                                     <% if (fieldDisplayed) { %>
                                         <% var _selectHasOther = (field.type === 'select' && field.options && field.options.some(function (o) { return o && o.isOther; })); %>
                                         <% var _fieldControlId = (field.type === 'select' && _selectHasOther) ? (field.fieldName + '_sel') : field.fieldName; %>

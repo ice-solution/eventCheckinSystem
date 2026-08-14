@@ -916,6 +916,7 @@
     "fieldType": "Field Type",
     "required": "Required",
     "display": "Display",
+    "displayHint": "When off, this field is hidden on the application form but still available in admin RSVP.",
     "placeholderZh": "Chinese Placeholder",
     "placeholderEn": "English Placeholder",
     "confirmEmailLabel": "Confirm email",
