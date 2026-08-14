@@ -564,6 +564,43 @@
                                 </div>
                             </div>
 
+                            <!-- 專屬申請已完成頁文案 -->
+                            <div class="card mb-3">
+                                <div class="card-header collapsible-card-header" data-toggle="collapse" data-target="#collapseApplicationCompleted" aria-expanded="false">
+                                    <i class="fa fa-plus-circle collapse-icon mr-2 text-primary"></i><h6 class="d-inline mb-0"><%= t('form_config.cardApplicationCompletedTitle') %></h6>
+                                </div>
+                                <div id="collapseApplicationCompleted" class="collapse">
+                                <div class="card-body">
+                                    <% const acp = (formConfig.applicationCompletedPage) ? formConfig.applicationCompletedPage : {}; %>
+                                    <p class="text-muted small mb-3"><%= t('form_config.applicationCompletedHint') %></p>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.applicationCompletedTitleZh') %></label>
+                                            <input type="text" class="form-control" id="applicationCompletedTitleZh"
+                                                   value="<%= (acp.title && acp.title.zh) ? acp.title.zh : '申請已完成' %>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.applicationCompletedTitleEn') %></label>
+                                            <input type="text" class="form-control" id="applicationCompletedTitleEn"
+                                                   value="<%= (acp.title && acp.title.en) ? acp.title.en : 'Application completed' %>">
+                                        </div>
+                                    </div>
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.applicationCompletedMessageZh') %></label>
+                                            <textarea class="form-control" id="applicationCompletedMessageZh" rows="3"
+                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (acp.message && acp.message.zh) ? acp.message.zh : '您已完成申請，此連結不可再次修改。' %></textarea>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= t('form_config.applicationCompletedMessageEn') %></label>
+                                            <textarea class="form-control" id="applicationCompletedMessageEn" rows="3"
+                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (acp.message && acp.message.en) ? acp.message.en : 'You have already completed this application. This link cannot be used to make further changes.' %></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                                </div>
+                            </div>
+
                             <!-- 付費票券 Register UI -->
                             <div class="card mb-3">
                                 <div class="card-header collapsible-card-header" data-toggle="collapse" data-target="#collapsePaymentTicket" aria-expanded="false">
@@ -764,12 +801,13 @@
                                                     const originalFieldIndex = section.fields.findIndex(f => f._id ? f._id.toString() === field._id.toString() : f.fieldName === field.fieldName);
                                                     const actualFieldIndex = originalFieldIndex >= 0 ? originalFieldIndex : fieldIndex;
                                                     %>
-                                                    <% const fieldDisplayed = field.display !== undefined ? field.display : field.visible !== false; %>
-                                                    <div class="field-item <%= fieldDisplayed ? '' : 'hidden-field' %>" data-field-index="<%= actualFieldIndex %>">
+                                                    <% const fieldEnabled = field.visible !== false; %>
+                                                    <% const fieldDisplayed = field.display !== undefined ? field.display : fieldEnabled; %>
+                                                    <div class="field-item <%= fieldEnabled ? '' : 'hidden-field' %>" data-field-index="<%= actualFieldIndex %>">
                                                         <div class="field-controls">
                                                             <div class="form-check form-switch">
                                                                 <input class="form-check-input" type="checkbox" 
-                                                                       <%= fieldDisplayed ? 'checked' : '' %>
+                                                                       <%= fieldEnabled ? 'checked' : '' %>
                                                                        onchange="toggleField(<%= actualSectionIndex %>, <%= actualFieldIndex %>)">
                                                                 <label class="form-check-label">
                                                                     <strong><%= fcLangText(field.label, fcHeaderLang) || field.fieldName || '欄位' %></strong>
@@ -836,10 +874,11 @@
                                                                 </div>
                                                             </div>
                                                             <div class="col-md-1">
-                                                                <label class="form-label"><%= t('form_config.display') %></label>
+                                                                <label class="form-label" title="<%= t('form_config.displayHint') %>"><%= t('form_config.display') %></label>
                                                                 <div class="form-check">
                                                                     <input class="form-check-input" type="checkbox"
                                                                            <%= fieldDisplayed ? 'checked' : '' %>
+                                                                           title="<%= t('form_config.displayHint') %>"
                                                                            onchange="updateFieldDisplay(<%= actualSectionIndex %>, <%= actualFieldIndex %>, this.checked)">
                                                                 </div>
                                                             </div>
@@ -1278,23 +1317,22 @@
         }
     }
 
+    function isFieldEnabled(field) {
+        if (!field) return true;
+        return field.visible !== false;
+    }
+
     function isFieldDisplayed(field) {
         if (!field) return true;
+        if (!isFieldEnabled(field)) return false;
         if (field.display !== undefined) return field.display !== false;
-        return field.visible !== false;
+        return true;
     }
 
     function updateFieldDisplay(sectionIndex, fieldIndex, checked) {
         if (!formConfig.sections[sectionIndex] || !formConfig.sections[sectionIndex].fields[fieldIndex]) return;
         const field = formConfig.sections[sectionIndex].fields[fieldIndex];
         field.display = !!checked;
-        field.visible = !!checked;
-        const fieldElement = document.querySelector('[data-section-index="' + sectionIndex + '"] [data-field-index="' + fieldIndex + '"]');
-        if (fieldElement) {
-            fieldElement.classList.toggle('hidden-field', !checked);
-        }
-        const topSwitch = fieldElement && fieldElement.querySelector('.field-controls .form-check-input');
-        if (topSwitch) topSwitch.checked = !!checked;
         updatePreview();
     }
 
@@ -1302,9 +1340,6 @@
     async function updateFieldProperty(sectionIndex, fieldIndex, property, value) {
         if (formConfig.sections[sectionIndex] && formConfig.sections[sectionIndex].fields[fieldIndex]) {
             formConfig.sections[sectionIndex].fields[fieldIndex][property] = value;
-            if (property === 'display') {
-                formConfig.sections[sectionIndex].fields[fieldIndex].visible = !!value;
-            }
             
             // 如果更改了字段類型，需要處理選項
             if (property === 'type') {
@@ -1396,19 +1431,16 @@
         }
     }
 
-    // 切換字段顯示（頂部 switch 與 Display 勾選同步）
+    // 頂部 switch：啟用欄位（後台 RSVP 可用）；Display 另控前台申請表
     function toggleField(sectionIndex, fieldIndex) {
         const field = formConfig.sections[sectionIndex].fields[fieldIndex];
-        const next = !isFieldDisplayed(field);
-        field.display = next;
+        const next = !isFieldEnabled(field);
         field.visible = next;
         
         const fieldElement = document.querySelector('[data-section-index="' + sectionIndex + '"] [data-field-index="' + fieldIndex + '"]');
         if (fieldElement) {
             fieldElement.classList.toggle('hidden-field', !next);
         }
-        const displayCheckbox = fieldElement && fieldElement.querySelector('input[type="checkbox"][onchange*="updateFieldDisplay"]');
-        if (displayCheckbox) displayCheckbox.checked = next;
         updatePreview();
     }
 
@@ -1829,6 +1861,16 @@
                     }
                 }
             },
+            applicationCompletedPage: {
+                title: {
+                    zh: trimVal('applicationCompletedTitleZh', '申請已完成'),
+                    en: trimVal('applicationCompletedTitleEn', 'Application completed')
+                },
+                message: {
+                    zh: val('applicationCompletedMessageZh', '您已完成申請，此連結不可再次修改。'),
+                    en: val('applicationCompletedMessageEn', 'You have already completed this application. This link cannot be used to make further changes.')
+                }
+            },
             paymentTicketUi: collectPaymentTicketUiFromForm()
         };
     }
@@ -1856,6 +1898,7 @@
             agreement: meta.agreement,
             agreements: meta.agreements,
             thankYou: meta.thankYou,
+            applicationCompletedPage: meta.applicationCompletedPage,
             paymentTicketUi: meta.paymentTicketUi,
             sections: (formConfig.sections || []).map(function(section) {
                 return {
@@ -1870,8 +1913,8 @@
                             type: field.type,
                             required: field.required,
                             confirmEmail: !!field.confirmEmail,
-                            display: field.display !== undefined ? field.display : field.visible !== false,
-                            visible: field.visible,
+                            display: field.display !== undefined ? field.display : true,
+                            visible: field.visible !== false,
                             placeholder: field.placeholder,
                             options: (field.options || []).map(function(opt) {
                                 return {
@@ -1913,6 +1956,7 @@
                     agreement: meta.agreement,
                     agreements: meta.agreements,
                     thankYou: meta.thankYou,
+                    applicationCompletedPage: meta.applicationCompletedPage,
                     paymentTicketUi: meta.paymentTicketUi
                 })
             });
@@ -2075,6 +2119,13 @@
                             noPurchaseMessage: { zh: '', en: '' }
                         }
                     };
+                    formConfig.applicationCompletedPage = importedData.applicationCompletedPage || formConfig.applicationCompletedPage || {
+                        title: { zh: '申請已完成', en: 'Application completed' },
+                        message: {
+                            zh: '您已完成申請，此連結不可再次修改。',
+                            en: 'You have already completed this application. This link cannot be used to make further changes.'
+                        }
+                    };
                     formConfig.eventDisplayName = importedData.eventDisplayName || formConfig.eventDisplayName || { zh: '', en: '' };
                     formConfig.registerSubHeader = importedData.registerSubHeader || formConfig.registerSubHeader || { zh: '', en: '' };
                     formConfig.registerSubtitle = importedData.registerSubtitle || formConfig.registerSubtitle || {
@@ -2090,7 +2141,8 @@
                         visible: section.visible !== undefined ? section.visible : true,
                         order: section.order || 0,
                         fields: (section.fields || []).map(field => {
-                            const disp = field.display !== undefined ? field.display : (field.visible !== undefined ? field.visible : true);
+                            const vis = field.visible !== undefined ? field.visible : true;
+                            const disp = field.display !== undefined ? field.display : vis;
                             return {
                             fieldName: field.fieldName || 'newField',
                             label: field.label || { zh: '', en: '' },
@@ -2098,7 +2150,7 @@
                             required: field.required || false,
                             confirmEmail: !!field.confirmEmail,
                             display: disp,
-                            visible: disp,
+                            visible: vis,
                             placeholder: field.placeholder || { zh: '', en: '' },
                             options: (field.options || []).map(function(opt) {
                                 return {
@@ -2211,6 +2263,12 @@
         setInputValue('thankYouNoPurchaseTitleEn', (ynq.noPurchaseTitle && ynq.noPurchaseTitle.en) || '');
         setInputValue('thankYouNoPurchaseMessageZh', (ynq.noPurchaseMessage && ynq.noPurchaseMessage.zh) || '');
         setInputValue('thankYouNoPurchaseMessageEn', (ynq.noPurchaseMessage && ynq.noPurchaseMessage.en) || '');
+
+        const acp = data.applicationCompletedPage || {};
+        setInputValue('applicationCompletedTitleZh', (acp.title && acp.title.zh) || '');
+        setInputValue('applicationCompletedTitleEn', (acp.title && acp.title.en) || '');
+        setInputValue('applicationCompletedMessageZh', (acp.message && acp.message.zh) || '');
+        setInputValue('applicationCompletedMessageEn', (acp.message && acp.message.en) || '');
 
         const pt = data.paymentTicketUi || {};
         if (pt.sectionTitle) {

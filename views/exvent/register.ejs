@@ -175,29 +175,29 @@ var registerPageTitleSuffix = isApplicationMode
         }
 
         .language-switcher .btn-group .btn.active {
-            background-color: #007bff;
-            border-color: #007bff;
-            color: white;
+            background-color: #E8B4B8;
+            border-color: #E8B4B8;
+            color: #5B4A43;
         }
 
         .language-switcher .btn-group .btn:not(.active) {
             background-color: transparent;
-            border-color: #007bff;
-            color: #007bff;
+            border-color: #E8B4B8;
+            color: #E8B4B8;
         }
 
         .language-switcher .btn-group .btn:not(.active):hover {
-            background-color: #007bff;
-            color: white;
+            background-color: #E8B4B8;
+            color: #5B4A43;
         }
         .form-note {
-            background-color: #e3f2fd;
-            border-left: 4px solid #2196f3;
+            background-color: #EED6D3;
+            border-left: 4px solid #E8B4B8;
             padding: 15px;
             margin-bottom: 25px;
             border-radius: 0 5px 5px 0;
             font-size: 0.9rem;
-            color: #1565c0;
+            color: #5B4A43;
         }
         .form-row {
             display: flex;
@@ -294,8 +294,8 @@ var registerPageTitleSuffix = isApplicationMode
             transition: border-color 0.3s ease;
         }
         .form-control:focus {
-            border-color: #3498db;
-            box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+            border-color: #E8B4B8;
+            box-shadow: 0 0 0 0.2rem rgba(232, 180, 184, 0.25);
         }
         .form-control[readonly],
         .form-control:disabled,
@@ -324,12 +324,14 @@ var registerPageTitleSuffix = isApplicationMode
             min-width: 120px;
         }
         .btn-primary {
-            background-color: #3498db;
-            border-color: #3498db;
+            background-color: #E8B4B8;
+            border-color: #E8B4B8;
+            color: #5B4A43;
         }
         .btn-primary:hover {
-            background-color: #2980b9;
-            border-color: #2980b9;
+            background-color: #67595E;
+            border-color: #67595E;
+            color: #fff;
         }
         .btn-secondary {
             background-color: #95a5a6;
@@ -356,18 +358,18 @@ var registerPageTitleSuffix = isApplicationMode
         .terms-open-link {
             font-size: 1rem;
             font-weight: 500;
-            color: #3498db;
+            color: #67595E;
             text-decoration: underline;
             cursor: pointer;
         }
         .terms-open-link:hover {
-            color: #2980b9;
+            color: #E8B4B8;
         }
         .terms-title-as-link {
             cursor: pointer;
         }
         .terms-title-as-link:hover {
-            color: #3498db;
+            color: #E8B4B8;
         }
         .terms-agree-row.form-check {
             display: flex;
@@ -390,12 +392,12 @@ var registerPageTitleSuffix = isApplicationMode
             line-height: 1.5;
         }
         .terms-agree-row .form-check-label a {
-            color: #3498db;
+            color: #67595E;
             text-decoration: underline;
             word-break: break-all;
         }
         .terms-agree-row .form-check-label a:hover {
-            color: #2980b9;
+            color: #E8B4B8;
         }
         .terms-overlay {
             display: none;
@@ -466,12 +468,12 @@ var registerPageTitleSuffix = isApplicationMode
             padding-left: 1.25rem;
         }
         .terms-modal-body a {
-            color: #3498db;
+            color: #67595E;
             text-decoration: underline;
             word-break: break-all;
         }
         .terms-modal-body a:hover {
-            color: #2980b9;
+            color: #E8B4B8;
         }
         @media (max-width: 768px) {
             .form-header h1 {
@@ -500,8 +502,8 @@ var registerPageTitleSuffix = isApplicationMode
             font-size: 14px;
         }
         .ticket-category-btn.active {
-            background: #007bff;
-            border-color: #007bff;
+            background: #E8B4B8;
+            border-color: #E8B4B8;
             color: #fff;
         }
         .ticket-select-block {
@@ -611,7 +613,7 @@ var registerPageTitleSuffix = isApplicationMode
                                 });
                                 %>
                                 <% sortedFields.forEach((field, fieldIndex) => { %>
-                                    <% const fieldDisplayed = field.display !== undefined ? field.display : field.visible !== false; %>
+                                    <% const fieldDisplayed = (field.visible !== false) && (field.display !== undefined ? field.display : true); %>
                                     <% if (fieldDisplayed) { %>
                                         <% var _selectHasOther = (field.type === 'select' && field.options && field.options.some(function (o) { return o && o.isOther; })); %>
                                         <% var _fieldControlId = (field.type === 'select' && _selectHasOther) ? (field.fieldName + '_sel') : field.fieldName; %>
@@ -681,7 +683,7 @@ var registerPageTitleSuffix = isApplicationMode
                                                         <input type="hidden" name="<%= field.fieldName %>" value="<%= appValStr(field.fieldName) %>">
                                                         <% } %>
                                                     <% } %>
-                                                    <% if (_fieldLocked) { %><div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Existing data, not editable">已有資料，不可修改</div><% } %>
+                                                    <% if (_fieldLocked) { %><div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Data cannot be changed">已有資料，不可修改</div><% } %>
                                                 <% } else if (field.type === 'checkbox' && field.options) { %>
                                                     <div class="checkbox-group" id="<%= field.fieldName %>-group">
                                                         <% field.options.forEach((option, optionIndex) => { %>
@@ -718,7 +720,7 @@ var registerPageTitleSuffix = isApplicationMode
                                                             </div>
                                                         <% }); %>
                                                     </div>
-                                                    <% if (_fieldLocked) { %><div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Existing data, not editable">已有資料，不可修改</div><% } %>
+                                                    <% if (_fieldLocked) { %><div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Data cannot be changed">已有資料，不可修改</div><% } %>
                                                     <% if (field.required && !_fieldLocked) { %>
                                                         <script>
                                                             // 驗證至少選擇一個 checkbox（勿對 div 呼叫 setCustomValidity，否則會 throw 導致 form 原生 POST）
@@ -796,7 +798,7 @@ var registerPageTitleSuffix = isApplicationMode
                                                     </div>
                                                     <% if (_fieldLocked) { %>
                                                     <input type="hidden" name="<%= field.fieldName %>" value="<%= appValStr(field.fieldName) %>">
-                                                    <div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Existing data, not editable">已有資料，不可修改</div>
+                                                    <div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Data cannot be changed">已有資料，不可修改</div>
                                                     <% } %>
                                                 <% } else if (field.type === 'textarea') { %>
                                                     <textarea class="form-control" id="<%= field.fieldName %>" name="<%= field.fieldName %>" 
@@ -805,7 +807,7 @@ var registerPageTitleSuffix = isApplicationMode
                                                               data-placeholder-en="<%= field.placeholder && field.placeholder.en ? field.placeholder.en : '' %>" 
                                                               <%= _fieldLocked ? 'readonly' : '' %>
                                                               <%= (!_fieldLocked && field.required) ? 'required' : '' %> rows="3"><%= _fieldLocked || isApplicationMode ? appValStr(field.fieldName) : '' %></textarea>
-                                                    <% if (_fieldLocked) { %><div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Existing data, not editable">已有資料，不可修改</div><% } %>
+                                                    <% if (_fieldLocked) { %><div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Data cannot be changed">已有資料，不可修改</div><% } %>
                                                 <% } else { %>
                                                     <input type="<%= field.type %>" class="form-control" id="<%= field.fieldName %>" name="<%= field.fieldName %>" 
                                                            placeholder="<%= field.placeholder && field.placeholder.zh ? field.placeholder.zh : (typeof field.placeholder === 'string' ? field.placeholder : '') %>" 
@@ -814,7 +816,7 @@ var registerPageTitleSuffix = isApplicationMode
                                                            value="<%= isApplicationMode ? appValStr(field.fieldName) : '' %>"
                                                            <%= _fieldLocked ? 'readonly' : '' %>
                                                            <%= (!_fieldLocked && field.required) ? 'required' : '' %>>
-                                                    <% if (_fieldLocked) { %><div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Existing data, not editable">已有資料，不可修改</div><% } %>
+                                                    <% if (_fieldLocked) { %><div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Data cannot be changed">已有資料，不可修改</div><% } %>
                                                 <% } %>
                                             </div>
                                         </div>
@@ -1574,6 +1576,18 @@ var registerPageTitleSuffix = isApplicationMode
                     $(this).text(zhText);
                 } else if (currentLanguage === 'en' && enText) {
                     $(this).text(enText);
+                }
+            });
+
+            // Application 已鎖定欄位提示
+            $('.application-locked-hint').each(function() {
+                const $el = $(this);
+                const zhText = $el.data('zh');
+                const enText = $el.data('en');
+                if (currentLanguage === 'en' && enText) {
+                    $el.text(enText);
+                } else if (zhText) {
+                    $el.text(zhText);
                 }
             });
 

@@ -1,0 +1,79 @@
+/* Phoebe Version - Neverland.Co Limited Color Theme for Event Website */
+
+:root {
+    --phoebe-primary: #E8B4B8;
+    --phoebe-secondary: #EED6D3;
+    --phoebe-coffee-light: #A49393;
+    --phoebe-coffee-dark: #67595E;
+    --phoebe-brown: #D48C70;
+    --phoebe-dark-brown: #5B4A43;
+}
+
+/* Primary Button Styles */
+.btn-primary,
+.btn {
+    background-color: var(--phoebe-primary) !important;
+    border-color: var(--phoebe-primary) !important;
+    color: var(--phoebe-dark-brown) !important;
+}
+
+.btn-primary:hover,
+.btn:hover {
+    background-color: var(--phoebe-coffee-dark) !important;
+    border-color: var(--phoebe-coffee-dark) !important;
+    color: #fff !important;
+}
+
+/* Links */
+a,
+.text-primary {
+    color: var(--phoebe-primary) !important;
+}
+
+a:hover {
+    color: var(--phoebe-coffee-dark) !important;
+}
+
+/* Form Controls */
+.form-control:focus {
+    border-color: var(--phoebe-primary) !important;
+    box-shadow: 0 0 0 0.2rem rgba(232, 180, 184, 0.25) !important;
+}
+
+/* Hero Section */
+.hero .btn-primary {
+    background-color: var(--phoebe-primary) !important;
+    color: var(--phoebe-dark-brown) !important;
+}
+
+/* Feature Boxes */
+.feature-box {
+    border-top-color: var(--phoebe-primary) !important;
+}
+
+/* Testimonials */
+.testimonial-item {
+    border-color: var(--phoebe-secondary) !important;
+}
+
+/* Schedule */
+.schedule-item h4 {
+    color: var(--phoebe-primary) !important;
+}
+
+/* FAQ */
+.faq-item.faq-active {
+    background-color: var(--phoebe-secondary) !important;
+}
+
+/* Contact Form */
+.contact-form .btn {
+    background-color: var(--phoebe-primary) !important;
+    color: var(--phoebe-dark-brown) !important;
+}
+
+/* Footer */
+.footer {
+    background-color: var(--phoebe-dark-brown) !important;
+}
+

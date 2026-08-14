@@ -3,6 +3,28 @@ const XLSX = require('xlsx');
 const Event = require('../model/Event'); // 確保引入 User 模型
 const FormConfig = require('../model/FormConfig');
 const formConfigController = require('./formConfigController');
+const { ensureUserNameField } = require('../utils/userDisplayName');
+
+/** Event.users.name 仍為 schema 必填；表單若改用 firstname/lastname 需自動組回 name */
+function applyImportDisplayName(userData, expectedFields) {
+    const formHasNameField = Array.isArray(expectedFields) && expectedFields.includes('name');
+    return ensureUserNameField(userData, { refreshFromParts: !formHasNameField });
+}
+
+function fillMissingUserNames(users) {
+    let filled = 0;
+    (users || []).forEach((user) => {
+        if (!user) return;
+        const current = user.name != null ? String(user.name).trim() : '';
+        if (current) return;
+        const obj = typeof user.toObject === 'function'
+            ? user.toObject({ minimize: false })
+            : { ...user };
+        user.name = ensureUserNameField(obj).name;
+        filled += 1;
+    });
+    return filled;
+}
 
 // 設置 multer 以處理文件上傳
 const storage = multer.memoryStorage();
@@ -230,8 +252,9 @@ exports.importUsers = async (req, res) => {
                         mergedUser.isCheckIn = parseBooleanCell(checkInRaw);
                     }
                     mergedUser.modified_at = now;
+                    const namedUser = applyImportDisplayName(mergedUser, expectedFields);
                     if (existingUserIndex >= 0) {
-                        event.users.set(existingUserIndex, mergedUser);
+                        event.users.set(existingUserIndex, namedUser);
                     }
                     updatedCount += 1;
                     hasAnyUserMutation = true;
@@ -272,12 +295,12 @@ exports.importUsers = async (req, res) => {
                     continue;
                 }
 
-                const newUser = {
+                const newUser = applyImportDisplayName({
                     ...mappedData,
                     isCheckIn: hasCheckInColumn ? parseBooleanCell(row[headerIndexMap.get('isCheckIn')]) : false,
                     create_at: now,
                     modified_at: now
-                };
+                }, expectedFields);
                 event.users.push(newUser);
                 createdCount += 1;
                 hasAnyUserMutation = true;
@@ -294,7 +317,9 @@ exports.importUsers = async (req, res) => {
         }
 
         // users 子文件包含 strict:false 的動態欄位；批量更新時顯式標記可避免「計數成功但未落庫」
-        if (hasAnyUserMutation) {
+        // schema 仍要求 name：舊資料或 firstname/lastname 匯入若缺 name，save 會整批失敗
+        const backfilledNameCount = fillMissingUserNames(event.users);
+        if (hasAnyUserMutation || backfilledNameCount > 0) {
             event.markModified('users');
         }
         await event.save(); // 保存事件
@@ -344,7 +369,10 @@ exports.importUsers = async (req, res) => {
         `);
     } catch (error) {
         console.error(error);
-        res.status(500).send('Error during import process!');
+        const detail = error && error.message ? String(error.message) : '';
+        res.status(500).send(detail
+            ? `Error during import process: ${detail}`
+            : 'Error during import process!');
     }
 };
 

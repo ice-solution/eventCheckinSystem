@@ -44,11 +44,18 @@ function resolveUserDisplayName(data = {}) {
 }
 
 /** 若無 name 欄，依其他姓名欄位補上（供 Transaction / event.users 使用） */
-function ensureUserNameField(data = {}) {
+function ensureUserNameField(data = {}, options = {}) {
     const out = { ...data };
+    const refreshFromParts = options.refreshFromParts === true;
+    if (refreshFromParts) {
+        const fromParts = resolveUserDisplayName({ ...out, name: '' });
+        if (fromParts) {
+            out.name = fromParts;
+            return out;
+        }
+    }
     if (!pickTruthyString(out.name)) {
-        const resolved = resolveUserDisplayName(out);
-        if (resolved) out.name = resolved;
+        out.name = resolveUserDisplayName(out) || '未提供姓名';
     }
     return out;
 }

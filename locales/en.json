@@ -766,6 +766,7 @@
     "cardTermsTitle": "Terms & Conditions (T&C)",
     "cardAgreementTitle": "Agreement",
     "cardThankYouTitle": "Thank You (success page)",
+    "cardApplicationCompletedTitle": "Exclusive Application Completed Page",
     "cardPaymentTicketTitle": "Payment Tickets (Register Page Text & Category Buttons)",
     "cardLanguageTitle": "Language Settings",
 
@@ -829,6 +830,11 @@
     "agreementHint": "Tip: The title at the top is shared by all Agreements. Use + to add more (each has its own checkbox and content, without a separate title). Click the link text to open the content dialog; content supports HTML. Agreement is optional.",
 
     "thankYouHint": "Success copy and email logic are mutually exclusive: with Yes/No off, use General copy + Email Settings auto-send; with Yes/No on, use only Yes/No copy and templates — no need to fill both.",
+    "applicationCompletedHint": "Shown when the exclusive application link is opened again after submit. Matching is by user ID in the URL, not email. Message supports HTML, e.g. <a href=\"https://example.com/\" target=\"_blank\">links</a>, <br>, bold text.",
+    "applicationCompletedTitleZh": "Title (ZH)",
+    "applicationCompletedTitleEn": "Title (EN)",
+    "applicationCompletedMessageZh": "Message (ZH)",
+    "applicationCompletedMessageEn": "Message (EN)",
     "thankYouFreeSection": "General registration success",
     "thankYouPurchaseSection": "Paid ticket purchase success",
     "thankYouTitleZhLabel": "Title (ZH)",
@@ -913,6 +919,7 @@
     "fieldType": "Field Type",
     "required": "Required",
     "display": "Display",
+    "displayHint": "When off, this field is hidden on the application form but still available in admin RSVP.",
     "placeholderZh": "Chinese Placeholder",
     "placeholderEn": "English Placeholder",
     "confirmEmailLabel": "Confirm email",

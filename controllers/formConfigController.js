@@ -311,6 +311,26 @@ function applyFormConfigMetaDefaults(migratedConfig) {
         }
     }
 
+    const defaultApplicationCompletedPage = {
+        title: { zh: '申請已完成', en: 'Application completed' },
+        message: {
+            zh: '您已完成申請，此連結不可再次修改。',
+            en: 'You have already completed this application. This link cannot be used to make further changes.'
+        }
+    };
+    if (!migratedConfig.applicationCompletedPage || typeof migratedConfig.applicationCompletedPage !== 'object') {
+        migratedConfig.applicationCompletedPage = JSON.parse(JSON.stringify(defaultApplicationCompletedPage));
+    } else {
+        ['title', 'message'].forEach((key) => {
+            if (!migratedConfig.applicationCompletedPage[key] || typeof migratedConfig.applicationCompletedPage[key] !== 'object') {
+                migratedConfig.applicationCompletedPage[key] = { ...defaultApplicationCompletedPage[key] };
+            } else {
+                migratedConfig.applicationCompletedPage[key].zh = migratedConfig.applicationCompletedPage[key].zh || defaultApplicationCompletedPage[key].zh;
+                migratedConfig.applicationCompletedPage[key].en = migratedConfig.applicationCompletedPage[key].en || defaultApplicationCompletedPage[key].en;
+            }
+        });
+    }
+
     migratedConfig.paymentTicketUi = normalizePaymentTicketUi(migratedConfig.paymentTicketUi);
     
     return migratedConfig;
@@ -370,6 +390,13 @@ exports.getDefaultFormConfig = () => ({
             noMessage: { zh: '', en: '' },
             noPurchaseTitle: { zh: '', en: '' },
             noPurchaseMessage: { zh: '', en: '' }
+        }
+    },
+    applicationCompletedPage: {
+        title: { zh: '申請已完成', en: 'Application completed' },
+        message: {
+            zh: '您已完成申請，此連結不可再次修改。',
+            en: 'You have already completed this application. This link cannot be used to make further changes.'
         }
     },
     paymentTicketUi: normalizePaymentTicketUi(),
@@ -628,7 +655,7 @@ exports.getFormConfig = async (req, res) => {
 exports.updateFormConfig = async (req, res) => {
     try {
         const { eventId } = req.params;
-        const { sections, defaultLanguage, languageSwitcherEnabled, registerPageEnabled, registerClosedMessage, registerSlug, terms, agreement, agreements, thankYou, eventDisplayName, registerSubHeader, registerSubtitle, paymentTicketUi } = req.body;
+        const { sections, defaultLanguage, languageSwitcherEnabled, registerPageEnabled, registerClosedMessage, registerSlug, terms, agreement, agreements, thankYou, applicationCompletedPage, eventDisplayName, registerSubHeader, registerSubtitle, paymentTicketUi } = req.body;
         
         // 驗證事件是否存在
         const event = await Event.findById(eventId);
@@ -690,6 +717,10 @@ exports.updateFormConfig = async (req, res) => {
                 const migrated = migrateFormConfig({ sections: formConfig.sections, thankYou });
                 formConfig.thankYou = migrated.thankYou;
             }
+            if (applicationCompletedPage && typeof applicationCompletedPage === 'object') {
+                const migrated = migrateFormConfig({ sections: formConfig.sections, applicationCompletedPage });
+                formConfig.applicationCompletedPage = migrated.applicationCompletedPage;
+            }
             if (paymentTicketUi && typeof paymentTicketUi === 'object') {
                 formConfig.paymentTicketUi = normalizePaymentTicketUi(paymentTicketUi);
             }
@@ -724,6 +755,9 @@ exports.updateFormConfig = async (req, res) => {
                 thankYou: thankYou && typeof thankYou === 'object'
                     ? migrateFormConfig({ sections: (sections || defaultConfig.sections), thankYou }).thankYou
                     : defaultConfig.thankYou,
+                applicationCompletedPage: applicationCompletedPage && typeof applicationCompletedPage === 'object'
+                    ? migrateFormConfig({ sections: (sections || defaultConfig.sections), applicationCompletedPage }).applicationCompletedPage
+                    : defaultConfig.applicationCompletedPage,
                 paymentTicketUi: paymentTicketUi && typeof paymentTicketUi === 'object'
                     ? normalizePaymentTicketUi(paymentTicketUi)
                     : defaultConfig.paymentTicketUi

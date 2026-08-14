@@ -23,11 +23,12 @@ const formFieldSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    // 是否在註冊頁等前台表單顯示供用戶填寫
+    // 是否在報名／申請頁顯示給用戶填寫；關閉後僅後台 RSVP 可登記
     display: {
         type: Boolean,
         default: true
     },
+    // 是否啟用此欄位（後台 RSVP、匯入、匯出等仍可使用）
     visible: { 
         type: Boolean, 
         default: true 
@@ -258,6 +259,17 @@ const formConfigSchema = new mongoose.Schema({
                 zh: { type: String, default: '' },
                 en: { type: String, default: '' }
             }
+        }
+    },
+    /** 專屬 Application 連結：已完成時顯示的標題／說明 */
+    applicationCompletedPage: {
+        title: {
+            zh: { type: String, default: '申請已完成' },
+            en: { type: String, default: 'Application completed' }
+        },
+        message: {
+            zh: { type: String, default: '您已完成申請，此連結不可再次修改。' },
+            en: { type: String, default: 'You have already completed this application. This link cannot be used to make further changes.' }
         }
     },
     // 付費票券區塊文案與分類按鈕（Register 頁）
