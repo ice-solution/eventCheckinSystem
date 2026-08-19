@@ -77,6 +77,7 @@ router.post('/create', eventsController.createEvent);
 router.get('/create', eventsController.renderCreateEventPage); // 創建事件
 router.get('/', eventsController.getUserEvents);
 router.get('/list', eventsController.renderEventsList);
+router.post('/export-checkin-list/fields', eventsController.getBatchReportFields);
 router.post('/export-checkin-list', eventsController.exportEventsCheckInList);
 router.post('/:eventId/copy', eventsController.copyEvent);
 

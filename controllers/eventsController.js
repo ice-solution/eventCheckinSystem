@@ -5312,22 +5312,10 @@ function sanitizeExcelSheetName(name, usedNames) {
 }
 
 /**
- * 建立單一 event 的報表欄位與列資料（與 users 頁 Download Report 相同格式）
+ * 與 users 頁 Download Report 相同的欄位定義（不含列資料）
  */
-async function buildEventCheckInReportData(event) {
-    const eventId = event._id;
-    const users = event.users || [];
-
-    const transactions = await Transaction.find({ eventId })
-        .sort({ updatedAt: -1 })
-        .lean();
-    const transactionsByEmail = buildTransactionsByEmail(transactions);
-
-    const FormConfig = require('../model/FormConfig');
-    const formConfig = await FormConfig.findOne({ eventId });
-
+function listEventReportColumns(formConfig) {
     const columnDefs = [{ header: '_id', key: '_id', width: 26 }];
-    const fieldKeys = ['_id'];
 
     if (formConfig && formConfig.sections && formConfig.sections.length > 0) {
         const lang = formConfig.defaultLanguage || 'zh';
@@ -5343,11 +5331,10 @@ async function buildEventCheckInReportData(event) {
                     key: field.fieldName,
                     width: Math.min(25, Math.max(10, (header && header.length) || 10)),
                 });
-                fieldKeys.push(field.fieldName);
             });
         });
     } else {
-        const defaults = [
+        [
             { header: 'Email', key: 'email', width: 25 },
             { header: 'Name', key: 'name', width: 20 },
             { header: 'Table', key: 'table', width: 10 },
@@ -5355,11 +5342,7 @@ async function buildEventCheckInReportData(event) {
             { header: 'Phone', key: 'phone', width: 15 },
             { header: 'Role', key: 'role', width: 10 },
             { header: 'Industry', key: 'industry', width: 15 },
-        ];
-        defaults.forEach((col) => {
-            columnDefs.push(col);
-            fieldKeys.push(col.key);
-        });
+        ].forEach((col) => columnDefs.push(col));
     }
 
     if (formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled) {
@@ -5372,25 +5355,61 @@ async function buildEventCheckInReportData(event) {
             key: 'thankYouYesNo',
             width: Math.min(30, Math.max(12, String(ynqHeader).length || 12)),
         });
-        fieldKeys.push('thankYouYesNo');
     }
 
-    const ticketColumns = [
+    [
         { header: 'Ticket Title (票券)', key: 'ticketTitle', width: 25 },
         { header: 'Ticket Price HKD (票價)', key: 'ticketPrice', width: 14 },
         { header: 'Transaction ID', key: 'transactionId', width: 26 },
         { header: 'Transaction Status (交易狀態)', key: 'transactionStatus', width: 16 },
         { header: 'Payment Gateway (付款閘道)', key: 'paymentGateway', width: 16 },
         { header: 'Transaction Date (交易日期)', key: 'transactionDate', width: 22 },
-    ];
-    ticketColumns.forEach((col) => {
-        columnDefs.push(col);
-        fieldKeys.push(col.key);
-    });
+        { header: 'CheckInAt', key: 'checkInAt', width: 15 },
+        { header: '已簽到', key: 'isCheckIn', width: 10 },
+    ].forEach((col) => columnDefs.push(col));
 
-    columnDefs.push({ header: 'CheckInAt', key: 'checkInAt', width: 15 });
-    columnDefs.push({ header: '已簽到', key: 'isCheckIn', width: 10 });
-    fieldKeys.push('checkInAt', 'isCheckIn');
+    return columnDefs;
+}
+
+function parseSelectedReportFields(raw) {
+    if (raw == null || raw === '') return null;
+    const arr = Array.isArray(raw) ? raw : String(raw).split(',');
+    const keys = arr.map((s) => String(s).trim()).filter(Boolean);
+    return keys.length ? keys : null;
+}
+
+/**
+ * 建立單一 event 的報表欄位與列資料（與 users 頁 Download Report 相同格式）
+ * options.selectedKeys: 只匯出這些欄位（順序跟清單）；未傳則全部
+ */
+async function buildEventCheckInReportData(event, options = {}) {
+    const eventId = event._id;
+    const users = event.users || [];
+
+    const transactions = await Transaction.find({ eventId })
+        .sort({ updatedAt: -1 })
+        .lean();
+    const transactionsByEmail = buildTransactionsByEmail(transactions);
+
+    const FormConfig = require('../model/FormConfig');
+    const formConfig = await FormConfig.findOne({ eventId });
+
+    let columnDefs = listEventReportColumns(formConfig);
+    const selectedKeys = options.selectedKeys;
+    if (Array.isArray(selectedKeys) && selectedKeys.length) {
+        const allow = new Set(selectedKeys);
+        const filtered = [];
+        selectedKeys.forEach((key) => {
+            const col = columnDefs.find((c) => c.key === key);
+            if (col && allow.has(key) && !filtered.some((f) => f.key === key)) {
+                filtered.push(col);
+            }
+        });
+        if (filtered.length) {
+            columnDefs = filtered;
+        }
+    }
+    const fieldKeys = columnDefs.map((c) => c.key);
 
     const checkInAtFormat = (date) => (date ? new Date(date).toLocaleString('en-US', {
         timeZone: 'Asia/Hong_Kong',
@@ -5456,7 +5475,8 @@ exports.outputReport = async (req, res) => {
         const event = await Event.findById(eventId);
         if (!event) return res.status(404).send('Event not found');
 
-        const reportData = await buildEventCheckInReportData(event);
+        const selectedKeys = parseSelectedReportFields(req.query.fields || (req.body && req.body.fields));
+        const reportData = await buildEventCheckInReportData(event, { selectedKeys });
         const workbook = new ExcelJS.Workbook();
         addEventReportWorksheet(workbook, 'Users', reportData);
 
@@ -5470,51 +5490,110 @@ exports.outputReport = async (req, res) => {
     }
 };
 
+const MAX_BATCH_REPORT_EVENTS = 6;
+
+async function resolveBatchReportEvents(req) {
+    if (!req.session || !req.session.user || !req.session.user._id) {
+        return { error: { status: 401, message: 'Unauthorized' } };
+    }
+
+    const rawIds = (req.body && req.body.eventIds) || [];
+    const eventIds = [...new Set((Array.isArray(rawIds) ? rawIds : [rawIds])
+        .map((id) => String(id || '').trim())
+        .filter((id) => mongoose.Types.ObjectId.isValid(id)))];
+
+    if (!eventIds.length) {
+        return { error: { status: 400, message: 'Please select at least one event' } };
+    }
+    if (eventIds.length > MAX_BATCH_REPORT_EVENTS) {
+        return { error: { status: 400, message: `You can select up to ${MAX_BATCH_REPORT_EVENTS} events at a time.` } };
+    }
+
+    const sessionUser = req.session.user;
+    const isAdmin = sessionUser.role === 'admin';
+    const allowed = (sessionUser.allowedEvents || []).map((id) => id && id.toString()).filter(Boolean);
+
+    if (!isAdmin) {
+        const forbidden = eventIds.filter((id) => !allowed.includes(id));
+        if (forbidden.length) {
+            return { error: { status: 403, message: 'No access to one or more selected events' } };
+        }
+    }
+
+    const events = await Event.find({ _id: { $in: eventIds } });
+    if (!events.length) {
+        return { error: { status: 404, message: 'No events found' } };
+    }
+
+    const byId = new Map(events.map((e) => [String(e._id), e]));
+    const ordered = eventIds.map((id) => byId.get(id)).filter(Boolean);
+    return { eventIds, ordered };
+}
+
+exports.getBatchReportFields = async (req, res) => {
+    try {
+        const resolved = await resolveBatchReportEvents(req);
+        if (resolved.error) {
+            return res.status(resolved.error.status).json({ message: resolved.error.message });
+        }
+
+        const FormConfig = require('../model/FormConfig');
+        const eventFields = [];
+
+        for (const event of resolved.ordered) {
+            const formConfig = await FormConfig.findOne({ eventId: event._id });
+            const seen = new Set();
+            const fields = [];
+            listEventReportColumns(formConfig).forEach((col) => {
+                if (!col || !col.key || seen.has(col.key)) return;
+                seen.add(col.key);
+                fields.push({
+                    key: col.key,
+                    label: col.header || col.key
+                });
+            });
+            eventFields.push({
+                eventId: String(event._id),
+                eventName: event.name || String(event._id),
+                fields
+            });
+        }
+
+        return res.json({
+            success: true,
+            events: eventFields,
+            maxEvents: MAX_BATCH_REPORT_EVENTS
+        });
+    } catch (err) {
+        console.error('Get batch report fields error:', err);
+        return res.status(500).json({ message: 'Failed to load report fields' });
+    }
+};
+
 /**
  * Event List：多選活動匯出 check-in list
- * Body: { eventIds: string[] }
+ * Body: { eventIds: string[], fields?: string[], fieldsByEvent?: { [eventId]: string[] } }
  * 一個 sheet = 一個 event，sheet name = event.name
  */
 exports.exportEventsCheckInList = async (req, res) => {
     try {
-        if (!req.session || !req.session.user || !req.session.user._id) {
-            return res.status(401).json({ message: 'Unauthorized' });
+        const resolved = await resolveBatchReportEvents(req);
+        if (resolved.error) {
+            return res.status(resolved.error.status).json({ message: resolved.error.message });
         }
 
-        const rawIds = (req.body && req.body.eventIds) || [];
-        const eventIds = (Array.isArray(rawIds) ? rawIds : [rawIds])
-            .map((id) => String(id || '').trim())
-            .filter((id) => mongoose.Types.ObjectId.isValid(id));
-
-        if (!eventIds.length) {
-            return res.status(400).json({ message: 'Please select at least one event' });
-        }
-
-        const sessionUser = req.session.user;
-        const isAdmin = sessionUser.role === 'admin';
-        const allowed = (sessionUser.allowedEvents || []).map((id) => id && id.toString()).filter(Boolean);
-
-        if (!isAdmin) {
-            const forbidden = eventIds.filter((id) => !allowed.includes(id));
-            if (forbidden.length) {
-                return res.status(403).json({ message: 'No access to one or more selected events' });
-            }
-        }
-
-        const events = await Event.find({ _id: { $in: eventIds } });
-        if (!events.length) {
-            return res.status(404).json({ message: 'No events found' });
-        }
-
-        // 依請求順序輸出 sheet
-        const byId = new Map(events.map((e) => [String(e._id), e]));
-        const ordered = eventIds.map((id) => byId.get(id)).filter(Boolean);
-
+        const globalKeys = parseSelectedReportFields(req.body && req.body.fields);
+        const fieldsByEvent = (req.body && req.body.fieldsByEvent && typeof req.body.fieldsByEvent === 'object')
+            ? req.body.fieldsByEvent
+            : {};
         const workbook = new ExcelJS.Workbook();
         const usedSheetNames = new Set();
 
-        for (const event of ordered) {
-            const reportData = await buildEventCheckInReportData(event);
+        for (const event of resolved.ordered) {
+            const id = String(event._id);
+            const perEventKeys = parseSelectedReportFields(fieldsByEvent[id]);
+            const selectedKeys = perEventKeys || globalKeys;
+            const reportData = await buildEventCheckInReportData(event, { selectedKeys });
             const sheetName = sanitizeExcelSheetName(event.name, usedSheetNames);
             addEventReportWorksheet(workbook, sheetName, reportData);
         }

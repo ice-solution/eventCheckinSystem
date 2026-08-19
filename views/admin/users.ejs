@@ -181,9 +181,20 @@
             z-index: 10600 !important;
             position: fixed !important;
         }
+        #downloadReportModal {
+            z-index: 200000 !important;
+            position: fixed !important;
+            pointer-events: auto !important;
+        }
         #batchSendEmailModal .modal-dialog,
         #batchSendSmsModal .modal-dialog {
             z-index: 10601 !important;
+        }
+        #downloadReportModal .modal-dialog {
+            z-index: 200001 !important;
+        }
+        #downloadReportBackdrop {
+            z-index: 199990 !important;
         }
         body.modal-open .modal-backdrop {
             z-index: 10550 !important;
@@ -211,7 +222,8 @@
             opacity: 1 !important;
         }
         #batchSendEmailModal.show,
-        #batchSendSmsModal.show {
+        #batchSendSmsModal.show,
+        #downloadReportModal.show {
             display: block !important;
             opacity: 1 !important;
         }
@@ -810,9 +822,9 @@
                                 <a href="/events/<%= event._id%>/import" class="btn btn-success">
                                     <i class="fa fa-upload"></i> <%= t('users.importBtn') %>
                                 </a>
-                                <a href="/events/<%= event._id %>/report" class="btn btn-info">
+                                <button type="button" id="downloadReportBtn" class="btn btn-info">
                                     <i class="fa fa-download"></i> <%= t('users.reportBtn') %>
-                                </a>
+                                </button>
                                 <%# HIDDEN: Scan QR Code — reserved for future use %>
                                 <% if (false) { %>
                                 <a href="/events/<%= event._id%>/scan" class="btn btn-secondary">
@@ -858,6 +870,120 @@
                                             <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('common.cancel') %></button>
                                             <button type="button" class="btn btn-primary" id="confirmBatchSendEmail">
                                                 <i class="fa fa-paper-plane"></i> <%= t('users.confirmSend') %>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Download Report: choose fields -->
+                            <div class="modal" id="downloadReportModal" tabindex="-1" role="dialog" aria-labelledby="downloadReportModalLabel" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="downloadReportModalLabel"><%= t('users.reportModalTitle') %></h5>
+                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p class="text-muted small mb-2"><%= t('users.reportModalHint') %></p>
+                                            <div class="mb-2">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" id="reportSelectAllBtn"><%= t('users.reportSelectAll') %></button>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" id="reportDeselectAllBtn"><%= t('users.reportDeselectAll') %></button>
+                                            </div>
+                                            <div id="reportFieldsList" style="max-height: 420px; overflow-y: auto; border: 1px solid #e9ecef; border-radius: 6px; padding: 10px 12px;">
+                                                <%
+                                                const _reportLang = (typeof lang !== 'undefined' && lang) ? lang : ((formConfig && formConfig.defaultLanguage) ? formConfig.defaultLanguage : 'zh');
+                                                function _reportFieldLabel(field) {
+                                                    if (!field) return '';
+                                                    if (typeof field.label === 'string') return field.label;
+                                                    if (field.label && field.label[_reportLang]) return field.label[_reportLang];
+                                                    if (field.label && field.label.zh) return field.label.zh;
+                                                    if (field.label && field.label.en) return field.label.en;
+                                                    return field.fieldName || '';
+                                                }
+                                                %>
+                                                <label class="d-block mb-1" style="cursor:pointer;">
+                                                    <input type="checkbox" class="report-field-cb" value="_id" checked>
+                                                    <%= t('users.reportFieldId') %> <small class="text-muted">(_id)</small>
+                                                </label>
+                                                <% if (formConfig && formConfig.sections) { %>
+                                                    <% const _repSections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                                                    <% _repSections.forEach(section => { %>
+                                                        <% if (section.visible && section.fields) { %>
+                                                            <% const _repFields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
+                                                            <% _repFields.forEach(field => { %>
+                                                                <% if (field.visible && field.type !== 'display' && field.fieldName) { %>
+                                                                <label class="d-block mb-1" style="cursor:pointer;">
+                                                                    <input type="checkbox" class="report-field-cb" value="<%= field.fieldName %>" checked>
+                                                                    <%= _reportFieldLabel(field) %> <small class="text-muted">(<%= field.fieldName %>)</small>
+                                                                </label>
+                                                                <% } %>
+                                                            <% }); %>
+                                                        <% } %>
+                                                    <% }); %>
+                                                <% } else { %>
+                                                    <% ['email','name','table','company','phone','role','industry'].forEach(function(k) { %>
+                                                    <label class="d-block mb-1" style="cursor:pointer;">
+                                                        <input type="checkbox" class="report-field-cb" value="<%= k %>" checked>
+                                                        <%= k %>
+                                                    </label>
+                                                    <% }); %>
+                                                <% } %>
+                                                <% if (formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled) { %>
+                                                    <%
+                                                        const _ynq = formConfig.thankYou.yesNoQuestion;
+                                                        let _ynqLabel = t('users.colThankYouYesNo');
+                                                        if (_ynq.question) {
+                                                            const q = (_ynq.question[_reportLang] || _ynq.question.zh || _ynq.question.en || '').trim();
+                                                            if (q) _ynqLabel = q;
+                                                        }
+                                                    %>
+                                                    <label class="d-block mb-1" style="cursor:pointer;">
+                                                        <input type="checkbox" class="report-field-cb" value="thankYouYesNo" checked>
+                                                        <%= _ynqLabel %> <small class="text-muted">(thankYouYesNo)</small>
+                                                    </label>
+                                                <% } %>
+                                                <hr class="my-2">
+                                                <label class="d-block mb-1" style="cursor:pointer;">
+                                                    <input type="checkbox" class="report-field-cb" value="ticketTitle" checked>
+                                                    <%= t('users.reportFieldTicketTitle') %> <small class="text-muted">(ticketTitle)</small>
+                                                </label>
+                                                <label class="d-block mb-1" style="cursor:pointer;">
+                                                    <input type="checkbox" class="report-field-cb" value="ticketPrice" checked>
+                                                    <%= t('users.reportFieldTicketPrice') %> <small class="text-muted">(ticketPrice)</small>
+                                                </label>
+                                                <label class="d-block mb-1" style="cursor:pointer;">
+                                                    <input type="checkbox" class="report-field-cb" value="transactionId" checked>
+                                                    <%= t('users.reportFieldTransactionId') %> <small class="text-muted">(transactionId)</small>
+                                                </label>
+                                                <label class="d-block mb-1" style="cursor:pointer;">
+                                                    <input type="checkbox" class="report-field-cb" value="transactionStatus" checked>
+                                                    <%= t('users.reportFieldTransactionStatus') %> <small class="text-muted">(transactionStatus)</small>
+                                                </label>
+                                                <label class="d-block mb-1" style="cursor:pointer;">
+                                                    <input type="checkbox" class="report-field-cb" value="paymentGateway" checked>
+                                                    <%= t('users.reportFieldPaymentGateway') %> <small class="text-muted">(paymentGateway)</small>
+                                                </label>
+                                                <label class="d-block mb-1" style="cursor:pointer;">
+                                                    <input type="checkbox" class="report-field-cb" value="transactionDate" checked>
+                                                    <%= t('users.reportFieldTransactionDate') %> <small class="text-muted">(transactionDate)</small>
+                                                </label>
+                                                <label class="d-block mb-1" style="cursor:pointer;">
+                                                    <input type="checkbox" class="report-field-cb" value="checkInAt" checked>
+                                                    <%= t('users.reportFieldCheckInAt') %> <small class="text-muted">(checkInAt)</small>
+                                                </label>
+                                                <label class="d-block mb-1" style="cursor:pointer;">
+                                                    <input type="checkbox" class="report-field-cb" value="isCheckIn" checked>
+                                                    <%= t('users.colCheckedIn') %> <small class="text-muted">(isCheckIn)</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('common.cancel') %></button>
+                                            <button type="button" class="btn btn-info" id="confirmDownloadReport">
+                                                <i class="fa fa-download"></i> <%= t('users.reportDownload') %>
                                             </button>
                                         </div>
                                     </div>
@@ -1625,6 +1751,8 @@ const _US = {
     batchDeleteSelected: '<%= t("users.batchDeleteSelected") %>',
     batchSendEmailSelected: '<%= t("users.batchSendEmailSelected") %>',
     batchSendSmsSelected: '<%= t("users.batchSendSmsSelected") %>',
+    reportBtn: '<%= t("users.reportBtn") %>',
+    reportNoFields: '<%= t("users.reportNoFields") %>',
     processing: '<%= t("users.processing") %>',
     errorNoFieldName: '<%= t("users.errorNoFieldName") %>',
     errorNoUserId: '<%= t("users.errorNoUserId") %>',
@@ -1700,7 +1828,70 @@ const _US = {
 
     $(document).ready(function() {
         // 將 modal 移到 body 最外層，避免被父元素 overflow 或 stacking context 遮擋
-        $('#batchSendEmailModal, #batchSendSmsModal, #resendEmailModal, #batchSendSmsResultsModal, #batchSendEmailResultsModal').appendTo('body');
+        $('#batchSendEmailModal, #batchSendSmsModal, #resendEmailModal, #batchSendSmsResultsModal, #batchSendEmailResultsModal, #downloadReportModal').appendTo('body');
+
+        function hidePageLoadingOverlay() {
+            var overlay = document.getElementById('page-loading-overlay');
+            if (!overlay) return;
+            overlay.classList.add('page-loaded');
+            overlay.style.display = 'none';
+            overlay.style.pointerEvents = 'none';
+        }
+
+        function showDownloadReportModal() {
+            hidePageLoadingOverlay();
+            const $modal = $('#downloadReportModal').appendTo('body');
+            $('.modal-backdrop').remove();
+            $('<div class="modal-backdrop show" id="downloadReportBackdrop"></div>')
+                .css({ zIndex: 199990, opacity: 0.5, display: 'block' })
+                .appendTo('body');
+            $modal.addClass('show').css({
+                display: 'block',
+                opacity: 1,
+                zIndex: 200000,
+                pointerEvents: 'auto'
+            }).attr('aria-hidden', 'false');
+            $('body').addClass('modal-open');
+        }
+
+        function hideDownloadReportModal() {
+            $('#downloadReportModal').removeClass('show').css('display', 'none').attr('aria-hidden', 'true');
+            $('#downloadReportBackdrop, .modal-backdrop').remove();
+            $('body').removeClass('modal-open').css({ 'padding-right': '', overflow: '' });
+        }
+
+        $(document).off('click.downloadReport').on('click.downloadReport', '#downloadReportBtn', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            showDownloadReportModal();
+        });
+
+        $(document).off('click.reportSelectAll').on('click.reportSelectAll', '#reportSelectAllBtn', function() {
+            $('#reportFieldsList .report-field-cb').prop('checked', true);
+        });
+        $(document).off('click.reportDeselectAll').on('click.reportDeselectAll', '#reportDeselectAllBtn', function() {
+            $('#reportFieldsList .report-field-cb').prop('checked', false);
+        });
+
+        $(document).off('click.confirmDownloadReport').on('click.confirmDownloadReport', '#confirmDownloadReport', function() {
+            const fields = [];
+            $('#reportFieldsList .report-field-cb:checked').each(function() {
+                const v = ($(this).val() || '').trim();
+                if (v) fields.push(v);
+            });
+            if (!fields.length) {
+                showAlert('warning', _US.reportNoFields);
+                return;
+            }
+            hideDownloadReportModal();
+            const params = new URLSearchParams();
+            params.set('fields', fields.join(','));
+            window.location.href = '/events/<%= event._id %>/report?' + params.toString();
+        });
+
+        $(document).off('click.downloadReportClose').on('click.downloadReportClose', '#downloadReportModal [data-dismiss="modal"], #downloadReportBackdrop', function() {
+            hideDownloadReportModal();
+        });
         
         // Check if DataTables is loaded
         if (typeof $.fn.DataTable === 'undefined') {
@@ -3421,6 +3612,7 @@ const _US = {
     if (!row) return;
     let drag = { active: false, x: 0, scroll: 0, moved: false };
     row.addEventListener('mousedown', function (e) {
+        if (e.target && e.target.closest('a, button, input, select, textarea, label')) return;
         drag = { active: true, x: e.clientX, scroll: row.scrollLeft, moved: false };
         row.classList.add('is-dragging');
     });
