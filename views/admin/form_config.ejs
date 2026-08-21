@@ -147,6 +147,9 @@
                                         <a class="btn btn-sm btn-outline-info" href="/formConfig/<%= event._id %>/custom-form/sample">
                                             <i class="fas fa-download"></i> <%= t('form_config.customFormDownloadSample') %>
                                         </a>
+                                        <a class="btn btn-sm btn-outline-info" href="/formConfig/<%= event._id %>/custom-form/fields-json">
+                                            <i class="fas fa-download"></i> <%= t('form_config.customFormDownloadFieldsJson') %>
+                                        </a>
                                         <label class="btn btn-sm btn-outline-secondary mb-0" for="customFormHtmlFile">
                                             <i class="fas fa-upload"></i> <%= t('form_config.customFormImportHtml') %>
                                         </label>
@@ -158,6 +161,26 @@
                                                   style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px;"
                                                   placeholder="<%= t('form_config.customFormHtmlPlaceholder') %>"><%= formConfig.customFormHtml || '' %></textarea>
                                         <small class="text-muted d-block mt-1"><%= t('form_config.customFormHtmlHint') %></small>
+                                    </div>
+                                    <hr>
+                                    <h6 class="mb-2"><%= t('form_config.syncFieldsTitle') %></h6>
+                                    <p class="text-muted small mb-2"><%= t('form_config.syncFieldsHint') %></p>
+                                    <div class="mb-2">
+                                        <label class="form-label" for="syncFieldsSampleJson"><%= t('form_config.syncFieldsSampleLabel') %></label>
+                                        <textarea class="form-control" id="syncFieldsSampleJson" rows="10"
+                                                  style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px;"
+                                                  placeholder='{"firstName":"A","lastName":"B","name":"A B","email":"...","attendees":{"sponsorTier":"Platinum","list":[]}}'></textarea>
+                                    </div>
+                                    <div class="d-flex flex-wrap" style="gap:8px;">
+                                        <button type="button" class="btn btn-sm btn-warning" id="syncFieldsReplaceBtn">
+                                            <i class="fas fa-sync"></i> <%= t('form_config.syncFieldsReplace') %>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="syncFieldsMergeBtn">
+                                            <i class="fas fa-plus"></i> <%= t('form_config.syncFieldsMerge') %>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-info" id="syncFieldsFillSampleBtn">
+                                            <%= t('form_config.syncFieldsFillSample') %>
+                                        </button>
                                     </div>
                                 </div>
                                 </div>
@@ -2600,6 +2623,85 @@
             e.target.value = '';
         };
         reader.readAsText(file);
+    });
+
+    const SPONSORSHIP_SAMPLE_USER = {
+        firstName: 'Tai',
+        lastName: 'Chan',
+        name: 'Tai Chan',
+        email: 'tai.chan@example.com',
+        phone_code: '+852',
+        phone: '91234567',
+        company: 'Example Co',
+        jobTitle: 'Director',
+        companyLogo: '/uploads/custom-form/EVENT_ID/logo.jpg',
+        companyLogoFileName: 'logo.jpg',
+        attendees: {
+            sponsorTier: 'Platinum',
+            list: [
+                { firstName: 'May', lastName: 'Lee', email: 'may@example.com', title: 'Manager' }
+            ]
+        }
+    };
+
+    document.getElementById('syncFieldsFillSampleBtn')?.addEventListener('click', async function() {
+        const ta = document.getElementById('syncFieldsSampleJson');
+        if (!ta) return;
+        try {
+            const res = await fetch('/formConfig/' + eventId + '/custom-form/fields-json');
+            if (!res.ok) throw new Error('Failed to load fields JSON');
+            const data = await res.json();
+            ta.value = JSON.stringify((data && data.sampleUser) ? data.sampleUser : data, null, 2);
+        } catch (err) {
+            ta.value = JSON.stringify(SPONSORSHIP_SAMPLE_USER, null, 2);
+        }
+    });
+
+    async function syncFieldsFromSample(mode) {
+        const ta = document.getElementById('syncFieldsSampleJson');
+        const raw = (ta && ta.value || '').trim();
+        if (!raw) {
+            alert(<%- JSON.stringify(t('form_config.syncFieldsNeedJson')) %>);
+            return;
+        }
+        let sampleUser;
+        try {
+            sampleUser = JSON.parse(raw);
+        } catch (err) {
+            alert(<%- JSON.stringify(t('form_config.syncFieldsNeedJson')) %> + '\n' + err.message);
+            return;
+        }
+        if (!sampleUser || typeof sampleUser !== 'object' || Array.isArray(sampleUser)) {
+            alert(<%- JSON.stringify(t('form_config.syncFieldsNeedJson')) %>);
+            return;
+        }
+        if (mode === 'replace') {
+            if (!confirm(<%- JSON.stringify(t('form_config.syncFieldsReplaceConfirm')) %>)) return;
+        }
+        try {
+            // 先儲存 custom HTML 等 meta，避免同步後 reload 唔見未 save 內容
+            await saveConfig();
+            const response = await fetch('/formConfig/' + eventId + '/sync-fields-from-sample', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sampleUser: sampleUser, mode: mode })
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+                throw new Error((result && result.message) || 'Sync failed');
+            }
+            alert((result.message || <%- JSON.stringify(t('form_config.syncFieldsOk')) %>) + '\n' + (result.fieldNames || []).join(', '));
+            window.location.reload();
+        } catch (err) {
+            alert(err.message || 'Sync failed');
+        }
+    }
+
+    document.getElementById('syncFieldsReplaceBtn')?.addEventListener('click', function() {
+        syncFieldsFromSample('replace');
+    });
+    document.getElementById('syncFieldsMergeBtn')?.addEventListener('click', function() {
+        syncFieldsFromSample('merge');
     });
 </script>
 

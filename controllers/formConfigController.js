@@ -854,6 +854,63 @@ exports.resetToDefault = async (req, res) => {
     }
 };
 
+/**
+ * 用 sample user document 更新 FormConfig.sections fields
+ * Body: { sampleUser: object, mode?: 'replace' | 'merge' }
+ * replace = 用新欄位列表取代全部 sections
+ * merge = 只加入尚未存在嘅 fieldName
+ */
+exports.syncFieldsFromUserSample = async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        const sampleUser = req.body && req.body.sampleUser;
+        const mode = (req.body && req.body.mode) === 'merge' ? 'merge' : 'replace';
+
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ success: false, message: '找不到該事件' });
+        }
+
+        const {
+            buildFieldsFromUserSample,
+            applyFieldsToSections
+        } = require('../utils/syncFormFieldsFromUserSample');
+
+        const built = buildFieldsFromUserSample(sampleUser);
+        if (!built.ok) {
+            return res.status(400).json({ success: false, message: built.message });
+        }
+
+        let formConfig = await FormConfig.findOne({ eventId });
+        if (!formConfig) {
+            formConfig = new FormConfig({
+                eventId,
+                ...getDefaultFormConfig()
+            });
+        }
+
+        formConfig.sections = applyFieldsToSections(formConfig.sections, built.fields, mode);
+        await formConfig.save();
+
+        const saved = await FormConfig.findOne({ eventId });
+        return res.json({
+            success: true,
+            message: mode === 'merge'
+                ? `已合併 ${built.fields.length} 個欄位定義（只新增缺少嘅）`
+                : `已用 sample 取代 FormConfig 欄位（${built.fields.length} 個）`,
+            mode,
+            fieldNames: built.fields.map((f) => f.fieldName),
+            formConfig: exports.getFormConfigForRender(saved)
+        });
+    } catch (error) {
+        console.error('syncFieldsFromUserSample error:', error);
+        return res.status(500).json({
+            success: false,
+            message: '同步欄位失敗'
+        });
+    }
+};
+
 // 渲染表單配置管理頁面
 exports.renderFormConfigPage = async (req, res) => {
     try {
@@ -905,6 +962,7 @@ module.exports = {
     updateFormConfig: exports.updateFormConfig,
     renderFormConfigPage: exports.renderFormConfigPage,
     resetToDefault: exports.resetToDefault,
+    syncFieldsFromUserSample: exports.syncFieldsFromUserSample,
     getDefaultFormConfig: exports.getDefaultFormConfig,
     getFormConfigForRender: exports.getFormConfigForRender,
     migrateFormConfig

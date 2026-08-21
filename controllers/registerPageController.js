@@ -90,7 +90,13 @@ function injectCustomFormRuntime(html, eventId) {
         .replace(/\{\{submitUrl\}\}/g, submitUrl)
         .replace(/\{\{successUrl\}\}/g, successUrl);
 
-    const runtime = `<script>
+    const runtime = `<style id="custom-form-base-font">
+html,body,input,select,textarea,button,label,h1,h2,h3,h4,h5,h6,p,span,a,div{
+  font-family:Arial,Helvetica,sans-serif!important;
+}
+body{font-weight:400;}
+</style>
+<script>
 window.CUSTOM_FORM_EVENT_ID=${JSON.stringify(String(eventId))};
 window.CUSTOM_FORM_SUBMIT_URL=${JSON.stringify(submitUrl)};
 window.CUSTOM_FORM_SUCCESS_URL=${JSON.stringify(successUrl)};

@@ -4,9 +4,6 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sponsorship Registration</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #0f1419;
@@ -20,14 +17,15 @@
       --danger: #e86a6a;
       --ok: #6bcf9a;
       --radius: 10px;
-      --font: "DM Sans", system-ui, sans-serif;
-      --display: "Instrument Serif", Georgia, serif;
+      --font: Arial, Helvetica, sans-serif;
+      --display: Arial, Helvetica, sans-serif;
     }
 
     * { box-sizing: border-box; }
     html, body { margin: 0; min-height: 100%; }
     body {
       font-family: var(--font);
+      font-weight: 400;
       color: var(--text);
       background:
         radial-gradient(1200px 600px at 10% -10%, rgba(201, 164, 106, 0.18), transparent 55%),
@@ -106,6 +104,13 @@
     }
     .field { margin-bottom: 4px; }
 
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="file"],
+    select, button, label {
+      font-family: Arial, Helvetica, sans-serif;
+    }
     input[type="text"],
     input[type="email"],
     input[type="tel"],
