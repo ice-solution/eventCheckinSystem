@@ -124,6 +124,45 @@
                                 </div>
                             </div>
 
+                            <!-- Custom HTML Form（獨立報名頁） -->
+                            <div class="card mb-3">
+                                <div class="card-header collapsible-card-header" data-toggle="collapse" data-target="#collapseCustomForm" aria-expanded="false">
+                                    <i class="fa fa-plus-circle collapse-icon mr-2 text-primary"></i><h6 class="d-inline mb-0"><%= t('form_config.cardCustomFormTitle') %></h6>
+                                </div>
+                                <div id="collapseCustomForm" class="collapse">
+                                <div class="card-body">
+                                    <p class="text-muted small mb-3"><%= t('form_config.customFormHint') %></p>
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="customFormEnabled"
+                                               <%= formConfig.customFormEnabled === true ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="customFormEnabled">
+                                            <%= t('form_config.customFormEnabledLabel') %>
+                                        </label>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong><%= t('form_config.customFormPublicUrl') %>:</strong>
+                                        <a href="/web/<%= event._id %>/custom-form" target="_blank" rel="noopener">/web/<%= event._id %>/custom-form</a>
+                                    </div>
+                                    <div class="mb-2 d-flex flex-wrap" style="gap:8px;">
+                                        <a class="btn btn-sm btn-outline-info" href="/formConfig/<%= event._id %>/custom-form/sample">
+                                            <i class="fas fa-download"></i> <%= t('form_config.customFormDownloadSample') %>
+                                        </a>
+                                        <label class="btn btn-sm btn-outline-secondary mb-0" for="customFormHtmlFile">
+                                            <i class="fas fa-upload"></i> <%= t('form_config.customFormImportHtml') %>
+                                        </label>
+                                        <input type="file" id="customFormHtmlFile" accept=".html,.htm,text/html" class="d-none">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label" for="customFormHtml"><%= t('form_config.customFormHtmlLabel') %></label>
+                                        <textarea class="form-control" id="customFormHtml" rows="16"
+                                                  style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px;"
+                                                  placeholder="<%= t('form_config.customFormHtmlPlaceholder') %>"><%= formConfig.customFormHtml || '' %></textarea>
+                                        <small class="text-muted d-block mt-1"><%= t('form_config.customFormHtmlHint') %></small>
+                                    </div>
+                                </div>
+                                </div>
+                            </div>
+
                             <!-- Event Banner Management（搬到 FormConfig） -->
                             <div class="card mb-3">
                                 <div class="card-header collapsible-card-header" data-toggle="collapse" data-target="#collapseBanner" aria-expanded="false">
@@ -1753,6 +1792,8 @@
             registerPageEnabled: checked('registerPageEnabled', true),
             registerClosedMessage: val('registerClosedMessage', ''),
             registerSlug: trimVal('registerSlug', '').toLowerCase().replace(/\s+/g, '-'),
+            customFormEnabled: checked('customFormEnabled', false),
+            customFormHtml: val('customFormHtml', ''),
             eventDisplayName: {
                 zh: trimVal('eventDisplayNameZh', ''),
                 en: trimVal('eventDisplayNameEn', '')
@@ -1891,6 +1932,8 @@
             registerPageEnabled: meta.registerPageEnabled,
             registerClosedMessage: meta.registerClosedMessage,
             registerSlug: meta.registerSlug,
+            customFormEnabled: meta.customFormEnabled,
+            customFormHtml: meta.customFormHtml,
             eventDisplayName: meta.eventDisplayName,
             registerSubHeader: meta.registerSubHeader,
             registerSubtitle: meta.registerSubtitle,
@@ -1949,6 +1992,8 @@
                     registerPageEnabled: meta.registerPageEnabled,
                     registerClosedMessage: meta.registerClosedMessage,
                     registerSlug: meta.registerSlug,
+                    customFormEnabled: meta.customFormEnabled,
+                    customFormHtml: meta.customFormHtml,
                     eventDisplayName: meta.eventDisplayName,
                     registerSubHeader: meta.registerSubHeader,
                     registerSubtitle: meta.registerSubtitle,
@@ -2072,6 +2117,12 @@
                     }
                     if (typeof importedData.registerSlug === 'string') {
                         formConfig.registerSlug = importedData.registerSlug;
+                    }
+                    if (typeof importedData.customFormEnabled === 'boolean') {
+                        formConfig.customFormEnabled = importedData.customFormEnabled;
+                    }
+                    if (typeof importedData.customFormHtml === 'string') {
+                        formConfig.customFormHtml = importedData.customFormHtml;
                     }
                     formConfig.terms = importedData.terms || formConfig.terms || {
                         enabled: false,
@@ -2203,6 +2254,8 @@
         if (typeof data.registerClosedMessage === 'string') setInputValue('registerClosedMessage', data.registerClosedMessage);
         if (typeof data.registerSlug === 'string') setInputValue('registerSlug', data.registerSlug);
         updateRegisterSlugPreview();
+        if (typeof data.customFormEnabled === 'boolean') setInputValue('customFormEnabled', data.customFormEnabled);
+        if (typeof data.customFormHtml === 'string') setInputValue('customFormHtml', data.customFormHtml);
         const edn = data.eventDisplayName || {};
         setInputValue('eventDisplayNameZh', edn.zh || '');
         setInputValue('eventDisplayNameEn', edn.en || '');
@@ -2521,6 +2574,33 @@
         updateRegisterSlugPreview();
     });
     updateRegisterSlugPreview();
+
+    document.getElementById('customFormHtmlFile')?.addEventListener('change', function(e) {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            const html = (ev.target && ev.target.result != null) ? String(ev.target.result) : '';
+            if (!html.trim()) {
+                alert('Empty file');
+                e.target.value = '';
+                return;
+            }
+            if (!confirm(<%- JSON.stringify(t('form_config.customFormImportConfirm')) %>)) {
+                e.target.value = '';
+                return;
+            }
+            const ta = document.getElementById('customFormHtml');
+            if (ta) ta.value = html;
+            alert(<%- JSON.stringify(t('form_config.customFormImportOk')) %>);
+            e.target.value = '';
+        };
+        reader.onerror = function() {
+            alert('Failed to read file');
+            e.target.value = '';
+        };
+        reader.readAsText(file);
+    });
 </script>
 
 <%- include ("components/footer") %>

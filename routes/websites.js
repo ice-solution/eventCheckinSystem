@@ -71,6 +71,10 @@ router.get('/:event_id/users/:userId', requireWebApiKey, async (req, res) => {
 
 // 路由到 event_website/register.ejs
 router.get('/:event_id/register', registerPageController.renderRegisterPageByEventId);
+
+// Custom HTML 報名頁（獨立於 FormConfig 動態表單）
+router.get('/:event_id/custom-form', registerPageController.renderCustomFormPage);
+router.post('/:event_id/custom-form', eventsController.publicCustomFormRegister);
 // 路由到註冊成功頁面（session_id 可為 Stripe session_id、Wonder order_id 或 Transaction _id）
 router.get('/:event_id/register/success', async (req, res) => {
     const { event_id } = req.params;

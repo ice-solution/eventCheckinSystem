@@ -78,3 +78,86 @@ exports.renderRegisterPageBySlug = async (req, res, next) => {
         res.status(500).send('Server error');
     }
 };
+
+/**
+ * 將 custom HTML 注入 eventId／submit helper（支援 {{eventId}} {{submitUrl}} {{successUrl}}）
+ */
+function injectCustomFormRuntime(html, eventId) {
+    const submitUrl = `/web/${eventId}/custom-form`;
+    const successUrl = `/web/${eventId}/register/success`;
+    let out = String(html || '')
+        .replace(/\{\{eventId\}\}/g, String(eventId))
+        .replace(/\{\{submitUrl\}\}/g, submitUrl)
+        .replace(/\{\{successUrl\}\}/g, successUrl);
+
+    const runtime = `<script>
+window.CUSTOM_FORM_EVENT_ID=${JSON.stringify(String(eventId))};
+window.CUSTOM_FORM_SUBMIT_URL=${JSON.stringify(submitUrl)};
+window.CUSTOM_FORM_SUCCESS_URL=${JSON.stringify(successUrl)};
+window.submitCustomForm=async function(data){
+  var res=await fetch(window.CUSTOM_FORM_SUBMIT_URL,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(data||{}),
+    credentials:'same-origin'
+  });
+  var body=await res.json().catch(function(){ return {}; });
+  if(!res.ok){
+    var err=new Error((body&&body.message)||('Submit failed ('+res.status+')'));
+    err.status=res.status;
+    err.body=body;
+    throw err;
+  }
+  return body;
+};
+</script>`;
+
+    if (/<\/body>/i.test(out)) {
+        return out.replace(/<\/body>/i, runtime + '</body>');
+    }
+    return out + runtime;
+}
+
+/**
+ * GET /web/:event_id/custom-form — 獨立 Custom HTML 報名頁
+ */
+exports.renderCustomFormPage = async (req, res) => {
+    try {
+        const eventId = req.params.event_id;
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).send('Event not found');
+        }
+
+        const formConfig = await FormConfig.findOne({ eventId });
+        if (!formConfig || formConfig.customFormEnabled !== true) {
+            return res.status(404).send('Custom form is not enabled for this event.');
+        }
+
+        const html = (formConfig.customFormHtml || '').trim();
+        if (!html) {
+            return res.status(404).send('Custom form HTML is empty.');
+        }
+
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        return res.send(injectCustomFormRuntime(html, eventId));
+    } catch (err) {
+        console.error('renderCustomFormPage error:', err);
+        return res.status(500).send('Server error');
+    }
+};
+
+/** 下載用 sample HTML（後台）— 優先用 sponsorship form 檔 */
+exports.getCustomFormSampleHtml = () => {
+    const fs = require('fs');
+    const path = require('path');
+    const filePath = path.join(__dirname, '..', 'template', 'sponsorship-custom-form.html');
+    try {
+        if (fs.existsSync(filePath)) {
+            return fs.readFileSync(filePath, 'utf8');
+        }
+    } catch (err) {
+        console.warn('getCustomFormSampleHtml read failed:', err.message);
+    }
+    return '<!DOCTYPE html><html><body><p>Sample missing. See template/sponsorship-custom-form.html</p></body></html>';
+};

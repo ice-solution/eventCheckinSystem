@@ -14,5 +14,14 @@ router.put('/:eventId/config', formConfigController.updateFormConfig);
 // 重置為預設配置
 router.post('/:eventId/reset', formConfigController.resetToDefault);
 
+// Custom form sample HTML
+router.get('/:eventId/custom-form/sample', (req, res) => {
+    const registerPageController = require('../controllers/registerPageController');
+    const html = registerPageController.getCustomFormSampleHtml();
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename=sponsorship-custom-form.html');
+    res.send(html);
+});
+
 module.exports = router;
 

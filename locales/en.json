@@ -771,6 +771,7 @@
     "configureHint": "Configure registration form field display for this event",
 
     "cardRegisterPageTitle": "Registration Page",
+    "cardCustomFormTitle": "Custom HTML Form",
     "cardBannerTitle": "Event Banner Management",
     "cardHeaderNameTitle": "Register Header Event Name",
     "cardTermsTitle": "Terms & Conditions (T&C)",
@@ -789,6 +790,17 @@
     "registerSlugHint": "When set, visitors can open the form at {{domain}}/slug. Lowercase letters, numbers, and hyphens only. Legacy URL /web/:eventId/register still works.",
     "registerSlugPreview": "Public URL",
     "registerSlugLegacy": "Legacy URL",
+
+    "customFormEnabledLabel": "Enable Custom HTML form page (separate from FormConfig register form above)",
+    "customFormHint": "For client forms that need if/animation/nested data (e.g. parents[]). Paste or import HTML, save, then open the public URL. Submit via JSON POST into RSVP immediately.",
+    "customFormPublicUrl": "Public URL",
+    "customFormDownloadSample": "Download Sample HTML",
+    "customFormImportHtml": "Import HTML file",
+    "customFormHtmlLabel": "Custom HTML",
+    "customFormHtmlPlaceholder": "Paste full HTML…",
+    "customFormHtmlHint": "Placeholders: {{eventId}}, {{submitUrl}}, {{successUrl}}. Runtime injects window.submitCustomForm(data). Build nested arrays/objects in JS before submit.",
+    "customFormImportConfirm": "Importing this HTML will overwrite the current Custom HTML. Continue?",
+    "customFormImportOk": "HTML loaded. Remember to click Save Config.",
 
     "deleteBannerConfirm": "Are you sure you want to delete the current banner?",
     "deleteBanner": "Delete Banner",

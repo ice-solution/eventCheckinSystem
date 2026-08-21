@@ -272,6 +272,18 @@ const formConfigSchema = new mongoose.Schema({
             en: { type: String, default: 'You have already completed this application. This link cannot be used to make further changes.' }
         }
     },
+    /**
+     * Custom HTML 報名頁（獨立於 FormConfig 動態表單）
+     * 開啟後以 /web/:eventId/custom-form 提供；submit 即時寫入 Event.users
+     */
+    customFormEnabled: {
+        type: Boolean,
+        default: false
+    },
+    customFormHtml: {
+        type: String,
+        default: ''
+    },
     // 付費票券區塊文案與分類按鈕（Register 頁）
     paymentTicketUi: {
         sectionTitle: {

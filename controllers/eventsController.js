@@ -719,6 +719,42 @@ exports.publicRegister = async (req, res) => {
 };
 
 /**
+ * Custom HTML 報名（獨立於 FormConfig register）
+ * POST /web/:event_id/custom-form
+ * body 可含巢狀陣列（如 parents: [{...}]），即時寫入 Event.users
+ */
+exports.publicCustomFormRegister = async (req, res) => {
+    const { event_id } = req.params;
+    const userData = req.body || {};
+
+    if (userData.ticketId) {
+        return res.status(400).json({ message: 'Custom form 僅支援免費報名，請勿選擇付費票券。' });
+    }
+
+    try {
+        const event = await Event.findById(event_id);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        const FormConfig = require('../model/FormConfig');
+        const formConfig = await FormConfig.findOne({ eventId: event_id });
+        if (!formConfig || formConfig.customFormEnabled !== true) {
+            return res.status(403).json({ message: 'Custom form is not enabled for this event.' });
+        }
+        if (!(formConfig.customFormHtml || '').trim()) {
+            return res.status(403).json({ message: 'Custom form HTML is empty.' });
+        }
+
+        req.params.eventId = event_id;
+        return exports.addUserToEvent(req, res);
+    } catch (error) {
+        console.error('Error in publicCustomFormRegister:', error);
+        return res.status(500).json({ message: '伺服器錯誤', error: error.message });
+    }
+};
+
+/**
  * 專屬 Application：已 import 用戶補填 FormConfig
  * GET  /web/:event_id/application/:userId?token=
  * POST /web/:event_id/application/:userId  body + token

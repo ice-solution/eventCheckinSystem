@@ -770,6 +770,7 @@
     "configureHint": "設定此活動的報名表單欄位顯示",
 
     "cardRegisterPageTitle": "報名頁版面開關",
+    "cardCustomFormTitle": "Custom HTML 報名頁",
     "cardBannerTitle": "活動橫額管理",
     "cardHeaderNameTitle": "報名頁頂部活動名稱",
     "cardTermsTitle": "Terms & Conditions (T&C)",
@@ -788,6 +789,17 @@
     "registerSlugHint": "設定後可用 {{domain}}/slug 開啟報名頁。僅小寫英文、數字與連字號。舊連結 /web/:eventId/register 仍可使用。",
     "registerSlugPreview": "公開連結",
     "registerSlugLegacy": "舊版連結",
+
+    "customFormEnabledLabel": "啟用 Custom HTML 報名頁（獨立於上方 FormConfig 報名表）",
+    "customFormHint": "適用於需要 if／animation／巢狀資料（如 parents[]）的客戶表單。貼上或匯入 HTML 後儲存，以公開連結開啟。Submit 請用 JSON POST，即時寫入 RSVP。",
+    "customFormPublicUrl": "公開連結",
+    "customFormDownloadSample": "下載 Sample HTML",
+    "customFormImportHtml": "匯入 HTML 檔",
+    "customFormHtmlLabel": "Custom HTML",
+    "customFormHtmlPlaceholder": "貼上完整 HTML…",
+    "customFormHtmlHint": "可用 {{eventId}}、{{submitUrl}}、{{successUrl}}。頁面會自動注入 window.submitCustomForm(data)。巢狀欄位請在 JS 組成 array／object 後再 submit。",
+    "customFormImportConfirm": "匯入此 HTML 會覆蓋現有 Custom HTML 內容，確定？",
+    "customFormImportOk": "已載入 HTML，請記得按「儲存設定」。",
 
     "deleteBannerConfirm": "確定要刪除當前的 banner 嗎？",
     "deleteBanner": "移除橫額",

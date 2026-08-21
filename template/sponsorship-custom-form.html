@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sponsorship Registration</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a222c;
+      --surface-2: #232d3a;
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #f2f4f7;
+      --muted: #9aa5b5;
+      --accent: #c9a46a;
+      --accent-hover: #d4b57e;
+      --danger: #e86a6a;
+      --ok: #6bcf9a;
+      --radius: 10px;
+      --font: "DM Sans", system-ui, sans-serif;
+      --display: "Instrument Serif", Georgia, serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      font-family: var(--font);
+      color: var(--text);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, rgba(201, 164, 106, 0.18), transparent 55%),
+        radial-gradient(900px 500px at 100% 0%, rgba(80, 120, 180, 0.12), transparent 50%),
+        var(--bg);
+      line-height: 1.45;
+    }
+
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px 20px 80px;
+    }
+
+    .hero {
+      margin-bottom: 28px;
+      animation: rise 0.55s ease both;
+    }
+    .hero-kicker {
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 600;
+      margin: 0 0 8px;
+    }
+    h1 {
+      font-family: var(--display);
+      font-weight: 400;
+      font-size: clamp(2rem, 5vw, 2.75rem);
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+    }
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      max-width: 42ch;
+    }
+
+    form {
+      display: grid;
+      gap: 18px;
+      animation: rise 0.7s ease both;
+    }
+
+    .section {
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent 40%), var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px 20px 20px;
+    }
+    .section h2 {
+      margin: 0 0 14px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 640px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .field { margin-bottom: 4px; }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="file"],
+    select {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      font: inherit;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input:focus, select:focus {
+      border-color: rgba(201, 164, 106, 0.55);
+      box-shadow: 0 0 0 3px rgba(201, 164, 106, 0.15);
+    }
+    select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5l5 5 5-5' stroke='%9aa5b5' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+    }
+    option { color: #111; }
+
+    .phone-row {
+      display: grid;
+      grid-template-columns: 130px 1fr;
+      gap: 10px;
+    }
+
+    .file-box {
+      border: 1px dashed rgba(201, 164, 106, 0.35);
+      border-radius: var(--radius);
+      padding: 14px;
+      background: rgba(201, 164, 106, 0.05);
+    }
+    .file-meta {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .file-meta.ok { color: var(--ok); }
+    .file-meta.bad { color: var(--danger); }
+
+    #attendeesSection {
+      display: none;
+      animation: rise 0.35s ease both;
+    }
+    #attendeesSection.is-open { display: block; }
+
+    .tier-note {
+      font-size: 13px;
+      color: var(--muted);
+      margin: 0 0 14px;
+    }
+    .tier-note strong { color: var(--accent); }
+
+    .attendee-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+      background: rgba(0, 0, 0, 0.18);
+      animation: rise 0.3s ease both;
+    }
+    .attendee-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .attendee-head span {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-top: 4px;
+    }
+
+    button, .btn {
+      font: inherit;
+      border: none;
+      border-radius: 999px;
+      padding: 12px 18px;
+      cursor: pointer;
+      transition: transform 0.15s ease, background 0.2s, opacity 0.2s;
+    }
+    button:active { transform: scale(0.98); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #1a140b;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      min-width: 160px;
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+
+    .btn-add {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid rgba(201, 164, 106, 0.45);
+      font-weight: 600;
+    }
+    .btn-add:hover:not(:disabled) {
+      background: rgba(201, 164, 106, 0.12);
+    }
+
+    .btn-remove {
+      background: transparent;
+      color: var(--danger);
+      border: 1px solid rgba(232, 106, 106, 0.35);
+      padding: 6px 12px;
+      font-size: 12px;
+      border-radius: 8px;
+    }
+
+    .msg {
+      margin-top: 8px;
+      font-size: 14px;
+      min-height: 1.2em;
+    }
+    .msg.err { color: var(--danger); }
+    .msg.ok { color: var(--ok); }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <p class="hero-kicker">Sponsorship</p>
+      <h1>Sponsorship Selection</h1>
+      <p>Choose your sponsor tier and provide the primary contact details. Additional attendees appear based on your tier.</p>
+    </header>
+
+    <form id="sponsorshipForm" novalidate>
+      <section class="section">
+        <h2>Sponsor Tier</h2>
+        <div class="field">
+          <label for="sponsorTier">Sponsor Tier</label>
+          <select id="sponsorTier" name="sponsorTier" required>
+            <option value="">Select a tier…</option>
+            <option value="Diamond">Diamond</option>
+            <option value="Platinum">Platinum</option>
+            <option value="Gold">Gold</option>
+            <option value="Cocktail">Cocktail</option>
+            <option value="Lunch">Lunch</option>
+            <option value="Promotional">Promotional</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Primary Sponsor Contact</h2>
+        <div class="grid-2">
+          <div class="field">
+            <label for="firstName">First Name</label>
+            <input id="firstName" name="firstName" type="text" required autocomplete="given-name">
+          </div>
+          <div class="field">
+            <label for="lastName">Last Name</label>
+            <input id="lastName" name="lastName" type="text" required autocomplete="family-name">
+          </div>
+        </div>
+        <div class="field" style="margin-top:12px;">
+          <label for="email">Email Address</label>
+          <input id="email" name="email" type="email" required autocomplete="email">
+        </div>
+        <div class="field" style="margin-top:12px;">
+          <label>Contact Number</label>
+          <div class="phone-row">
+            <select id="phone_code" name="phone_code" required aria-label="Region code">
+              <option value="+852">+852</option>
+              <option value="+86">+86</option>
+              <option value="+1">+1</option>
+              <option value="+65">+65</option>
+              <option value="+60">+60</option>
+              <option value="+81">+81</option>
+              <option value="+82">+82</option>
+              <option value="+63">+63</option>
+              <option value="+84">+84</option>
+              <option value="+44">+44</option>
+              <option value="+61">+61</option>
+            </select>
+            <input id="phone" name="phone" type="tel" required inputmode="tel" placeholder="Contact number" autocomplete="tel-national">
+          </div>
+        </div>
+        <div class="field" style="margin-top:12px;">
+          <label for="company">Company Name</label>
+          <input id="company" name="company" type="text" required autocomplete="organization">
+        </div>
+        <div class="field" style="margin-top:12px;">
+          <label for="jobTitle">Job Title</label>
+          <input id="jobTitle" name="jobTitle" type="text" required autocomplete="organization-title">
+        </div>
+        <div class="field" style="margin-top:12px;">
+          <label for="companyLogo">Company Logo (.JPG only)</label>
+          <div class="file-box">
+            <input id="companyLogo" name="companyLogo" type="file" accept=".jpg,.jpeg,image/jpeg" required>
+            <div class="file-meta" id="logoMeta">JPG / JPEG only. Max 5MB.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="attendeesSection" aria-live="polite">
+        <h2>Additional Attendees</h2>
+        <p class="tier-note" id="tierNote"></p>
+        <div id="attendeesList"></div>
+        <div class="btn-row" id="addAttendeeRow" style="display:none;">
+          <button type="button" class="btn-add" id="addAttendeeBtn">+ Add attendee</button>
+        </div>
+      </section>
+
+      <div class="btn-row">
+        <button type="submit" class="btn-primary" id="submitBtn">Submit</button>
+      </div>
+      <div class="msg" id="formMsg" role="status"></div>
+    </form>
+  </div>
+
+  <script>
+(function () {
+  var TIER_RULES = {
+    Diamond: { mode: 'dynamic', max: Infinity, label: 'Diamond: unlimited additional attendees. Use + to add.' },
+    Platinum: { mode: 'dynamic', max: 5, label: 'Platinum: add up to 5 attendees with +.' },
+    Gold: { mode: 'fixed', max: 3, label: 'Gold: 3 additional attendee slots (fixed).' },
+    Cocktail: { mode: 'fixed', max: 1, label: 'Cocktail: 1 additional attendee (fixed).' },
+    Lunch: { mode: 'fixed', max: 1, label: 'Lunch: 1 additional attendee (fixed).' },
+    Promotional: { mode: 'fixed', max: 1, label: 'Promotional: 1 additional attendee (fixed).' }
+  };
+
+  var tierEl = document.getElementById('sponsorTier');
+  var sectionEl = document.getElementById('attendeesSection');
+  var listEl = document.getElementById('attendeesList');
+  var noteEl = document.getElementById('tierNote');
+  var addRow = document.getElementById('addAttendeeRow');
+  var addBtn = document.getElementById('addAttendeeBtn');
+  var logoInput = document.getElementById('companyLogo');
+  var logoMeta = document.getElementById('logoMeta');
+  var formMsg = document.getElementById('formMsg');
+  var submitBtn = document.getElementById('submitBtn');
+  var form = document.getElementById('sponsorshipForm');
+
+  var attendeeSeq = 0;
+  var logoDataUrl = '';
+  var logoFileName = '';
+
+  function currentRule() {
+    return TIER_RULES[tierEl.value] || null;
+  }
+
+  function attendeeCount() {
+    return listEl.querySelectorAll('.attendee-card').length;
+  }
+
+  function syncAddButton() {
+    var rule = currentRule();
+    if (!rule || rule.mode !== 'dynamic') {
+      addRow.style.display = 'none';
+      return;
+    }
+    addRow.style.display = 'flex';
+    var atMax = attendeeCount() >= rule.max;
+    addBtn.disabled = atMax;
+    addBtn.textContent = atMax
+      ? ('Limit reached (' + (rule.max === Infinity ? '∞' : rule.max) + ')')
+      : '+ Add attendee';
+  }
+
+  function createAttendeeCard(indexLabel, removable) {
+    attendeeSeq += 1;
+    var id = 'att_' + attendeeSeq;
+    var card = document.createElement('div');
+    card.className = 'attendee-card';
+    card.dataset.attendeeId = id;
+    card.innerHTML =
+      '<div class="attendee-head">' +
+        '<span>Attendee ' + indexLabel + '</span>' +
+        (removable ? '<button type="button" class="btn-remove" data-remove="' + id + '">Remove</button>' : '') +
+      '</div>' +
+      '<div class="grid-2">' +
+        '<div class="field"><label>First Name</label><input type="text" data-f="firstName" required></div>' +
+        '<div class="field"><label>Last Name</label><input type="text" data-f="lastName" required></div>' +
+      '</div>' +
+      '<div class="field" style="margin-top:10px;"><label>Email</label><input type="email" data-f="email" required></div>' +
+      '<div class="field" style="margin-top:10px;"><label>Title</label><input type="text" data-f="title" required></div>';
+    return card;
+  }
+
+  function renumberCards() {
+    var cards = listEl.querySelectorAll('.attendee-card');
+    cards.forEach(function (card, i) {
+      var span = card.querySelector('.attendee-head span');
+      if (span) span.textContent = 'Attendee ' + (i + 1);
+    });
+  }
+
+  function rebuildAttendees() {
+    var rule = currentRule();
+    listEl.innerHTML = '';
+    if (!rule) {
+      sectionEl.classList.remove('is-open');
+      noteEl.textContent = '';
+      syncAddButton();
+      return;
+    }
+
+    sectionEl.classList.add('is-open');
+    noteEl.innerHTML = rule.label.replace(/^([^:]+:)/, '<strong>$1</strong>');
+
+    if (rule.mode === 'fixed') {
+      for (var i = 0; i < rule.max; i += 1) {
+        listEl.appendChild(createAttendeeCard(i + 1, false));
+      }
+    } else {
+      // Diamond / Platinum: start empty; user adds with +
+    }
+
+    syncAddButton();
+  }
+
+  function addDynamicAttendee() {
+    var rule = currentRule();
+    if (!rule || rule.mode !== 'dynamic') return;
+    if (attendeeCount() >= rule.max) return;
+    listEl.appendChild(createAttendeeCard(attendeeCount() + 1, true));
+    renumberCards();
+    syncAddButton();
+  }
+
+  tierEl.addEventListener('change', rebuildAttendees);
+
+  addBtn.addEventListener('click', addDynamicAttendee);
+
+  listEl.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-remove]');
+    if (!btn) return;
+    var id = btn.getAttribute('data-remove');
+    var card = listEl.querySelector('[data-attendee-id="' + id + '"]');
+    if (card) card.remove();
+    renumberCards();
+    syncAddButton();
+  });
+
+  logoInput.addEventListener('change', function () {
+    logoDataUrl = '';
+    logoFileName = '';
+    logoMeta.className = 'file-meta';
+    var file = logoInput.files && logoInput.files[0];
+    if (!file) {
+      logoMeta.textContent = 'JPG / JPEG only. Max 5MB.';
+      return;
+    }
+    var name = (file.name || '').toLowerCase();
+    var okExt = /\.jpe?g$/.test(name);
+    var okType = !file.type || file.type === 'image/jpeg';
+    if (!okExt || !okType) {
+      logoInput.value = '';
+      logoMeta.className = 'file-meta bad';
+      logoMeta.textContent = 'Only .JPG / .JPEG files are allowed.';
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      logoInput.value = '';
+      logoMeta.className = 'file-meta bad';
+      logoMeta.textContent = 'File too large (max 5MB).';
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function () {
+      logoDataUrl = String(reader.result || '');
+      logoFileName = file.name;
+      logoMeta.className = 'file-meta ok';
+      logoMeta.textContent = 'Ready: ' + file.name + ' (' + Math.round(file.size / 1024) + ' KB)';
+    };
+    reader.onerror = function () {
+      logoInput.value = '';
+      logoMeta.className = 'file-meta bad';
+      logoMeta.textContent = 'Failed to read file.';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  function collectAttendees() {
+    var out = [];
+    listEl.querySelectorAll('.attendee-card').forEach(function (card) {
+      var get = function (key) {
+        var el = card.querySelector('[data-f="' + key + '"]');
+        return el ? String(el.value || '').trim() : '';
+      };
+      var row = {
+        firstName: get('firstName'),
+        lastName: get('lastName'),
+        email: get('email'),
+        title: get('title')
+      };
+      // Skip completely empty fixed slots
+      if (!row.firstName && !row.lastName && !row.email && !row.title) return;
+      out.push(row);
+    });
+    return out;
+  }
+
+  function validateAttendees(attendees, rule) {
+    if (!rule) return 'Please select a sponsor tier.';
+    if (rule.mode === 'fixed') {
+      // All fixed slots should be filled
+      var cards = listEl.querySelectorAll('.attendee-card');
+      if (cards.length !== rule.max) return 'Attendee slots mismatch for selected tier.';
+      for (var i = 0; i < cards.length; i += 1) {
+        var card = cards[i];
+        var fields = ['firstName', 'lastName', 'email', 'title'];
+        for (var f = 0; f < fields.length; f += 1) {
+          var el = card.querySelector('[data-f="' + fields[f] + '"]');
+          if (!el || !String(el.value || '').trim()) {
+            return 'Please complete all fields for Attendee ' + (i + 1) + '.';
+          }
+        }
+      }
+    } else {
+      if (attendees.length > rule.max) {
+        return 'Too many attendees for this tier.';
+      }
+      for (var j = 0; j < attendees.length; j += 1) {
+        var a = attendees[j];
+        if (!a.firstName || !a.lastName || !a.email || !a.title) {
+          return 'Please complete all fields for each added attendee.';
+        }
+      }
+    }
+    return '';
+  }
+
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    formMsg.className = 'msg';
+    formMsg.textContent = '';
+
+    var rule = currentRule();
+    if (!rule) {
+      formMsg.className = 'msg err';
+      formMsg.textContent = 'Please select a sponsor tier.';
+      return;
+    }
+
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+
+    if (!logoDataUrl) {
+      formMsg.className = 'msg err';
+      formMsg.textContent = 'Please upload a company logo in JPG format.';
+      return;
+    }
+
+    var attendees = collectAttendees();
+    var attErr = validateAttendees(attendees, rule);
+    if (attErr) {
+      formMsg.className = 'msg err';
+      formMsg.textContent = attErr;
+      return;
+    }
+
+    var firstName = document.getElementById('firstName').value.trim();
+    var lastName = document.getElementById('lastName').value.trim();
+    var payload = {
+      sponsorTier: tierEl.value,
+      firstName: firstName,
+      lastName: lastName,
+      name: (firstName + ' ' + lastName).trim(),
+      email: document.getElementById('email').value.trim(),
+      phone_code: document.getElementById('phone_code').value,
+      phone: document.getElementById('phone').value.trim(),
+      company: document.getElementById('company').value.trim(),
+      jobTitle: document.getElementById('jobTitle').value.trim(),
+      companyLogo: logoDataUrl,
+      companyLogoFileName: logoFileName,
+      attendees: attendees
+    };
+
+    if (typeof window.submitCustomForm !== 'function') {
+      formMsg.className = 'msg err';
+      formMsg.textContent = 'Submit helper not ready. Open this page via /web/:eventId/custom-form after saving HTML in Form Config.';
+      return;
+    }
+
+    submitBtn.disabled = true;
+    formMsg.textContent = 'Submitting…';
+    try {
+      await window.submitCustomForm(payload);
+      formMsg.className = 'msg ok';
+      formMsg.textContent = 'Submitted successfully. Redirecting…';
+      window.location.href = window.CUSTOM_FORM_SUCCESS_URL || ('/web/' + (window.CUSTOM_FORM_EVENT_ID || '') + '/register/success');
+    } catch (err) {
+      formMsg.className = 'msg err';
+      formMsg.textContent = (err && err.message) || 'Submit failed';
+      submitBtn.disabled = false;
+    }
+  });
+})();
+  </script>
+</body>
+</html>

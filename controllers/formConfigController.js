@@ -158,6 +158,14 @@ function applyFormConfigMetaDefaults(migratedConfig) {
     if (typeof migratedConfig.languageSwitcherEnabled !== 'boolean') {
         migratedConfig.languageSwitcherEnabled = true;
     }
+    if (typeof migratedConfig.customFormEnabled !== 'boolean') {
+        migratedConfig.customFormEnabled = false;
+    }
+    if (typeof migratedConfig.customFormHtml !== 'string') {
+        migratedConfig.customFormHtml = migratedConfig.customFormHtml != null
+            ? String(migratedConfig.customFormHtml)
+            : '';
+    }
     if (migratedConfig.registerSlug != null && migratedConfig.registerSlug !== '') {
         migratedConfig.registerSlug = normalizeRegisterSlug(migratedConfig.registerSlug);
     } else {
@@ -399,6 +407,8 @@ exports.getDefaultFormConfig = () => ({
             en: 'You have already completed this application. This link cannot be used to make further changes.'
         }
     },
+    customFormEnabled: false,
+    customFormHtml: '',
     paymentTicketUi: normalizePaymentTicketUi(),
     sections: [
         {
@@ -655,7 +665,7 @@ exports.getFormConfig = async (req, res) => {
 exports.updateFormConfig = async (req, res) => {
     try {
         const { eventId } = req.params;
-        const { sections, defaultLanguage, languageSwitcherEnabled, registerPageEnabled, registerClosedMessage, registerSlug, terms, agreement, agreements, thankYou, applicationCompletedPage, eventDisplayName, registerSubHeader, registerSubtitle, paymentTicketUi } = req.body;
+        const { sections, defaultLanguage, languageSwitcherEnabled, registerPageEnabled, registerClosedMessage, registerSlug, terms, agreement, agreements, thankYou, applicationCompletedPage, eventDisplayName, registerSubHeader, registerSubtitle, paymentTicketUi, customFormEnabled, customFormHtml } = req.body;
         
         // 驗證事件是否存在
         const event = await Event.findById(eventId);
@@ -724,6 +734,12 @@ exports.updateFormConfig = async (req, res) => {
             if (paymentTicketUi && typeof paymentTicketUi === 'object') {
                 formConfig.paymentTicketUi = normalizePaymentTicketUi(paymentTicketUi);
             }
+            if (typeof customFormEnabled === 'boolean') {
+                formConfig.customFormEnabled = customFormEnabled;
+            }
+            if (typeof customFormHtml === 'string') {
+                formConfig.customFormHtml = customFormHtml;
+            }
             await formConfig.save();
             if (slugResult.unset && formConfig._id) {
                 await FormConfig.updateOne({ _id: formConfig._id }, { $unset: { registerSlug: 1 } });
@@ -758,6 +774,8 @@ exports.updateFormConfig = async (req, res) => {
                 applicationCompletedPage: applicationCompletedPage && typeof applicationCompletedPage === 'object'
                     ? migrateFormConfig({ sections: (sections || defaultConfig.sections), applicationCompletedPage }).applicationCompletedPage
                     : defaultConfig.applicationCompletedPage,
+                customFormEnabled: typeof customFormEnabled === 'boolean' ? customFormEnabled : defaultConfig.customFormEnabled,
+                customFormHtml: typeof customFormHtml === 'string' ? customFormHtml : defaultConfig.customFormHtml,
                 paymentTicketUi: paymentTicketUi && typeof paymentTicketUi === 'object'
                     ? normalizePaymentTicketUi(paymentTicketUi)
                     : defaultConfig.paymentTicketUi
