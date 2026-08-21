@@ -94,18 +94,41 @@ function injectCustomFormRuntime(html, eventId) {
 window.CUSTOM_FORM_EVENT_ID=${JSON.stringify(String(eventId))};
 window.CUSTOM_FORM_SUBMIT_URL=${JSON.stringify(submitUrl)};
 window.CUSTOM_FORM_SUCCESS_URL=${JSON.stringify(successUrl)};
-window.submitCustomForm=async function(data){
-  var res=await fetch(window.CUSTOM_FORM_SUBMIT_URL,{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(data||{}),
-    credentials:'same-origin'
-  });
-  var body=await res.json().catch(function(){ return {}; });
-  if(!res.ok){
-    var err=new Error((body&&body.message)||('Submit failed ('+res.status+')'));
-    err.status=res.status;
-    err.body=body;
+window.submitCustomForm=async function(data, files){
+  var res;
+  if (typeof FormData !== 'undefined' && data instanceof FormData) {
+    res = await fetch(window.CUSTOM_FORM_SUBMIT_URL, {
+      method: 'POST',
+      body: data,
+      credentials: 'same-origin'
+    });
+  } else if (files && files.companyLogo) {
+    var fd = new FormData();
+    var payload = data || {};
+    if (payload.companyLogo && typeof payload.companyLogo === 'string' && payload.companyLogo.indexOf('data:image') === 0) {
+      payload = Object.assign({}, payload);
+      delete payload.companyLogo;
+    }
+    fd.append('payload', JSON.stringify(payload));
+    fd.append('companyLogo', files.companyLogo, files.companyLogo.name || 'logo.jpg');
+    res = await fetch(window.CUSTOM_FORM_SUBMIT_URL, {
+      method: 'POST',
+      body: fd,
+      credentials: 'same-origin'
+    });
+  } else {
+    res = await fetch(window.CUSTOM_FORM_SUBMIT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data || {}),
+      credentials: 'same-origin'
+    });
+  }
+  var body = await res.json().catch(function(){ return {}; });
+  if (!res.ok) {
+    var err = new Error((body && body.message) || ('Submit failed (' + res.status + ')'));
+    err.status = res.status;
+    err.body = body;
     throw err;
   }
   return body;

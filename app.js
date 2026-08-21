@@ -53,8 +53,8 @@ if (corsEnabled) {
 app.post('/web/webhook/stripe', express.raw({ type: 'application/json' }), eventsController.stripeWebhook);
 
 // 中間件
-app.use(express.json()); // 解析 JSON 請求主體
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' })); // 解析 JSON（自訂表單大圖請用 multipart，勿塞 base64）
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(session({
     secret: 'events', // 替換為您的密鑰
     resave: false,

@@ -74,7 +74,19 @@ router.get('/:event_id/register', registerPageController.renderRegisterPageByEve
 
 // Custom HTML 報名頁（獨立於 FormConfig 動態表單）
 router.get('/:event_id/custom-form', registerPageController.renderCustomFormPage);
-router.post('/:event_id/custom-form', eventsController.publicCustomFormRegister);
+router.post(
+    '/:event_id/custom-form',
+    (req, res, next) => {
+        eventsController.customFormLogoUpload(req, res, (err) => {
+            if (!err) return next();
+            const msg = err.code === 'LIMIT_FILE_SIZE'
+                ? 'Logo file too large (max 5MB).'
+                : (err.message || 'Logo upload failed');
+            return res.status(400).json({ message: msg });
+        });
+    },
+    eventsController.publicCustomFormRegister
+);
 // 路由到註冊成功頁面（session_id 可為 Stripe session_id、Wonder order_id 或 Transaction _id）
 router.get('/:event_id/register/success', async (req, res) => {
     const { event_id } = req.params;

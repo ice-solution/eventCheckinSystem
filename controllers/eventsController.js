@@ -719,19 +719,79 @@ exports.publicRegister = async (req, res) => {
 };
 
 /**
+ * Custom HTML 報名：logo 用 multipart 上傳（避免 base64 JSON 觸發 413）
+ * field: companyLogo (jpg only, max 5MB)
+ * field: payload (JSON string) 或一般 body fields
+ */
+const customFormLogoStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const eventId = String(req.params.event_id || 'unknown');
+        const uploadDir = path.join('public', 'uploads', 'custom-form', eventId);
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+        const ext = (path.extname(file.originalname) || '.jpg').toLowerCase();
+        const safeExt = (ext === '.jpeg' || ext === '.jpg') ? ext : '.jpg';
+        cb(null, `logo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${safeExt}`);
+    }
+});
+
+exports.customFormLogoUpload = multer({
+    storage: customFormLogoStorage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: function (req, file, cb) {
+        const name = String(file.originalname || '').toLowerCase();
+        const okExt = /\.jpe?g$/.test(name);
+        const okType = !file.mimetype || file.mimetype === 'image/jpeg';
+        if (okExt && okType) return cb(null, true);
+        return cb(new Error('Only JPG / JPEG logos are allowed'));
+    }
+}).single('companyLogo');
+
+/**
  * Custom HTML 報名（獨立於 FormConfig register）
  * POST /web/:event_id/custom-form
- * body 可含巢狀陣列（如 parents: [{...}]），即時寫入 Event.users
+ * - multipart: payload=JSON + companyLogo=file
+ * - 或 application/json（細資料、無大圖）
  */
 exports.publicCustomFormRegister = async (req, res) => {
     const { event_id } = req.params;
-    const userData = req.body || {};
-
-    if (userData.ticketId) {
-        return res.status(400).json({ message: 'Custom form 僅支援免費報名，請勿選擇付費票券。' });
-    }
 
     try {
+        let userData = {};
+        if (req.body && typeof req.body.payload === 'string' && req.body.payload.trim()) {
+            try {
+                userData = JSON.parse(req.body.payload);
+            } catch (e) {
+                return res.status(400).json({ message: 'Invalid payload JSON' });
+            }
+        } else if (req.body && typeof req.body === 'object') {
+            userData = { ...req.body };
+            if (typeof userData.attendees === 'string') {
+                try {
+                    userData.attendees = JSON.parse(userData.attendees);
+                } catch (_) { /* keep string */ }
+            }
+            delete userData.payload;
+        }
+
+        if (userData.ticketId) {
+            return res.status(400).json({ message: 'Custom form 僅支援免費報名，請勿選擇付費票券。' });
+        }
+
+        // 唔好把巨大 base64 logo 寫入 DB
+        if (typeof userData.companyLogo === 'string' && userData.companyLogo.indexOf('data:image') === 0) {
+            delete userData.companyLogo;
+        }
+
+        if (req.file) {
+            userData.companyLogo = `/uploads/custom-form/${event_id}/${req.file.filename}`;
+            userData.companyLogoFileName = req.file.originalname || req.file.filename;
+        }
+
         const event = await Event.findById(event_id);
         if (!event) {
             return res.status(404).json({ message: 'Event not found' });
@@ -747,6 +807,7 @@ exports.publicCustomFormRegister = async (req, res) => {
         }
 
         req.params.eventId = event_id;
+        req.body = userData;
         return exports.addUserToEvent(req, res);
     } catch (error) {
         console.error('Error in publicCustomFormRegister:', error);
