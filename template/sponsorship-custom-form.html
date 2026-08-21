@@ -317,7 +317,7 @@
         <div class="field" style="margin-bottom:14px;">
           <label for="sponsorTier">Sponsor Tier</label>
           <select id="sponsorTier" name="sponsorTier" required>
-            <option value="">Select a tier…</option>
+            <option value="">Select a tier...</option>
             <option value="Diamond">Diamond</option>
             <option value="Platinum">Platinum</option>
             <option value="Gold">Gold</option>
@@ -386,7 +386,7 @@
     var atMax = attendeeCount() >= rule.max;
     addBtn.disabled = atMax;
     addBtn.textContent = atMax
-      ? ('Limit reached (' + (rule.max === Infinity ? '∞' : rule.max) + ')')
+      ? ('Limit reached (' + (rule.max === Infinity ? 'unlimited' : rule.max) + ')')
       : '+ Add attendee';
   }
 
@@ -594,11 +594,11 @@
     }
 
     submitBtn.disabled = true;
-    formMsg.textContent = 'Submitting…';
+    formMsg.textContent = 'Submitting...';
     try {
       await window.submitCustomForm(payload, { companyLogo: logoFile });
       formMsg.className = 'msg ok';
-      formMsg.textContent = 'Submitted successfully. Redirecting…';
+      formMsg.textContent = 'Submitted successfully. Redirecting...';
       window.location.href = window.CUSTOM_FORM_SUCCESS_URL || ('/web/' + (window.CUSTOM_FORM_EVENT_ID || '') + '/register/success');
     } catch (err) {
       formMsg.className = 'msg err';

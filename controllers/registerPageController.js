@@ -168,8 +168,18 @@ exports.renderCustomFormPage = async (req, res) => {
             return res.status(404).send('Custom form HTML is empty.');
         }
 
+        // 確保瀏覽器以 UTF-8 解析（避免 JS 字串內特殊字元變 Invalid token）
+        let pageHtml = html;
+        if (!/<meta[^>]+charset=/i.test(pageHtml)) {
+            if (/<head[^>]*>/i.test(pageHtml)) {
+                pageHtml = pageHtml.replace(/<head[^>]*>/i, (m) => `${m}\n  <meta charset="utf-8">`);
+            } else {
+                pageHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${pageHtml}</body></html>`;
+            }
+        }
+
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
-        return res.send(injectCustomFormRuntime(html, eventId));
+        return res.send(injectCustomFormRuntime(pageHtml, eventId));
     } catch (err) {
         console.error('renderCustomFormPage error:', err);
         return res.status(500).send('Server error');
