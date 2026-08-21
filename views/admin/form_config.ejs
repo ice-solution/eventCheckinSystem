@@ -1170,7 +1170,8 @@
         });
     });
 
-    let formConfig = <%- JSON.stringify(formConfig) %>;
+    // 將 < 轉成 \u003c，避免 customFormHtml 內 </script>/</body> 截斷本頁 <script>
+    let formConfig = <%- JSON.stringify(formConfig).replace(/</g, '\\u003c') %>;
     const eventId = '<%= event._id %>';
     let currentLanguage = 'zh'; // 當前編輯語言
 
