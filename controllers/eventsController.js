@@ -406,6 +406,23 @@ exports.copyEvent = async (req, res) => {
                     return ticket;
                 })
                 : [],
+            promoCodes: Array.isArray(source.promoCodes)
+                ? source.promoCodes
+                    .map((pc) => {
+                        const code = normalizePromoCodeInput(pc && pc.code ? pc.code : '');
+                        if (!code) return null;
+                        return {
+                            code,
+                            enabled: pc.enabled !== false,
+                            discountType: 'fixed',
+                            discountValue: Number(pc.discountValue ?? pc.discountAmount ?? 0) || 0,
+                            maxUses: Number(pc.maxUses ?? 0) || 0,
+                            usedCount: 0,
+                            uses: []
+                        };
+                    })
+                    .filter(Boolean)
+                : [],
             gameIds: Array.isArray(source.gameIds) ? [...source.gameIds] : [],
             scanPointUsers: Array.isArray(source.scanPointUsers)
                 ? source.scanPointUsers.map((u) => {
@@ -4707,7 +4724,7 @@ function normalizePaymentTicket(ticket) {
 // 更新付費活動設定
 exports.updatePaymentEvent = async (req, res) => {
     const { eventId } = req.params;
-    const { isPaymentEvent, PaymentTickets } = req.body;
+    const { isPaymentEvent, PaymentTickets, promoCodes } = req.body;
     try {
         const event = await Event.findById(eventId);
         if (!event) {
@@ -4717,10 +4734,34 @@ exports.updatePaymentEvent = async (req, res) => {
         if (Array.isArray(PaymentTickets)) {
             event.PaymentTickets = PaymentTickets.map(normalizePaymentTicket);
         }
+        if (Array.isArray(promoCodes)) {
+            event.promoCodes = promoCodes
+                .map(pc => {
+                    const code = normalizePromoCodeInput(pc && pc.code ? pc.code : '');
+                    if (!code) return null;
+                    const discountValue = Number(pc.discountValue ?? pc.discountAmount ?? 0) || 0;
+                    const maxUses = Number(pc.maxUses ?? 0) || 0;
+                    return {
+                        code,
+                        enabled: pc.enabled !== false,
+                        discountType: 'fixed',
+                        discountValue,
+                        maxUses,
+                        usedCount: Number(pc.usedCount ?? 0) || 0,
+                        uses: Array.isArray(pc.uses) ? pc.uses : []
+                    };
+                })
+                .filter(Boolean);
+            event.markModified('promoCodes');
+        }
         event.markModified('PaymentTickets');
         await event.save();
         const ticketsForClient = normalizeTicketsForView(event.PaymentTickets);
-        res.status(200).json({ message: 'Payment event updated', PaymentTickets: ticketsForClient });
+        res.status(200).json({
+            message: 'Payment event updated',
+            PaymentTickets: ticketsForClient,
+            promoCodes: event.promoCodes || []
+        });
     } catch (error) {
         console.error('Error updating payment event:', error);
         res.status(500).json({ message: 'Error updating payment event' });
@@ -4864,8 +4905,162 @@ function getPaymentGateway() {
     return v === 'stripe' ? 'stripe' : 'wonder';
 }
 
+function normalizePromoCodeInput(input) {
+    const s = (input === undefined || input === null) ? '' : String(input);
+    const code = s.trim().toUpperCase();
+    return code || '';
+}
+
+function computeFixedDiscountAmount(promo) {
+    if (!promo) return 0;
+    if (promo.discountType && promo.discountType !== 'fixed') return 0;
+    return Number(promo.discountValue ?? 0) || 0;
+}
+
+function promoHasRemaining(promo) {
+    if (!promo) return false;
+    if (promo.enabled === false) return false;
+    const maxUses = Number(promo.maxUses ?? 0) || 0;
+    const usedCount = Number(promo.usedCount ?? 0) || 0;
+    if (!maxUses) return true; // 0 = 無限
+    return usedCount < maxUses;
+}
+
+function findPromoDocByCode(eventDoc, promoCode) {
+    const code = normalizePromoCodeInput(promoCode);
+    if (!code) return null;
+    const list = Array.isArray(eventDoc.promoCodes) ? eventDoc.promoCodes : [];
+    return list.find(pc => normalizePromoCodeInput(pc && pc.code ? pc.code : '') === code) || null;
+}
+
+/**
+ * 寫入 promo 使用紀錄（保護重複 webhook）
+ * - transactionId 會用嚟去重：同一個 transaction 唔會重複寫入 uses。
+ */
+function recordPromoUsageToEvent(eventDoc, promoCode, usage) {
+    const code = normalizePromoCodeInput(promoCode);
+    if (!code) return;
+    const promo = findPromoDocByCode(eventDoc, code);
+    if (!promo) return;
+
+    const txId = usage && usage.transactionId ? String(usage.transactionId) : '';
+    const already = txId && Array.isArray(promo.uses)
+        ? promo.uses.some(u => u && u.transactionId && String(u.transactionId) === txId)
+        : false;
+    if (already) return;
+
+    if (!Array.isArray(promo.uses)) promo.uses = [];
+    promo.uses.push({
+        transactionId: txId ? usage.transactionId : undefined,
+        userEmail: usage && usage.userEmail ? usage.userEmail : '',
+        userName: usage && usage.userName ? usage.userName : '',
+        originalTicketPrice: Number(usage && usage.originalTicketPrice ? usage.originalTicketPrice : 0) || 0,
+        discountAmount: Number(usage && usage.discountAmount ? usage.discountAmount : 0) || 0,
+        paidTicketPrice: Number(usage && usage.paidTicketPrice ? usage.paidTicketPrice : 0) || 0,
+        usedAt: new Date()
+    });
+
+    // 用 uses 長度作為 usedCount 真相來源，避免 usedCount/uses 不一致
+    promo.usedCount = promo.uses.length;
+    eventDoc.markModified('promoCodes');
+}
+
+/** 公開：檢查 promocode 是否可用（報名頁「檢查」掣） */
+exports.validatePromoCode = async (req, res) => {
+    const { event_id } = req.params;
+    const { promoCode, ticketId, lang } = req.body || {};
+    const isEn = lang && String(lang).toLowerCase().startsWith('en');
+    try {
+        const code = normalizePromoCodeInput(promoCode);
+        if (!code) {
+            return res.status(400).json({
+                valid: false,
+                message: isEn ? 'Please enter a promocode.' : '請輸入折扣碼。'
+            });
+        }
+
+        const event = await Event.findById(event_id);
+        if (!event) {
+            return res.status(404).json({
+                valid: false,
+                message: isEn ? 'Event not found.' : '找不到活動。'
+            });
+        }
+
+        const promo = findPromoDocByCode(event, code);
+        if (!promo) {
+            return res.status(400).json({
+                valid: false,
+                message: isEn ? 'Invalid promocode.' : '無效折扣碼。'
+            });
+        }
+        if (promo.enabled === false) {
+            return res.status(400).json({
+                valid: false,
+                message: isEn ? 'This promocode is disabled.' : '此折扣碼已停用。'
+            });
+        }
+        if (!promoHasRemaining(promo)) {
+            return res.status(400).json({
+                valid: false,
+                message: isEn ? 'This promocode has reached its usage limit.' : '此折扣碼已用完（超出使用次數）。'
+            });
+        }
+
+        const discountAmount = computeFixedDiscountAmount(promo);
+        const maxUses = Number(promo.maxUses ?? 0) || 0;
+        const usedCount = Number(promo.usedCount ?? 0) || 0;
+        const remainingUses = maxUses ? Math.max(0, maxUses - usedCount) : null;
+
+        let originalTicketPrice = null;
+        let paidTicketPrice = null;
+        if (ticketId && event.PaymentTickets && typeof event.PaymentTickets.id === 'function') {
+            const ticket = event.PaymentTickets.id(ticketId);
+            if (ticket) {
+                originalTicketPrice = Number(ticket.price) || 0;
+                paidTicketPrice = Math.max(0, originalTicketPrice - discountAmount);
+            }
+        }
+
+        const freeAfterDiscount = paidTicketPrice !== null && paidTicketPrice <= 0;
+        let message;
+        if (paidTicketPrice !== null) {
+            if (freeAfterDiscount) {
+                message = isEn
+                    ? `Promocode valid. Discount HKD ${discountAmount}. Final price: free (payment skipped).`
+                    : `折扣碼有效。減價 HKD ${discountAmount}。折後免費（無需付款）。`;
+            } else {
+                message = isEn
+                    ? `Promocode valid. Discount HKD ${discountAmount}. Final price: HKD ${paidTicketPrice}.`
+                    : `折扣碼有效。減價 HKD ${discountAmount}。折後價 HKD ${paidTicketPrice}。`;
+            }
+        } else {
+            message = isEn
+                ? `Promocode valid. Discount HKD ${discountAmount}.`
+                : `折扣碼有效。減價 HKD ${discountAmount}。`;
+        }
+
+        return res.json({
+            valid: true,
+            code,
+            discountAmount,
+            originalTicketPrice,
+            paidTicketPrice,
+            remainingUses,
+            freeAfterDiscount,
+            message
+        });
+    } catch (error) {
+        console.error('validatePromoCode error:', error);
+        return res.status(500).json({
+            valid: false,
+            message: isEn ? 'Failed to validate promocode.' : '檢查折扣碼失敗。'
+        });
+    }
+};
+
 /** $0 票券：視作免費登記（不經付款閘道、不標記 paid） */
-async function completeFreePaymentTicketRegistration(event, ticket, userFormData, lang) {
+async function completeFreePaymentTicketRegistration(event, ticket, userFormData, lang, appliedPromo) {
     const now = new Date();
     const ticketTitleDisplay = getPaymentTicketTitle(ticket, lang);
     const excludedFields = ['_id', '__v', 'create_at', 'modified_at'];
@@ -4899,18 +5094,31 @@ async function completeFreePaymentTicketRegistration(event, ticket, userFormData
     const savedUser = event.users[event.users.length - 1];
     const userForEmail = { ...newUser, _id: savedUser._id };
 
+    // 折扣碼（折後變 $0）：亦要記錄「誰用咗」
+    const appliedPromoCode = appliedPromo && appliedPromo.code ? normalizePromoCodeInput(appliedPromo.code) : '';
+    const appliedPromoDiscountAmount = appliedPromo && typeof appliedPromo.discountAmount !== 'undefined'
+        ? Number(appliedPromo.discountAmount) || 0
+        : 0;
+    const appliedPromoOriginalTicketPrice = appliedPromo && typeof appliedPromo.originalTicketPrice !== 'undefined'
+        ? Number(appliedPromo.originalTicketPrice) || 0
+        : Number(ticket.price) || 0;
+
     if (userForEmail.role !== 'guest') {
         await exports.sendPostRegistrationEmailByPolicy(userForEmail, event, { mode: 'welcome' });
     }
 
+    let freeInvoiceTransaction = null;
     if (isInvoiceEmailEnabled()) {
-        const transaction = await Transaction.create({
+        freeInvoiceTransaction = await Transaction.create({
             eventId: event._id,
             userEmail: userForEmail.email || userFormData.email,
             userName: resolveUserDisplayName(userForEmail) || userForEmail.name || resolveUserDisplayName(userFormData) || userFormData.email || '未提供姓名',
             ticketId: ticket._id,
             ticketTitle: ticketTitleDisplay,
             ticketPrice: 0,
+            promoCode: appliedPromoCode || '',
+            promoDiscountAmount: appliedPromoDiscountAmount,
+            promoOriginalTicketPrice: appliedPromoOriginalTicketPrice,
             stripeSessionId: 'free',
             paymentGateway: 'none',
             status: 'free',
@@ -4919,10 +5127,22 @@ async function completeFreePaymentTicketRegistration(event, ticket, userFormData
         });
         try {
             const invoiceTemplate = await findEmailTemplateForEvent(event._id, 'invoice');
-            await sendInvoiceEmail(transaction, event, invoiceTemplate ? invoiceTemplate._id : null);
+            await sendInvoiceEmail(freeInvoiceTransaction, event, invoiceTemplate ? invoiceTemplate._id : null);
         } catch (e) {
             console.error('Free ticket invoice email error:', e);
         }
+    }
+
+    if (appliedPromoCode) {
+        recordPromoUsageToEvent(event, appliedPromoCode, {
+            transactionId: freeInvoiceTransaction ? freeInvoiceTransaction._id : null,
+            userEmail: userForEmail.email || userFormData.email,
+            userName: userForEmail.name || userForEmail.userName || '',
+            originalTicketPrice: appliedPromoOriginalTicketPrice,
+            discountAmount: appliedPromoDiscountAmount,
+            paidTicketPrice: 0
+        });
+        await event.save();
     }
 
     return userForEmail;
@@ -4931,7 +5151,7 @@ async function completeFreePaymentTicketRegistration(event, ticket, userFormData
 // 統一 Checkout 入口：依 PAYMENT_GATEWAY 選擇 Stripe 或 Wonder，前端不需改動
 exports.stripeCheckout = async (req, res) => {
     const { event_id } = req.params;
-    const { ticketId, email, name, company, phone_code, phone, lang, ...restBody } = req.body || {};
+    const { ticketId, email, name, company, phone_code, phone, lang, promoCode, ...restBody } = req.body || {};
     const gateway = getPaymentGateway();
     try {
         const event = await Event.findById(event_id);
@@ -4948,15 +5168,37 @@ exports.stripeCheckout = async (req, res) => {
         let userFormData = ensureUserNameField({ email, name, company, phone_code, phone, ...restBody });
         delete userFormData.ticketId;
         delete userFormData.lang;
+        delete userFormData.promoCode;
+        delete userFormData.ticketCategory;
 
         const displayName = resolveUserDisplayName(userFormData) || email || '未提供姓名';
 
         const langQuery = lang && lang !== 'zh' ? `&lang=${lang}` : '';
         const ticketTitleDisplay = getPaymentTicketTitle(ticket, lang);
 
-        // 免費票券（$0）：視作免費登記，不建立付款交易、不導向 Wonder/Stripe
-        if (isFreePaymentTicketPrice(ticket.price)) {
-            await completeFreePaymentTicketRegistration(event, ticket, userFormData, lang);
+        const originalTicketPrice = Number(ticket.price) || 0;
+        const promoCodeNormalized = promoCode ? normalizePromoCodeInput(promoCode) : '';
+
+        const appliedPromo = promoCodeNormalized ? findPromoDocByCode(event, promoCodeNormalized) : null;
+        const appliedPromoCode = appliedPromo ? normalizePromoCodeInput(appliedPromo.code) : '';
+        const discountAmount = appliedPromo ? computeFixedDiscountAmount(appliedPromo) : 0;
+
+        if (promoCodeNormalized && !appliedPromo) {
+            return res.status(400).json({ message: '無效 promocode' });
+        }
+        if (appliedPromo && !promoHasRemaining(appliedPromo)) {
+            return res.status(400).json({ message: '此 promocode 已用完（超出使用次數）' });
+        }
+
+        const paidTicketPrice = Math.max(0, originalTicketPrice - discountAmount);
+
+        // 免費票券（折後 $0）：視作免費登記，不建立付款交易、不導向 Wonder/Stripe
+        if (isFreePaymentTicketPrice(paidTicketPrice)) {
+            await completeFreePaymentTicketRegistration(event, ticket, userFormData, lang, appliedPromoCode ? {
+                code: appliedPromoCode,
+                discountAmount,
+                originalTicketPrice
+            } : null);
             const params = new URLSearchParams();
             if (lang && lang !== 'zh') params.set('lang', lang);
             if (userFormData.thankYouYesNo) params.set('thankYouYesNo', String(userFormData.thankYouYesNo));
@@ -4971,7 +5213,10 @@ exports.stripeCheckout = async (req, res) => {
             userName: displayName,
             ticketId: ticket._id,
             ticketTitle: ticketTitleDisplay,
-            ticketPrice: ticket.price,
+            ticketPrice: paidTicketPrice,
+            promoCode: appliedPromoCode || '',
+            promoDiscountAmount: discountAmount,
+            promoOriginalTicketPrice: originalTicketPrice,
             stripeSessionId: 'pending',
             paymentGateway: gateway,
             status: 'pending',
@@ -4988,7 +5233,7 @@ exports.stripeCheckout = async (req, res) => {
                 referenceNumber: transaction._id.toString(),
                 currency: 'HKD',
                 ticketTitle: ticketTitleDisplay,
-                amount: ticket.price,
+                amount: paidTicketPrice,
                 callbackUrl,
                 redirectUrl,
                 note: `Event: ${eventDisplayName}, Ticket: ${ticketTitleDisplay}`
@@ -5021,7 +5266,7 @@ exports.stripeCheckout = async (req, res) => {
                 price_data: {
                     currency: (process.env.STRIPE_CURRENCY || 'hkd').toLowerCase(),
                     product_data: { name: ticketTitleDisplay || 'Ticket' },
-                    unit_amount: Math.round(Number(ticket.price) * 100) // 轉為分
+                    unit_amount: Math.round(Number(paidTicketPrice) * 100) // 轉為分
                 },
                 quantity: 1
             }],
@@ -5162,6 +5407,19 @@ async function markTransactionPaidAndAddUser(transaction) {
             modified_at: now
         };
     }
+
+    // paid 成功後才算「誰使用 promocode」
+    if (transaction.promoCode && String(transaction.promoCode).trim()) {
+        recordPromoUsageToEvent(eventDoc, transaction.promoCode, {
+            transactionId: transaction._id,
+            userEmail: transaction.userEmail,
+            userName: transaction.userName,
+            originalTicketPrice: transaction.promoOriginalTicketPrice ?? transaction.ticketPrice,
+            discountAmount: transaction.promoDiscountAmount ?? 0,
+            paidTicketPrice: transaction.ticketPrice ?? 0
+        });
+    }
+
     eventDoc.users.push(newUser);
     await eventDoc.save();
     const addedUser = eventDoc.users[eventDoc.users.length - 1];

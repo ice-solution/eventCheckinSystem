@@ -15,6 +15,10 @@ const transactionSchema = new mongoose.Schema({
     updatedAt: { type: Date, default: Date.now },
     // 付款前註冊表單的完整資料（FormConfig 欄位），webhook 完成付款後用來寫入 event.users
     userFormData: { type: mongoose.Schema.Types.Mixed },
+    /** 若使用 promocode 折扣：折後/原價與代碼資訊（用於管理端查詢） */
+    promoCode: { type: String, default: '' },
+    promoDiscountAmount: { type: Number, default: 0 }, // fixed：減價多少（HKD）
+    promoOriginalTicketPrice: { type: Number, default: 0 }, // 折扣前票價（HKD）
     /** Wonder 回調的完整 body（Invoice 等），用於對帳與排查 */
     transactionData: { type: mongoose.Schema.Types.Mixed }
 });

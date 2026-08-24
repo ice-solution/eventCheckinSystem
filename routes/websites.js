@@ -154,6 +154,7 @@ router.get('/:event_id/application/:userId', eventsController.renderApplicationF
 router.post('/:event_id/application/:userId', eventsController.submitApplicationForm);
 
 // Wonder Payment Checkout（沿用舊路徑以相容前端）
+router.post('/:event_id/promo-code/validate', eventsController.validatePromoCode);
 router.post('/:event_id/stripe-checkout', eventsController.stripeCheckout);
 
 // Wonder Payment 回調（GET/POST 皆可，依 Wonder 文件設定 callback_url）

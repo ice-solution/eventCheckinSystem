@@ -139,9 +139,99 @@ function applyFieldsToSections(existingSections, newFields, mode) {
     return sections;
 }
 
+function normalizeFieldDef(field, order) {
+    if (!field || !field.fieldName) return null;
+    const label = field.label && typeof field.label === 'object'
+        ? {
+            zh: field.label.zh || humanizeKey(field.fieldName),
+            en: field.label.en || humanizeKey(field.fieldName)
+        }
+        : {
+            zh: (typeof field.label === 'string' && field.label) || humanizeKey(field.fieldName),
+            en: (typeof field.label === 'string' && field.label) || humanizeKey(field.fieldName)
+        };
+    return {
+        fieldName: String(field.fieldName).trim(),
+        label,
+        type: field.type || 'text',
+        required: !!field.required,
+        display: field.display === true,
+        visible: field.visible !== false,
+        placeholder: field.placeholder && typeof field.placeholder === 'object'
+            ? field.placeholder
+            : { zh: '', en: '' },
+        options: Array.isArray(field.options) ? field.options : [],
+        validation: field.validation && typeof field.validation === 'object' ? field.validation : {},
+        order: field.order != null ? field.order : order
+    };
+}
+
+/**
+ * 接受多種貼上格式：
+ * 1) sponsorship-custom-form.json 成份（有 fields 或 sampleUser）
+ * 2) 只有 sampleUser object
+ * 3) 直接一個 user document
+ * Body 亦可係 { sampleUser, fields, mode }
+ */
+function resolveFieldsFromSyncPayload(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+        return {
+            ok: false,
+            message: '請貼上 JSON object。可用：① sponsorship-custom-form.json 成份；② 其中的 sampleUser；③ 一個 RSVP user document。'
+        };
+    }
+
+    // 模板 JSON：優先用 fields[]
+    if (Array.isArray(raw.fields) && raw.fields.length && raw.fields[0] && raw.fields[0].fieldName) {
+        const fields = [];
+        raw.fields.forEach((f, i) => {
+            const def = normalizeFieldDef(f, i + 1);
+            if (def) fields.push(def);
+        });
+        if (!fields.some((f) => f.fieldName === 'name')) {
+            fields.push(normalizeFieldDef({ fieldName: 'name', type: 'text', required: true }, fields.length + 1));
+        }
+        return { ok: true, fields, source: 'fields' };
+    }
+
+    // 模板 JSON 或 API body：sampleUser
+    if (raw.sampleUser && typeof raw.sampleUser === 'object' && !Array.isArray(raw.sampleUser)) {
+        const built = buildFieldsFromUserSample(raw.sampleUser);
+        if (!built.ok) return built;
+        return { ...built, source: 'sampleUser' };
+    }
+
+    // 直接係 user document（有典型欄位、又唔係模板 wrapper）
+    const looksLikeUser =
+        raw.firstName != null ||
+        raw.lastName != null ||
+        raw.email != null ||
+        raw.name != null ||
+        raw.company != null ||
+        raw.attendees != null;
+    const looksLikeTemplateWrapper =
+        raw.htmlFile != null ||
+        raw.publicPath != null ||
+        raw.tierRules != null ||
+        raw.submit != null;
+
+    if (looksLikeUser && !looksLikeTemplateWrapper) {
+        const built = buildFieldsFromUserSample(raw);
+        if (!built.ok) return built;
+        return { ...built, source: 'userDocument' };
+    }
+
+    return {
+        ok: false,
+        message: '認唔到格式。請貼 sponsorship-custom-form.json 成份，或只貼裡面的 sampleUser { firstName, email, attendees, ... }。'
+    };
+}
+
 module.exports = {
     SYSTEM_SKIP,
     buildFieldsFromUserSample,
     buildSectionFromFields,
-    applyFieldsToSections
+    applyFieldsToSections,
+    resolveFieldsFromSyncPayload,
+    normalizeFieldDef
 };

@@ -122,6 +122,27 @@ const eventSchema = new mongoose.Schema({
     luckydrawAwardPassword: { type: String, default: '' },
     isPaymentEvent: { type: Boolean, default: false }, // 是否為付費活動
     PaymentTickets: [ticketSchema], // 票券陣列
+    /**
+     * 折扣碼（Promotion Code / Coupon）
+     * 用於 Payment Event checkout 折價；折後 $0 會繞過付款閘道。
+     */
+    promoCodes: [{
+        code: { type: String, required: true }, // 代碼（會在寫入時正規化為大寫）
+        enabled: { type: Boolean, default: true },
+        discountType: { type: String, enum: ['fixed'], default: 'fixed' },
+        discountValue: { type: Number, required: true }, // fixed：減價多少（HKD）
+        maxUses: { type: Number, default: 0 }, // 0 = 無限
+        usedCount: { type: Number, default: 0 },
+        uses: [{
+            transactionId: { type: mongoose.Schema.Types.ObjectId },
+            userEmail: { type: String, default: '' },
+            userName: { type: String, default: '' },
+            originalTicketPrice: { type: Number, default: 0 },
+            discountAmount: { type: Number, default: 0 },
+            paidTicketPrice: { type: Number, default: 0 },
+            usedAt: { type: Date, default: Date.now }
+        }]
+    }],
     gameIds: [{ type: String }], // 新增 gameIds 陣列，存儲該事件開放的遊戲ID
     scanPointUsers: [scanPointUserSchema], // 掃瞄加分用戶列表
     treasureHuntItems: [treasureHuntItemSchema], // Treasure Hunt 項目列表

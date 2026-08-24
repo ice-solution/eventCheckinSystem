@@ -855,16 +855,14 @@ exports.resetToDefault = async (req, res) => {
 };
 
 /**
- * 用 sample user document 更新 FormConfig.sections fields
- * Body: { sampleUser: object, mode?: 'replace' | 'merge' }
- * replace = 用新欄位列表取代全部 sections
- * merge = 只加入尚未存在嘅 fieldName
+ * 用 sample user / template JSON 更新 FormConfig.sections fields
+ * Body: { sampleUser?, fields?, mode? } 或直接把整份 sponsorship-custom-form.json 放喺 sampleUser / 根
  */
 exports.syncFieldsFromUserSample = async (req, res) => {
     try {
         const { eventId } = req.params;
-        const sampleUser = req.body && req.body.sampleUser;
         const mode = (req.body && req.body.mode) === 'merge' ? 'merge' : 'replace';
+        const body = req.body || {};
 
         const event = await Event.findById(eventId);
         if (!event) {
@@ -872,11 +870,15 @@ exports.syncFieldsFromUserSample = async (req, res) => {
         }
 
         const {
-            buildFieldsFromUserSample,
+            resolveFieldsFromSyncPayload,
             applyFieldsToSections
         } = require('../utils/syncFormFieldsFromUserSample');
 
-        const built = buildFieldsFromUserSample(sampleUser);
+        // 相容：前端可能把成份 JSON 放喺 sampleUser，或放喺根
+        const payload = (body.sampleUser && typeof body.sampleUser === 'object')
+            ? body.sampleUser
+            : body;
+        const built = resolveFieldsFromSyncPayload(payload);
         if (!built.ok) {
             return res.status(400).json({ success: false, message: built.message });
         }
@@ -896,9 +898,10 @@ exports.syncFieldsFromUserSample = async (req, res) => {
         return res.json({
             success: true,
             message: mode === 'merge'
-                ? `已合併 ${built.fields.length} 個欄位定義（只新增缺少嘅）`
-                : `已用 sample 取代 FormConfig 欄位（${built.fields.length} 個）`,
+                ? `已合併 ${built.fields.length} 個欄位（來源：${built.source}）`
+                : `已取代 FormConfig 欄位 ${built.fields.length} 個（來源：${built.source}）`,
             mode,
+            source: built.source,
             fieldNames: built.fields.map((f) => f.fieldName),
             formConfig: exports.getFormConfigForRender(saved)
         });

@@ -537,6 +537,30 @@ var registerPageTitleSuffix = isApplicationMode
             color: #5a6268;
             white-space: pre-wrap;
         }
+        .promo-code-row .form-input {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+        .promo-code-row .form-input .form-control {
+            flex: 1 1 180px;
+            min-width: 140px;
+        }
+        .promo-code-row #promoCodeCheckBtn {
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+        #promoCodeStatus {
+            width: 100%;
+            margin-top: 6px;
+            font-size: 13px;
+            line-height: 1.4;
+            min-height: 1.2em;
+        }
+        #promoCodeStatus.is-ok { color: #1e7e34; }
+        #promoCodeStatus.is-err { color: #c82333; }
+        #promoCodeStatus.is-muted { color: #6c757d; }
     </style>
 </head>
 <body>
@@ -933,6 +957,26 @@ var registerPageTitleSuffix = isApplicationMode
                             <div id="ticketHighlightText" class="ticket-highlight-text"></div>
                         </div>
                     </div>
+
+                    <div class="form-row mt-3 promo-code-row" id="promoCodeRow">
+                        <label class="form-label field-label" for="eventPromoCode"
+                               data-zh="折扣碼（可選）" data-en="Promocode (optional)">折扣碼（可選）</label>
+                        <div class="form-input">
+                            <input type="text" id="eventPromoCode" name="promoCode" class="form-control"
+                                   placeholder="折扣碼（可選）"
+                                   data-placeholder-zh="折扣碼（可選）"
+                                   data-placeholder-en="Enter promocode (optional)"
+                                   autocomplete="off"
+                                   autocapitalize="characters"
+                                   spellcheck="false"
+                                   data-lpignore="true"
+                                   data-1p-ignore="true"
+                                   data-form-type="other">
+                            <button type="button" class="btn btn-outline-primary lang-text" id="promoCodeCheckBtn"
+                                    data-zh="檢查" data-en="Check">檢查</button>
+                            <div id="promoCodeStatus" class="is-muted" aria-live="polite"></div>
+                        </div>
+                    </div>
                 </div>
                 <script type="application/json" id="paymentTicketsDataJson"><%- JSON.stringify(paymentTickets) %></script>
                 <script type="application/json" id="paymentTicketUiJson"><%- JSON.stringify(ptUi) %></script>
@@ -1186,6 +1230,100 @@ var registerPageTitleSuffix = isApplicationMode
             try { return !!JSON.parse(el.textContent); } catch (_) { return false; }
         })();
         let selectedTicketCategory = '';
+        let validatedPromoCode = '';
+
+        function setPromoCodeStatus(text, kind) {
+            const $st = $('#promoCodeStatus');
+            if (!$st.length) return;
+            $st.removeClass('is-ok is-err is-muted')
+                .addClass(kind === 'ok' ? 'is-ok' : (kind === 'err' ? 'is-err' : 'is-muted'))
+                .text(text || '');
+        }
+
+        function clearPromoValidation(keepMessage) {
+            validatedPromoCode = '';
+            if (!keepMessage) setPromoCodeStatus('', 'muted');
+        }
+
+        function getEnteredPromoCode() {
+            return String($('#eventPromoCode').val() || '').trim().toUpperCase();
+        }
+
+        function checkPromoCode() {
+            const code = getEnteredPromoCode();
+            if (!code) {
+                clearPromoValidation();
+                setPromoCodeStatus(
+                    currentLanguage === 'en' ? 'Please enter a promocode first.' : '請先輸入折扣碼。',
+                    'err'
+                );
+                return;
+            }
+            const $btn = $('#promoCodeCheckBtn');
+            $btn.prop('disabled', true);
+            setPromoCodeStatus(
+                currentLanguage === 'en' ? 'Checking…' : '檢查中…',
+                'muted'
+            );
+            $.ajax({
+                type: 'POST',
+                url: '/web/<%= event_id %>/promo-code/validate',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    promoCode: code,
+                    ticketId: $('#ticketId').val() || '',
+                    lang: currentLanguage
+                }),
+                success: function(res) {
+                    if (res && res.valid) {
+                        validatedPromoCode = res.code || code;
+                        setPromoCodeStatus(res.message || (currentLanguage === 'en' ? 'Promocode valid.' : '折扣碼有效。'), 'ok');
+                    } else {
+                        clearPromoValidation(true);
+                        setPromoCodeStatus(
+                            (res && res.message) || (currentLanguage === 'en' ? 'Invalid promocode.' : '無效折扣碼。'),
+                            'err'
+                        );
+                    }
+                },
+                error: function(xhr) {
+                    clearPromoValidation(true);
+                    const msg = (xhr.responseJSON && xhr.responseJSON.message)
+                        ? xhr.responseJSON.message
+                        : (currentLanguage === 'en' ? 'Failed to validate promocode.' : '檢查折扣碼失敗。');
+                    setPromoCodeStatus(msg, 'err');
+                },
+                complete: function() {
+                    $btn.prop('disabled', false);
+                }
+            });
+        }
+
+        $(document).on('click', '#promoCodeCheckBtn', function(e) {
+            e.preventDefault();
+            checkPromoCode();
+        });
+        $(document).on('input change', '#eventPromoCode', function() {
+            if (validatedPromoCode && getEnteredPromoCode() !== validatedPromoCode) {
+                clearPromoValidation();
+                setPromoCodeStatus(
+                    currentLanguage === 'en' ? 'Promocode changed — please check again.' : '折扣碼已更改，請重新檢查。',
+                    'muted'
+                );
+            } else if (!getEnteredPromoCode()) {
+                clearPromoValidation();
+            }
+        });
+        $(document).on('change', '#ticketId', function() {
+            if (validatedPromoCode) {
+                // 票券轉咗，折後價可能唔同，要重新檢查
+                clearPromoValidation();
+                setPromoCodeStatus(
+                    currentLanguage === 'en' ? 'Ticket changed — please check promocode again.' : '票券已更改，請重新檢查折扣碼。',
+                    'muted'
+                );
+            }
+        });
 
         function isTicketInRange(ticket) {
             const now = new Date();
@@ -1624,77 +1762,31 @@ var registerPageTitleSuffix = isApplicationMode
                 }
             }
 
-            // 為所有必填字段設置驗證訊息處理
+            // 為所有必填字段設置驗證訊息處理（namespaced，避免每次切語言重複綁定）
             $('input[required], textarea[required], select[required]').each(function() {
                 const field = this;
-                const $field = $(field);
-                const fieldType = $field.attr('type');
-                
-                // 跳過 checkbox 和 radio（它們有特殊的驗證邏輯）
-                if (fieldType === 'checkbox' || fieldType === 'radio') {
-                    return;
-                }
-                
-                // 監聽輸入事件，清除驗證訊息（如果字段有效）
-                $(field).on('input', function() {
-                    // 立即清除驗證訊息，讓瀏覽器重新驗證
-                    this.setCustomValidity('');
-                    // 如果字段有效，確保保持清除狀態
-                    if (this.validity.valid) {
-                        this.setCustomValidity('');
-                    }
-                });
-                
-                // 監聽改變事件，清除驗證訊息（如果字段有效）
-                $(field).on('change', function() {
-                    // 立即清除驗證訊息
-                    this.setCustomValidity('');
-                    if (this.validity.valid) {
-                        this.setCustomValidity('');
-                    }
-                });
-                
-                // 在驗證失敗時設置訊息
-                $(field).on('invalid', function(e) {
-                    // 只在字段確實無效時設置訊息
-                    if (!this.validity.valid) {
-                        setValidationMessage(this);
-                    }
-                });
-            });
-            
-            // 在語言切換後，更新所有字段的驗證訊息（只在字段無效時）
-            const originalUpdatePageLanguage = updatePageLanguage;
-            updatePageLanguage = function() {
-                originalUpdatePageLanguage.call(this);
-                
-                // 更新所有無效字段的驗證訊息（只在字段已經有自定義驗證訊息時才更新）
-                $('input[required], textarea[required], select[required]').each(function() {
-                    const field = this;
-                    const $field = $(field);
-                    const fieldType = $field.attr('type');
-                    
-                    if (fieldType === 'checkbox' || fieldType === 'radio') {
-                        return;
-                    }
-                    
-                    // 如果字段有效，清除所有驗證訊息
-                    if (field.validity.valid) {
-                        field.setCustomValidity('');
-                    } else {
-                        // 只有當字段確實無效且已經有驗證訊息時才更新（避免在頁面載入時設置）
-                        // 檢查字段是否有值，如果有值但無效，才更新訊息
-                        if (field.value && field.value.trim() !== '') {
-                            // 字段有值但驗證失敗（如 email 格式錯誤），更新訊息
-                            setValidationMessage(field);
-                        } else {
-                            // 字段為空，但只在已經觸發過驗證時才設置訊息
-                            // 這裡不設置，讓瀏覽器在實際驗證時才設置
-                        }
-                    }
-                });
-            };
+                const fieldType = ($(field).attr('type') || '').toLowerCase();
+                if (fieldType === 'checkbox' || fieldType === 'radio') return;
 
+                $(field).off('.regValidate')
+                    .on('input.regValidate change.regValidate', function() {
+                        this.setCustomValidity('');
+                    })
+                    .on('invalid.regValidate', function() {
+                        if (!this.validity.valid) setValidationMessage(this);
+                    });
+            });
+
+            $('input[required], textarea[required], select[required]').each(function() {
+                const field = this;
+                const fieldType = ($(field).attr('type') || '').toLowerCase();
+                if (fieldType === 'checkbox' || fieldType === 'radio') return;
+                if (field.validity.valid) {
+                    field.setCustomValidity('');
+                } else if (field.value && String(field.value).trim() !== '') {
+                    setValidationMessage(field);
+                }
+            });
         }
 
         function initOverlayAndValidation(opts) {
@@ -1963,6 +2055,16 @@ var registerPageTitleSuffix = isApplicationMode
                 }
                 if (!$('#ticketId').val()) {
                     alert(currentLanguage === 'zh' ? '請選擇票券。' : 'Please select a ticket.');
+                    return;
+                }
+            }
+            const enteredPromo = getEnteredPromoCode ? getEnteredPromoCode() : String($('#eventPromoCode').val() || '').trim().toUpperCase();
+            if (enteredPromo) {
+                if (!validatedPromoCode || validatedPromoCode !== enteredPromo) {
+                    alert(currentLanguage === 'zh'
+                        ? '請先按「檢查」確認折扣碼可用。'
+                        : 'Please click Check to verify the promocode first.');
+                    $('#eventPromoCode').focus();
                     return;
                 }
             }
