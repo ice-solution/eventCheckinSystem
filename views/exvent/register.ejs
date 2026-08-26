@@ -113,7 +113,12 @@ var registerPageTitleSuffix = isApplicationMode
     <style>
         body {
             background-color: #f8f9fa;
-            font-family: 'A','Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: Arial, Helvetica, sans-serif;
+            font-weight: 400;
+        }
+        body, body input, body select, body textarea, body button, body label,
+        body h1, body h2, body h3, body h4, body h5, body h6, body p, body span, body a, body .btn {
+            font-family: Arial, Helvetica, sans-serif !important;
         }
         .container {
             max-width: 800px;
@@ -369,7 +374,7 @@ var registerPageTitleSuffix = isApplicationMode
             cursor: pointer;
         }
         .terms-title-as-link:hover {
-            color: #E8B4B8;
+            color: #67595E;
         }
         .terms-agree-row.form-check {
             display: flex;
@@ -534,6 +539,30 @@ var registerPageTitleSuffix = isApplicationMode
             color: #5a6268;
             white-space: pre-wrap;
         }
+        .promo-code-row .form-input {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+        .promo-code-row .form-input .form-control {
+            flex: 1 1 180px;
+            min-width: 140px;
+        }
+        .promo-code-row #promoCodeCheckBtn {
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+        #promoCodeStatus {
+            width: 100%;
+            margin-top: 6px;
+            font-size: 13px;
+            line-height: 1.4;
+            min-height: 1.2em;
+        }
+        #promoCodeStatus.is-ok { color: #1e7e34; }
+        #promoCodeStatus.is-err { color: #c82333; }
+        #promoCodeStatus.is-muted { color: #6c757d; }
     </style>
 </head>
 <body>
@@ -930,6 +959,26 @@ var registerPageTitleSuffix = isApplicationMode
                             <div id="ticketHighlightText" class="ticket-highlight-text"></div>
                         </div>
                     </div>
+
+                    <div class="form-row mt-3 promo-code-row" id="promoCodeRow">
+                        <label class="form-label field-label" for="eventPromoCode"
+                               data-zh="折扣碼（可選）" data-en="Promocode (optional)">折扣碼（可選）</label>
+                        <div class="form-input">
+                            <input type="text" id="eventPromoCode" name="promoCode" class="form-control"
+                                   placeholder="折扣碼（可選）"
+                                   data-placeholder-zh="折扣碼（可選）"
+                                   data-placeholder-en="Enter promocode (optional)"
+                                   autocomplete="off"
+                                   autocapitalize="characters"
+                                   spellcheck="false"
+                                   data-lpignore="true"
+                                   data-1p-ignore="true"
+                                   data-form-type="other">
+                            <button type="button" class="btn btn-outline-primary lang-text" id="promoCodeCheckBtn"
+                                    data-zh="檢查" data-en="Check">檢查</button>
+                            <div id="promoCodeStatus" class="is-muted" aria-live="polite"></div>
+                        </div>
+                    </div>
                 </div>
                 <script type="application/json" id="paymentTicketsDataJson"><%- JSON.stringify(paymentTickets) %></script>
                 <script type="application/json" id="paymentTicketUiJson"><%- JSON.stringify(ptUi) %></script>
@@ -983,50 +1032,71 @@ var registerPageTitleSuffix = isApplicationMode
                 }) %></script>
             <% } %>
 
-            <!-- Agreement（非必填，但會記錄勾選狀態） -->
-            <% if (formConfig && formConfig.agreement && formConfig.agreement.enabled) { %>
-                <% const agr = formConfig.agreement; %>
-                <% const agrTitle = agr.title || {}; %>
-                <% const agrLink = agr.linkLabel || {}; %>
-                <% const showAgrLink = agr.showLinkLabel !== false; %>
+            <!-- Agreement（可多份；共用一個頂部標題） -->
+            <%
+                const _agreementsAll = (formConfig && Array.isArray(formConfig.agreements) && formConfig.agreements.length)
+                    ? formConfig.agreements
+                    : (formConfig && formConfig.agreement ? [formConfig.agreement] : []);
+                const _agreementsEnabled = _agreementsAll
+                    .map(function(agr, agrIndex) { return { agr: agr, agrIndex: agrIndex }; })
+                    .filter(function(x) { return x.agr && x.agr.enabled; });
+                const _agrSharedTitle = (_agreementsAll[0] && _agreementsAll[0].title) ? _agreementsAll[0].title : {};
+            %>
+            <% if (_agreementsEnabled.length) { %>
                 <div class="form-section agreement-section">
-                    <div class="terms-header">
-                        <h3 class="section-title<%= showAgrLink ? '' : ' terms-title-as-link js-agreement-modal-opener' %>" id="agreementSectionTitle"
-                            data-zh="<%= (agrTitle.zh ? agrTitle.zh : '協議') %>"
-                            data-en="<%= (agrTitle.en ? agrTitle.en : 'Agreement') %>"><%= (agrTitle.zh ? agrTitle.zh : '協議') %></h3>
-                        <% if (showAgrLink) { %>
-                        <a href="#" class="terms-open-link lang-text" id="agreementOpenLink" role="button"
-                           data-zh="<%= (agrLink.zh ? agrLink.zh : '(協議)') %>"
-                           data-en="<%= (agrLink.en ? agrLink.en : '(agreement)') %>"><%= (agrLink.zh ? agrLink.zh : '(協議)') %></a>
-                        <% } %>
-                    </div>
-                    <div class="form-check terms-agree-row">
-                        <input class="form-check-input" type="checkbox" id="agreementAgree" name="agreementAgreed" value="true">
-                        <label class="form-check-label agreement-checkbox-label"
-                               for="agreementAgree"
-                               id="agreementAgreeLabel"></label>
-                    </div>
-                </div>
-
-                <div id="agreementOverlay" class="terms-overlay" aria-hidden="true">
-                    <div class="terms-modal" role="dialog" aria-modal="true" aria-labelledby="agreementModalTitle">
-                        <div class="terms-modal-header">
-                            <h4 id="agreementModalTitle" class="lang-text"
-                                data-zh="<%= (agrTitle.zh ? agrTitle.zh : '協議') %>"
-                                data-en="<%= (agrTitle.en ? agrTitle.en : 'Agreement') %>"><%= (agrTitle.zh ? agrTitle.zh : '協議') %></h4>
-                            <button type="button" class="terms-modal-close" id="agreementModalClose" aria-label="Close">&times;</button>
+                    <h3 class="section-title" id="agreementSectionTitle"
+                        data-zh="<%= (_agrSharedTitle.zh ? _agrSharedTitle.zh : '協議') %>"
+                        data-en="<%= (_agrSharedTitle.en ? _agrSharedTitle.en : 'Agreement') %>"><%= (_agrSharedTitle.zh ? _agrSharedTitle.zh : '協議') %></h3>
+                    <% _agreementsEnabled.forEach(function(entry) { %>
+                        <% const agr = entry.agr; %>
+                        <% const agrIndex = entry.agrIndex; %>
+                        <% const agrTitle = agr.title || _agrSharedTitle || {}; %>
+                        <% const agrLink = agr.linkLabel || {}; %>
+                        <% const showAgrLink = agr.showLinkLabel !== false; %>
+                        <% const agrId = agrIndex === 0 ? '' : ('_' + (agrIndex + 1)); %>
+                        <% const agrAgreedName = agrIndex === 0 ? 'agreementAgreed' : ('agreementAgreed_' + (agrIndex + 1)); %>
+                        <% const agrRecordedName = agrIndex === 0 ? 'agreementRecordedAt' : ('agreementRecordedAt_' + (agrIndex + 1)); %>
+                        <div class="agreement-item mb-3">
+                            <% if (showAgrLink) { %>
+                            <div class="terms-header">
+                                <a href="#" class="terms-open-link lang-text" id="agreementOpenLink<%= agrId %>" role="button"
+                                   data-zh="<%= (agrLink.zh ? agrLink.zh : '(協議)') %>"
+                                   data-en="<%= (agrLink.en ? agrLink.en : '(agreement)') %>"><%= (agrLink.zh ? agrLink.zh : '(協議)') %></a>
+                            </div>
+                            <% } %>
+                            <div class="form-check terms-agree-row">
+                                <input class="form-check-input js-agreement-agree" type="checkbox"
+                                       id="agreementAgree<%= agrId %>"
+                                       name="<%= agrAgreedName %>"
+                                       data-recorded-at-name="<%= agrRecordedName %>"
+                                       value="true">
+                                <label class="form-check-label agreement-checkbox-label js-agreement-label"
+                                       id="agreementAgreeLabel<%= agrId %>"
+                                       data-checkbox-id="agreementAgree<%= agrId %>"></label>
+                            </div>
                         </div>
-                        <div class="terms-modal-body" id="agreementContent"></div>
-                    </div>
+
+                        <div id="agreementOverlay<%= agrId %>" class="terms-overlay" aria-hidden="true">
+                            <div class="terms-modal" role="dialog" aria-modal="true" aria-labelledby="agreementModalTitle<%= agrId %>">
+                                <div class="terms-modal-header">
+                                    <h4 id="agreementModalTitle<%= agrId %>" class="lang-text"
+                                        data-zh="<%= (agrTitle.zh || _agrSharedTitle.zh || '協議') %>"
+                                        data-en="<%= (agrTitle.en || _agrSharedTitle.en || 'Agreement') %>"><%= (agrTitle.zh || _agrSharedTitle.zh || '協議') %></h4>
+                                    <button type="button" class="terms-modal-close" id="agreementModalClose<%= agrId %>" aria-label="Close">&times;</button>
+                                </div>
+                                <div class="terms-modal-body js-agreement-content" id="agreementContent<%= agrId %>"></div>
+                            </div>
+                        </div>
+                        <script type="application/json" class="js-agreement-label-json" data-target="agreementAgreeLabel<%= agrId %>"><%- JSON.stringify({
+                            zh: (agr.label && agr.label.zh) ? agr.label.zh : '',
+                            en: (agr.label && agr.label.en) ? agr.label.en : ''
+                        }) %></script>
+                        <script type="application/json" class="js-agreement-content-json" data-target="agreementContent<%= agrId %>"><%- JSON.stringify({
+                            zh: (agr.content && agr.content.zh) ? agr.content.zh : '',
+                            en: (agr.content && agr.content.en) ? agr.content.en : ''
+                        }) %></script>
+                    <% }); %>
                 </div>
-                <script type="application/json" id="agreementLabelJson"><%- JSON.stringify({
-                    zh: (agr.label && agr.label.zh) ? agr.label.zh : '',
-                    en: (agr.label && agr.label.en) ? agr.label.en : ''
-                }) %></script>
-                <script type="application/json" id="agreementContentJson"><%- JSON.stringify({
-                    zh: (agr.content && agr.content.zh) ? agr.content.zh : '',
-                    en: (agr.content && agr.content.en) ? agr.content.en : ''
-                }) %></script>
             <% } %>
 
             <!-- Thank You Yes/No 問題 -->
@@ -1144,16 +1214,6 @@ var registerPageTitleSuffix = isApplicationMode
             if (!el) return { zh: '', en: '' };
             try { return JSON.parse(el.textContent); } catch (_) { return { zh: '', en: '' }; }
         })();
-        const agreementContentByLang = (function() {
-            const el = document.getElementById('agreementContentJson');
-            if (!el) return { zh: '', en: '' };
-            try { return JSON.parse(el.textContent); } catch (_) { return { zh: '', en: '' }; }
-        })();
-        const agreementLabelByLang = (function() {
-            const el = document.getElementById('agreementLabelJson');
-            if (!el) return { zh: '', en: '' };
-            try { return JSON.parse(el.textContent); } catch (_) { return { zh: '', en: '' }; }
-        })();
 
         // --- 付費票券：分類按鈕、票券下拉、Highlight ---
         const paymentTicketsData = (function() {
@@ -1172,6 +1232,100 @@ var registerPageTitleSuffix = isApplicationMode
             try { return !!JSON.parse(el.textContent); } catch (_) { return false; }
         })();
         let selectedTicketCategory = '';
+        let validatedPromoCode = '';
+
+        function setPromoCodeStatus(text, kind) {
+            const $st = $('#promoCodeStatus');
+            if (!$st.length) return;
+            $st.removeClass('is-ok is-err is-muted')
+                .addClass(kind === 'ok' ? 'is-ok' : (kind === 'err' ? 'is-err' : 'is-muted'))
+                .text(text || '');
+        }
+
+        function clearPromoValidation(keepMessage) {
+            validatedPromoCode = '';
+            if (!keepMessage) setPromoCodeStatus('', 'muted');
+        }
+
+        function getEnteredPromoCode() {
+            return String($('#eventPromoCode').val() || '').trim().toUpperCase();
+        }
+
+        function checkPromoCode() {
+            const code = getEnteredPromoCode();
+            if (!code) {
+                clearPromoValidation();
+                setPromoCodeStatus(
+                    currentLanguage === 'en' ? 'Please enter a promocode first.' : '請先輸入折扣碼。',
+                    'err'
+                );
+                return;
+            }
+            const $btn = $('#promoCodeCheckBtn');
+            $btn.prop('disabled', true);
+            setPromoCodeStatus(
+                currentLanguage === 'en' ? 'Checking…' : '檢查中…',
+                'muted'
+            );
+            $.ajax({
+                type: 'POST',
+                url: '/web/<%= event_id %>/promo-code/validate',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    promoCode: code,
+                    ticketId: $('#ticketId').val() || '',
+                    lang: currentLanguage
+                }),
+                success: function(res) {
+                    if (res && res.valid) {
+                        validatedPromoCode = res.code || code;
+                        setPromoCodeStatus(res.message || (currentLanguage === 'en' ? 'Promocode valid.' : '折扣碼有效。'), 'ok');
+                    } else {
+                        clearPromoValidation(true);
+                        setPromoCodeStatus(
+                            (res && res.message) || (currentLanguage === 'en' ? 'Invalid promocode.' : '無效折扣碼。'),
+                            'err'
+                        );
+                    }
+                },
+                error: function(xhr) {
+                    clearPromoValidation(true);
+                    const msg = (xhr.responseJSON && xhr.responseJSON.message)
+                        ? xhr.responseJSON.message
+                        : (currentLanguage === 'en' ? 'Failed to validate promocode.' : '檢查折扣碼失敗。');
+                    setPromoCodeStatus(msg, 'err');
+                },
+                complete: function() {
+                    $btn.prop('disabled', false);
+                }
+            });
+        }
+
+        $(document).on('click', '#promoCodeCheckBtn', function(e) {
+            e.preventDefault();
+            checkPromoCode();
+        });
+        $(document).on('input change', '#eventPromoCode', function() {
+            if (validatedPromoCode && getEnteredPromoCode() !== validatedPromoCode) {
+                clearPromoValidation();
+                setPromoCodeStatus(
+                    currentLanguage === 'en' ? 'Promocode changed — please check again.' : '折扣碼已更改，請重新檢查。',
+                    'muted'
+                );
+            } else if (!getEnteredPromoCode()) {
+                clearPromoValidation();
+            }
+        });
+        $(document).on('change', '#ticketId', function() {
+            if (validatedPromoCode) {
+                // 票券轉咗，折後價可能唔同，要重新檢查
+                clearPromoValidation();
+                setPromoCodeStatus(
+                    currentLanguage === 'en' ? 'Ticket changed — please check promocode again.' : '票券已更改，請重新檢查折扣碼。',
+                    'muted'
+                );
+            }
+        });
 
         function isTicketInRange(ticket) {
             const now = new Date();
@@ -1374,21 +1528,31 @@ var registerPageTitleSuffix = isApplicationMode
         }
 
         function renderAgreementContentHtml() {
-            const $content = $('#agreementContent');
-            if (!$content.length) return;
-            const raw = currentLanguage === 'en'
-                ? (agreementContentByLang.en || agreementContentByLang.zh || '')
-                : (agreementContentByLang.zh || agreementContentByLang.en || '');
-            $content.html(formatTermsContent(raw));
+            document.querySelectorAll('.js-agreement-content-json').forEach(function(el) {
+                const targetId = el.getAttribute('data-target');
+                const $content = targetId ? $('#' + targetId) : $();
+                if (!$content.length) return;
+                let parsed = { zh: '', en: '' };
+                try { parsed = JSON.parse(el.textContent); } catch (_) {}
+                const raw = currentLanguage === 'en'
+                    ? (parsed.en || parsed.zh || '')
+                    : (parsed.zh || parsed.en || '');
+                $content.html(formatTermsContent(raw));
+            });
         }
 
         function renderAgreementLabelHtml() {
-            const $label = $('#agreementAgreeLabel');
-            if (!$label.length) return;
-            const raw = currentLanguage === 'en'
-                ? (agreementLabelByLang.en || agreementLabelByLang.zh || '')
-                : (agreementLabelByLang.zh || agreementLabelByLang.en || '');
-            $label.html(formatTermsContent(raw));
+            document.querySelectorAll('.js-agreement-label-json').forEach(function(el) {
+                const targetId = el.getAttribute('data-target');
+                const $label = targetId ? $('#' + targetId) : $();
+                if (!$label.length) return;
+                let parsed = { zh: '', en: '' };
+                try { parsed = JSON.parse(el.textContent); } catch (_) {}
+                const raw = currentLanguage === 'en'
+                    ? (parsed.en || parsed.zh || '')
+                    : (parsed.zh || parsed.en || '');
+                $label.html(formatTermsContent(raw));
+            });
         }
         
         // 初始化語言按鈕狀態
@@ -1600,77 +1764,31 @@ var registerPageTitleSuffix = isApplicationMode
                 }
             }
 
-            // 為所有必填字段設置驗證訊息處理
+            // 為所有必填字段設置驗證訊息處理（namespaced，避免每次切語言重複綁定）
             $('input[required], textarea[required], select[required]').each(function() {
                 const field = this;
-                const $field = $(field);
-                const fieldType = $field.attr('type');
-                
-                // 跳過 checkbox 和 radio（它們有特殊的驗證邏輯）
-                if (fieldType === 'checkbox' || fieldType === 'radio') {
-                    return;
-                }
-                
-                // 監聽輸入事件，清除驗證訊息（如果字段有效）
-                $(field).on('input', function() {
-                    // 立即清除驗證訊息，讓瀏覽器重新驗證
-                    this.setCustomValidity('');
-                    // 如果字段有效，確保保持清除狀態
-                    if (this.validity.valid) {
-                        this.setCustomValidity('');
-                    }
-                });
-                
-                // 監聽改變事件，清除驗證訊息（如果字段有效）
-                $(field).on('change', function() {
-                    // 立即清除驗證訊息
-                    this.setCustomValidity('');
-                    if (this.validity.valid) {
-                        this.setCustomValidity('');
-                    }
-                });
-                
-                // 在驗證失敗時設置訊息
-                $(field).on('invalid', function(e) {
-                    // 只在字段確實無效時設置訊息
-                    if (!this.validity.valid) {
-                        setValidationMessage(this);
-                    }
-                });
-            });
-            
-            // 在語言切換後，更新所有字段的驗證訊息（只在字段無效時）
-            const originalUpdatePageLanguage = updatePageLanguage;
-            updatePageLanguage = function() {
-                originalUpdatePageLanguage.call(this);
-                
-                // 更新所有無效字段的驗證訊息（只在字段已經有自定義驗證訊息時才更新）
-                $('input[required], textarea[required], select[required]').each(function() {
-                    const field = this;
-                    const $field = $(field);
-                    const fieldType = $field.attr('type');
-                    
-                    if (fieldType === 'checkbox' || fieldType === 'radio') {
-                        return;
-                    }
-                    
-                    // 如果字段有效，清除所有驗證訊息
-                    if (field.validity.valid) {
-                        field.setCustomValidity('');
-                    } else {
-                        // 只有當字段確實無效且已經有驗證訊息時才更新（避免在頁面載入時設置）
-                        // 檢查字段是否有值，如果有值但無效，才更新訊息
-                        if (field.value && field.value.trim() !== '') {
-                            // 字段有值但驗證失敗（如 email 格式錯誤），更新訊息
-                            setValidationMessage(field);
-                        } else {
-                            // 字段為空，但只在已經觸發過驗證時才設置訊息
-                            // 這裡不設置，讓瀏覽器在實際驗證時才設置
-                        }
-                    }
-                });
-            };
+                const fieldType = ($(field).attr('type') || '').toLowerCase();
+                if (fieldType === 'checkbox' || fieldType === 'radio') return;
 
+                $(field).off('.regValidate')
+                    .on('input.regValidate change.regValidate', function() {
+                        this.setCustomValidity('');
+                    })
+                    .on('invalid.regValidate', function() {
+                        if (!this.validity.valid) setValidationMessage(this);
+                    });
+            });
+
+            $('input[required], textarea[required], select[required]').each(function() {
+                const field = this;
+                const fieldType = ($(field).attr('type') || '').toLowerCase();
+                if (fieldType === 'checkbox' || fieldType === 'radio') return;
+                if (field.validity.valid) {
+                    field.setCustomValidity('');
+                } else if (field.value && String(field.value).trim() !== '') {
+                    setValidationMessage(field);
+                }
+            });
         }
 
         function initOverlayAndValidation(opts) {
@@ -1682,6 +1800,7 @@ var registerPageTitleSuffix = isApplicationMode
             function openOverlay(e) {
                 if (e) e.preventDefault();
                 if (!overlay) return;
+                if (typeof opts.shouldOpen === 'function' && !opts.shouldOpen()) return;
                 overlay.classList.add('is-open');
                 overlay.setAttribute('aria-hidden', 'false');
                 document.body.style.overflow = 'hidden';
@@ -1737,18 +1856,49 @@ var registerPageTitleSuffix = isApplicationMode
             invalidMsgEn: 'Please agree to the terms before submitting.'
         });
 
-        // Agreement（非必填，僅彈層；勾選狀態於 submit 時寫入 agreementAgreed）
-        initOverlayAndValidation({
-            overlayId: 'agreementOverlay',
-            openLinkId: 'agreementOpenLink',
-            openTitleId: 'agreementSectionTitle',
-            closeBtnId: 'agreementModalClose',
-            agreeId: 'agreementAgree',
-            optionalAgree: true
+        // Agreement：只有「顯示連結文字」時，用 link text 開 content；否則只當 tickbox
+        function agreementHasContent(suffix) {
+            const jsonEl = document.querySelector('.js-agreement-content-json[data-target="agreementContent' + suffix + '"]');
+            if (!jsonEl) return false;
+            try {
+                const parsed = JSON.parse(jsonEl.textContent || '{}');
+                const raw = currentLanguage === 'en'
+                    ? (parsed.en || parsed.zh || '')
+                    : (parsed.zh || parsed.en || '');
+                return String(raw).replace(/<[^>]*>/g, '').trim().length > 0;
+            } catch (_) {
+                return false;
+            }
+        }
+        document.querySelectorAll('.js-agreement-agree').forEach(function(el) {
+            const suffix = (el.id || '').replace(/^agreementAgree/, '');
+            const openLink = document.getElementById('agreementOpenLink' + suffix);
+            // 冇 show link text → 完全唔綁開框；有 link 先綁
+            if (!openLink) return;
+            initOverlayAndValidation({
+                overlayId: 'agreementOverlay' + suffix,
+                openLinkId: 'agreementOpenLink' + suffix,
+                closeBtnId: 'agreementModalClose' + suffix,
+                agreeId: el.id,
+                optionalAgree: true,
+                shouldOpen: function() { return agreementHasContent(suffix); }
+            });
         });
 
-        // 勾選框 label 內的連結：點擊時不觸發 checkbox 切換
-        $(document).on('mousedown click', '.agreement-checkbox-label a, .terms-checkbox-label a', function(e) {
+        // 勾選框 label：點文字 = tick；點 URL = 正常開啟連結（唔 tick、唔開 content）
+        $(document).on('click', '.agreement-checkbox-label', function(e) {
+            if ($(e.target).closest('a').length) return;
+            e.preventDefault();
+            const cbId = this.getAttribute('data-checkbox-id');
+            const cb = cbId ? document.getElementById(cbId) : null;
+            if (!cb || cb.disabled) return;
+            cb.checked = !cb.checked;
+            $(cb).trigger('change');
+        });
+        $(document).on('click', '.agreement-checkbox-label a, .terms-checkbox-label a', function(e) {
+            e.stopPropagation();
+        });
+        $(document).on('mousedown', '.agreement-checkbox-label a, .terms-checkbox-label a', function(e) {
             e.stopPropagation();
         });
 
@@ -1910,6 +2060,16 @@ var registerPageTitleSuffix = isApplicationMode
                     return;
                 }
             }
+            const enteredPromo = getEnteredPromoCode ? getEnteredPromoCode() : String($('#eventPromoCode').val() || '').trim().toUpperCase();
+            if (enteredPromo) {
+                if (!validatedPromoCode || validatedPromoCode !== enteredPromo) {
+                    alert(currentLanguage === 'zh'
+                        ? '請先按「檢查」確認折扣碼可用。'
+                        : 'Please click Check to verify the promocode first.');
+                    $('#eventPromoCode').focus();
+                    return;
+                }
+            }
             if (typeof validateAllEmailConfirms === 'function') {
                 validateAllEmailConfirms();
             }
@@ -1923,7 +2083,7 @@ var registerPageTitleSuffix = isApplicationMode
             const newUser = {};
             $('#userForm').find('input, select, textarea').each(function() {
                 const fieldName = $(this).attr('name');
-                if (!fieldName || fieldName === 'ticketId' || fieldName === 'agreementAgreed') return;
+                if (!fieldName || fieldName === 'ticketId' || /^(agreementAgreed|agreementRecordedAt)(_\d+)?$/.test(fieldName)) return;
                 if ($(this).prop('disabled')) return;
                 if ($(this).hasClass('js-email-confirm') || String(fieldName).endsWith('_confirm')) return;
                 const type = (this.type || '').toLowerCase();
@@ -1959,11 +2119,12 @@ var registerPageTitleSuffix = isApplicationMode
                 }
                 newUser[fieldName] = $(this).val();
             });
-            const agreementEl = document.getElementById('agreementAgree');
-            if (agreementEl) {
-                newUser.agreementAgreed = agreementEl.checked;
-                newUser.agreementRecordedAt = new Date().toISOString();
-            }
+            document.querySelectorAll('.js-agreement-agree').forEach(function(agreementEl) {
+                const agreedName = agreementEl.getAttribute('name');
+                const recordedName = agreementEl.getAttribute('data-recorded-at-name');
+                if (agreedName) newUser[agreedName] = agreementEl.checked;
+                if (recordedName) newUser[recordedName] = new Date().toISOString();
+            });
             newUser.ticketId = ticketId;
             <% if (isApplicationMode) { %>
             if (!newUser.token) {

@@ -79,6 +79,40 @@
                             <h5 id="ticketSettingsHeading" class="mb-1"></h5>
                             <p class="text-muted small mb-3" id="ticketTimeSlotNote"></p>
                             <div id="ticketsList"></div>
+
+                            <!-- Promo Codes (fixed discount) -->
+                            <div class="mt-4" id="promoCodesSection">
+                                <h5 class="mb-2"><%= t('users.promoCodesTitle') %></h5>
+                                <div class="row" style="gap:10px; align-items:flex-end;">
+                                    <div class="col-md-3">
+                                        <label class="form-label" for="promoCodeInput"><%= t('users.promoCodeLabel') %></label>
+                                        <input type="text" id="promoCodeInput" class="form-control" placeholder="<%= t('users.promoCodePlaceholder') %>">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label" for="promoDiscountInput"><%= t('users.promoDiscountLabel') %> (HKD)</label>
+                                        <input type="number" id="promoDiscountInput" class="form-control" min="0" step="0.01" value="0">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label" for="promoMaxUsesInput"><%= t('users.promoMaxUsesLabel') %></label>
+                                        <input type="number" id="promoMaxUsesInput" class="form-control" min="0" step="1" value="0">
+                                        <div class="text-muted small mt-1"><%= t('users.promoMaxUsesHint') %></div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label d-block">&nbsp;</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="promoEnabledInput" checked>
+                                            <label class="form-check-label" for="promoEnabledInput"><%= t('users.promoEnabledLabel') %></label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label d-block">&nbsp;</label>
+                                        <button type="button" class="btn btn-primary btn-sm" id="addPromoCodeBtn"><%= t('users.addPromoCodeBtn') %></button>
+                                    </div>
+                                </div>
+
+                                <div class="mt-3" id="promoCodesList"></div>
+                            </div>
+
                             <div class="mt-2 d-flex flex-wrap align-items-center" style="gap:8px;">
                                 <button type="button" class="btn btn-primary btn-sm" id="addTicketBtn"></button>
                                 <button type="submit" class="btn btn-success btn-sm" id="savePaymentBtn"></button>
@@ -110,11 +144,14 @@
         exportTicketsBtn:        '<%= t("users.exportPaymentTickets") %>',
         importTicketsBtn:        '<%= t("users.importPaymentTickets") %>',
         importSuccess:           '<%= t("users.importPaymentTicketsSuccess") %>',
-        importFailed:            '<%= t("users.importPaymentTicketsFailed") %>'
+        importFailed:            '<%= t("users.importPaymentTicketsFailed") %>',
+        promoCodesEmpty:        '<%= t("users.promoCodesEmpty") %>',
+        promoUnlimited:        '<%= t("users.promoUnlimited") %>'
     };
 
     const eventId      = '<%= event._id %>';
     let paymentTickets = <%- JSON.stringify(event.PaymentTickets || []) %>;
+    let promoCodes     = <%- JSON.stringify(event.promoCodes || []).replace(/</g, '\\u003c') %>;
     let isPaymentEvent = <%- event.isPaymentEvent ? 'true' : 'false' %>;
 
     function showAlert(type, message) {
@@ -179,6 +216,7 @@
         $('#importTicketsLabel').text(_PS.importTicketsBtn);
         $('#paymentEventForm').show();
         renderTickets();
+        renderPromoCodes();
     }
 
     function syncPaymentTicketsFromDom() {
@@ -193,6 +231,48 @@
             paymentTickets[idx].datetimeTo   = row.find('.ticket-datetime-to').val();
             delete paymentTickets[idx].datetime;
         });
+    }
+
+    function renderPromoCodes() {
+        const $wrap = $('#promoCodesList');
+        if (!$wrap.length) return;
+
+        if (!Array.isArray(promoCodes) || !promoCodes.length) {
+            $wrap.html(`<div class="text-muted small">${_PS.promoCodesEmpty}</div>`);
+            return;
+        }
+
+        let html = '';
+        promoCodes.forEach((pc, idx) => {
+            if (!pc) return;
+            const code = pc.code ? String(pc.code) : '';
+            const discountValue = Number(pc.discountValue ?? pc.discountAmount ?? 0) || 0;
+            const maxUses = Number(pc.maxUses ?? 0) || 0;
+            const usedCount = Number(pc.usedCount ?? 0) || 0;
+            const enabled = pc.enabled !== false;
+
+            const maxUsesText = maxUses ? String(maxUses) : _PS.promoUnlimited;
+            const usedList = Array.isArray(pc.uses) ? pc.uses : [];
+            const recentUses = usedList.slice(-3).map(u => u && u.userEmail ? u.userEmail : '').filter(Boolean);
+            const recentUsesText = recentUses.length ? recentUses.join(', ') : '';
+
+            html += `
+                <div class="promo-code-item mb-3 p-3 border rounded" data-idx="${idx}">
+                    <div class="d-flex flex-wrap align-items-center" style="gap:10px;">
+                        <div style="min-width:140px;">
+                            <div class="font-weight-bold">${code}</div>
+                            <div class="text-muted small">-${discountValue} HKD</div>
+                        </div>
+                        <div class="text-muted small">max: ${maxUsesText}</div>
+                        <div class="text-muted small">used: ${usedCount}</div>
+                        <div class="text-muted small">${enabled ? 'enabled' : 'disabled'}</div>
+                        <button type="button" class="btn btn-danger btn-sm remove-promo-code">Delete</button>
+                    </div>
+                    ${recentUsesText ? `<div class="text-muted small mt-2">Recent uses: ${recentUsesText}</div>` : ''}
+                </div>
+            `;
+        });
+        $wrap.html(html);
     }
 
     // ── Init (DOM already ready since script is at bottom) ──────────────────
@@ -260,6 +340,7 @@
     $(document).on('submit', '#paymentEventForm', function(e) {
         e.preventDefault();
         syncPaymentTicketsFromDom();
+        // promoCodes 是 JS 內保持最新狀態（新增/刪除立即更新陣列）
         const missingTitle = paymentTickets.some(t => {
             const title = t.title || {};
             return !(title.zh && title.zh.trim()) && !(title.en && title.en.trim());
@@ -269,14 +350,63 @@
             url: `/events/${eventId}/paymentEvent`,
             type: 'PATCH',
             contentType: 'application/json',
-            data: JSON.stringify({ isPaymentEvent: $('#paymentEvent').is(':checked'), PaymentTickets: paymentTickets }),
+            data: JSON.stringify({ isPaymentEvent: $('#paymentEvent').is(':checked'), PaymentTickets: paymentTickets, promoCodes: promoCodes }),
             success: (res) => {
                 if (res && res.PaymentTickets) {
                     applyTicketsFromServer(res.PaymentTickets, $('#paymentEvent').is(':checked'));
                 }
+                if (res && Array.isArray(res.promoCodes)) {
+                    promoCodes = res.promoCodes;
+                    renderPromoCodes();
+                }
                 showAlert('success', _PS.paymentSavedSuccess);
             }
         });
+    });
+
+    $(document).on('click', '#addPromoCodeBtn', function(e) {
+        e.preventDefault();
+        const code = String($('#promoCodeInput').val() || '').trim().toUpperCase();
+        const discountValue = Number($('#promoDiscountInput').val());
+        const maxUses = Number($('#promoMaxUsesInput').val());
+        const enabled = $('#promoEnabledInput').is(':checked');
+
+        if (!code) { alert('Please enter a promo code'); return; }
+        if (Number.isNaN(discountValue) || discountValue < 0) { alert('Discount must be >= 0'); return; }
+        if (Number.isNaN(maxUses) || maxUses < 0) { alert('Max uses must be >= 0'); return; }
+
+        const existingIdx = promoCodes.findIndex(pc => pc && pc.code && String(pc.code).toUpperCase() === code);
+        if (existingIdx >= 0) {
+            const old = promoCodes[existingIdx];
+            promoCodes[existingIdx] = {
+                ...old,
+                code,
+                enabled,
+                discountType: 'fixed',
+                discountValue,
+                maxUses
+            };
+        } else {
+            promoCodes.push({
+                code,
+                enabled,
+                discountType: 'fixed',
+                discountValue,
+                maxUses,
+                usedCount: 0,
+                uses: []
+            });
+        }
+
+        $('#promoCodeInput').val('');
+        renderPromoCodes();
+    });
+
+    $(document).on('click', '.remove-promo-code', function() {
+        const idx = $(this).closest('.promo-code-item').data('idx');
+        if (idx === undefined) return;
+        promoCodes.splice(idx, 1);
+        renderPromoCodes();
     });
 
     $('#importTicketsBtn').on('click', function() {

@@ -286,7 +286,7 @@
 <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
 <script>
     const eventId = "<%= event._id %>"; // Get event ID from backend
-    const formConfig = <%- JSON.stringify(formConfig || null) %>; // Get form config from backend
+    const formConfig = <%- JSON.stringify(formConfig || null).replace(/</g, '\\u003c') %>; // Get form config from backend
     const _CS = {
         checkedIn: '<%= t("checkin_scan.checkedInStatus") %>',
         checkIn: '<%= t("checkin_scan.checkInStatus") %>',

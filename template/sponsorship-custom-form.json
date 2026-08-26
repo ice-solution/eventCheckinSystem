@@ -1,0 +1,59 @@
+{
+  "name": "sponsorship-custom-form",
+  "htmlFile": "template/sponsorship-custom-form.html",
+  "description": "Sponsorship registration custom form. Paste HTML into Form Config → Custom HTML; use sampleUser / fields to sync RSVP FormConfig.",
+  "publicPath": "/web/:eventId/custom-form",
+  "submit": {
+    "method": "POST",
+    "url": "/web/:eventId/custom-form",
+    "contentType": "multipart/form-data",
+    "payloadField": "payload",
+    "fileField": "companyLogo",
+    "notes": "JSON fields in payload; logo as file. Nested attendees supported."
+  },
+  "sampleUser": {
+    "firstName": "Tai",
+    "lastName": "Chan",
+    "name": "Tai Chan",
+    "email": "tai.chan@example.com",
+    "phone_code": "+852",
+    "phone": "91234567",
+    "company": "Example Co",
+    "jobTitle": "Director",
+    "companyLogo": "/uploads/custom-form/EVENT_ID/logo.jpg",
+    "companyLogoFileName": "logo.jpg",
+    "attendees": {
+      "sponsorTier": "Platinum",
+      "list": [
+        {
+          "firstName": "May",
+          "lastName": "Lee",
+          "email": "may@example.com",
+          "title": "Manager"
+        }
+      ]
+    }
+  },
+  "fields": [
+    { "fieldName": "firstName", "type": "text", "label": { "zh": "First Name", "en": "First Name" }, "required": false, "display": false, "visible": true },
+    { "fieldName": "lastName", "type": "text", "label": { "zh": "Last Name", "en": "Last Name" }, "required": false, "display": false, "visible": true },
+    { "fieldName": "name", "type": "text", "label": { "zh": "Name", "en": "Name" }, "required": true, "display": false, "visible": true },
+    { "fieldName": "email", "type": "email", "label": { "zh": "Email", "en": "Email" }, "required": true, "display": false, "visible": true },
+    { "fieldName": "phone_code", "type": "text", "label": { "zh": "Phone Code", "en": "Phone Code" }, "required": false, "display": false, "visible": true },
+    { "fieldName": "phone", "type": "tel", "label": { "zh": "Phone", "en": "Phone" }, "required": false, "display": false, "visible": true },
+    { "fieldName": "company", "type": "text", "label": { "zh": "Company", "en": "Company" }, "required": false, "display": false, "visible": true },
+    { "fieldName": "jobTitle", "type": "text", "label": { "zh": "Job Title", "en": "Job Title" }, "required": false, "display": false, "visible": true },
+    { "fieldName": "companyLogo", "type": "text", "label": { "zh": "Company Logo", "en": "Company Logo" }, "required": false, "display": false, "visible": true },
+    { "fieldName": "companyLogoFileName", "type": "text", "label": { "zh": "Logo File Name", "en": "Logo File Name" }, "required": false, "display": false, "visible": true },
+    { "fieldName": "attendees", "type": "textarea", "label": { "zh": "Attendees", "en": "Attendees" }, "required": false, "display": false, "visible": true },
+    { "fieldName": "sponsorTier", "type": "text", "label": { "zh": "Sponsor Tier", "en": "Sponsor Tier" }, "required": false, "display": false, "visible": true }
+  ],
+  "tierRules": {
+    "Diamond": { "mode": "dynamic", "max": null, "note": "unlimited additional attendees via +" },
+    "Platinum": { "mode": "dynamic", "max": 5, "note": "add up to 5 via +" },
+    "Gold": { "mode": "fixed", "max": 3 },
+    "Cocktail": { "mode": "fixed", "max": 1 },
+    "Lunch": { "mode": "fixed", "max": 1 },
+    "Promotional": { "mode": "fixed", "max": 1 }
+  }
+}

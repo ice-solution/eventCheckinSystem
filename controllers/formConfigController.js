@@ -2,6 +2,7 @@ const FormConfig = require('../model/FormConfig');
 const Event = require('../model/Event');
 const { normalizePaymentTicketUi } = require('../utils/paymentTicket');
 const { normalizeRegisterSlug, validateRegisterSlug } = require('../utils/registerSlug');
+const { syncAgreementsOnConfig, cloneDefaultAgreement } = require('../utils/agreementFields');
 
 async function applyRegisterSlugToFormConfig(formConfig, rawSlug, eventId) {
     if (rawSlug === undefined) {
@@ -157,6 +158,14 @@ function applyFormConfigMetaDefaults(migratedConfig) {
     if (typeof migratedConfig.languageSwitcherEnabled !== 'boolean') {
         migratedConfig.languageSwitcherEnabled = true;
     }
+    if (typeof migratedConfig.customFormEnabled !== 'boolean') {
+        migratedConfig.customFormEnabled = false;
+    }
+    if (typeof migratedConfig.customFormHtml !== 'string') {
+        migratedConfig.customFormHtml = migratedConfig.customFormHtml != null
+            ? String(migratedConfig.customFormHtml)
+            : '';
+    }
     if (migratedConfig.registerSlug != null && migratedConfig.registerSlug !== '') {
         migratedConfig.registerSlug = normalizeRegisterSlug(migratedConfig.registerSlug);
     } else {
@@ -236,54 +245,8 @@ function applyFormConfigMetaDefaults(migratedConfig) {
         }
     }
 
-    // 確保有 agreement 設定
-    if (!migratedConfig.agreement || typeof migratedConfig.agreement !== 'object') {
-        migratedConfig.agreement = {
-            enabled: false,
-            title: { zh: '協議', en: 'Agreement' },
-            linkLabel: { zh: '(協議)', en: '(agreement)' },
-            showLinkLabel: true,
-            label: {
-                zh: '本人已閱讀並同意上述協議內容。',
-                en: 'I have read and agree to the agreement above.'
-            },
-            content: { zh: '', en: '' }
-        };
-    } else {
-        migratedConfig.agreement.enabled = !!migratedConfig.agreement.enabled;
-        if (!migratedConfig.agreement.title || typeof migratedConfig.agreement.title !== 'object') {
-            migratedConfig.agreement.title = { zh: '協議', en: 'Agreement' };
-        } else {
-            migratedConfig.agreement.title.zh = migratedConfig.agreement.title.zh || '協議';
-            migratedConfig.agreement.title.en = migratedConfig.agreement.title.en || 'Agreement';
-        }
-        if (!migratedConfig.agreement.linkLabel || typeof migratedConfig.agreement.linkLabel !== 'object') {
-            migratedConfig.agreement.linkLabel = { zh: '(協議)', en: '(agreement)' };
-        } else {
-            migratedConfig.agreement.linkLabel.zh = migratedConfig.agreement.linkLabel.zh || '(協議)';
-            migratedConfig.agreement.linkLabel.en = migratedConfig.agreement.linkLabel.en || '(agreement)';
-        }
-        if (migratedConfig.agreement.showLinkLabel === undefined) {
-            migratedConfig.agreement.showLinkLabel = true;
-        } else {
-            migratedConfig.agreement.showLinkLabel = !!migratedConfig.agreement.showLinkLabel;
-        }
-        if (!migratedConfig.agreement.label || typeof migratedConfig.agreement.label !== 'object') {
-            migratedConfig.agreement.label = {
-                zh: '本人已閱讀並同意上述協議內容。',
-                en: 'I have read and agree to the agreement above.'
-            };
-        } else {
-            migratedConfig.agreement.label.zh = migratedConfig.agreement.label.zh || '本人已閱讀並同意上述協議內容。';
-            migratedConfig.agreement.label.en = migratedConfig.agreement.label.en || 'I have read and agree to the agreement above.';
-        }
-        if (!migratedConfig.agreement.content || typeof migratedConfig.agreement.content !== 'object') {
-            migratedConfig.agreement.content = { zh: '', en: '' };
-        } else {
-            migratedConfig.agreement.content.zh = migratedConfig.agreement.content.zh || '';
-            migratedConfig.agreement.content.en = migratedConfig.agreement.content.en || '';
-        }
-    }
+    // 確保有 agreement / agreements（舊單一 agreement 會遷成陣列第一份）
+    syncAgreementsOnConfig(migratedConfig);
 
     // 確保有 thankYou 設定
     const defaultThankYou = {
@@ -410,17 +373,8 @@ exports.getDefaultFormConfig = () => ({
         },
         content: { zh: '', en: '' }
     },
-    agreement: {
-        enabled: false,
-        title: { zh: '協議', en: 'Agreement' },
-        linkLabel: { zh: '(協議)', en: '(agreement)' },
-        showLinkLabel: true,
-        label: {
-            zh: '本人已閱讀並同意上述協議內容。',
-            en: 'I have read and agree to the agreement above.'
-        },
-        content: { zh: '', en: '' }
-    },
+    agreement: cloneDefaultAgreement(),
+    agreements: [cloneDefaultAgreement()],
     thankYou: {
         title: { zh: '感謝你參加！', en: 'Thank you for participating!' },
         message: { zh: '我們會透過 Email 把資訊發送給你。', en: 'We will send the information to you via Email.' },
@@ -453,6 +407,8 @@ exports.getDefaultFormConfig = () => ({
             en: 'You have already completed this application. This link cannot be used to make further changes.'
         }
     },
+    customFormEnabled: false,
+    customFormHtml: '',
     paymentTicketUi: normalizePaymentTicketUi(),
     sections: [
         {
@@ -709,7 +665,7 @@ exports.getFormConfig = async (req, res) => {
 exports.updateFormConfig = async (req, res) => {
     try {
         const { eventId } = req.params;
-        const { sections, defaultLanguage, languageSwitcherEnabled, registerPageEnabled, registerClosedMessage, registerSlug, terms, agreement, thankYou, applicationCompletedPage, eventDisplayName, registerSubHeader, registerSubtitle, paymentTicketUi } = req.body;
+        const { sections, defaultLanguage, languageSwitcherEnabled, registerPageEnabled, registerClosedMessage, registerSlug, terms, agreement, agreements, thankYou, applicationCompletedPage, eventDisplayName, registerSubHeader, registerSubtitle, paymentTicketUi, customFormEnabled, customFormHtml } = req.body;
         
         // 驗證事件是否存在
         const event = await Event.findById(eventId);
@@ -758,8 +714,13 @@ exports.updateFormConfig = async (req, res) => {
                 const migrated = migrateFormConfig({ sections: formConfig.sections, terms });
                 formConfig.terms = migrated.terms;
             }
-            if (agreement && typeof agreement === 'object') {
-                const migrated = migrateFormConfig({ sections: formConfig.sections, agreement });
+            if ((Array.isArray(agreements) && agreements.length) || (agreement && typeof agreement === 'object')) {
+                const migrated = migrateFormConfig({
+                    sections: formConfig.sections,
+                    agreements: Array.isArray(agreements) && agreements.length ? agreements : [agreement],
+                    agreement: Array.isArray(agreements) && agreements.length ? agreements[0] : agreement
+                });
+                formConfig.agreements = migrated.agreements;
                 formConfig.agreement = migrated.agreement;
             }
             if (thankYou && typeof thankYou === 'object') {
@@ -772,6 +733,12 @@ exports.updateFormConfig = async (req, res) => {
             }
             if (paymentTicketUi && typeof paymentTicketUi === 'object') {
                 formConfig.paymentTicketUi = normalizePaymentTicketUi(paymentTicketUi);
+            }
+            if (typeof customFormEnabled === 'boolean') {
+                formConfig.customFormEnabled = customFormEnabled;
+            }
+            if (typeof customFormHtml === 'string') {
+                formConfig.customFormHtml = customFormHtml;
             }
             await formConfig.save();
             if (slugResult.unset && formConfig._id) {
@@ -799,19 +766,29 @@ exports.updateFormConfig = async (req, res) => {
                 terms: terms && typeof terms === 'object'
                     ? migrateFormConfig({ sections: (sections || defaultConfig.sections), terms }).terms
                     : defaultConfig.terms,
-                agreement: agreement && typeof agreement === 'object'
-                    ? migrateFormConfig({ sections: (sections || defaultConfig.sections), agreement }).agreement
-                    : defaultConfig.agreement,
+                agreement: defaultConfig.agreement,
+                agreements: defaultConfig.agreements,
                 thankYou: thankYou && typeof thankYou === 'object'
                     ? migrateFormConfig({ sections: (sections || defaultConfig.sections), thankYou }).thankYou
                     : defaultConfig.thankYou,
                 applicationCompletedPage: applicationCompletedPage && typeof applicationCompletedPage === 'object'
                     ? migrateFormConfig({ sections: (sections || defaultConfig.sections), applicationCompletedPage }).applicationCompletedPage
                     : defaultConfig.applicationCompletedPage,
+                customFormEnabled: typeof customFormEnabled === 'boolean' ? customFormEnabled : defaultConfig.customFormEnabled,
+                customFormHtml: typeof customFormHtml === 'string' ? customFormHtml : defaultConfig.customFormHtml,
                 paymentTicketUi: paymentTicketUi && typeof paymentTicketUi === 'object'
                     ? normalizePaymentTicketUi(paymentTicketUi)
                     : defaultConfig.paymentTicketUi
             });
+            if ((Array.isArray(agreements) && agreements.length) || (agreement && typeof agreement === 'object')) {
+                const migrated = migrateFormConfig({
+                    sections: formConfig.sections,
+                    agreements: Array.isArray(agreements) && agreements.length ? agreements : [agreement],
+                    agreement: Array.isArray(agreements) && agreements.length ? agreements[0] : agreement
+                });
+                formConfig.agreements = migrated.agreements;
+                formConfig.agreement = migrated.agreement;
+            }
             const slugResult = await applyRegisterSlugToFormConfig(formConfig, registerSlug, eventId);
             if (!slugResult.ok) {
                 return res.status(400).json({ success: false, message: slugResult.message });
@@ -877,6 +854,66 @@ exports.resetToDefault = async (req, res) => {
     }
 };
 
+/**
+ * 用 sample user / template JSON 更新 FormConfig.sections fields
+ * Body: { sampleUser?, fields?, mode? } 或直接把整份 sponsorship-custom-form.json 放喺 sampleUser / 根
+ */
+exports.syncFieldsFromUserSample = async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        const mode = (req.body && req.body.mode) === 'merge' ? 'merge' : 'replace';
+        const body = req.body || {};
+
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ success: false, message: '找不到該事件' });
+        }
+
+        const {
+            resolveFieldsFromSyncPayload,
+            applyFieldsToSections
+        } = require('../utils/syncFormFieldsFromUserSample');
+
+        // 相容：前端可能把成份 JSON 放喺 sampleUser，或放喺根
+        const payload = (body.sampleUser && typeof body.sampleUser === 'object')
+            ? body.sampleUser
+            : body;
+        const built = resolveFieldsFromSyncPayload(payload);
+        if (!built.ok) {
+            return res.status(400).json({ success: false, message: built.message });
+        }
+
+        let formConfig = await FormConfig.findOne({ eventId });
+        if (!formConfig) {
+            formConfig = new FormConfig({
+                eventId,
+                ...getDefaultFormConfig()
+            });
+        }
+
+        formConfig.sections = applyFieldsToSections(formConfig.sections, built.fields, mode);
+        await formConfig.save();
+
+        const saved = await FormConfig.findOne({ eventId });
+        return res.json({
+            success: true,
+            message: mode === 'merge'
+                ? `已合併 ${built.fields.length} 個欄位（來源：${built.source}）`
+                : `已取代 FormConfig 欄位 ${built.fields.length} 個（來源：${built.source}）`,
+            mode,
+            source: built.source,
+            fieldNames: built.fields.map((f) => f.fieldName),
+            formConfig: exports.getFormConfigForRender(saved)
+        });
+    } catch (error) {
+        console.error('syncFieldsFromUserSample error:', error);
+        return res.status(500).json({
+            success: false,
+            message: '同步欄位失敗'
+        });
+    }
+};
+
 // 渲染表單配置管理頁面
 exports.renderFormConfigPage = async (req, res) => {
     try {
@@ -928,6 +965,7 @@ module.exports = {
     updateFormConfig: exports.updateFormConfig,
     renderFormConfigPage: exports.renderFormConfigPage,
     resetToDefault: exports.resetToDefault,
+    syncFieldsFromUserSample: exports.syncFieldsFromUserSample,
     getDefaultFormConfig: exports.getDefaultFormConfig,
     getFormConfigForRender: exports.getFormConfigForRender,
     migrateFormConfig

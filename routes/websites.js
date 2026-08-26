@@ -71,6 +71,22 @@ router.get('/:event_id/users/:userId', requireWebApiKey, async (req, res) => {
 
 // 路由到 event_website/register.ejs
 router.get('/:event_id/register', registerPageController.renderRegisterPageByEventId);
+
+// Custom HTML 報名頁（獨立於 FormConfig 動態表單）
+router.get('/:event_id/custom-form', registerPageController.renderCustomFormPage);
+router.post(
+    '/:event_id/custom-form',
+    (req, res, next) => {
+        eventsController.customFormLogoUpload(req, res, (err) => {
+            if (!err) return next();
+            const msg = err.code === 'LIMIT_FILE_SIZE'
+                ? 'Logo file too large (max 5MB).'
+                : (err.message || 'Logo upload failed');
+            return res.status(400).json({ message: msg });
+        });
+    },
+    eventsController.publicCustomFormRegister
+);
 // 路由到註冊成功頁面（session_id 可為 Stripe session_id、Wonder order_id 或 Transaction _id）
 router.get('/:event_id/register/success', async (req, res) => {
     const { event_id } = req.params;
@@ -138,6 +154,7 @@ router.get('/:event_id/application/:userId', eventsController.renderApplicationF
 router.post('/:event_id/application/:userId', eventsController.submitApplicationForm);
 
 // Wonder Payment Checkout（沿用舊路徑以相容前端）
+router.post('/:event_id/promo-code/validate', eventsController.validatePromoCode);
 router.post('/:event_id/stripe-checkout', eventsController.stripeCheckout);
 
 // Wonder Payment 回調（GET/POST 皆可，依 Wonder 文件設定 callback_url）

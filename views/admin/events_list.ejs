@@ -172,6 +172,60 @@
             min-width: 0;
         }
     }
+
+    #batchReportModal {
+        z-index: 200000 !important;
+        position: fixed !important;
+        pointer-events: auto !important;
+    }
+    #batchReportModal.show {
+        display: block !important;
+        opacity: 1 !important;
+    }
+    #batchReportModal .modal-dialog {
+        z-index: 200001 !important;
+    }
+    #batchReportBackdrop {
+        z-index: 199990 !important;
+        background-color: rgba(0, 0, 0, 0.5) !important;
+        opacity: 0.5 !important;
+    }
+    #batchReportModal .report-fields-list {
+        max-height: 420px;
+        overflow-y: auto;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        padding: 10px 12px;
+    }
+    #batchReportModal .report-event-group {
+        margin-bottom: 14px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eef1f5;
+    }
+    #batchReportModal .report-event-group:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+    #batchReportModal .report-event-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 6px;
+        flex-wrap: wrap;
+    }
+    #batchReportModal .report-event-name {
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0;
+        font-size: 14px;
+    }
+    #batchReportModal .report-field-item {
+        display: block;
+        margin-bottom: 4px;
+        cursor: pointer;
+    }
 </style>
 
 <div id="right-panel" class="right-panel">
@@ -307,6 +361,33 @@
     </div>
 </div>
 
+<div class="modal" id="batchReportModal" tabindex="-1" role="dialog" aria-labelledby="batchReportModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="batchReportModalLabel"><%= t('events_list.reportModalTitle') %></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-2"><%= t('events_list.reportModalHint') %></p>
+                <div class="mb-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="batchReportSelectAllBtn"><%= t('events_list.reportSelectAll') %></button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="batchReportDeselectAllBtn"><%= t('events_list.reportDeselectAll') %></button>
+                </div>
+                <div id="batchReportFieldsList" class="report-fields-list"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('common.cancel') %></button>
+                <button type="button" class="btn btn-info" id="confirmBatchReportDownload">
+                    <i class="fa fa-download"></i> <%= t('events_list.reportDownload') %>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <%- include ("components/footer") %>
 <script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
 <script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
@@ -314,11 +395,17 @@
 $(document).ready(function() {
     $('[data-toggle="tooltip"]').tooltip();
 
+    var MAX_BATCH_EVENTS = 6;
     var i18n = {
         selectFirst: <%- JSON.stringify(t('events_list.selectEventsFirst')) %>,
+        exportMaxEvents: <%- JSON.stringify(t('events_list.exportMaxEvents')) %>,
         exporting: <%- JSON.stringify(t('events_list.exporting')) %>,
         exportFailed: <%- JSON.stringify(t('events_list.exportFailed')) %>,
         exportLabel: <%- JSON.stringify(t('events_list.exportCheckInList')) %>,
+        reportEventSelectAll: <%- JSON.stringify(t('events_list.reportEventSelectAll')) %>,
+        reportEventDeselectAll: <%- JSON.stringify(t('events_list.reportEventDeselectAll')) %>,
+        reportNoFields: <%- JSON.stringify(t('events_list.reportNoFields')) %>,
+        reportFieldsFailed: <%- JSON.stringify(t('events_list.reportFieldsFailed')) %>,
         copyConfirm: <%- JSON.stringify(t('events_list.copyConfirm')) %>,
         copying: <%- JSON.stringify(t('events_list.copying')) %>,
         copySuccess: <%- JSON.stringify(t('events_list.copySuccess')) %>,
@@ -326,6 +413,39 @@ $(document).ready(function() {
         copyLabel: <%- JSON.stringify(t('events_list.copyEvent')) %>
     };
     var selectedIds = {};
+    var pendingExportEventIds = [];
+
+    $('#batchReportModal').appendTo('body');
+
+    function hidePageLoadingOverlay() {
+        var overlay = document.getElementById('page-loading-overlay');
+        if (!overlay) return;
+        overlay.classList.add('page-loaded');
+        overlay.style.display = 'none';
+        overlay.style.pointerEvents = 'none';
+    }
+
+    function showBatchReportModal() {
+        hidePageLoadingOverlay();
+        var $modal = $('#batchReportModal').appendTo('body');
+        $('.modal-backdrop').remove();
+        $('<div class="modal-backdrop show" id="batchReportBackdrop"></div>')
+            .css({ zIndex: 199990, opacity: 0.5, display: 'block' })
+            .appendTo('body');
+        $modal.addClass('show').css({
+            display: 'block',
+            opacity: 1,
+            zIndex: 200000,
+            pointerEvents: 'auto'
+        }).attr('aria-hidden', 'false');
+        $('body').addClass('modal-open');
+    }
+
+    function hideBatchReportModal() {
+        $('#batchReportModal').removeClass('show').css('display', 'none').attr('aria-hidden', 'true');
+        $('#batchReportBackdrop, .modal-backdrop').remove();
+        $('body').removeClass('modal-open').css({ 'padding-right': '', overflow: '' });
+    }
 
     var table = $('#eventsTable').DataTable({
         pageLength: 25,
@@ -398,39 +518,93 @@ $(document).ready(function() {
         $('#selectAllEvents').prop('checked', total > 0 && checked === total);
     }
 
-    // 全選：目前頁面所有列（含 DataTables 可見列）
+    // 全選：目前頁面所有列，最多 6 個
     $('#selectAllEvents').on('change', function() {
         var checked = $(this).is(':checked');
+        if (!checked) {
+            table.rows({ page: 'current' }).nodes().to$().find('.event-export-cb').each(function() {
+                var id = $(this).val();
+                $(this).prop('checked', false);
+                delete selectedIds[id];
+            });
+            return;
+        }
+        var remaining = MAX_BATCH_EVENTS - Object.keys(selectedIds).length;
+        var skipped = false;
         table.rows({ page: 'current' }).nodes().to$().find('.event-export-cb').each(function() {
             var id = $(this).val();
-            $(this).prop('checked', checked);
-            if (checked) selectedIds[id] = true;
-            else delete selectedIds[id];
+            if (selectedIds[id]) {
+                $(this).prop('checked', true);
+                return;
+            }
+            if (remaining <= 0) {
+                skipped = true;
+                $(this).prop('checked', false);
+                return;
+            }
+            $(this).prop('checked', true);
+            selectedIds[id] = true;
+            remaining -= 1;
         });
+        if (skipped) {
+            alert(i18n.exportMaxEvents);
+        }
+        syncSelectAllState();
     });
 
     $(document).on('change', '#eventsTable .event-export-cb', function() {
         var id = $(this).val();
-        if ($(this).is(':checked')) selectedIds[id] = true;
-        else delete selectedIds[id];
+        if ($(this).is(':checked')) {
+            if (Object.keys(selectedIds).length >= MAX_BATCH_EVENTS) {
+                $(this).prop('checked', false);
+                alert(i18n.exportMaxEvents);
+            } else {
+                selectedIds[id] = true;
+            }
+        } else {
+            delete selectedIds[id];
+        }
         syncSelectAllState();
     });
 
-    $('#exportCheckInListBtn').on('click', function() {
-        var eventIds = getSelectedEventIds();
-        if (!eventIds.length) {
-            alert(i18n.selectFirst);
-            return;
-        }
+    function renderBatchReportFields(eventGroups) {
+        var html = '';
+        (eventGroups || []).forEach(function(group) {
+            var eventId = group.eventId || '';
+            var eventName = group.eventName || eventId;
+            if (!eventId) return;
+            html += '<div class="report-event-group" data-event-id="' + $('<div>').text(eventId).html() + '">';
+            html += '<div class="report-event-head">';
+            html += '<p class="report-event-name">' + $('<div>').text(eventName).html() + '</p>';
+            html += '<div>';
+            html += '<button type="button" class="btn btn-sm btn-outline-secondary js-event-select-all">' + i18n.reportEventSelectAll + '</button> ';
+            html += '<button type="button" class="btn btn-sm btn-outline-secondary js-event-deselect-all">' + i18n.reportEventDeselectAll + '</button>';
+            html += '</div></div>';
+            (group.fields || []).forEach(function(field) {
+                var key = field.key || '';
+                var label = field.label || key;
+                if (!key) return;
+                html += '<label class="report-field-item">'
+                    + '<input type="checkbox" class="batch-report-field-cb" data-event-id="' + $('<div>').text(eventId).html() + '" value="' + String(key).replace(/"/g, '&quot;') + '" checked> '
+                    + $('<div>').text(label).html()
+                    + ' <small class="text-muted">(' + $('<div>').text(key).html() + ')</small>'
+                    + '</label>';
+            });
+            html += '</div>';
+        });
+        $('#batchReportFieldsList').html(html || '<p class="text-muted mb-0">—</p>');
+    }
 
-        var $btn = $(this).prop('disabled', true);
+    function downloadBatchReport(eventIds, fieldsByEvent) {
+        var $btn = $('#exportCheckInListBtn').prop('disabled', true);
         var originalHtml = $btn.html();
         $btn.html('<i class="fas fa-spinner fa-spin"></i> ' + i18n.exporting);
+        $('#confirmBatchReportDownload').prop('disabled', true);
 
         fetch('/events/export-checkin-list', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ eventIds: eventIds }),
+            body: JSON.stringify({ eventIds: eventIds, fieldsByEvent: fieldsByEvent }),
             credentials: 'same-origin'
         }).then(function(res) {
             if (!res.ok) {
@@ -455,6 +629,87 @@ $(document).ready(function() {
             URL.revokeObjectURL(url);
         }).catch(function(err) {
             alert(err.message || i18n.exportFailed);
+        }).finally(function() {
+            $btn.prop('disabled', false).html(originalHtml);
+            $('#confirmBatchReportDownload').prop('disabled', false);
+        });
+    }
+
+    $(document).off('click.batchReportSelectAll').on('click.batchReportSelectAll', '#batchReportSelectAllBtn', function() {
+        $('#batchReportFieldsList .batch-report-field-cb').prop('checked', true);
+    });
+    $(document).off('click.batchReportDeselectAll').on('click.batchReportDeselectAll', '#batchReportDeselectAllBtn', function() {
+        $('#batchReportFieldsList .batch-report-field-cb').prop('checked', false);
+    });
+
+    $(document).off('click.batchReportEventSelect').on('click.batchReportEventSelect', '.js-event-select-all', function() {
+        $(this).closest('.report-event-group').find('.batch-report-field-cb').prop('checked', true);
+    });
+    $(document).off('click.batchReportEventDeselect').on('click.batchReportEventDeselect', '.js-event-deselect-all', function() {
+        $(this).closest('.report-event-group').find('.batch-report-field-cb').prop('checked', false);
+    });
+
+    $(document).off('click.confirmBatchReport').on('click.confirmBatchReport', '#confirmBatchReportDownload', function() {
+        var fieldsByEvent = {};
+        var missing = false;
+        $('#batchReportFieldsList .report-event-group').each(function() {
+            var eventId = ($(this).attr('data-event-id') || '').trim();
+            if (!eventId) return;
+            var fields = [];
+            $(this).find('.batch-report-field-cb:checked').each(function() {
+                var v = ($(this).val() || '').trim();
+                if (v) fields.push(v);
+            });
+            if (!fields.length) missing = true;
+            fieldsByEvent[eventId] = fields;
+        });
+        if (missing || !Object.keys(fieldsByEvent).length) {
+            alert(i18n.reportNoFields);
+            return;
+        }
+        hideBatchReportModal();
+        downloadBatchReport(pendingExportEventIds, fieldsByEvent);
+    });
+
+    $(document).off('click.batchReportClose').on('click.batchReportClose', '#batchReportModal [data-dismiss="modal"], #batchReportBackdrop', function() {
+        hideBatchReportModal();
+    });
+
+    $(document).off('click.exportCheckInList').on('click.exportCheckInList', '#exportCheckInListBtn', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var eventIds = getSelectedEventIds();
+        if (!eventIds.length) {
+            alert(i18n.selectFirst);
+            return;
+        }
+        if (eventIds.length > MAX_BATCH_EVENTS) {
+            alert(i18n.exportMaxEvents);
+            return;
+        }
+
+        var $btn = $(this).prop('disabled', true);
+        var originalHtml = $btn.html();
+        $btn.html('<i class="fas fa-spinner fa-spin"></i> ' + i18n.exporting);
+
+        fetch('/events/export-checkin-list/fields', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ eventIds: eventIds }),
+            credentials: 'same-origin'
+        }).then(function(res) {
+            return res.json().then(function(body) {
+                if (!res.ok || !body.success) {
+                    throw new Error((body && body.message) || i18n.reportFieldsFailed);
+                }
+                return body;
+            });
+        }).then(function(body) {
+            pendingExportEventIds = eventIds.slice();
+            renderBatchReportFields(body.events || []);
+            showBatchReportModal();
+        }).catch(function(err) {
+            alert(err.message || i18n.reportFieldsFailed);
         }).finally(function() {
             $btn.prop('disabled', false).html(originalHtml);
         });

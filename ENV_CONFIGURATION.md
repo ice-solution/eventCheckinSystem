@@ -122,6 +122,22 @@ AWS_REGION=us-east-1
 SENDER_EMAIL=noreply@yourdomain.com
 ```
 
+### 郵件追蹤（開信 pixel / 連結 click）
+預設全部啟用。設為 `false` 後須 **重啟 Node / pm2** 才生效。
+
+```env
+# 關閉全部追蹤（唔改 link、唔加 pixel）；Email Records 仍會記錄「已發送」
+EMAIL_TRACKING_ENABLED=false
+
+# 只關連結改寫（保留開信 pixel）
+EMAIL_LINK_TRACKING_ENABLED=false
+
+# 只關開信 pixel（保留連結改寫）
+EMAIL_OPEN_TRACKING_ENABLED=false
+```
+
+可接受值：`true` / `false`（亦支援 `1`/`0`、`yes`/`no`、`on`/`off`）。
+
 ## 📱 SMS 配置（選填 - 使用 Twilio）
 
 ### Twilio

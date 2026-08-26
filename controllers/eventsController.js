@@ -25,7 +25,7 @@ const { getSocket } = require('../socket'); // 引入 socket 以發送實時更�
 const { embedKaitiFontInEmail } = require('../utils/embedEmailFonts'); // 引入字型嵌入功能
 const { replaceTemplateVariables, buildEmailTemplateAdditionalVars, flattenForTemplate } = require('../utils/replaceTemplateVariables');
 const { isInvoiceEmailEnabled } = require('../utils/featureFlags');
-const { normalizeAgreementAgreed, formatAgreementAgreedLabel, agreementAgreedSortOrder } = require('../utils/agreementFields');
+const { normalizeAgreementAgreed, formatAgreementAgreedLabel, agreementAgreedSortOrder, getEnabledAgreements, isAgreementMetaKey } = require('../utils/agreementFields');
 const { resolveUserDisplayName, ensureUserNameField } = require('../utils/userDisplayName');
 
 /** 取得對外 base URL（依 DOMAIN/domain，缺協議時自動補 https://） */
@@ -406,6 +406,23 @@ exports.copyEvent = async (req, res) => {
                     return ticket;
                 })
                 : [],
+            promoCodes: Array.isArray(source.promoCodes)
+                ? source.promoCodes
+                    .map((pc) => {
+                        const code = normalizePromoCodeInput(pc && pc.code ? pc.code : '');
+                        if (!code) return null;
+                        return {
+                            code,
+                            enabled: pc.enabled !== false,
+                            discountType: 'fixed',
+                            discountValue: Number(pc.discountValue ?? pc.discountAmount ?? 0) || 0,
+                            maxUses: Number(pc.maxUses ?? 0) || 0,
+                            usedCount: 0,
+                            uses: []
+                        };
+                    })
+                    .filter(Boolean)
+                : [],
             gameIds: Array.isArray(source.gameIds) ? [...source.gameIds] : [],
             scanPointUsers: Array.isArray(source.scanPointUsers)
                 ? source.scanPointUsers.map((u) => {
@@ -659,6 +676,7 @@ exports.getEventUsersByEventID = async (req, res) => {
             formConfig,
             formatAgreementAgreedLabel,
             agreementAgreedSortOrder,
+            enabledAgreements: getEnabledAgreements(formConfig),
         });
     } catch (error) {
         console.error('Error fetching event:', error);
@@ -713,6 +731,103 @@ exports.publicRegister = async (req, res) => {
         return exports.addUserToEvent(req, res);
     } catch (error) {
         console.error('Error in publicRegister:', error);
+        return res.status(500).json({ message: '伺服器錯誤', error: error.message });
+    }
+};
+
+/**
+ * Custom HTML 報名：logo 用 multipart 上傳（避免 base64 JSON 觸發 413）
+ * field: companyLogo (jpg only, max 5MB)
+ * field: payload (JSON string) 或一般 body fields
+ */
+const customFormLogoStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const eventId = String(req.params.event_id || 'unknown');
+        const uploadDir = path.join('public', 'uploads', 'custom-form', eventId);
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+        const ext = (path.extname(file.originalname) || '.jpg').toLowerCase();
+        const safeExt = (ext === '.jpeg' || ext === '.jpg') ? ext : '.jpg';
+        cb(null, `logo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${safeExt}`);
+    }
+});
+
+exports.customFormLogoUpload = multer({
+    storage: customFormLogoStorage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: function (req, file, cb) {
+        const name = String(file.originalname || '').toLowerCase();
+        const okExt = /\.jpe?g$/.test(name);
+        const okType = !file.mimetype || file.mimetype === 'image/jpeg';
+        if (okExt && okType) return cb(null, true);
+        return cb(new Error('Only JPG / JPEG logos are allowed'));
+    }
+}).single('companyLogo');
+
+/**
+ * Custom HTML 報名（獨立於 FormConfig register）
+ * POST /web/:event_id/custom-form
+ * - multipart: payload=JSON + companyLogo=file
+ * - 或 application/json（細資料、無大圖）
+ */
+exports.publicCustomFormRegister = async (req, res) => {
+    const { event_id } = req.params;
+
+    try {
+        let userData = {};
+        if (req.body && typeof req.body.payload === 'string' && req.body.payload.trim()) {
+            try {
+                userData = JSON.parse(req.body.payload);
+            } catch (e) {
+                return res.status(400).json({ message: 'Invalid payload JSON' });
+            }
+        } else if (req.body && typeof req.body === 'object') {
+            userData = { ...req.body };
+            if (typeof userData.attendees === 'string') {
+                try {
+                    userData.attendees = JSON.parse(userData.attendees);
+                } catch (_) { /* keep string */ }
+            }
+            delete userData.payload;
+        }
+
+        if (userData.ticketId) {
+            return res.status(400).json({ message: 'Custom form 僅支援免費報名，請勿選擇付費票券。' });
+        }
+
+        // 唔好把巨大 base64 logo 寫入 DB
+        if (typeof userData.companyLogo === 'string' && userData.companyLogo.indexOf('data:image') === 0) {
+            delete userData.companyLogo;
+        }
+
+        if (req.file) {
+            userData.companyLogo = `/uploads/custom-form/${event_id}/${req.file.filename}`;
+            userData.companyLogoFileName = req.file.originalname || req.file.filename;
+        }
+
+        const event = await Event.findById(event_id);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        const FormConfig = require('../model/FormConfig');
+        const formConfig = await FormConfig.findOne({ eventId: event_id });
+        if (!formConfig || formConfig.customFormEnabled !== true) {
+            return res.status(403).json({ message: 'Custom form is not enabled for this event.' });
+        }
+        if (!(formConfig.customFormHtml || '').trim()) {
+            return res.status(403).json({ message: 'Custom form HTML is empty.' });
+        }
+
+        req.params.eventId = event_id;
+        req.body = userData;
+        return exports.addUserToEvent(req, res);
+    } catch (error) {
+        console.error('Error in publicCustomFormRegister:', error);
         return res.status(500).json({ message: '伺服器錯誤', error: error.message });
     }
 };
@@ -888,14 +1003,14 @@ exports.submitApplicationForm = async (req, res) => {
         Object.keys(body).forEach((key) => {
             if (excluded.has(key)) return;
             if (allowedFieldNames.size && !allowedFieldNames.has(key) &&
-                key !== 'agreementAgreed' && key !== 'agreementRecordedAt' && key !== 'thankYouYesNo' && key !== 'lang') {
+                !isAgreementMetaKey(key) && key !== 'thankYouYesNo' && key !== 'lang') {
                 return;
             }
             // 已有資料的欄位：顯示不可改，伺服器亦拒絕覆寫
             if (isUserFieldFilled(userObj, key)) return;
 
             let val = body[key];
-            if (key === 'agreementAgreed') {
+            if (/^agreementAgreed(_\d+)?$/.test(key)) {
                 val = normalizeAgreementAgreed(val);
             }
             user.set(key, val);
@@ -986,7 +1101,7 @@ exports.addUserToEvent = async (req, res) => {
             }
             // 添加字段值（包括空字符串和 null，但不包括 undefined）
             else if (userData[key] !== undefined) {
-                if (key === 'agreementAgreed') {
+                if (key === 'agreementAgreed' || /^agreementAgreed(_\d+)?$/.test(key)) {
                     newUser[key] = normalizeAgreementAgreed(userData[key]);
                 } else {
                     newUser[key] = userData[key];
@@ -4609,7 +4724,7 @@ function normalizePaymentTicket(ticket) {
 // 更新付費活動設定
 exports.updatePaymentEvent = async (req, res) => {
     const { eventId } = req.params;
-    const { isPaymentEvent, PaymentTickets } = req.body;
+    const { isPaymentEvent, PaymentTickets, promoCodes } = req.body;
     try {
         const event = await Event.findById(eventId);
         if (!event) {
@@ -4619,10 +4734,34 @@ exports.updatePaymentEvent = async (req, res) => {
         if (Array.isArray(PaymentTickets)) {
             event.PaymentTickets = PaymentTickets.map(normalizePaymentTicket);
         }
+        if (Array.isArray(promoCodes)) {
+            event.promoCodes = promoCodes
+                .map(pc => {
+                    const code = normalizePromoCodeInput(pc && pc.code ? pc.code : '');
+                    if (!code) return null;
+                    const discountValue = Number(pc.discountValue ?? pc.discountAmount ?? 0) || 0;
+                    const maxUses = Number(pc.maxUses ?? 0) || 0;
+                    return {
+                        code,
+                        enabled: pc.enabled !== false,
+                        discountType: 'fixed',
+                        discountValue,
+                        maxUses,
+                        usedCount: Number(pc.usedCount ?? 0) || 0,
+                        uses: Array.isArray(pc.uses) ? pc.uses : []
+                    };
+                })
+                .filter(Boolean);
+            event.markModified('promoCodes');
+        }
         event.markModified('PaymentTickets');
         await event.save();
         const ticketsForClient = normalizeTicketsForView(event.PaymentTickets);
-        res.status(200).json({ message: 'Payment event updated', PaymentTickets: ticketsForClient });
+        res.status(200).json({
+            message: 'Payment event updated',
+            PaymentTickets: ticketsForClient,
+            promoCodes: event.promoCodes || []
+        });
     } catch (error) {
         console.error('Error updating payment event:', error);
         res.status(500).json({ message: 'Error updating payment event' });
@@ -4766,8 +4905,162 @@ function getPaymentGateway() {
     return v === 'stripe' ? 'stripe' : 'wonder';
 }
 
+function normalizePromoCodeInput(input) {
+    const s = (input === undefined || input === null) ? '' : String(input);
+    const code = s.trim().toUpperCase();
+    return code || '';
+}
+
+function computeFixedDiscountAmount(promo) {
+    if (!promo) return 0;
+    if (promo.discountType && promo.discountType !== 'fixed') return 0;
+    return Number(promo.discountValue ?? 0) || 0;
+}
+
+function promoHasRemaining(promo) {
+    if (!promo) return false;
+    if (promo.enabled === false) return false;
+    const maxUses = Number(promo.maxUses ?? 0) || 0;
+    const usedCount = Number(promo.usedCount ?? 0) || 0;
+    if (!maxUses) return true; // 0 = 無限
+    return usedCount < maxUses;
+}
+
+function findPromoDocByCode(eventDoc, promoCode) {
+    const code = normalizePromoCodeInput(promoCode);
+    if (!code) return null;
+    const list = Array.isArray(eventDoc.promoCodes) ? eventDoc.promoCodes : [];
+    return list.find(pc => normalizePromoCodeInput(pc && pc.code ? pc.code : '') === code) || null;
+}
+
+/**
+ * 寫入 promo 使用紀錄（保護重複 webhook）
+ * - transactionId 會用嚟去重：同一個 transaction 唔會重複寫入 uses。
+ */
+function recordPromoUsageToEvent(eventDoc, promoCode, usage) {
+    const code = normalizePromoCodeInput(promoCode);
+    if (!code) return;
+    const promo = findPromoDocByCode(eventDoc, code);
+    if (!promo) return;
+
+    const txId = usage && usage.transactionId ? String(usage.transactionId) : '';
+    const already = txId && Array.isArray(promo.uses)
+        ? promo.uses.some(u => u && u.transactionId && String(u.transactionId) === txId)
+        : false;
+    if (already) return;
+
+    if (!Array.isArray(promo.uses)) promo.uses = [];
+    promo.uses.push({
+        transactionId: txId ? usage.transactionId : undefined,
+        userEmail: usage && usage.userEmail ? usage.userEmail : '',
+        userName: usage && usage.userName ? usage.userName : '',
+        originalTicketPrice: Number(usage && usage.originalTicketPrice ? usage.originalTicketPrice : 0) || 0,
+        discountAmount: Number(usage && usage.discountAmount ? usage.discountAmount : 0) || 0,
+        paidTicketPrice: Number(usage && usage.paidTicketPrice ? usage.paidTicketPrice : 0) || 0,
+        usedAt: new Date()
+    });
+
+    // 用 uses 長度作為 usedCount 真相來源，避免 usedCount/uses 不一致
+    promo.usedCount = promo.uses.length;
+    eventDoc.markModified('promoCodes');
+}
+
+/** 公開：檢查 promocode 是否可用（報名頁「檢查」掣） */
+exports.validatePromoCode = async (req, res) => {
+    const { event_id } = req.params;
+    const { promoCode, ticketId, lang } = req.body || {};
+    const isEn = lang && String(lang).toLowerCase().startsWith('en');
+    try {
+        const code = normalizePromoCodeInput(promoCode);
+        if (!code) {
+            return res.status(400).json({
+                valid: false,
+                message: isEn ? 'Please enter a promocode.' : '請輸入折扣碼。'
+            });
+        }
+
+        const event = await Event.findById(event_id);
+        if (!event) {
+            return res.status(404).json({
+                valid: false,
+                message: isEn ? 'Event not found.' : '找不到活動。'
+            });
+        }
+
+        const promo = findPromoDocByCode(event, code);
+        if (!promo) {
+            return res.status(400).json({
+                valid: false,
+                message: isEn ? 'Invalid promocode.' : '無效折扣碼。'
+            });
+        }
+        if (promo.enabled === false) {
+            return res.status(400).json({
+                valid: false,
+                message: isEn ? 'This promocode is disabled.' : '此折扣碼已停用。'
+            });
+        }
+        if (!promoHasRemaining(promo)) {
+            return res.status(400).json({
+                valid: false,
+                message: isEn ? 'This promocode has reached its usage limit.' : '此折扣碼已用完（超出使用次數）。'
+            });
+        }
+
+        const discountAmount = computeFixedDiscountAmount(promo);
+        const maxUses = Number(promo.maxUses ?? 0) || 0;
+        const usedCount = Number(promo.usedCount ?? 0) || 0;
+        const remainingUses = maxUses ? Math.max(0, maxUses - usedCount) : null;
+
+        let originalTicketPrice = null;
+        let paidTicketPrice = null;
+        if (ticketId && event.PaymentTickets && typeof event.PaymentTickets.id === 'function') {
+            const ticket = event.PaymentTickets.id(ticketId);
+            if (ticket) {
+                originalTicketPrice = Number(ticket.price) || 0;
+                paidTicketPrice = Math.max(0, originalTicketPrice - discountAmount);
+            }
+        }
+
+        const freeAfterDiscount = paidTicketPrice !== null && paidTicketPrice <= 0;
+        let message;
+        if (paidTicketPrice !== null) {
+            if (freeAfterDiscount) {
+                message = isEn
+                    ? `Promocode valid. Discount HKD ${discountAmount}. Final price: free (payment skipped).`
+                    : `折扣碼有效。減價 HKD ${discountAmount}。折後免費（無需付款）。`;
+            } else {
+                message = isEn
+                    ? `Promocode valid. Discount HKD ${discountAmount}. Final price: HKD ${paidTicketPrice}.`
+                    : `折扣碼有效。減價 HKD ${discountAmount}。折後價 HKD ${paidTicketPrice}。`;
+            }
+        } else {
+            message = isEn
+                ? `Promocode valid. Discount HKD ${discountAmount}.`
+                : `折扣碼有效。減價 HKD ${discountAmount}。`;
+        }
+
+        return res.json({
+            valid: true,
+            code,
+            discountAmount,
+            originalTicketPrice,
+            paidTicketPrice,
+            remainingUses,
+            freeAfterDiscount,
+            message
+        });
+    } catch (error) {
+        console.error('validatePromoCode error:', error);
+        return res.status(500).json({
+            valid: false,
+            message: isEn ? 'Failed to validate promocode.' : '檢查折扣碼失敗。'
+        });
+    }
+};
+
 /** $0 票券：視作免費登記（不經付款閘道、不標記 paid） */
-async function completeFreePaymentTicketRegistration(event, ticket, userFormData, lang) {
+async function completeFreePaymentTicketRegistration(event, ticket, userFormData, lang, appliedPromo) {
     const now = new Date();
     const ticketTitleDisplay = getPaymentTicketTitle(ticket, lang);
     const excludedFields = ['_id', '__v', 'create_at', 'modified_at'];
@@ -4782,7 +5075,7 @@ async function completeFreePaymentTicketRegistration(event, ticket, userFormData
     Object.keys(userFormData).forEach((key) => {
         if (excludedFields.includes(key)) return;
         const val = userFormData[key];
-        if (key === 'agreementAgreed') {
+        if (key === 'agreementAgreed' || /^agreementAgreed(_\d+)?$/.test(key)) {
             newUser[key] = normalizeAgreementAgreed(val);
             return;
         }
@@ -4801,18 +5094,31 @@ async function completeFreePaymentTicketRegistration(event, ticket, userFormData
     const savedUser = event.users[event.users.length - 1];
     const userForEmail = { ...newUser, _id: savedUser._id };
 
+    // 折扣碼（折後變 $0）：亦要記錄「誰用咗」
+    const appliedPromoCode = appliedPromo && appliedPromo.code ? normalizePromoCodeInput(appliedPromo.code) : '';
+    const appliedPromoDiscountAmount = appliedPromo && typeof appliedPromo.discountAmount !== 'undefined'
+        ? Number(appliedPromo.discountAmount) || 0
+        : 0;
+    const appliedPromoOriginalTicketPrice = appliedPromo && typeof appliedPromo.originalTicketPrice !== 'undefined'
+        ? Number(appliedPromo.originalTicketPrice) || 0
+        : Number(ticket.price) || 0;
+
     if (userForEmail.role !== 'guest') {
         await exports.sendPostRegistrationEmailByPolicy(userForEmail, event, { mode: 'welcome' });
     }
 
+    let freeInvoiceTransaction = null;
     if (isInvoiceEmailEnabled()) {
-        const transaction = await Transaction.create({
+        freeInvoiceTransaction = await Transaction.create({
             eventId: event._id,
             userEmail: userForEmail.email || userFormData.email,
             userName: resolveUserDisplayName(userForEmail) || userForEmail.name || resolveUserDisplayName(userFormData) || userFormData.email || '未提供姓名',
             ticketId: ticket._id,
             ticketTitle: ticketTitleDisplay,
             ticketPrice: 0,
+            promoCode: appliedPromoCode || '',
+            promoDiscountAmount: appliedPromoDiscountAmount,
+            promoOriginalTicketPrice: appliedPromoOriginalTicketPrice,
             stripeSessionId: 'free',
             paymentGateway: 'none',
             status: 'free',
@@ -4821,10 +5127,22 @@ async function completeFreePaymentTicketRegistration(event, ticket, userFormData
         });
         try {
             const invoiceTemplate = await findEmailTemplateForEvent(event._id, 'invoice');
-            await sendInvoiceEmail(transaction, event, invoiceTemplate ? invoiceTemplate._id : null);
+            await sendInvoiceEmail(freeInvoiceTransaction, event, invoiceTemplate ? invoiceTemplate._id : null);
         } catch (e) {
             console.error('Free ticket invoice email error:', e);
         }
+    }
+
+    if (appliedPromoCode) {
+        recordPromoUsageToEvent(event, appliedPromoCode, {
+            transactionId: freeInvoiceTransaction ? freeInvoiceTransaction._id : null,
+            userEmail: userForEmail.email || userFormData.email,
+            userName: userForEmail.name || userForEmail.userName || '',
+            originalTicketPrice: appliedPromoOriginalTicketPrice,
+            discountAmount: appliedPromoDiscountAmount,
+            paidTicketPrice: 0
+        });
+        await event.save();
     }
 
     return userForEmail;
@@ -4833,7 +5151,7 @@ async function completeFreePaymentTicketRegistration(event, ticket, userFormData
 // 統一 Checkout 入口：依 PAYMENT_GATEWAY 選擇 Stripe 或 Wonder，前端不需改動
 exports.stripeCheckout = async (req, res) => {
     const { event_id } = req.params;
-    const { ticketId, email, name, company, phone_code, phone, lang, ...restBody } = req.body || {};
+    const { ticketId, email, name, company, phone_code, phone, lang, promoCode, ...restBody } = req.body || {};
     const gateway = getPaymentGateway();
     try {
         const event = await Event.findById(event_id);
@@ -4850,15 +5168,37 @@ exports.stripeCheckout = async (req, res) => {
         let userFormData = ensureUserNameField({ email, name, company, phone_code, phone, ...restBody });
         delete userFormData.ticketId;
         delete userFormData.lang;
+        delete userFormData.promoCode;
+        delete userFormData.ticketCategory;
 
         const displayName = resolveUserDisplayName(userFormData) || email || '未提供姓名';
 
         const langQuery = lang && lang !== 'zh' ? `&lang=${lang}` : '';
         const ticketTitleDisplay = getPaymentTicketTitle(ticket, lang);
 
-        // 免費票券（$0）：視作免費登記，不建立付款交易、不導向 Wonder/Stripe
-        if (isFreePaymentTicketPrice(ticket.price)) {
-            await completeFreePaymentTicketRegistration(event, ticket, userFormData, lang);
+        const originalTicketPrice = Number(ticket.price) || 0;
+        const promoCodeNormalized = promoCode ? normalizePromoCodeInput(promoCode) : '';
+
+        const appliedPromo = promoCodeNormalized ? findPromoDocByCode(event, promoCodeNormalized) : null;
+        const appliedPromoCode = appliedPromo ? normalizePromoCodeInput(appliedPromo.code) : '';
+        const discountAmount = appliedPromo ? computeFixedDiscountAmount(appliedPromo) : 0;
+
+        if (promoCodeNormalized && !appliedPromo) {
+            return res.status(400).json({ message: '無效 promocode' });
+        }
+        if (appliedPromo && !promoHasRemaining(appliedPromo)) {
+            return res.status(400).json({ message: '此 promocode 已用完（超出使用次數）' });
+        }
+
+        const paidTicketPrice = Math.max(0, originalTicketPrice - discountAmount);
+
+        // 免費票券（折後 $0）：視作免費登記，不建立付款交易、不導向 Wonder/Stripe
+        if (isFreePaymentTicketPrice(paidTicketPrice)) {
+            await completeFreePaymentTicketRegistration(event, ticket, userFormData, lang, appliedPromoCode ? {
+                code: appliedPromoCode,
+                discountAmount,
+                originalTicketPrice
+            } : null);
             const params = new URLSearchParams();
             if (lang && lang !== 'zh') params.set('lang', lang);
             if (userFormData.thankYouYesNo) params.set('thankYouYesNo', String(userFormData.thankYouYesNo));
@@ -4873,7 +5213,10 @@ exports.stripeCheckout = async (req, res) => {
             userName: displayName,
             ticketId: ticket._id,
             ticketTitle: ticketTitleDisplay,
-            ticketPrice: ticket.price,
+            ticketPrice: paidTicketPrice,
+            promoCode: appliedPromoCode || '',
+            promoDiscountAmount: discountAmount,
+            promoOriginalTicketPrice: originalTicketPrice,
             stripeSessionId: 'pending',
             paymentGateway: gateway,
             status: 'pending',
@@ -4890,7 +5233,7 @@ exports.stripeCheckout = async (req, res) => {
                 referenceNumber: transaction._id.toString(),
                 currency: 'HKD',
                 ticketTitle: ticketTitleDisplay,
-                amount: ticket.price,
+                amount: paidTicketPrice,
                 callbackUrl,
                 redirectUrl,
                 note: `Event: ${eventDisplayName}, Ticket: ${ticketTitleDisplay}`
@@ -4923,7 +5266,7 @@ exports.stripeCheckout = async (req, res) => {
                 price_data: {
                     currency: (process.env.STRIPE_CURRENCY || 'hkd').toLowerCase(),
                     product_data: { name: ticketTitleDisplay || 'Ticket' },
-                    unit_amount: Math.round(Number(ticket.price) * 100) // 轉為分
+                    unit_amount: Math.round(Number(paidTicketPrice) * 100) // 轉為分
                 },
                 quantity: 1
             }],
@@ -5039,7 +5382,7 @@ async function markTransactionPaidAndAddUser(transaction) {
         Object.keys(transaction.userFormData).forEach(key => {
             if (excludedFields.includes(key)) return;
             const val = transaction.userFormData[key];
-            if (key === 'agreementAgreed') {
+            if (key === 'agreementAgreed' || /^agreementAgreed(_\d+)?$/.test(key)) {
                 newUser[key] = normalizeAgreementAgreed(val);
                 return;
             }
@@ -5064,6 +5407,19 @@ async function markTransactionPaidAndAddUser(transaction) {
             modified_at: now
         };
     }
+
+    // paid 成功後才算「誰使用 promocode」
+    if (transaction.promoCode && String(transaction.promoCode).trim()) {
+        recordPromoUsageToEvent(eventDoc, transaction.promoCode, {
+            transactionId: transaction._id,
+            userEmail: transaction.userEmail,
+            userName: transaction.userName,
+            originalTicketPrice: transaction.promoOriginalTicketPrice ?? transaction.ticketPrice,
+            discountAmount: transaction.promoDiscountAmount ?? 0,
+            paidTicketPrice: transaction.ticketPrice ?? 0
+        });
+    }
+
     eventDoc.users.push(newUser);
     await eventDoc.save();
     const addedUser = eventDoc.users[eventDoc.users.length - 1];
@@ -5311,22 +5667,10 @@ function sanitizeExcelSheetName(name, usedNames) {
 }
 
 /**
- * 建立單一 event 的報表欄位與列資料（與 users 頁 Download Report 相同格式）
+ * 與 users 頁 Download Report 相同的欄位定義（不含列資料）
  */
-async function buildEventCheckInReportData(event) {
-    const eventId = event._id;
-    const users = event.users || [];
-
-    const transactions = await Transaction.find({ eventId })
-        .sort({ updatedAt: -1 })
-        .lean();
-    const transactionsByEmail = buildTransactionsByEmail(transactions);
-
-    const FormConfig = require('../model/FormConfig');
-    const formConfig = await FormConfig.findOne({ eventId });
-
+function listEventReportColumns(formConfig) {
     const columnDefs = [{ header: '_id', key: '_id', width: 26 }];
-    const fieldKeys = ['_id'];
 
     if (formConfig && formConfig.sections && formConfig.sections.length > 0) {
         const lang = formConfig.defaultLanguage || 'zh';
@@ -5342,11 +5686,10 @@ async function buildEventCheckInReportData(event) {
                     key: field.fieldName,
                     width: Math.min(25, Math.max(10, (header && header.length) || 10)),
                 });
-                fieldKeys.push(field.fieldName);
             });
         });
     } else {
-        const defaults = [
+        [
             { header: 'Email', key: 'email', width: 25 },
             { header: 'Name', key: 'name', width: 20 },
             { header: 'Table', key: 'table', width: 10 },
@@ -5354,11 +5697,7 @@ async function buildEventCheckInReportData(event) {
             { header: 'Phone', key: 'phone', width: 15 },
             { header: 'Role', key: 'role', width: 10 },
             { header: 'Industry', key: 'industry', width: 15 },
-        ];
-        defaults.forEach((col) => {
-            columnDefs.push(col);
-            fieldKeys.push(col.key);
-        });
+        ].forEach((col) => columnDefs.push(col));
     }
 
     if (formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled) {
@@ -5371,25 +5710,61 @@ async function buildEventCheckInReportData(event) {
             key: 'thankYouYesNo',
             width: Math.min(30, Math.max(12, String(ynqHeader).length || 12)),
         });
-        fieldKeys.push('thankYouYesNo');
     }
 
-    const ticketColumns = [
+    [
         { header: 'Ticket Title (票券)', key: 'ticketTitle', width: 25 },
         { header: 'Ticket Price HKD (票價)', key: 'ticketPrice', width: 14 },
         { header: 'Transaction ID', key: 'transactionId', width: 26 },
         { header: 'Transaction Status (交易狀態)', key: 'transactionStatus', width: 16 },
         { header: 'Payment Gateway (付款閘道)', key: 'paymentGateway', width: 16 },
         { header: 'Transaction Date (交易日期)', key: 'transactionDate', width: 22 },
-    ];
-    ticketColumns.forEach((col) => {
-        columnDefs.push(col);
-        fieldKeys.push(col.key);
-    });
+        { header: 'CheckInAt', key: 'checkInAt', width: 15 },
+        { header: '已簽到', key: 'isCheckIn', width: 10 },
+    ].forEach((col) => columnDefs.push(col));
 
-    columnDefs.push({ header: 'CheckInAt', key: 'checkInAt', width: 15 });
-    columnDefs.push({ header: '已簽到', key: 'isCheckIn', width: 10 });
-    fieldKeys.push('checkInAt', 'isCheckIn');
+    return columnDefs;
+}
+
+function parseSelectedReportFields(raw) {
+    if (raw == null || raw === '') return null;
+    const arr = Array.isArray(raw) ? raw : String(raw).split(',');
+    const keys = arr.map((s) => String(s).trim()).filter(Boolean);
+    return keys.length ? keys : null;
+}
+
+/**
+ * 建立單一 event 的報表欄位與列資料（與 users 頁 Download Report 相同格式）
+ * options.selectedKeys: 只匯出這些欄位（順序跟清單）；未傳則全部
+ */
+async function buildEventCheckInReportData(event, options = {}) {
+    const eventId = event._id;
+    const users = event.users || [];
+
+    const transactions = await Transaction.find({ eventId })
+        .sort({ updatedAt: -1 })
+        .lean();
+    const transactionsByEmail = buildTransactionsByEmail(transactions);
+
+    const FormConfig = require('../model/FormConfig');
+    const formConfig = await FormConfig.findOne({ eventId });
+
+    let columnDefs = listEventReportColumns(formConfig);
+    const selectedKeys = options.selectedKeys;
+    if (Array.isArray(selectedKeys) && selectedKeys.length) {
+        const allow = new Set(selectedKeys);
+        const filtered = [];
+        selectedKeys.forEach((key) => {
+            const col = columnDefs.find((c) => c.key === key);
+            if (col && allow.has(key) && !filtered.some((f) => f.key === key)) {
+                filtered.push(col);
+            }
+        });
+        if (filtered.length) {
+            columnDefs = filtered;
+        }
+    }
+    const fieldKeys = columnDefs.map((c) => c.key);
 
     const checkInAtFormat = (date) => (date ? new Date(date).toLocaleString('en-US', {
         timeZone: 'Asia/Hong_Kong',
@@ -5455,7 +5830,8 @@ exports.outputReport = async (req, res) => {
         const event = await Event.findById(eventId);
         if (!event) return res.status(404).send('Event not found');
 
-        const reportData = await buildEventCheckInReportData(event);
+        const selectedKeys = parseSelectedReportFields(req.query.fields || (req.body && req.body.fields));
+        const reportData = await buildEventCheckInReportData(event, { selectedKeys });
         const workbook = new ExcelJS.Workbook();
         addEventReportWorksheet(workbook, 'Users', reportData);
 
@@ -5469,51 +5845,110 @@ exports.outputReport = async (req, res) => {
     }
 };
 
+const MAX_BATCH_REPORT_EVENTS = 6;
+
+async function resolveBatchReportEvents(req) {
+    if (!req.session || !req.session.user || !req.session.user._id) {
+        return { error: { status: 401, message: 'Unauthorized' } };
+    }
+
+    const rawIds = (req.body && req.body.eventIds) || [];
+    const eventIds = [...new Set((Array.isArray(rawIds) ? rawIds : [rawIds])
+        .map((id) => String(id || '').trim())
+        .filter((id) => mongoose.Types.ObjectId.isValid(id)))];
+
+    if (!eventIds.length) {
+        return { error: { status: 400, message: 'Please select at least one event' } };
+    }
+    if (eventIds.length > MAX_BATCH_REPORT_EVENTS) {
+        return { error: { status: 400, message: `You can select up to ${MAX_BATCH_REPORT_EVENTS} events at a time.` } };
+    }
+
+    const sessionUser = req.session.user;
+    const isAdmin = sessionUser.role === 'admin';
+    const allowed = (sessionUser.allowedEvents || []).map((id) => id && id.toString()).filter(Boolean);
+
+    if (!isAdmin) {
+        const forbidden = eventIds.filter((id) => !allowed.includes(id));
+        if (forbidden.length) {
+            return { error: { status: 403, message: 'No access to one or more selected events' } };
+        }
+    }
+
+    const events = await Event.find({ _id: { $in: eventIds } });
+    if (!events.length) {
+        return { error: { status: 404, message: 'No events found' } };
+    }
+
+    const byId = new Map(events.map((e) => [String(e._id), e]));
+    const ordered = eventIds.map((id) => byId.get(id)).filter(Boolean);
+    return { eventIds, ordered };
+}
+
+exports.getBatchReportFields = async (req, res) => {
+    try {
+        const resolved = await resolveBatchReportEvents(req);
+        if (resolved.error) {
+            return res.status(resolved.error.status).json({ message: resolved.error.message });
+        }
+
+        const FormConfig = require('../model/FormConfig');
+        const eventFields = [];
+
+        for (const event of resolved.ordered) {
+            const formConfig = await FormConfig.findOne({ eventId: event._id });
+            const seen = new Set();
+            const fields = [];
+            listEventReportColumns(formConfig).forEach((col) => {
+                if (!col || !col.key || seen.has(col.key)) return;
+                seen.add(col.key);
+                fields.push({
+                    key: col.key,
+                    label: col.header || col.key
+                });
+            });
+            eventFields.push({
+                eventId: String(event._id),
+                eventName: event.name || String(event._id),
+                fields
+            });
+        }
+
+        return res.json({
+            success: true,
+            events: eventFields,
+            maxEvents: MAX_BATCH_REPORT_EVENTS
+        });
+    } catch (err) {
+        console.error('Get batch report fields error:', err);
+        return res.status(500).json({ message: 'Failed to load report fields' });
+    }
+};
+
 /**
  * Event List：多選活動匯出 check-in list
- * Body: { eventIds: string[] }
+ * Body: { eventIds: string[], fields?: string[], fieldsByEvent?: { [eventId]: string[] } }
  * 一個 sheet = 一個 event，sheet name = event.name
  */
 exports.exportEventsCheckInList = async (req, res) => {
     try {
-        if (!req.session || !req.session.user || !req.session.user._id) {
-            return res.status(401).json({ message: 'Unauthorized' });
+        const resolved = await resolveBatchReportEvents(req);
+        if (resolved.error) {
+            return res.status(resolved.error.status).json({ message: resolved.error.message });
         }
 
-        const rawIds = (req.body && req.body.eventIds) || [];
-        const eventIds = (Array.isArray(rawIds) ? rawIds : [rawIds])
-            .map((id) => String(id || '').trim())
-            .filter((id) => mongoose.Types.ObjectId.isValid(id));
-
-        if (!eventIds.length) {
-            return res.status(400).json({ message: 'Please select at least one event' });
-        }
-
-        const sessionUser = req.session.user;
-        const isAdmin = sessionUser.role === 'admin';
-        const allowed = (sessionUser.allowedEvents || []).map((id) => id && id.toString()).filter(Boolean);
-
-        if (!isAdmin) {
-            const forbidden = eventIds.filter((id) => !allowed.includes(id));
-            if (forbidden.length) {
-                return res.status(403).json({ message: 'No access to one or more selected events' });
-            }
-        }
-
-        const events = await Event.find({ _id: { $in: eventIds } });
-        if (!events.length) {
-            return res.status(404).json({ message: 'No events found' });
-        }
-
-        // 依請求順序輸出 sheet
-        const byId = new Map(events.map((e) => [String(e._id), e]));
-        const ordered = eventIds.map((id) => byId.get(id)).filter(Boolean);
-
+        const globalKeys = parseSelectedReportFields(req.body && req.body.fields);
+        const fieldsByEvent = (req.body && req.body.fieldsByEvent && typeof req.body.fieldsByEvent === 'object')
+            ? req.body.fieldsByEvent
+            : {};
         const workbook = new ExcelJS.Workbook();
         const usedSheetNames = new Set();
 
-        for (const event of ordered) {
-            const reportData = await buildEventCheckInReportData(event);
+        for (const event of resolved.ordered) {
+            const id = String(event._id);
+            const perEventKeys = parseSelectedReportFields(fieldsByEvent[id]);
+            const selectedKeys = perEventKeys || globalKeys;
+            const reportData = await buildEventCheckInReportData(event, { selectedKeys });
             const sheetName = sanitizeExcelSheetName(event.name, usedSheetNames);
             addEventReportWorksheet(workbook, sheetName, reportData);
         }
