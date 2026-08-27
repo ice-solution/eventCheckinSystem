@@ -745,14 +745,13 @@ exports.exportEventFormPackages = async (req, res) => {
         };
 
         const stamp = new Date().toISOString().slice(0, 10);
+        // Content-Disposition 只允許 ASCII；中文活動名改用 eventId
         const namePart = packages.length === 1
-            ? String(packages[0].sourceEventName || 'event').replace(/[^\w\u4e00-\u9fff-]+/g, '_').slice(0, 40)
+            ? String(packages[0].sourceEventId || 'event').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24) || 'event'
             : `events_${packages.length}`;
+        const filename = `form_package_${namePart}_${stamp}.json`;
         res.setHeader('Content-Type', 'application/json; charset=utf-8');
-        res.setHeader(
-            'Content-Disposition',
-            `attachment; filename=form_package_${namePart}_${stamp}.json`
-        );
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
         return res.status(200).send(JSON.stringify(payload, null, 2));
     } catch (error) {
         console.error('exportEventFormPackages error:', error);
