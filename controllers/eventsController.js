@@ -27,6 +27,7 @@ const { replaceTemplateVariables, buildEmailTemplateAdditionalVars, flattenForTe
 const { isInvoiceEmailEnabled } = require('../utils/featureFlags');
 const { normalizeAgreementAgreed, formatAgreementAgreedLabel, agreementAgreedSortOrder, getEnabledAgreements, isAgreementMetaKey } = require('../utils/agreementFields');
 const { resolveUserDisplayName, ensureUserNameField } = require('../utils/userDisplayName');
+const { getCurrencyUpper, getCurrencyLower } = require('../utils/currency');
 
 /** 取得對外 base URL（依 DOMAIN/domain，缺協議時自動補 https://） */
 function getPublicBaseUrl() {
@@ -183,7 +184,7 @@ async function sendInvoiceEmail(transaction, event, emailTemplateId = null) {
         });
         const invoiceData = transaction.transactionData && Object.keys(transaction.transactionData).length > 0
             ? transaction.transactionData
-            : { currency: 'HKD', number: String(transaction._id), state: transaction.status || 'pending' };
+            : { currency: getCurrencyUpper(), number: String(transaction._id), state: transaction.status || 'pending' };
         const additionalVars = {
             ...flattenForTemplate(transaction.toObject ? transaction.toObject() : transaction, 'transaction'),
             ...flattenForTemplate(invoiceData, 'invoice'),
@@ -230,7 +231,7 @@ async function sendPaymentReceiptEmail(transaction, event, user, emailTemplateId
         const userLike = resolveUserForPaymentEmail(transaction, eventDoc, user);
         const invoiceData = transaction.transactionData && Object.keys(transaction.transactionData).length > 0
             ? transaction.transactionData
-            : { paid_total: transaction.ticketPrice, currency: 'HKD', number: transaction.stripeSessionId || transaction._id, state: transaction.status || 'paid' };
+            : { paid_total: transaction.ticketPrice, currency: getCurrencyUpper(), number: transaction.stripeSessionId || transaction._id, state: transaction.status || 'paid' };
         const additionalVars = {
             ...flattenForTemplate(transaction.toObject ? transaction.toObject() : transaction, 'transaction'),
             ...flattenForTemplate(invoiceData, 'invoice'),
@@ -5221,7 +5222,11 @@ exports.renderPaymentSettings = async (req, res) => {
         }
         const eventForView = event.toObject ? event.toObject() : event;
         eventForView.PaymentTickets = normalizeTicketsForView(event.PaymentTickets);
-        res.render('admin/payment_settings', { event: eventForView, eventId });
+        res.render('admin/payment_settings', {
+            event: eventForView,
+            eventId,
+            currencyCode: getCurrencyUpper()
+        });
     } catch (error) {
         console.error('Error rendering payment settings page:', error);
         res.status(500).send('Error rendering payment settings page.');
@@ -5404,21 +5409,22 @@ exports.validatePromoCode = async (req, res) => {
         }
 
         const freeAfterDiscount = paidTicketPrice !== null && paidTicketPrice <= 0;
+        const cur = getCurrencyUpper();
         let message;
         if (paidTicketPrice !== null) {
             if (freeAfterDiscount) {
                 message = isEn
-                    ? `Promocode valid. Discount HKD ${discountAmount}. Final price: free (payment skipped).`
-                    : `折扣碼有效。減價 HKD ${discountAmount}。折後免費（無需付款）。`;
+                    ? `Promocode valid. Discount ${cur} ${discountAmount}. Final price: free (payment skipped).`
+                    : `折扣碼有效。減價 ${cur} ${discountAmount}。折後免費（無需付款）。`;
             } else {
                 message = isEn
-                    ? `Promocode valid. Discount HKD ${discountAmount}. Final price: HKD ${paidTicketPrice}.`
-                    : `折扣碼有效。減價 HKD ${discountAmount}。折後價 HKD ${paidTicketPrice}。`;
+                    ? `Promocode valid. Discount ${cur} ${discountAmount}. Final price: ${cur} ${paidTicketPrice}.`
+                    : `折扣碼有效。減價 ${cur} ${discountAmount}。折後價 ${cur} ${paidTicketPrice}。`;
             }
         } else {
             message = isEn
-                ? `Promocode valid. Discount HKD ${discountAmount}.`
-                : `折扣碼有效。減價 HKD ${discountAmount}。`;
+                ? `Promocode valid. Discount ${cur} ${discountAmount}.`
+                : `折扣碼有效。減價 ${cur} ${discountAmount}。`;
         }
 
         return res.json({
@@ -5505,7 +5511,7 @@ async function completeFreePaymentTicketRegistration(event, ticket, userFormData
             status: 'free',
             userFormData,
             userId: savedUser._id || null,
-            transactionData: { currency: 'HKD', paid_total: '0.00', state: 'free' },
+            transactionData: { currency: getCurrencyUpper(), paid_total: '0.00', state: 'free' },
         });
         try {
             const invoiceTemplate = await findEmailTemplateForEvent(event._id, 'invoice');
@@ -5617,7 +5623,7 @@ exports.stripeCheckout = async (req, res) => {
             const redirectUrl = `${baseUrl}/web/${event_id}/register/success?session_id=${transaction._id}${langQuery}`;
             // Wonder 收款：票價 × 1.058（例如手續費／稅）
             const wonderChargeAmount = Math.round(Number(paidTicketPrice) * 1.058 * 100) / 100;
-            const wonderCurrency = (process.env.CURRENCY || 'hkd').toString().trim().toUpperCase() || 'HKD';
+            const wonderCurrency = getCurrencyUpper();
             const { paymentUrl, orderId } = await wonderPayment.createOrder({
                 referenceNumber: transaction._id.toString(),
                 currency: wonderCurrency,
@@ -5653,7 +5659,7 @@ exports.stripeCheckout = async (req, res) => {
             payment_method_types: ['card'],
             line_items: [{
                 price_data: {
-                    currency: (process.env.CURRENCY || 'hkd').toString().trim().toLowerCase() || 'hkd',
+                    currency: getCurrencyLower(),
                     product_data: { name: ticketTitleDisplay || 'Ticket' },
                     unit_amount: Math.round(Number(paidTicketPrice) * 100) // 轉為分
                 },
@@ -5905,7 +5911,8 @@ exports.renderTransactionRecords = async (req, res) => {
         res.render('admin/transaction_records', { 
             event, 
             transactions,
-            eventId: eventId 
+            eventId: eventId,
+            currencyCode: getCurrencyUpper()
         });
     } catch (error) {
         console.error('Error fetching transaction records:', error);
@@ -5952,7 +5959,7 @@ exports.exportTransactionRecords = async (req, res) => {
             { header: 'User Name (用戶姓名)', key: 'userName', width: 20 },
             { header: 'User Email (用戶電郵)', key: 'userEmail', width: 28 },
             { header: 'Ticket Title (票券標題)', key: 'ticketTitle', width: 25 },
-            { header: 'Price HKD (價格)', key: 'ticketPrice', width: 14 },
+            { header: `Price ${getCurrencyUpper()} (價格)`, key: 'ticketPrice', width: 14 },
             { header: 'Status (狀態)', key: 'status', width: 12 },
             { header: 'Payment Gateway (付款閘道)', key: 'paymentGateway', width: 18 },
             { header: 'Session / Reference ID', key: 'stripeSessionId', width: 30 },
@@ -5985,7 +5992,7 @@ exports.exportTransactionRecords = async (req, res) => {
                 invoiceNumber: td.number || td.invoice_number || td.reference_number || '',
                 invoiceState: td.state || td.correspondence_state || '',
                 paidTotal: td.paid_total != null ? td.paid_total : '',
-                currency: td.currency || 'HKD',
+                currency: td.currency || getCurrencyUpper(),
             });
         });
 
@@ -6124,7 +6131,7 @@ function listEventReportColumns(formConfig) {
 
     [
         { header: 'Ticket Title (票券)', key: 'ticketTitle', width: 25 },
-        { header: 'Ticket Price HKD (票價)', key: 'ticketPrice', width: 14 },
+        { header: `Ticket Price ${getCurrencyUpper()} (票價)`, key: 'ticketPrice', width: 14 },
         { header: 'Transaction ID', key: 'transactionId', width: 26 },
         { header: 'Transaction Status (交易狀態)', key: 'transactionStatus', width: 16 },
         { header: 'Payment Gateway (付款閘道)', key: 'paymentGateway', width: 16 },

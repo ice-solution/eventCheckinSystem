@@ -75,7 +75,7 @@
                                     <div class="card bg-primary text-white">
                                         <div class="card-body">
                                             <h5 class="card-title"><%= t('transaction_records.totalRevenue') %></h5>
-                                            <h3>HKD <%= transactions.filter(tx => tx.status === 'paid').reduce((sum, tx) => sum + tx.ticketPrice, 0) %></h3>
+                                            <h3><%= typeof currencyCode !== 'undefined' ? currencyCode : 'HKD' %> <%= transactions.filter(tx => tx.status === 'paid').reduce((sum, tx) => sum + tx.ticketPrice, 0) %></h3>
                                         </div>
                                     </div>
                                 </div>

@@ -430,7 +430,7 @@
     "totalRevenue": "總收入",
     "transactionId": "交易 ID", "date": "日期",
     "userName": "用戶姓名", "userEmail": "用戶電郵",
-    "ticketTitle": "票券標題", "price": "價格 (HKD)", "status": "狀態",
+    "ticketTitle": "票券標題", "price": "價格", "status": "狀態",
     "exportBtn": "匯出交易記錄"
   },
   "attachments": {
