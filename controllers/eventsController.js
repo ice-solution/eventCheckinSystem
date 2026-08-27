@@ -85,12 +85,60 @@ function getDefaultPaymentReceiptEmailContent(transaction, event) {
 </body></html>`;
 }
 
-/** 從 event.users 以 email 找 userId（供郵件記錄） */
-function findEventUserIdByEmail(eventDoc, email) {
+/** 從 event.users 以 Mongo _id 找 user（優先，避免重覆 email 用錯人） */
+function findEventUserById(eventDoc, userId) {
+    if (!eventDoc || !userId || !Array.isArray(eventDoc.users)) return null;
+    const idStr = String(userId);
+    const user = eventDoc.users.find(u => u && u._id && String(u._id) === idStr);
+    if (!user) return null;
+    return user.toObject ? user.toObject({ minimize: false }) : user;
+}
+
+/** 從 event.users 以 email 找 user（僅 fallback；重覆 email 時唔可靠） */
+function findEventUserByEmail(eventDoc, email) {
     if (!eventDoc || !email || !Array.isArray(eventDoc.users)) return null;
     const normalized = String(email).trim().toLowerCase();
     const user = eventDoc.users.find(u => u.email && String(u.email).trim().toLowerCase() === normalized);
+    if (!user) return null;
+    return user.toObject ? user.toObject({ minimize: false }) : user;
+}
+
+/** 從 event.users 以 email 找 userId（供郵件記錄；優先改用 transaction.userId） */
+function findEventUserIdByEmail(eventDoc, email) {
+    const user = findEventUserByEmail(eventDoc, email);
     return user && user._id ? String(user._id) : null;
+}
+
+/**
+ * Invoice / payment_receipt 發信用完整 user。
+ * 優先順序（避免重覆 email 用錯人）：
+ * 1) 傳入 user._id / transaction.userId → event.users.id
+ * 2) transaction.userFormData + 傳入 stub
+ * 唔再用 email 從 event.users 合併欄位
+ */
+function resolveUserForPaymentEmail(transaction, eventDoc, user) {
+    const stub = user
+        ? (user.toObject ? user.toObject({ minimize: false }) : { ...user })
+        : {};
+    const formData = (transaction && transaction.userFormData && typeof transaction.userFormData === 'object')
+        ? (transaction.userFormData.toObject ? transaction.userFormData.toObject() : { ...transaction.userFormData })
+        : {};
+    const userId = (stub && stub._id) || (transaction && transaction.userId) || null;
+    const fromEvent = userId ? findEventUserById(eventDoc, userId) : null;
+    const merged = {
+        ...formData,
+        ...stub,
+        ...(fromEvent || {}),
+    };
+    if (!merged.email) merged.email = stub.email || transaction.userEmail || '';
+    if (!merged.name || String(merged.name).trim() === '') {
+        merged.name = resolveUserDisplayName(merged)
+            || transaction.userName
+            || merged.email
+            || '';
+    }
+    if (!merged._id && userId) merged._id = userId;
+    return merged;
 }
 
 /** 發送郵件並寫入 EmailRecord（invoice / payment_receipt 等） */
@@ -129,7 +177,10 @@ async function sendInvoiceEmail(transaction, event, emailTemplateId = null) {
         let emailTemplate = emailTemplateId ? await EmailTemplate.findById(emailTemplateId) : null;
         if (!emailTemplate) emailTemplate = await EmailTemplate.findOne({ eventId: eventDoc._id, type: 'invoice' });
         if (!emailTemplate) emailTemplate = await EmailTemplate.findOne({ eventId: null, type: 'invoice' });
-        const userLike = { name: transaction.userName || '', email: transaction.userEmail || '' };
+        const userLike = resolveUserForPaymentEmail(transaction, eventDoc, {
+            name: transaction.userName || '',
+            email: transaction.userEmail || '',
+        });
         const invoiceData = transaction.transactionData && Object.keys(transaction.transactionData).length > 0
             ? transaction.transactionData
             : { currency: 'HKD', number: String(transaction._id), state: transaction.status || 'pending' };
@@ -148,7 +199,9 @@ async function sendInvoiceEmail(transaction, event, emailTemplateId = null) {
             ? replaceTemplateVariables(emailTemplate.content, userLike, eventDoc, additionalVars)
             : getDefaultInvoiceEmailContent(transaction, eventDoc);
         messageBody = replaceTemplateVariables(messageBody, userLike, eventDoc, additionalVars);
-        const userId = findEventUserIdByEmail(eventDoc, email);
+        const userId = (userLike._id && String(userLike._id))
+            || (transaction.userId && String(transaction.userId))
+            || null;
         await sendEmailWithRecord({
             recipient: email,
             subject,
@@ -174,7 +227,7 @@ async function sendPaymentReceiptEmail(transaction, event, user, emailTemplateId
         let emailTemplate = emailTemplateId ? await EmailTemplate.findById(emailTemplateId) : null;
         if (!emailTemplate) emailTemplate = await EmailTemplate.findOne({ eventId: eventDoc._id, type: 'payment_receipt' });
         if (!emailTemplate) emailTemplate = await EmailTemplate.findOne({ eventId: null, type: 'payment_receipt' });
-        const userLike = user ? (user.toObject ? user.toObject() : user) : { name: transaction.userName || '', email: transaction.userEmail || '' };
+        const userLike = resolveUserForPaymentEmail(transaction, eventDoc, user);
         const invoiceData = transaction.transactionData && Object.keys(transaction.transactionData).length > 0
             ? transaction.transactionData
             : { paid_total: transaction.ticketPrice, currency: 'HKD', number: transaction.stripeSessionId || transaction._id, state: transaction.status || 'paid' };
@@ -193,7 +246,9 @@ async function sendPaymentReceiptEmail(transaction, event, user, emailTemplateId
             ? replaceTemplateVariables(emailTemplate.content, userLike, eventDoc, additionalVars)
             : getDefaultPaymentReceiptEmailContent(transaction, eventDoc);
         messageBody = replaceTemplateVariables(messageBody, userLike, eventDoc, additionalVars);
-        const userId = (userLike._id && String(userLike._id)) || findEventUserIdByEmail(eventDoc, email);
+        const userId = (userLike._id && String(userLike._id))
+            || (transaction.userId && String(transaction.userId))
+            || null;
         await sendEmailWithRecord({
             recipient: email,
             subject,
@@ -1551,11 +1606,21 @@ exports.resendEmail = async (req, res) => {
         const type = emailType || 'welcome';
 
         if (type === 'payment_receipt') {
-            const transaction = await Transaction.findOne({
-                eventId,
-                userEmail: user.email,
-                status: 'paid',
-            }).sort({ updatedAt: -1 });
+            let transaction = null;
+            if (userData._id) {
+                transaction = await Transaction.findOne({
+                    eventId,
+                    userId: userData._id,
+                    status: 'paid',
+                }).sort({ updatedAt: -1 });
+            }
+            if (!transaction) {
+                transaction = await Transaction.findOne({
+                    eventId,
+                    userEmail: user.email,
+                    status: 'paid',
+                }).sort({ updatedAt: -1 });
+            }
             if (!transaction) {
                 return res.status(400).json({ message: '找不到此用戶的已付款訂單，無法重發付款憑證' });
             }
@@ -1564,10 +1629,19 @@ exports.resendEmail = async (req, res) => {
             if (!isInvoiceEmailEnabled()) {
                 return res.status(400).json({ message: '發票郵件功能已停用' });
             }
-            const transaction = await Transaction.findOne({
-                eventId,
-                userEmail: user.email,
-            }).sort({ createdAt: -1 });
+            let transaction = null;
+            if (userData._id) {
+                transaction = await Transaction.findOne({
+                    eventId,
+                    userId: userData._id,
+                }).sort({ createdAt: -1 });
+            }
+            if (!transaction) {
+                transaction = await Transaction.findOne({
+                    eventId,
+                    userEmail: user.email,
+                }).sort({ createdAt: -1 });
+            }
             if (!transaction) {
                 return res.status(400).json({ message: '找不到此用戶的訂單記錄，無法重發發票' });
             }
@@ -5123,6 +5197,7 @@ async function completeFreePaymentTicketRegistration(event, ticket, userFormData
             paymentGateway: 'none',
             status: 'free',
             userFormData,
+            userId: savedUser._id || null,
             transactionData: { currency: 'HKD', paid_total: '0.00', state: 'free' },
         });
         try {
@@ -5338,11 +5413,12 @@ exports.wonderWebhook = async (req, res) => {
         );
 
         if (isPaid) {
-            await markTransactionPaidAndAddUser(transaction);
-            const eventDoc = await Event.findById(transaction.eventId);
-            if (eventDoc) {
+            const { eventDoc, addedUser, transaction: paidTx } = await markTransactionPaidAndAddUser(transaction) || {};
+            const txForEmail = paidTx || updatedTransaction;
+            const evt = eventDoc || await Event.findById(transaction.eventId);
+            if (evt) {
                 try {
-                    await sendPaymentReceiptEmail(updatedTransaction, eventDoc, { email: updatedTransaction.userEmail, name: updatedTransaction.userName });
+                    await sendPaymentReceiptEmail(txForEmail, evt, addedUser || null);
                 } catch (e) { console.error('[Wonder Webhook] Payment receipt email error:', e); }
             }
             console.log('[Wonder Webhook] Result: transaction marked paid, user added to event. Transaction _id:', transaction._id);
@@ -5359,7 +5435,9 @@ exports.wonderWebhook = async (req, res) => {
     }
 };
 
-/** 共用：將 transaction 標為已付款並將 user 加入 event（Stripe / Wonder webhook 皆用） */
+/** 共用：將 transaction 標為已付款並將 user 加入 event（Stripe / Wonder webhook 皆用）
+ *  @returns {{ eventDoc, addedUser, transaction }|undefined}
+ */
 async function markTransactionPaidAndAddUser(transaction) {
     await Transaction.findOneAndUpdate(
         { _id: transaction._id },
@@ -5423,12 +5501,28 @@ async function markTransactionPaidAndAddUser(transaction) {
     eventDoc.users.push(newUser);
     await eventDoc.save();
     const addedUser = eventDoc.users[eventDoc.users.length - 1];
+    const addedUserObj = addedUser
+        ? (addedUser.toObject ? addedUser.toObject({ minimize: false }) : addedUser)
+        : null;
+
+    // 寫回 transaction.userId，之後 receipt／重發可用 MongoId 對準呢個 RSVP
+    let paidTx = transaction;
+    if (addedUserObj && addedUserObj._id) {
+        paidTx = await Transaction.findOneAndUpdate(
+            { _id: transaction._id },
+            { userId: addedUserObj._id, updatedAt: new Date() },
+            { new: true }
+        ) || transaction;
+        if (!paidTx.userId) paidTx.userId = addedUserObj._id;
+    }
+
     if (addedUser) {
         await exports.sendPostRegistrationEmailByPolicy(addedUser, eventDoc, {
             mode: 'confirmation',
-            transaction,
+            transaction: paidTx,
         });
     }
+    return { eventDoc, addedUser: addedUserObj, transaction: paidTx };
 }
 
 // Stripe Webhook（需用 raw body 驗證簽名，路由在 app.js 以 express.raw 註冊）
@@ -5461,10 +5555,12 @@ exports.stripeWebhook = async (req, res) => {
             console.error('Stripe webhook: Transaction not found for session', sessionId);
             return res.status(200).json({ received: true, warning: 'Transaction not found' });
         }
-        await markTransactionPaidAndAddUser(transaction);
-        const eventDoc = await Event.findById(transaction.eventId);
-        if (eventDoc) {
-            try { await sendPaymentReceiptEmail(transaction, eventDoc, { email: transaction.userEmail, name: transaction.userName }); } catch (e) { console.error('Stripe webhook receipt email error:', e); }
+        const paid = await markTransactionPaidAndAddUser(transaction) || {};
+        const evt = paid.eventDoc || await Event.findById(transaction.eventId);
+        if (evt) {
+            try {
+                await sendPaymentReceiptEmail(paid.transaction || transaction, evt, paid.addedUser || null);
+            } catch (e) { console.error('Stripe webhook receipt email error:', e); }
         }
         return res.status(200).json({ received: true });
     } catch (error) {
