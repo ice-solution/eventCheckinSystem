@@ -454,6 +454,7 @@ exports.copyEvent = async (req, res) => {
             luckydrawListFieldNames: source.luckydrawListFieldNames || [],
             luckydrawAwardPassword: source.luckydrawAwardPassword || '',
             isPaymentEvent: !!source.isPaymentEvent,
+            promoCodeDisplayEnabled: source.promoCodeDisplayEnabled !== false,
             PaymentTickets: Array.isArray(source.PaymentTickets)
                 ? source.PaymentTickets.map((t) => {
                     const ticket = { ...t };
@@ -4798,13 +4799,16 @@ function normalizePaymentTicket(ticket) {
 // 更新付費活動設定
 exports.updatePaymentEvent = async (req, res) => {
     const { eventId } = req.params;
-    const { isPaymentEvent, PaymentTickets, promoCodes } = req.body;
+    const { isPaymentEvent, PaymentTickets, promoCodes, promoCodeDisplayEnabled } = req.body;
     try {
         const event = await Event.findById(eventId);
         if (!event) {
             return res.status(404).json({ message: 'Event not found' });
         }
         if (typeof isPaymentEvent !== 'undefined') event.isPaymentEvent = isPaymentEvent;
+        if (typeof promoCodeDisplayEnabled !== 'undefined') {
+            event.promoCodeDisplayEnabled = !!promoCodeDisplayEnabled;
+        }
         if (Array.isArray(PaymentTickets)) {
             event.PaymentTickets = PaymentTickets.map(normalizePaymentTicket);
         }
@@ -4834,7 +4838,8 @@ exports.updatePaymentEvent = async (req, res) => {
         res.status(200).json({
             message: 'Payment event updated',
             PaymentTickets: ticketsForClient,
-            promoCodes: event.promoCodes || []
+            promoCodes: event.promoCodes || [],
+            promoCodeDisplayEnabled: event.promoCodeDisplayEnabled !== false
         });
     } catch (error) {
         console.error('Error updating payment event:', error);
@@ -5061,6 +5066,13 @@ exports.validatePromoCode = async (req, res) => {
             });
         }
 
+        if (event.promoCodeDisplayEnabled === false) {
+            return res.status(400).json({
+                valid: false,
+                message: isEn ? 'Promocode is not available for this event.' : '此活動未開放折扣碼。'
+            });
+        }
+
         const promo = findPromoDocByCode(event, code);
         if (!promo) {
             return res.status(400).json({
@@ -5252,7 +5264,8 @@ exports.stripeCheckout = async (req, res) => {
         const ticketTitleDisplay = getPaymentTicketTitle(ticket, lang);
 
         const originalTicketPrice = Number(ticket.price) || 0;
-        const promoCodeNormalized = promoCode ? normalizePromoCodeInput(promoCode) : '';
+        const promoDisplayOn = event.promoCodeDisplayEnabled !== false;
+        const promoCodeNormalized = (promoDisplayOn && promoCode) ? normalizePromoCodeInput(promoCode) : '';
 
         const appliedPromo = promoCodeNormalized ? findPromoDocByCode(event, promoCodeNormalized) : null;
         const appliedPromoCode = appliedPromo ? normalizePromoCodeInput(appliedPromo.code) : '';
@@ -5260,6 +5273,9 @@ exports.stripeCheckout = async (req, res) => {
 
         if (promoCodeNormalized && !appliedPromo) {
             return res.status(400).json({ message: '無效 promocode' });
+        }
+        if (appliedPromo && appliedPromo.enabled === false) {
+            return res.status(400).json({ message: '此 promocode 已停用' });
         }
         if (appliedPromo && !promoHasRemaining(appliedPromo)) {
             return res.status(400).json({ message: '此 promocode 已用完（超出使用次數）' });

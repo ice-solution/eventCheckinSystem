@@ -591,6 +591,8 @@
     "exportPaymentTickets": "Export Excel", "importPaymentTickets": "Import Excel",
     "importPaymentTicketsSuccess": "Tickets imported successfully", "importPaymentTicketsFailed": "Failed to import tickets",
     "promoCodesTitle": "Promo Codes (fixed discount)",
+    "promoCodeDisplayLabel": "Show promocode on registration page",
+    "promoCodeDisplayHint": "When off, the promocode field is hidden on the public form (codes can still be managed here)",
     "promoCodeLabel": "Promocode",
     "promoCodePlaceholder": "Enter promocode",
     "promoDiscountLabel": "Discount",

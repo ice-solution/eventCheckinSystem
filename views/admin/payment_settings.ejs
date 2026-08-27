@@ -80,8 +80,17 @@
                             <p class="text-muted small mb-3" id="ticketTimeSlotNote"></p>
                             <div id="ticketsList"></div>
 
-                            <!-- Promo Codes (fixed discount) -->
+            <!-- Promo Codes (fixed discount) -->
                             <div class="mt-4" id="promoCodesSection">
+                                <div class="payment-event-container mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="promoCodeDisplayEnabled" aria-label="Promo code display">
+                                        <label class="form-check-label" for="promoCodeDisplayEnabled">
+                                            <strong><%= t('users.promoCodeDisplayLabel') %></strong>
+                                            <small class="text-muted d-block"><%= t('users.promoCodeDisplayHint') %></small>
+                                        </label>
+                                    </div>
+                                </div>
                                 <h5 class="mb-2"><%= t('users.promoCodesTitle') %></h5>
                                 <div class="row" style="gap:10px; align-items:flex-end;">
                                     <div class="col-md-3">
@@ -153,6 +162,7 @@
     let paymentTickets = <%- JSON.stringify(event.PaymentTickets || []) %>;
     let promoCodes     = <%- JSON.stringify(event.promoCodes || []).replace(/</g, '\\u003c') %>;
     let isPaymentEvent = <%- event.isPaymentEvent ? 'true' : 'false' %>;
+    let promoCodeDisplayEnabled = <%- event.promoCodeDisplayEnabled === false ? 'false' : 'true' %>;
 
     function showAlert(type, message) {
         const id = 'toast-' + Date.now();
@@ -277,7 +287,12 @@
 
     // ── Init (DOM already ready since script is at bottom) ──────────────────
     $('#paymentEvent').prop('checked', isPaymentEvent);
+    $('#promoCodeDisplayEnabled').prop('checked', promoCodeDisplayEnabled);
     if (isPaymentEvent) showTicketForm();
+
+    $('#promoCodeDisplayEnabled').on('change', function() {
+        promoCodeDisplayEnabled = $(this).is(':checked');
+    });
 
     $('#paymentEvent').on('change', function() {
         const checked = $(this).is(':checked');
@@ -350,7 +365,12 @@
             url: `/events/${eventId}/paymentEvent`,
             type: 'PATCH',
             contentType: 'application/json',
-            data: JSON.stringify({ isPaymentEvent: $('#paymentEvent').is(':checked'), PaymentTickets: paymentTickets, promoCodes: promoCodes }),
+            data: JSON.stringify({
+                isPaymentEvent: $('#paymentEvent').is(':checked'),
+                PaymentTickets: paymentTickets,
+                promoCodes: promoCodes,
+                promoCodeDisplayEnabled: $('#promoCodeDisplayEnabled').is(':checked')
+            }),
             success: (res) => {
                 if (res && res.PaymentTickets) {
                     applyTicketsFromServer(res.PaymentTickets, $('#paymentEvent').is(':checked'));
@@ -358,6 +378,10 @@
                 if (res && Array.isArray(res.promoCodes)) {
                     promoCodes = res.promoCodes;
                     renderPromoCodes();
+                }
+                if (res && typeof res.promoCodeDisplayEnabled !== 'undefined') {
+                    promoCodeDisplayEnabled = !!res.promoCodeDisplayEnabled;
+                    $('#promoCodeDisplayEnabled').prop('checked', promoCodeDisplayEnabled);
                 }
                 showAlert('success', _PS.paymentSavedSuccess);
             }

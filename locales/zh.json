@@ -590,6 +590,8 @@
     "exportPaymentTickets": "匯出 Excel", "importPaymentTickets": "匯入 Excel",
     "importPaymentTicketsSuccess": "票券匯入成功", "importPaymentTicketsFailed": "票券匯入失敗",
     "promoCodesTitle": "折扣碼（固定金額）",
+    "promoCodeDisplayLabel": "報名頁顯示折扣碼",
+    "promoCodeDisplayHint": "關閉後報名頁不會顯示折扣碼輸入欄（後台仍可管理折扣碼）",
     "promoCodeLabel": "Promocode",
     "promoCodePlaceholder": "輸入折扣碼",
     "promoDiscountLabel": "折扣",
