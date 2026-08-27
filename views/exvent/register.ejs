@@ -983,6 +983,7 @@ var registerPageTitleSuffix = isApplicationMode
                     <script type="application/json" id="promoCodeDisplayEnabledJson"><%- JSON.stringify(typeof event !== 'undefined' && event ? event.promoCodeDisplayEnabled !== false : true) %></script>
                 </div>
                 <script type="application/json" id="paymentTicketsDataJson"><%- JSON.stringify(paymentTickets) %></script>
+                <script type="application/json" id="currencySymbolJson"><%- JSON.stringify(typeof currencySymbol !== 'undefined' ? currencySymbol : '$') %></script>
                 <script type="application/json" id="paymentTicketUiJson"><%- JSON.stringify(ptUi) %></script>
                 <script type="application/json" id="ticketsUseCategoriesJson"><%- JSON.stringify(!!ticketsUseCategories) %></script>
             <% } %>
@@ -1223,6 +1224,14 @@ var registerPageTitleSuffix = isApplicationMode
             if (!el) return [];
             try { return JSON.parse(el.textContent); } catch (_) { return []; }
         })();
+        const currencySymbol = (function() {
+            const el = document.getElementById('currencySymbolJson');
+            if (!el) return '$';
+            try {
+                const v = JSON.parse(el.textContent);
+                return v || '$';
+            } catch (_) { return '$'; }
+        })();
         const paymentTicketUi = (function() {
             const el = document.getElementById('paymentTicketUiJson');
             if (!el) return {};
@@ -1372,8 +1381,9 @@ var registerPageTitleSuffix = isApplicationMode
             const en = t.en || zh;
             const name = currentLanguage === 'en' ? (en || zh) : (zh || en);
             const price = ticket.price != null ? ticket.price : '';
-            if (name) return name + ' - $' + price;
-            return currentLanguage === 'en' ? ('Ticket - $' + price) : ('票券 - $' + price);
+            const sym = currencySymbol || '$';
+            if (name) return name + ' - ' + sym + price;
+            return currentLanguage === 'en' ? ('Ticket - ' + sym + price) : ('票券 - ' + sym + price);
         }
 
         function getDistinctCategoryKeys() {
@@ -1430,8 +1440,9 @@ var registerPageTitleSuffix = isApplicationMode
                 if (!isTicketInRange(ticket)) return;
                 if (ticketsUseCategories && selectedTicketCategory !== getTicketCategoryKey(ticket)) return;
                 const t = ticket.title || {};
-                const optZh = (t.zh ? t.zh : '票券') + ' - $' + ticket.price;
-                const optEn = ((t.en || t.zh) ? (t.en || t.zh) : 'Ticket') + ' - $' + ticket.price;
+                const sym = currencySymbol || '$';
+                const optZh = (t.zh ? t.zh : '票券') + ' - ' + sym + ticket.price;
+                const optEn = ((t.en || t.zh) ? (t.en || t.zh) : 'Ticket') + ' - ' + sym + ticket.price;
                 $sel.append($('<option>', {
                     value: ticket._id,
                     text: getTicketOptionLabel(ticket),

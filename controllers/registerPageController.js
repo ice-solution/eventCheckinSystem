@@ -4,6 +4,7 @@ const formConfigController = require('./formConfigController');
 const { getBannerRenderData } = require('../utils/bannerCache');
 const { normalizeTicketsForView, ticketsUseCategories } = require('../utils/paymentTicket');
 const { isRegisterSlugRouteCandidate } = require('../utils/registerSlug');
+const { getCurrencySymbol, getCurrencyUpper } = require('../utils/currency');
 
 async function loadOrCreateFormConfig(eventId) {
     let formConfig = await FormConfig.findOne({ eventId });
@@ -47,7 +48,9 @@ async function renderRegisterPage(req, res, eventId) {
         event,
         paymentTickets: ticketsForView,
         ticketsUseCategories: ticketsUseCategories(ticketsForView),
-        formConfig
+        formConfig,
+        currencySymbol: getCurrencySymbol(),
+        currencyCode: getCurrencyUpper()
     });
 }
 
