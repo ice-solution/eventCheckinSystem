@@ -5615,11 +5615,14 @@ exports.stripeCheckout = async (req, res) => {
             const eventDisplayName = getEventDisplayName(event, formConfig, lang);
             const callbackUrl = `${baseUrl}/web/webhook/wonder`;
             const redirectUrl = `${baseUrl}/web/${event_id}/register/success?session_id=${transaction._id}${langQuery}`;
+            // Wonder 收款：票價 × 1.058（例如手續費／稅）
+            const wonderChargeAmount = Math.round(Number(paidTicketPrice) * 1.058 * 100) / 100;
+            const wonderCurrency = (process.env.CURRENCY || 'hkd').toString().trim().toUpperCase() || 'HKD';
             const { paymentUrl, orderId } = await wonderPayment.createOrder({
                 referenceNumber: transaction._id.toString(),
-                currency: 'HKD',
+                currency: wonderCurrency,
                 ticketTitle: ticketTitleDisplay,
-                amount: paidTicketPrice,
+                amount: wonderChargeAmount,
                 callbackUrl,
                 redirectUrl,
                 note: `Event: ${eventDisplayName}, Ticket: ${ticketTitleDisplay}`
@@ -5650,7 +5653,7 @@ exports.stripeCheckout = async (req, res) => {
             payment_method_types: ['card'],
             line_items: [{
                 price_data: {
-                    currency: (process.env.STRIPE_CURRENCY || 'hkd').toLowerCase(),
+                    currency: (process.env.CURRENCY || 'hkd').toString().trim().toLowerCase() || 'hkd',
                     product_data: { name: ticketTitleDisplay || 'Ticket' },
                     unit_amount: Math.round(Number(paidTicketPrice) * 100) // 轉為分
                 },
