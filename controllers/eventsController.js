@@ -652,6 +652,302 @@ exports.copyEvent = async (req, res) => {
     }
 };
 
+const FORM_PACKAGE_KIND = 'event-form-package';
+const FORM_PACKAGE_VERSION = 1;
+const MAX_FORM_PACKAGE_EVENTS = 6;
+
+function stripFormConfigForExport(srcForm) {
+    const formObj = clonePlainWithoutIds(srcForm);
+    if (!formObj) return null;
+    delete formObj.eventId;
+    delete formObj.createdAt;
+    delete formObj.updatedAt;
+    delete formObj.registerSlug; // 唔帶走 slug，避免撞 unique
+    if (Array.isArray(formObj.sections)) {
+        formObj.sections = formObj.sections.map((sec) => {
+            const s = { ...sec };
+            delete s._id;
+            if (Array.isArray(s.fields)) {
+                s.fields = s.fields.map((f) => {
+                    const field = { ...f };
+                    delete field._id;
+                    if (Array.isArray(field.options)) {
+                        field.options = field.options.map((o) => {
+                            const opt = { ...o };
+                            delete opt._id;
+                            return opt;
+                        });
+                    }
+                    return field;
+                });
+            }
+            return s;
+        });
+    }
+    if (Array.isArray(formObj.agreements)) {
+        formObj.agreements = formObj.agreements.map((a) => {
+            const next = { ...a };
+            delete next._id;
+            return next;
+        });
+    }
+    return formObj;
+}
+
+async function buildEventFormPackage(event) {
+    const FormConfig = require('../model/FormConfig');
+    const emailTemplates = await EmailTemplate.find({ eventId: event._id }).lean();
+    const srcForm = await FormConfig.findOne({ eventId: event._id }).lean();
+    const templates = (emailTemplates || []).map((tpl) => ({
+        exportId: String(tpl._id),
+        subject: tpl.subject || '',
+        content: tpl.content || '',
+        type: tpl.type || 'welcome'
+    }));
+    let eventEmailTemplateExportId = null;
+    if (event.emailTemplate) {
+        const match = templates.find((t) => t.exportId === String(event.emailTemplate));
+        if (match) eventEmailTemplateExportId = match.exportId;
+    }
+    return {
+        sourceEventId: String(event._id),
+        sourceEventName: event.name || String(event._id),
+        eventEmailTemplateExportId,
+        emailTemplates: templates,
+        formConfig: srcForm ? stripFormConfigForExport(srcForm) : null
+    };
+}
+
+/** 匯出選中活動的 FormConfig + Email templates（不含用戶） */
+exports.exportEventFormPackages = async (req, res) => {
+    try {
+        const resolved = await resolveBatchReportEvents(req);
+        if (resolved.error) {
+            return res.status(resolved.error.status).json({ success: false, message: resolved.error.message });
+        }
+        if (resolved.eventIds.length > MAX_FORM_PACKAGE_EVENTS) {
+            return res.status(400).json({
+                success: false,
+                message: `一次最多選擇 ${MAX_FORM_PACKAGE_EVENTS} 個活動。`
+            });
+        }
+
+        const packages = [];
+        for (const event of resolved.ordered) {
+            packages.push(await buildEventFormPackage(event));
+        }
+
+        const payload = {
+            version: FORM_PACKAGE_VERSION,
+            kind: FORM_PACKAGE_KIND,
+            exportedAt: new Date().toISOString(),
+            packages
+        };
+
+        const stamp = new Date().toISOString().slice(0, 10);
+        const namePart = packages.length === 1
+            ? String(packages[0].sourceEventName || 'event').replace(/[^\w\u4e00-\u9fff-]+/g, '_').slice(0, 40)
+            : `events_${packages.length}`;
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.setHeader(
+            'Content-Disposition',
+            `attachment; filename=form_package_${namePart}_${stamp}.json`
+        );
+        return res.status(200).send(JSON.stringify(payload, null, 2));
+    } catch (error) {
+        console.error('exportEventFormPackages error:', error);
+        return res.status(500).json({ success: false, message: error.message || '匯出失敗' });
+    }
+};
+
+function parseFormPackagePayload(raw) {
+    let data = raw;
+    if (Buffer.isBuffer(data)) data = data.toString('utf8');
+    if (typeof data === 'string') {
+        try {
+            data = JSON.parse(data);
+        } catch (e) {
+            return { error: '無效的 JSON 檔案' };
+        }
+    }
+    if (!data || typeof data !== 'object') {
+        return { error: '無效的套件格式' };
+    }
+    if (data.kind && data.kind !== FORM_PACKAGE_KIND) {
+        return { error: '檔案類型不符（需要 event-form-package）' };
+    }
+    let packages = Array.isArray(data.packages) ? data.packages : null;
+    if (!packages && (data.formConfig || data.emailTemplates)) {
+        packages = [data];
+    }
+    if (!packages || !packages.length) {
+        return { error: '檔案內沒有可匯入的活動套件' };
+    }
+    return { data, packages };
+}
+
+async function assertCanAccessEvent(sessionUser, eventId) {
+    if (!sessionUser || !sessionUser._id) {
+        return { error: { status: 401, message: '未授權：請先登入' } };
+    }
+    if (!mongoose.Types.ObjectId.isValid(eventId)) {
+        return { error: { status: 400, message: '無效的活動 ID' } };
+    }
+    const event = await Event.findById(eventId);
+    if (!event) {
+        return { error: { status: 404, message: '找不到目標活動' } };
+    }
+    if (sessionUser.role !== 'admin') {
+        const allowed = (sessionUser.allowedEvents || []).map(String);
+        if (!allowed.includes(String(eventId)) && String(event.owner) !== String(sessionUser._id)) {
+            return { error: { status: 403, message: '無權限寫入此活動' } };
+        }
+    }
+    return { event };
+}
+
+/**
+ * 將 FormConfig + Email templates 匯入到目標活動（覆蓋該活動既有 event-scoped email templates；FormConfig upsert）
+ * body: targetEventId, packageIndex?；file: JSON（multer memory）或 body.packageJson
+ */
+exports.importEventFormPackage = async (req, res) => {
+    try {
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.status(401).json({ success: false, message: '未授權：請先登入' });
+        }
+
+        const targetEventId = (req.body && req.body.targetEventId) || '';
+        const access = await assertCanAccessEvent(req.session.user, targetEventId);
+        if (access.error) {
+            return res.status(access.error.status).json({ success: false, message: access.error.message });
+        }
+        const targetEvent = access.event;
+
+        let raw = null;
+        if (req.file && req.file.buffer) {
+            raw = req.file.buffer;
+        } else if (req.body && req.body.packageJson) {
+            raw = req.body.packageJson;
+        }
+        const parsed = parseFormPackagePayload(raw);
+        if (parsed.error) {
+            return res.status(400).json({ success: false, message: parsed.error });
+        }
+
+        const packageIndex = Math.max(0, parseInt(req.body && req.body.packageIndex, 10) || 0);
+        if (packageIndex >= parsed.packages.length) {
+            return res.status(400).json({
+                success: false,
+                message: `packageIndex 超出範圍（共 ${parsed.packages.length} 個套件）`,
+                packageCount: parsed.packages.length,
+                packages: parsed.packages.map((p, i) => ({
+                    index: i,
+                    sourceEventName: p.sourceEventName || '',
+                    sourceEventId: p.sourceEventId || ''
+                }))
+            });
+        }
+
+        // 僅預覽套件列表（前端選完再真正匯入）
+        if (req.body && (req.body.preview === '1' || req.body.preview === 'true' || req.body.preview === true)) {
+            return res.status(200).json({
+                success: true,
+                preview: true,
+                packageCount: parsed.packages.length,
+                packages: parsed.packages.map((p, i) => ({
+                    index: i,
+                    sourceEventName: p.sourceEventName || '',
+                    sourceEventId: p.sourceEventId || '',
+                    emailTemplateCount: Array.isArray(p.emailTemplates) ? p.emailTemplates.length : 0,
+                    hasFormConfig: !!p.formConfig
+                }))
+            });
+        }
+
+        const pkg = parsed.packages[packageIndex];
+        const FormConfig = require('../model/FormConfig');
+        const now = new Date();
+
+        // 覆蓋該活動的 email templates（唔動 global eventId:null）
+        await EmailTemplate.deleteMany({ eventId: targetEvent._id });
+        const emailIdMap = {};
+        const importedTemplates = Array.isArray(pkg.emailTemplates) ? pkg.emailTemplates : [];
+        for (const tpl of importedTemplates) {
+            const created = await EmailTemplate.create({
+                eventId: targetEvent._id,
+                subject: tpl.subject || 'Untitled',
+                content: tpl.content || '',
+                type: tpl.type || 'welcome',
+                created_at: now,
+                modified_at: now
+            });
+            if (tpl.exportId) {
+                emailIdMap[String(tpl.exportId)] = String(created._id);
+            }
+        }
+
+        if (pkg.eventEmailTemplateExportId && emailIdMap[String(pkg.eventEmailTemplateExportId)]) {
+            targetEvent.emailTemplate = emailIdMap[String(pkg.eventEmailTemplateExportId)];
+        } else {
+            targetEvent.emailTemplate = undefined;
+        }
+        targetEvent.modified_at = now;
+        await targetEvent.save();
+
+        if (pkg.formConfig && typeof pkg.formConfig === 'object') {
+            const formObj = JSON.parse(JSON.stringify(pkg.formConfig));
+            delete formObj._id;
+            delete formObj.__v;
+            delete formObj.id;
+            delete formObj.eventId;
+            delete formObj.createdAt;
+            delete formObj.updatedAt;
+            delete formObj.registerSlug;
+            remapFormConfigEmailTemplateIds(formObj, emailIdMap);
+
+            const existing = await FormConfig.findOne({ eventId: targetEvent._id });
+            if (existing) {
+                const keepSlug = existing.registerSlug;
+                Object.keys(formObj).forEach((key) => {
+                    existing[key] = formObj[key];
+                });
+                existing.registerSlug = keepSlug;
+                existing.updatedAt = now;
+                existing.markModified('sections');
+                existing.markModified('thankYou');
+                existing.markModified('terms');
+                existing.markModified('agreement');
+                existing.markModified('agreements');
+                existing.markModified('paymentTicketUi');
+                await existing.save();
+            } else {
+                await FormConfig.create({
+                    ...formObj,
+                    eventId: targetEvent._id,
+                    createdAt: now,
+                    updatedAt: now
+                });
+            }
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: '已匯入 FormConfig 與 Email templates',
+            targetEventId: String(targetEvent._id),
+            targetEventName: targetEvent.name,
+            sourceEventName: pkg.sourceEventName || '',
+            emailTemplateCount: importedTemplates.length,
+            formConfigImported: !!(pkg.formConfig && typeof pkg.formConfig === 'object')
+        });
+    } catch (error) {
+        console.error('importEventFormPackage error:', error);
+        if (error && error.code === 11000 && error.keyPattern && error.keyPattern.registerSlug) {
+            return res.status(400).json({ success: false, message: 'FormConfig slug 衝突' });
+        }
+        return res.status(500).json({ success: false, message: error.message || '匯入失敗' });
+    }
+};
+
 // 獲取用戶的事件
 exports.getUserEvents = async (req, res) => {
     try {

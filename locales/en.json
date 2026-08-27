@@ -127,7 +127,18 @@
     "copyConfirm": "Copy this event? Form Config, Email/SMS templates and event settings will be copied (registered users are not).",
     "copying": "Copying…",
     "copySuccess": "Copied as: ",
-    "copyFailed": "Copy failed. Please try again."
+    "copyFailed": "Copy failed. Please try again.",
+    "exportFormPackage": "Export Form Package",
+    "importFormPackage": "Import Form Package",
+    "exportFormPackageHint": "Export FormConfig + Email templates for selected events (no users)",
+    "importFormPackageHint": "Select exactly 1 target event, then upload a previously exported JSON",
+    "importSelectOneTarget": "Please select exactly 1 target event for import",
+    "importPickPackage": "This file contains multiple packages. Choose one to import:",
+    "importConfirm": "This will overwrite the target event's FormConfig and Email templates (users are not affected). Continue?",
+    "importing": "Importing…",
+    "importSuccess": "Imported into: ",
+    "importFailed": "Import failed. Please try again.",
+    "formPackageNoFile": "Please choose a JSON file"
   },
   "create_event": {
     "title": "Create New Event", "eventName": "Event Name", "startTime": "Event Start Time",

@@ -127,7 +127,18 @@
     "copyConfirm": "確定要複製此活動？會複製 Form Config、Email／SMS 模板與活動設定（不含報名用戶）。",
     "copying": "複製中…",
     "copySuccess": "已複製為：",
-    "copyFailed": "複製失敗，請稍後再試"
+    "copyFailed": "複製失敗，請稍後再試",
+    "exportFormPackage": "匯出表單套件",
+    "importFormPackage": "匯入表單套件",
+    "exportFormPackageHint": "匯出勾選活動的 FormConfig + Email templates（不含用戶）",
+    "importFormPackageHint": "請先勾選 1 個目標活動，再上傳先前匯出的 JSON",
+    "importSelectOneTarget": "匯入時請只勾選 1 個目標活動",
+    "importPickPackage": "檔案含多個活動套件，請選擇要匯入哪一個：",
+    "importConfirm": "將覆蓋目標活動的 FormConfig 與 Email templates（不含用戶）。確定繼續？",
+    "importing": "匯入中…",
+    "importSuccess": "匯入成功：",
+    "importFailed": "匯入失敗，請稍後再試",
+    "formPackageNoFile": "請選擇 JSON 檔案"
   },
   "create_event": {
     "title": "建立新活動", "eventName": "活動名稱", "startTime": "活動開始時間",

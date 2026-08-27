@@ -299,10 +299,17 @@
                     <div class="card">
                         <div class="card-header card-header-with-action">
                             <strong class="card-title"><%= t('events_list.title') %></strong>
-                            <div style="display:inline-flex; align-items:center; gap:12px;">
+                            <div style="display:inline-flex; align-items:center; gap:12px; flex-wrap:wrap;">
                                 <button type="button" class="btn btn-sm btn-info" id="exportCheckInListBtn">
                                     <i class="fas fa-download"></i> <%= t('events_list.exportCheckInList') %>
                                 </button>
+                                <button type="button" class="btn btn-sm btn-outline-info" id="exportFormPackageBtn" title="<%= t('events_list.exportFormPackageHint') %>">
+                                    <i class="fas fa-file-export"></i> <%= t('events_list.exportFormPackage') %>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="importFormPackageBtn" title="<%= t('events_list.importFormPackageHint') %>">
+                                    <i class="fas fa-file-import"></i> <%= t('events_list.importFormPackage') %>
+                                </button>
+                                <input type="file" id="importFormPackageFile" accept=".json,application/json" class="d-none">
                                 <a href="/auth/users" title="Login Account Management" data-toggle="tooltip" data-placement="left" style="color:#90a4ae; font-size:1.2em; line-height:1; text-decoration:none;">
                                     <i class="fa fa-users"></i>
                                 </a>
@@ -388,6 +395,27 @@
     </div>
 </div>
 
+<div class="modal" id="formPackagePickModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><%= t('events_list.importFormPackage') %></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-2"><%= t('events_list.importPickPackage') %></p>
+                <div id="formPackagePickList"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('common.cancel') %></button>
+                <button type="button" class="btn btn-primary" id="confirmFormPackageImport"><%= t('events_list.importFormPackage') %></button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <%- include ("components/footer") %>
 <script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
 <script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
@@ -410,10 +438,20 @@ $(document).ready(function() {
         copying: <%- JSON.stringify(t('events_list.copying')) %>,
         copySuccess: <%- JSON.stringify(t('events_list.copySuccess')) %>,
         copyFailed: <%- JSON.stringify(t('events_list.copyFailed')) %>,
-        copyLabel: <%- JSON.stringify(t('events_list.copyEvent')) %>
+        copyLabel: <%- JSON.stringify(t('events_list.copyEvent')) %>,
+        exportFormPackage: <%- JSON.stringify(t('events_list.exportFormPackage')) %>,
+        importFormPackage: <%- JSON.stringify(t('events_list.importFormPackage')) %>,
+        importSelectOneTarget: <%- JSON.stringify(t('events_list.importSelectOneTarget')) %>,
+        importConfirm: <%- JSON.stringify(t('events_list.importConfirm')) %>,
+        importing: <%- JSON.stringify(t('events_list.importing')) %>,
+        importSuccess: <%- JSON.stringify(t('events_list.importSuccess')) %>,
+        importFailed: <%- JSON.stringify(t('events_list.importFailed')) %>,
+        formPackageNoFile: <%- JSON.stringify(t('events_list.formPackageNoFile')) %>
     };
     var selectedIds = {};
     var pendingExportEventIds = [];
+    var pendingImportFile = null;
+    var pendingImportTargetId = null;
 
     $('#batchReportModal').appendTo('body');
 
@@ -743,6 +781,175 @@ $(document).ready(function() {
             alert(err.message || i18n.copyFailed);
             $btn.prop('disabled', false).html(originalHtml);
         });
+    });
+
+    function downloadBlob(blob, filename) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = filename || 'form_package.json';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+    }
+
+    function filenameFromContentDisposition(header) {
+        if (!header) return '';
+        var m = /filename\*?=(?:UTF-8''|")?([^\";]+)/i.exec(header);
+        if (!m) return '';
+        try { return decodeURIComponent(m[1].replace(/"/g, '').trim()); } catch (e) { return m[1].replace(/"/g, '').trim(); }
+    }
+
+    $(document).on('click', '#exportFormPackageBtn', function(e) {
+        e.preventDefault();
+        var eventIds = getSelectedEventIds();
+        if (!eventIds.length) {
+            alert(i18n.selectFirst);
+            return;
+        }
+        if (eventIds.length > MAX_BATCH_EVENTS) {
+            alert(i18n.exportMaxEvents);
+            return;
+        }
+        var $btn = $(this).prop('disabled', true);
+        var originalHtml = $btn.html();
+        $btn.html('<i class="fas fa-spinner fa-spin"></i> ' + i18n.exporting);
+
+        fetch('/events/export-form-package', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ eventIds: eventIds }),
+            credentials: 'same-origin'
+        }).then(function(res) {
+            if (!res.ok) {
+                return res.json().then(function(body) {
+                    throw new Error((body && (body.message || body.error)) || i18n.exportFailed);
+                }).catch(function(err) {
+                    if (err instanceof Error && err.message !== i18n.exportFailed) throw err;
+                    throw new Error(i18n.exportFailed);
+                });
+            }
+            var cd = res.headers.get('Content-Disposition');
+            var filename = filenameFromContentDisposition(cd) || 'form_package.json';
+            return res.blob().then(function(blob) {
+                downloadBlob(blob, filename);
+            });
+        }).catch(function(err) {
+            alert(err.message || i18n.exportFailed);
+        }).finally(function() {
+            $btn.prop('disabled', false).html(originalHtml);
+        });
+    });
+
+    function postImportFormPackage(file, targetEventId, packageIndex, preview) {
+        var fd = new FormData();
+        fd.append('file', file);
+        fd.append('targetEventId', targetEventId);
+        if (typeof packageIndex === 'number') fd.append('packageIndex', String(packageIndex));
+        if (preview) fd.append('preview', '1');
+        return fetch('/events/import-form-package', {
+            method: 'POST',
+            body: fd,
+            credentials: 'same-origin'
+        }).then(function(res) {
+            return res.json().then(function(body) {
+                if (!res.ok || !body.success) {
+                    throw new Error((body && body.message) || i18n.importFailed);
+                }
+                return body;
+            });
+        });
+    }
+
+    function runImportWithIndex(packageIndex) {
+        if (!pendingImportFile || !pendingImportTargetId) {
+            return Promise.resolve();
+        }
+        if (!confirm(i18n.importConfirm)) {
+            return Promise.resolve();
+        }
+        var $btn = $('#importFormPackageBtn').prop('disabled', true);
+        var originalHtml = $btn.html();
+        $btn.html('<i class="fas fa-spinner fa-spin"></i> ' + i18n.importing);
+        return postImportFormPackage(pendingImportFile, pendingImportTargetId, packageIndex, false)
+            .then(function(body) {
+                alert(i18n.importSuccess + (body.targetEventName || ''));
+                pendingImportFile = null;
+                pendingImportTargetId = null;
+                $('#importFormPackageFile').val('');
+                $('#formPackagePickModal').modal('hide');
+            })
+            .catch(function(err) {
+                alert(err.message || i18n.importFailed);
+            })
+            .finally(function() {
+                $btn.prop('disabled', false).html(originalHtml);
+            });
+    }
+
+    $(document).on('click', '#importFormPackageBtn', function(e) {
+        e.preventDefault();
+        var eventIds = getSelectedEventIds();
+        if (eventIds.length !== 1) {
+            alert(i18n.importSelectOneTarget);
+            return;
+        }
+        pendingImportTargetId = eventIds[0];
+        $('#importFormPackageFile').val('').trigger('click');
+    });
+
+    $(document).on('change', '#importFormPackageFile', function() {
+        var file = this.files && this.files[0];
+        if (!file) return;
+        if (!pendingImportTargetId) {
+            alert(i18n.importSelectOneTarget);
+            return;
+        }
+        pendingImportFile = file;
+        var $btn = $('#importFormPackageBtn').prop('disabled', true);
+        var originalHtml = $btn.html();
+        $btn.html('<i class="fas fa-spinner fa-spin"></i> ' + i18n.importing);
+
+        postImportFormPackage(file, pendingImportTargetId, 0, true)
+            .then(function(body) {
+                var list = body.packages || [];
+                if (list.length <= 1) {
+                    $btn.prop('disabled', false).html(originalHtml);
+                    return runImportWithIndex(0);
+                }
+                var html = '';
+                list.forEach(function(p) {
+                    html += '<div class="form-check mb-2">' +
+                        '<input class="form-check-input" type="radio" name="formPackagePick" id="fpick' + p.index + '" value="' + p.index + '"' + (p.index === 0 ? ' checked' : '') + '>' +
+                        '<label class="form-check-label" for="fpick' + p.index + '">' +
+                        (p.sourceEventName || ('#' + p.index)) +
+                        ' <span class="text-muted small">(' + (p.emailTemplateCount || 0) + ' emails' + (p.hasFormConfig ? ', form' : '') + ')</span>' +
+                        '</label></div>';
+                });
+                $('#formPackagePickList').html(html);
+                $('#formPackagePickModal').appendTo('body').modal('show');
+            })
+            .catch(function(err) {
+                alert(err.message || i18n.importFailed);
+                pendingImportFile = null;
+                $('#importFormPackageFile').val('');
+            })
+            .finally(function() {
+                if ($('#formPackagePickModal').hasClass('show') || $('#formPackagePickModal').is(':visible')) {
+                    $btn.prop('disabled', false).html(originalHtml);
+                } else if ($btn.prop('disabled') && $btn.html().indexOf('fa-spinner') >= 0) {
+                    // single-package path handed off to runImportWithIndex
+                } else {
+                    $btn.prop('disabled', false).html(originalHtml);
+                }
+            });
+    });
+
+    $(document).on('click', '#confirmFormPackageImport', function() {
+        var idx = parseInt($('input[name="formPackagePick"]:checked').val(), 10);
+        if (Number.isNaN(idx)) idx = 0;
+        runImportWithIndex(idx);
     });
 });
 </script>
