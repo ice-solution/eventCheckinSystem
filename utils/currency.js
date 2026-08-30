@@ -41,9 +41,24 @@ function getCurrencySymbol() {
     return getCurrencyUpper() + ' ';
 }
 
+/** 向 payment gateway 實際收款：票價 × 1.058（2 位小數） */
+const PAYMENT_CHARGE_MULTIPLIER = 1.058;
+
+function computeGatewayChargeAmount(paidTicketPrice) {
+    return Math.round(Number(paidTicketPrice) * PAYMENT_CHARGE_MULTIPLIER * 100) / 100;
+}
+
+/** Stripe unit_amount 用（最小貨幣單位，例如 USD 分） */
+function computeGatewayChargeAmountCents(paidTicketPrice) {
+    return Math.round(computeGatewayChargeAmount(paidTicketPrice) * 100);
+}
+
 module.exports = {
     getCurrencyRaw,
     getCurrencyLower,
     getCurrencyUpper,
     getCurrencySymbol,
+    PAYMENT_CHARGE_MULTIPLIER,
+    computeGatewayChargeAmount,
+    computeGatewayChargeAmountCents,
 };
