@@ -8,6 +8,7 @@ const registerPageController = require('../controllers/registerPageController');
 const Transaction = require('../model/Transaction');
 const { getBannerRenderData } = require('../utils/bannerCache');
 const { isFreePaymentTicketPrice } = require('../utils/paymentTicket');
+const { getCurrencySymbol, computeGatewayChargeAmount } = require('../utils/currency');
 
 function getWebApiKeys() {
     const raw = (process.env.WEB_SITE_API_KEYS || process.env.WEB_API_KEYS || '').toString().trim();
@@ -118,12 +119,26 @@ router.get('/:event_id/register/success', async (req, res) => {
         thankYouYesNo = transaction.userFormData.thankYouYesNo || null;
     }
 
+    let paymentBreakdown = null;
+    if (transaction && transaction.ticketPrice != null && Number(transaction.ticketPrice) > 0) {
+        const ticketPrice = Number(transaction.ticketPrice);
+        const totalCharge = computeGatewayChargeAmount(ticketPrice);
+        const processingFee = Math.round((totalCharge - ticketPrice) * 100) / 100;
+        paymentBreakdown = {
+            ticketPrice,
+            processingFee,
+            totalCharge,
+        };
+    }
+
     res.render('exvent/success', {
         event_id,
         transaction,
         lang: lang || null,
         formConfig,
-        thankYouYesNo
+        thankYouYesNo,
+        currencySymbol: getCurrencySymbol(),
+        paymentBreakdown,
     });
 });
 
