@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="<%= (typeof pageLang !== 'undefined' && pageLang === 'en') ? 'en' : 'zh-Hant' %>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>登記成功</title>
+    <title><%= (typeof pageLang !== 'undefined' && pageLang === 'en') ? 'Registration Successful' : '登記成功' %></title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         body {
@@ -105,7 +105,7 @@
 
         <div class="form-header">
             <div class="success-icon">✓</div>
-            <h1 id="successTitle" data-zh="登記成功" data-en="Registration Successful">登記成功</h1>
+            <h1 id="successTitle" data-zh="登記成功" data-en="Registration Successful"><%= (typeof pageLang !== 'undefined' && pageLang === 'en') ? 'Registration Successful' : '登記成功' %></h1>
         </div>
 
         <div class="success-content">
@@ -138,7 +138,7 @@
                     if (ynq.yesPurchaseTitle && ynq.yesPurchaseTitle.en) purchaseTitleEn = ynq.yesPurchaseTitle.en;
                     if (ynq.yesPurchaseMessage && ynq.yesPurchaseMessage.zh) purchaseMsgZh = ynq.yesPurchaseMessage.zh;
                     if (ynq.yesPurchaseMessage && ynq.yesPurchaseMessage.en) purchaseMsgEn = ynq.yesPurchaseMessage.en;
-                } else if (useNoCopy) {
+                } else                 if (useNoCopy) {
                     if (ynq.noTitle && ynq.noTitle.zh) freeTitleZh = ynq.noTitle.zh;
                     if (ynq.noTitle && ynq.noTitle.en) freeTitleEn = ynq.noTitle.en;
                     if (ynq.noMessage && ynq.noMessage.zh) freeMsgZh = ynq.noMessage.zh;
@@ -148,10 +148,15 @@
                     if (ynq.noPurchaseMessage && ynq.noPurchaseMessage.zh) purchaseMsgZh = ynq.noPurchaseMessage.zh;
                     if (ynq.noPurchaseMessage && ynq.noPurchaseMessage.en) purchaseMsgEn = ynq.noPurchaseMessage.en;
                 }
+
+                const successPageLang = (typeof pageLang !== 'undefined' && pageLang === 'en') ? 'en' : 'zh';
+                const pickTy = function(zh, en) {
+                    return successPageLang === 'en' ? (en || zh || '') : (zh || en || '');
+                };
             %>
             <% if (transaction) { %>
-                <h5 id="thankYouTitle"><%= purchaseTitleZh %></h5>
-                <p id="emailMessage"><%= purchaseMsgZh %></p>
+                <h5 id="thankYouTitle"><%= pickTy(purchaseTitleZh, purchaseTitleEn) %></h5>
+                <p id="emailMessage"><%= pickTy(purchaseMsgZh, purchaseMsgEn) %></p>
                 
                 <div class="transaction-details">
                     <h5 id="transactionTitle" data-zh="交易詳情" data-en="Transaction Details">交易詳情</h5>
@@ -183,8 +188,8 @@
                     </div>
                 </div>
             <% } else { %>
-                <h5 id="thankYouTitle"><%= freeTitleZh %></h5>
-                <p id="emailMessage"><%= freeMsgZh %></p>
+                <h5 id="thankYouTitle"><%= pickTy(freeTitleZh, freeTitleEn) %></h5>
+                <p id="emailMessage"><%= pickTy(freeMsgZh, freeMsgEn) %></p>
             <% } %>
                 <script type="application/json" id="thankYouCopyJson"><%- JSON.stringify({
                     title: { zh: freeTitleZh, en: freeTitleEn },
@@ -211,7 +216,7 @@
         }
         
         const urlLanguage = getLanguageFromURL();
-        const currentLanguage = urlLanguage || 'zh';
+        const currentLanguage = urlLanguage || '<%= (typeof pageLang !== "undefined" && pageLang) ? pageLang : "zh" %>';
         
         const thankYouCopy = (function() {
             const el = document.getElementById('thankYouCopyJson');

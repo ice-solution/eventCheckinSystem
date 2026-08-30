@@ -945,12 +945,19 @@ exports.renderFormConfigPage = async (req, res) => {
             $or: [{ eventId: eventId }, { eventId: null }]
         }).select('_id type subject eventId').sort({ type: 1, subject: 1 }).lean();
 
+        const editLangRaw = (req.query.editLang || '').toString().trim().toLowerCase();
+        let editLang = formConfigForView.defaultLanguage === 'en' ? 'en' : 'zh';
+        if (editLangRaw === 'en' || editLangRaw === 'zh') {
+            editLang = editLangRaw;
+        }
+
         res.render('admin/form_config', { 
             event: event, 
             formConfig: formConfigForView,
             currentBanner,
             emailTemplates,
-            publicDomain: (process.env.DOMAIN || '').replace(/\/$/, '')
+            publicDomain: (process.env.DOMAIN || '').replace(/\/$/, ''),
+            editLang,
         });
         
     } catch (error) {

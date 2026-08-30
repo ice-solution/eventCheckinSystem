@@ -280,7 +280,7 @@
            alt="DBC Banner">
       <p class="hero-kicker">Sponsorship</p>
       <h1>D. Boral Capital SPAC Summit 2026 – Sponsor Registration</h1>
-      <p>Provide the primary sponsor contact, then choose a tier under Additional Attendees.</p>
+      <p>Provide the primary sponsor contact. You may optionally add additional attendee slots below.</p>
     </header>
 
     <form id="sponsorshipForm" novalidate>
@@ -288,12 +288,12 @@
         <h2>Primary Sponsor Contact</h2>
         <div class="grid-2">
           <div class="field">
-            <label for="firstName">First Name</label>
-            <input id="firstName" name="firstName" type="text" required autocomplete="given-name">
+            <label for="firstname">First Name</label>
+            <input id="firstname" name="firstname" type="text" required autocomplete="given-name">
           </div>
           <div class="field">
-            <label for="lastName">Last Name</label>
-            <input id="lastName" name="lastName" type="text" required autocomplete="family-name">
+            <label for="lastname">Last Name</label>
+            <input id="lastname" name="lastname" type="text" required autocomplete="family-name">
           </div>
         </div>
         <div class="field" style="margin-top:12px;">
@@ -341,11 +341,11 @@
       </section>
 
       <section class="section is-open" id="attendeesSection" aria-live="polite">
-        <h2>Additional Attendees</h2>
+        <h2>Additional Attendee Slots (Optional)</h2>
         <div class="field" style="margin-bottom:14px;">
           <label for="sponsorTier">Sponsor Tier</label>
-          <select id="sponsorTier" name="sponsorTier" required>
-            <option value="">Select a tier...</option>
+          <select id="sponsorTier" name="sponsorTier">
+            <option value="">Select a tier (optional)...</option>
             <option value="Diamond">Diamond</option>
             <option value="Platinum">Platinum</option>
             <option value="Gold">Gold</option>
@@ -354,7 +354,7 @@
             <option value="Promotional">Promotional</option>
           </select>
         </div>
-        <p class="tier-note" id="tierNote">Select a sponsor tier to show attendee fields.</p>
+        <p class="tier-note" id="tierNote">Select a sponsor tier to show additional attendee slots (optional).</p>
         <div id="attendeesList"></div>
         <div class="btn-row" id="addAttendeeRow" style="display:none;">
           <button type="button" class="btn-add" id="addAttendeeBtn">+ Add attendee</button>
@@ -373,12 +373,12 @@
   // Platinum: + up to 5. Diamond: + unlimited.
   // Gold / Cocktail / Lunch / Promotional: fixed when tier selected.
   var TIER_RULES = {
-    Diamond: { mode: 'dynamic', max: Infinity, label: 'Diamond: use + to add unlimited additional attendees.' },
-    Platinum: { mode: 'dynamic', max: 5, label: 'Platinum: use + to add up to 5 additional attendees.' },
-    Gold: { mode: 'fixed', max: 3, label: 'Gold: 3 additional attendee slots (fixed).' },
-    Cocktail: { mode: 'fixed', max: 1, label: 'Cocktail: 1 additional attendee (fixed).' },
-    Lunch: { mode: 'fixed', max: 1, label: 'Lunch: 1 additional attendee (fixed).' },
-    Promotional: { mode: 'fixed', max: 1, label: 'Promotional: 1 additional attendee (fixed).' }
+    Diamond: { mode: 'dynamic', max: Infinity, label: 'Diamond: additional attendee slots (optional) — use + to add.' },
+    Platinum: { mode: 'dynamic', max: 5, label: 'Platinum: up to 5 additional attendee slots (optional).' },
+    Gold: { mode: 'fixed', max: 3, label: 'Gold: 3 additional attendee slots (optional).' },
+    Cocktail: { mode: 'fixed', max: 1, label: 'Cocktail: 1 additional attendee slot (optional).' },
+    Lunch: { mode: 'fixed', max: 1, label: 'Lunch: 1 additional attendee slot (optional).' },
+    Promotional: { mode: 'fixed', max: 1, label: 'Promotional: 1 additional attendee slot (optional).' }
   };
 
   var tierEl = document.getElementById('sponsorTier');
@@ -450,11 +450,11 @@
         (removable ? '<button type="button" class="btn-remove" data-remove="' + id + '">Remove</button>' : '') +
       '</div>' +
       '<div class="grid-2">' +
-        '<div class="field"><label>First Name</label><input type="text" data-f="firstName" required></div>' +
-        '<div class="field"><label>Last Name</label><input type="text" data-f="lastName" required></div>' +
+        '<div class="field"><label>First Name</label><input type="text" data-f="firstname"></div>' +
+        '<div class="field"><label>Last Name</label><input type="text" data-f="lastname"></div>' +
       '</div>' +
-      '<div class="field" style="margin-top:10px;"><label>Email</label><input type="email" data-f="email" required></div>' +
-      '<div class="field" style="margin-top:10px;"><label>Title</label><input type="text" data-f="title" required></div>';
+      '<div class="field" style="margin-top:10px;"><label>Email</label><input type="email" data-f="email"></div>' +
+      '<div class="field" style="margin-top:10px;"><label>Title</label><input type="text" data-f="title"></div>';
     return card;
   }
 
@@ -470,7 +470,7 @@
     var rule = currentRule();
     listEl.innerHTML = '';
     if (!rule) {
-      noteEl.textContent = 'Select a sponsor tier to show attendee fields.';
+      noteEl.textContent = 'Select a sponsor tier to show additional attendee slots (optional).';
       syncAddButton();
       return;
     }
@@ -546,42 +546,28 @@
         return el ? String(el.value || '').trim() : '';
       };
       var row = {
-        firstName: get('firstName'),
-        lastName: get('lastName'),
+        firstname: get('firstname'),
+        lastname: get('lastname'),
         email: get('email'),
         title: get('title')
       };
-      if (!row.firstName && !row.lastName && !row.email && !row.title) return;
+      if (!row.firstname && !row.lastname && !row.email && !row.title) return;
       out.push(row);
     });
     return out;
   }
 
   function validateAttendees(list, rule) {
-    if (!rule) return 'Please select a sponsor tier.';
-    if (rule.mode === 'fixed') {
-      var cards = listEl.querySelectorAll('.attendee-card');
-      if (cards.length !== rule.max) return 'Attendee slots mismatch for selected tier.';
-      for (var i = 0; i < cards.length; i += 1) {
-        var card = cards[i];
-        var fields = ['firstName', 'lastName', 'email', 'title'];
-        for (var f = 0; f < fields.length; f += 1) {
-          var el = card.querySelector('[data-f="' + fields[f] + '"]');
-          if (!el || !String(el.value || '').trim()) {
-            return 'Please complete all fields for Attendee ' + (i + 1) + '.';
-          }
-        }
-      }
-    } else {
-      // Platinum: optional to add 0..max; each added card must be complete
-      if (list.length > rule.max) {
-        return 'Too many attendees for this tier.';
-      }
-      for (var j = 0; j < list.length; j += 1) {
-        var a = list[j];
-        if (!a.firstName || !a.lastName || !a.email || !a.title) {
-          return 'Please complete all fields for each added attendee.';
-        }
+    if (!rule) return '';
+    if (list.length > rule.max) {
+      return 'Too many attendees for this tier.';
+    }
+    for (var j = 0; j < list.length; j += 1) {
+      var a = list[j];
+      var any = a.firstname || a.lastname || a.email || a.title;
+      var all = a.firstname && a.lastname && a.email && a.title;
+      if (any && !all) {
+        return 'Please complete all fields for each attendee you started, or leave the row empty.';
       }
     }
     return '';
@@ -593,9 +579,11 @@
     formMsg.textContent = '';
 
     var rule = currentRule();
-    if (!rule) {
+    var list = collectAttendeeList();
+    var attErr = validateAttendees(list, rule);
+    if (attErr) {
       formMsg.className = 'msg err';
-      formMsg.textContent = 'Please select a sponsor tier.';
+      formMsg.textContent = attErr;
       return;
     }
 
@@ -610,16 +598,8 @@
       return;
     }
 
-    var list = collectAttendeeList();
-    var attErr = validateAttendees(list, rule);
-    if (attErr) {
-      formMsg.className = 'msg err';
-      formMsg.textContent = attErr;
-      return;
-    }
-
-    var firstName = document.getElementById('firstName').value.trim();
-    var lastName = document.getElementById('lastName').value.trim();
+    var firstname = document.getElementById('firstname').value.trim();
+    var lastname = document.getElementById('lastname').value.trim();
     var phoneCode = resolvePhoneCode();
     if (!phoneCode) {
       formMsg.className = 'msg err';
@@ -627,16 +607,16 @@
       return;
     }
     var payload = {
-      firstName: firstName,
-      lastName: lastName,
-      name: (firstName + ' ' + lastName).trim(),
+      firstname: firstname,
+      lastname: lastname,
+      name: (firstname + ' ' + lastname).trim(),
       email: document.getElementById('email').value.trim(),
       phone_code: phoneCode,
       phone: document.getElementById('phone').value.trim(),
       company: document.getElementById('company').value.trim(),
       jobTitle: document.getElementById('jobTitle').value.trim(),
       attendees: {
-        sponsorTier: tierEl.value,
+        sponsorTier: tierEl.value || '',
         list: list
       }
     };
@@ -653,7 +633,7 @@
       await window.submitCustomForm(payload, { companyLogo: logoFile });
       formMsg.className = 'msg ok';
       formMsg.textContent = 'Submitted successfully. Redirecting...';
-      window.location.href = window.CUSTOM_FORM_SUCCESS_URL || ('/web/' + (window.CUSTOM_FORM_EVENT_ID || '') + '/register/success');
+      window.location.href = window.CUSTOM_FORM_SUCCESS_URL || ('/web/' + (window.CUSTOM_FORM_EVENT_ID || '') + '/register/success?lang=' + (window.CUSTOM_FORM_DEFAULT_LANG || 'en'));
     } catch (err) {
       formMsg.className = 'msg err';
       formMsg.textContent = (err && err.message) || 'Submit failed';

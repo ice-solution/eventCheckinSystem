@@ -85,9 +85,10 @@ exports.renderRegisterPageBySlug = async (req, res, next) => {
 /**
  * 將 custom HTML 注入 eventId／submit helper（支援 {{eventId}} {{submitUrl}} {{successUrl}}）
  */
-function injectCustomFormRuntime(html, eventId) {
+function injectCustomFormRuntime(html, eventId, defaultLanguage) {
     const submitUrl = `/web/${eventId}/custom-form`;
-    const successUrl = `/web/${eventId}/register/success`;
+    const pageLang = defaultLanguage === 'en' ? 'en' : 'zh';
+    const successUrl = `/web/${eventId}/register/success?lang=${pageLang}`;
     let out = String(html || '')
         .replace(/\{\{eventId\}\}/g, String(eventId))
         .replace(/\{\{submitUrl\}\}/g, submitUrl)
@@ -103,6 +104,7 @@ body{font-weight:400;}
 window.CUSTOM_FORM_EVENT_ID=${JSON.stringify(String(eventId))};
 window.CUSTOM_FORM_SUBMIT_URL=${JSON.stringify(submitUrl)};
 window.CUSTOM_FORM_SUCCESS_URL=${JSON.stringify(successUrl)};
+window.CUSTOM_FORM_DEFAULT_LANG=${JSON.stringify(pageLang)};
 window.submitCustomForm=async function(data, files){
   var res;
   if (typeof FormData !== 'undefined' && data instanceof FormData) {
@@ -182,7 +184,8 @@ exports.renderCustomFormPage = async (req, res) => {
         }
 
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
-        return res.send(injectCustomFormRuntime(pageHtml, eventId));
+        const defaultLanguage = formConfig.defaultLanguage || 'zh';
+        return res.send(injectCustomFormRuntime(pageHtml, eventId, defaultLanguage));
     } catch (err) {
         console.error('renderCustomFormPage error:', err);
         return res.status(500).send('Server error');

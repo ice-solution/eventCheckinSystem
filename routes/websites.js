@@ -131,10 +131,15 @@ router.get('/:event_id/register/success', async (req, res) => {
         };
     }
 
+    const pageLang = (lang === 'en' || lang === 'zh')
+        ? lang
+        : ((formConfig.defaultLanguage === 'en') ? 'en' : 'zh');
+
     res.render('exvent/success', {
         event_id,
         transaction,
-        lang: lang || null,
+        lang: pageLang,
+        pageLang,
         formConfig,
         thankYouYesNo,
         currencySymbol: getCurrencySymbol(),

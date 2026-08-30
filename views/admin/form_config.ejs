@@ -781,8 +781,8 @@
                                         <div class="col-md-6">
                                             <label><%= t('form_config.currentLanguageLabel') %></label>
                                             <div class="btn-group" role="group">
-                                                <button type="button" class="btn btn-outline-primary active" id="langZhBtn" onclick="switchLanguage('zh')">中文</button>
-                                                <button type="button" class="btn btn-outline-primary" id="langEnBtn" onclick="switchLanguage('en')">English</button>
+                                                <button type="button" class="btn btn-outline-primary <%= (typeof editLang !== 'undefined' && editLang === 'zh') ? 'active' : '' %>" id="langZhBtn" onclick="switchLanguage('zh')">中文</button>
+                                                <button type="button" class="btn btn-outline-primary <%= (typeof editLang !== 'undefined' && editLang === 'en') ? 'active' : '' %>" id="langEnBtn" onclick="switchLanguage('en')">English</button>
                                             </div>
                                         </div>
                                     </div>
@@ -802,7 +802,7 @@
                             <div id="formConfigContainer">
                                 <% if (formConfig && formConfig.sections) { %>
                                     <%
-                                    const fcHeaderLang = (typeof lang !== 'undefined' && lang) ? lang : ((formConfig && formConfig.defaultLanguage) ? formConfig.defaultLanguage : 'zh');
+                                    const fcHeaderLang = (typeof editLang !== 'undefined' && editLang) ? editLang : ((formConfig && formConfig.defaultLanguage) ? formConfig.defaultLanguage : 'zh');
                                     function fcLangText(val, lang) {
                                         if (val == null || val === '') return '';
                                         if (typeof val === 'string') return val;
@@ -1173,7 +1173,7 @@
     // 將 < 轉成 \u003c，避免 customFormHtml 內 </script>/</body> 截斷本頁 <script>
     let formConfig = <%- JSON.stringify(formConfig).replace(/</g, '\\u003c') %>;
     const eventId = '<%= event._id %>';
-    let currentLanguage = 'zh'; // 當前編輯語言
+    let currentLanguage = '<%= (typeof editLang !== "undefined" && editLang) ? editLang : (formConfig.defaultLanguage || "zh") %>';
 
     // 初始化 T&C 欄位（避免舊資料缺少）
     if (!formConfig.terms) {
@@ -1282,16 +1282,12 @@
         };
     }
 
-    // 切換語言
+    // 切換編輯語言（寫入 URL editLang，重新載入後 section 標題等會跟語言顯示）
     function switchLanguage(lang) {
         currentLanguage = lang;
-        
-        // 更新按鈕狀態
-        document.getElementById('langZhBtn').classList.toggle('active', lang === 'zh');
-        document.getElementById('langEnBtn').classList.toggle('active', lang === 'en');
-        
-        // 重新渲染頁面以顯示對應語言的內容
-        location.reload();
+        const u = new URL(window.location.href);
+        u.searchParams.set('editLang', lang);
+        window.location.href = u.toString();
     }
 
     // 顯示提示信息
