@@ -4,6 +4,7 @@ const Event = require('../model/Event');
 const QRCode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
+const { registerBadgeFonts, formatCanvasFont, getBadgeFontCatalog, getDefaultBadgeFontFamily, getBadgeFontCssUrl } = require('../utils/badgeFonts');
 
 // 動態載入 canvas（如果可用）
 let createCanvas, loadImage;
@@ -11,6 +12,7 @@ try {
     const canvas = require('canvas');
     createCanvas = canvas.createCanvas;
     loadImage = canvas.loadImage;
+    registerBadgeFonts(canvas);
 } catch (error) {
     console.warn('Canvas package not installed. Badge image generation will be limited.');
     console.warn('Please install canvas: npm install canvas');
@@ -43,7 +45,10 @@ exports.renderBadgeDesignPage = async (req, res) => {
             eventId,
             event,
             formConfig: formConfig || { sections: [] },
-            badgeConfig
+            badgeConfig,
+            badgeFonts: getBadgeFontCatalog(),
+            defaultBadgeFont: getDefaultBadgeFontFamily(),
+            avantGardeFontUrl: getBadgeFontCssUrl('ITC Avant Garde Gothic Demi'),
         });
     } catch (error) {
         console.error('Error rendering badge design page:', error);
@@ -278,7 +283,7 @@ async function drawText(ctx, element, data, dimensions) {
     const actualFontSize = Math.round(baseFontSize * (sizePercent / 100));
     
     // 設置字體樣式
-    ctx.font = `${element.fontWeight || 'normal'} ${actualFontSize}px ${element.fontFamily || 'Arial'}`;
+    ctx.font = formatCanvasFont(element, actualFontSize);
     ctx.fillStyle = element.color || '#000000';
     
     // 處理 fullWidth：如果 fullWidth，則元素寬度為整個 canvas 寬度，x 為 0
