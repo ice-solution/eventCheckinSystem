@@ -79,6 +79,8 @@ router.get('/', eventsController.getUserEvents);
 router.get('/list', eventsController.renderEventsList);
 router.post('/export-checkin-list/fields', eventsController.getBatchReportFields);
 router.post('/export-checkin-list', eventsController.exportEventsCheckInList);
+router.post('/export-form-package', eventsController.exportEventFormPackages);
+router.post('/import-form-package', upload, eventsController.importEventFormPackage);
 router.post('/:eventId/copy', eventsController.copyEvent);
 
 

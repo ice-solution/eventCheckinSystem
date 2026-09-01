@@ -122,6 +122,8 @@ const eventSchema = new mongoose.Schema({
     luckydrawAwardPassword: { type: String, default: '' },
     isPaymentEvent: { type: Boolean, default: false }, // 是否為付費活動
     PaymentTickets: [ticketSchema], // 票券陣列
+    /** 報名頁是否顯示折扣碼輸入（與個別 promoCodes[].enabled 分開） */
+    promoCodeDisplayEnabled: { type: Boolean, default: true },
     /**
      * 折扣碼（Promotion Code / Coupon）
      * 用於 Payment Event checkout 折價；折後 $0 會繞過付款閘道。

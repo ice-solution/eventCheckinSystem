@@ -7,6 +7,8 @@
  *   {{user.fieldName.label.en}}     → FormConfig option 英文 label（無則 fallback value）
  */
 
+const { getCurrencyUpper } = require('./currency');
+
 function getPublicBaseUrlFromEnv() {
     const raw = (process.env.DOMAIN || process.env.domain || 'http://localhost:3377').toString().trim().replace(/\/+$/, '');
     return raw.startsWith('http://') || raw.startsWith('https://') ? raw : `https://${raw}`;
@@ -194,7 +196,7 @@ async function buildEmailTemplateAdditionalVars({
         const invoiceData = t.transactionData && Object.keys(t.transactionData).length > 0
             ? t.transactionData
             : {
-                currency: 'HKD',
+                currency: getCurrencyUpper(),
                 number: String(t.stripeSessionId || t._id || ''),
                 state: t.status || '',
                 paid_total: t.ticketPrice != null ? String(t.ticketPrice) : '',

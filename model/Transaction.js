@@ -15,6 +15,8 @@ const transactionSchema = new mongoose.Schema({
     updatedAt: { type: Date, default: Date.now },
     // 付款前註冊表單的完整資料（FormConfig 欄位），webhook 完成付款後用來寫入 event.users
     userFormData: { type: mongoose.Schema.Types.Mixed },
+    /** 付款成功寫入 event.users 後的 RSVP user._id（避免重覆 email 時用錯人） */
+    userId: { type: mongoose.Schema.Types.ObjectId, default: null },
     /** 若使用 promocode 折扣：折後/原價與代碼資訊（用於管理端查詢） */
     promoCode: { type: String, default: '' },
     promoDiscountAmount: { type: Number, default: 0 }, // fixed：減價多少（HKD）

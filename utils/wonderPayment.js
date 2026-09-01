@@ -7,6 +7,7 @@
 const axios = require('axios');
 const path = require('path');
 const WonderSignature = require(path.join(__dirname, '../nodejs/wonder_signature'));
+const { getCurrencyUpper } = require('./currency');
 
 // 與 nodejs/main.js 一致，credential 時間戳用 UTC
 process.env.TZ = 'UTC';
@@ -151,7 +152,7 @@ async function createOrder(params) {
         order: {
             reference_number: String(params.referenceNumber || ''),
             charge_fee: amountStr,
-            currency: (params.currency || 'HKD').toUpperCase(),
+            currency: (params.currency || getCurrencyUpper()).toUpperCase(),
             note: String(params.note || ''),
             callback_url: params.callbackUrl,
             redirect_url: params.redirectUrl

@@ -56,12 +56,13 @@ function getTicketCategoryKey(ticket) {
     return c || '';
 }
 
-function getTicketDisplayLabel(ticket, lang = 'zh') {
+function getTicketDisplayLabel(ticket, lang = 'zh', currencySymbol = '$') {
     const t = normalizeTicketTitle(ticket && ticket.title);
     const price = ticket && ticket.price != null ? ticket.price : '';
     const name = lang === 'en' ? (t.en || t.zh) : (t.zh || t.en);
-    if (name) return `${name} - $${price}`;
-    return lang === 'en' ? `Ticket - $${price}` : `票券 - $${price}`;
+    const sym = currencySymbol != null ? String(currencySymbol) : '$';
+    if (name) return `${name} - ${sym}${price}`;
+    return lang === 'en' ? `Ticket - ${sym}${price}` : `票券 - ${sym}${price}`;
 }
 
 function normalizePaymentTicketForSave(ticket) {

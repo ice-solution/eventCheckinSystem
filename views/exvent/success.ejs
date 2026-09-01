@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="<%= (typeof pageLang !== 'undefined' && pageLang === 'en') ? 'en' : 'zh-Hant' %>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>登記成功</title>
+    <title><%= (typeof pageLang !== 'undefined' && pageLang === 'en') ? 'Registration Successful' : '登記成功' %></title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         body {
@@ -12,7 +12,7 @@
             font-weight: 400;
         }
         body, body input, body select, body textarea, body button, body label,
-        body h1, body h2, body h3, body h4, body h5, body h6, body p, body span, body a, body .btn {
+        body h1, body h2, body h3, body h4, body h5, body h6, body p, body span, body a {
             font-family: Arial, Helvetica, sans-serif !important;
         }
         .container {
@@ -57,29 +57,6 @@
             margin-bottom: 30px;
             white-space: pre-line;
         }
-        .btn-container {
-            text-align: center;
-            margin-top: 40px;
-            padding-top: 30px;
-            border-top: 2px solid #e9ecef;
-        }
-        .btn {
-            padding: 12px 30px;
-            font-weight: 500;
-            border-radius: 5px;
-            margin: 0 10px;
-            min-width: 120px;
-        }
-        .btn-primary {
-            background-color: #E8B4B8;
-            border-color: #E8B4B8;
-            color: #5B4A43;
-        }
-        .btn-primary:hover {
-            background-color: #67595E;
-            border-color: #67595E;
-            color: #fff;
-        }
         .transaction-details {
             background-color: #f8f9fa;
             border-radius: 5px;
@@ -97,6 +74,18 @@
         }
         .transaction-item:last-child {
             border-bottom: none;
+        }
+        .transaction-item-sub {
+            padding-top: 0;
+            padding-left: 12px;
+            font-size: 0.95rem;
+            color: #6c757d;
+        }
+        .transaction-item-sub strong {
+            font-weight: 500;
+        }
+        .transaction-item-total {
+            font-weight: 600;
         }
     </style>
 </head>
@@ -116,7 +105,7 @@
 
         <div class="form-header">
             <div class="success-icon">✓</div>
-            <h1 id="successTitle" data-zh="登記成功" data-en="Registration Successful">登記成功</h1>
+            <h1 id="successTitle" data-zh="登記成功" data-en="Registration Successful"><%= (typeof pageLang !== 'undefined' && pageLang === 'en') ? 'Registration Successful' : '登記成功' %></h1>
         </div>
 
         <div class="success-content">
@@ -159,10 +148,15 @@
                     if (ynq.noPurchaseMessage && ynq.noPurchaseMessage.zh) purchaseMsgZh = ynq.noPurchaseMessage.zh;
                     if (ynq.noPurchaseMessage && ynq.noPurchaseMessage.en) purchaseMsgEn = ynq.noPurchaseMessage.en;
                 }
+
+                const successPageLang = (typeof pageLang !== 'undefined' && pageLang === 'en') ? 'en' : 'zh';
+                const pickTy = function(zh, en) {
+                    return successPageLang === 'en' ? (en || zh || '') : (zh || en || '');
+                };
             %>
             <% if (transaction) { %>
-                <h5 id="thankYouTitle"><%= purchaseTitleZh %></h5>
-                <p id="emailMessage"><%= purchaseMsgZh %></p>
+                <h5 id="thankYouTitle"><%= pickTy(purchaseTitleZh, purchaseTitleEn) %></h5>
+                <p id="emailMessage"><%= pickTy(purchaseMsgZh, purchaseMsgEn) %></p>
                 
                 <div class="transaction-details">
                     <h5 id="transactionTitle" data-zh="交易詳情" data-en="Transaction Details">交易詳情</h5>
@@ -176,16 +170,26 @@
                     </div>
                     <div class="transaction-item">
                         <strong id="priceLabel" data-zh="票券價格：" data-en="Ticket Price: ">票券價格：</strong>
-                        <span>$<%= transaction && transaction.ticketPrice ? transaction.ticketPrice : '' %></span>
+                        <span><%= typeof currencySymbol !== 'undefined' ? currencySymbol : '$' %><%= paymentBreakdown ? paymentBreakdown.ticketPrice.toFixed(2) : (transaction && transaction.ticketPrice != null ? Number(transaction.ticketPrice).toFixed(2) : '') %></span>
                     </div>
+                    <% if (paymentBreakdown) { %>
+                    <div class="transaction-item transaction-item-sub">
+                        <strong id="processingFeeLabel" data-zh="手續費 (5.8%)：" data-en="Processing fee (5.8%): ">手續費 (5.8%)：</strong>
+                        <span><%= typeof currencySymbol !== 'undefined' ? currencySymbol : '$' %><%= paymentBreakdown.processingFee.toFixed(2) %></span>
+                    </div>
+                    <div class="transaction-item transaction-item-total">
+                        <strong id="totalLabel" data-zh="總計：" data-en="Total: ">總計：</strong>
+                        <span><%= typeof currencySymbol !== 'undefined' ? currencySymbol : '$' %><%= paymentBreakdown.totalCharge.toFixed(2) %></span>
+                    </div>
+                    <% } %>
                     <div class="transaction-item">
                         <strong id="statusLabel" data-zh="付款狀態：" data-en="Payment Status: ">付款狀態：</strong>
                         <span><%= transaction && transaction.status ? transaction.status : '' %></span>
                     </div>
                 </div>
             <% } else { %>
-                <h5 id="thankYouTitle"><%= freeTitleZh %></h5>
-                <p id="emailMessage"><%= freeMsgZh %></p>
+                <h5 id="thankYouTitle"><%= pickTy(freeTitleZh, freeTitleEn) %></h5>
+                <p id="emailMessage"><%= pickTy(freeMsgZh, freeMsgEn) %></p>
             <% } %>
                 <script type="application/json" id="thankYouCopyJson"><%- JSON.stringify({
                     title: { zh: freeTitleZh, en: freeTitleEn },
@@ -194,10 +198,6 @@
                     purchaseMessage: { zh: purchaseMsgZh, en: purchaseMsgEn },
                     hasTransaction: !!transaction
                 }) %></script>
-
-            <div class="btn-container">
-                <a href="/web/<%= event_id %>/register<%= lang ? '?lang=' + lang : '' %>" class="btn btn-primary" id="backBtn" data-zh="返回主頁" data-en="Return to Homepage">返回主頁</a>
-            </div>
         </div>
     </div>
 
@@ -216,7 +216,7 @@
         }
         
         const urlLanguage = getLanguageFromURL();
-        const currentLanguage = urlLanguage || 'zh';
+        const currentLanguage = urlLanguage || '<%= (typeof pageLang !== "undefined" && pageLang) ? pageLang : "zh" %>';
         
         const thankYouCopy = (function() {
             const el = document.getElementById('thankYouCopyJson');

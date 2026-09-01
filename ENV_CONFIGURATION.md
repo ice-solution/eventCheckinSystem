@@ -100,9 +100,9 @@
 - **範例**：`STRIPE_WEBHOOK_SECRET=whsec_xxx`
 - **Webhook URL**：`{DOMAIN}/web/webhook/stripe`（請在 Stripe 後台新增此 URL，事件選 `checkout.session.completed`）
 
-### STRIPE_CURRENCY（選填）
-- **說明**：Stripe 金額幣別（小寫），預設 `hkd`
-- **範例**：`STRIPE_CURRENCY=hkd`
+### CURRENCY（選填）
+- **說明**：付款幣別。Stripe 會用小寫（如 `usd`），Wonder 會用大寫（如 `USD`）。預設 `hkd`
+- **範例**：`CURRENCY=usd`
 
 ---
 

@@ -26,6 +26,15 @@
             margin: 0 auto;
             cursor: crosshair;
         }
+        <% if (typeof avantGardeFontUrl !== 'undefined' && avantGardeFontUrl) { %>
+        @font-face {
+            font-family: 'ITC Avant Garde Gothic Demi';
+            src: url('<%= avantGardeFontUrl %>') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        <% } %>
         .field-item {
             padding: 10px;
             margin: 5px 0;
@@ -232,8 +241,22 @@
             textAlignHint: '<%= t("badge_design.textAlignHint") %>',
             baseFontSize: '<%= t("badge_design.baseFontSize") %>',
             baseFontSizeHint: '<%= t("badge_design.baseFontSizeHint") %>',
-            color: '<%= t("badge_design.color") %>'
+            color: '<%= t("badge_design.color") %>',
+            fontFamily: '<%= t("badge_design.fontFamily") %>',
+            fontWeight: '<%= t("badge_design.fontWeight") %>',
+            fontWeightNormal: '<%= t("badge_design.fontWeightNormal") %>',
+            fontWeightBold: '<%= t("badge_design.fontWeightBold") %>',
+            fontMissingHint: '<%= t("badge_design.fontMissingHint") %>'
         };
+        const BADGE_FONTS = <%- JSON.stringify(typeof badgeFonts !== 'undefined' ? badgeFonts : [{ value: 'Arial', label: 'Arial', available: true }]) %>;
+        const DEFAULT_BADGE_FONT = '<%= typeof defaultBadgeFont !== "undefined" ? defaultBadgeFont : "ITC Avant Garde Gothic Demi" %>';
+
+        function formatBadgeCanvasFont(element, actualFontSize) {
+            const family = element.fontFamily || DEFAULT_BADGE_FONT;
+            const weight = element.fontWeight || 'normal';
+            const quoted = family.indexOf(' ') >= 0 ? '"' + family + '"' : family;
+            return weight + ' ' + actualFontSize + 'px ' + quoted + ', Arial, sans-serif';
+        }
 
         // Canvas 設置
         // 100mm x 62mm @ 300 DPI = 1181px x 732px（橫向）
@@ -337,7 +360,7 @@
                 const sizePercent = element.size || 100;
                 const actualFontSize = Math.round(baseFontSize * (sizePercent / 100));
 
-                ctx.font = `${element.fontWeight || 'normal'} ${actualFontSize}px ${element.fontFamily || 'Arial'}`;
+                ctx.font = formatBadgeCanvasFont(element, actualFontSize);
                 ctx.fillStyle = element.color || '#000000';
 
                 // 處理 fullWidth：如果 fullWidth，則元素寬度為整個 canvas 寬度，x 為 0
@@ -439,7 +462,7 @@
                 width: 300,
                 height: 50,
                 fontSize: 16,
-                fontFamily: 'Arial',
+                fontFamily: DEFAULT_BADGE_FONT,
                 fontWeight: 'normal',
                 textAlign: 'center',
                 color: '#000000',
@@ -467,7 +490,7 @@
                 width: type === 'qrcode' ? 150 : 300,
                 height: type === 'qrcode' ? 150 : 50,
                 fontSize: 16,
-                fontFamily: 'Arial',
+                fontFamily: DEFAULT_BADGE_FONT,
                 fontWeight: 'normal',
                 textAlign: 'center',
                 color: '#000000',
@@ -772,6 +795,23 @@
                             <option value="right" ${element.textAlign === 'right' ? 'selected' : ''}>${_BD.alignRight}</option>
                         </select>
                         <small class="form-text text-muted">${_BD.textAlignHint}</small>
+                    </div>
+                    <div class="form-group">
+                        <label>${_BD.fontFamily}</label>
+                        <select id="elementFontFamily" class="form-control js-badge-prop" data-prop="fontFamily" data-value-type="string">
+                            ${BADGE_FONTS.map(function(f) {
+                                const sel = (element.fontFamily || DEFAULT_BADGE_FONT) === f.value ? 'selected' : '';
+                                const hint = f.available ? '' : ' (' + _BD.fontMissingHint + ')';
+                                return '<option value="' + f.value.replace(/"/g, '&quot;') + '" ' + sel + '>' + f.label + hint + '</option>';
+                            }).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>${_BD.fontWeight}</label>
+                        <select id="elementFontWeight" class="form-control js-badge-prop" data-prop="fontWeight" data-value-type="string">
+                            <option value="normal" ${(element.fontWeight || 'normal') === 'normal' ? 'selected' : ''}>${_BD.fontWeightNormal}</option>
+                            <option value="bold" ${element.fontWeight === 'bold' ? 'selected' : ''}>${_BD.fontWeightBold}</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>${_BD.baseFontSize}</label>

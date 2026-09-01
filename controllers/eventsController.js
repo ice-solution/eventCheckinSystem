@@ -27,6 +27,7 @@ const { replaceTemplateVariables, buildEmailTemplateAdditionalVars, flattenForTe
 const { isInvoiceEmailEnabled } = require('../utils/featureFlags');
 const { normalizeAgreementAgreed, formatAgreementAgreedLabel, agreementAgreedSortOrder, getEnabledAgreements, isAgreementMetaKey } = require('../utils/agreementFields');
 const { resolveUserDisplayName, ensureUserNameField } = require('../utils/userDisplayName');
+const { getCurrencyUpper, getCurrencyLower, computeGatewayChargeAmount, computeGatewayChargeAmountCents } = require('../utils/currency');
 
 /** 取得對外 base URL（依 DOMAIN/domain，缺協議時自動補 https://） */
 function getPublicBaseUrl() {
@@ -85,12 +86,60 @@ function getDefaultPaymentReceiptEmailContent(transaction, event) {
 </body></html>`;
 }
 
-/** 從 event.users 以 email 找 userId（供郵件記錄） */
-function findEventUserIdByEmail(eventDoc, email) {
+/** 從 event.users 以 Mongo _id 找 user（優先，避免重覆 email 用錯人） */
+function findEventUserById(eventDoc, userId) {
+    if (!eventDoc || !userId || !Array.isArray(eventDoc.users)) return null;
+    const idStr = String(userId);
+    const user = eventDoc.users.find(u => u && u._id && String(u._id) === idStr);
+    if (!user) return null;
+    return user.toObject ? user.toObject({ minimize: false }) : user;
+}
+
+/** 從 event.users 以 email 找 user（僅 fallback；重覆 email 時唔可靠） */
+function findEventUserByEmail(eventDoc, email) {
     if (!eventDoc || !email || !Array.isArray(eventDoc.users)) return null;
     const normalized = String(email).trim().toLowerCase();
     const user = eventDoc.users.find(u => u.email && String(u.email).trim().toLowerCase() === normalized);
+    if (!user) return null;
+    return user.toObject ? user.toObject({ minimize: false }) : user;
+}
+
+/** 從 event.users 以 email 找 userId（供郵件記錄；優先改用 transaction.userId） */
+function findEventUserIdByEmail(eventDoc, email) {
+    const user = findEventUserByEmail(eventDoc, email);
     return user && user._id ? String(user._id) : null;
+}
+
+/**
+ * Invoice / payment_receipt 發信用完整 user。
+ * 優先順序（避免重覆 email 用錯人）：
+ * 1) 傳入 user._id / transaction.userId → event.users.id
+ * 2) transaction.userFormData + 傳入 stub
+ * 唔再用 email 從 event.users 合併欄位
+ */
+function resolveUserForPaymentEmail(transaction, eventDoc, user) {
+    const stub = user
+        ? (user.toObject ? user.toObject({ minimize: false }) : { ...user })
+        : {};
+    const formData = (transaction && transaction.userFormData && typeof transaction.userFormData === 'object')
+        ? (transaction.userFormData.toObject ? transaction.userFormData.toObject() : { ...transaction.userFormData })
+        : {};
+    const userId = (stub && stub._id) || (transaction && transaction.userId) || null;
+    const fromEvent = userId ? findEventUserById(eventDoc, userId) : null;
+    const merged = {
+        ...formData,
+        ...stub,
+        ...(fromEvent || {}),
+    };
+    if (!merged.email) merged.email = stub.email || transaction.userEmail || '';
+    if (!merged.name || String(merged.name).trim() === '') {
+        merged.name = resolveUserDisplayName(merged)
+            || transaction.userName
+            || merged.email
+            || '';
+    }
+    if (!merged._id && userId) merged._id = userId;
+    return merged;
 }
 
 /** 發送郵件並寫入 EmailRecord（invoice / payment_receipt 等） */
@@ -129,10 +178,13 @@ async function sendInvoiceEmail(transaction, event, emailTemplateId = null) {
         let emailTemplate = emailTemplateId ? await EmailTemplate.findById(emailTemplateId) : null;
         if (!emailTemplate) emailTemplate = await EmailTemplate.findOne({ eventId: eventDoc._id, type: 'invoice' });
         if (!emailTemplate) emailTemplate = await EmailTemplate.findOne({ eventId: null, type: 'invoice' });
-        const userLike = { name: transaction.userName || '', email: transaction.userEmail || '' };
+        const userLike = resolveUserForPaymentEmail(transaction, eventDoc, {
+            name: transaction.userName || '',
+            email: transaction.userEmail || '',
+        });
         const invoiceData = transaction.transactionData && Object.keys(transaction.transactionData).length > 0
             ? transaction.transactionData
-            : { currency: 'HKD', number: String(transaction._id), state: transaction.status || 'pending' };
+            : { currency: getCurrencyUpper(), number: String(transaction._id), state: transaction.status || 'pending' };
         const additionalVars = {
             ...flattenForTemplate(transaction.toObject ? transaction.toObject() : transaction, 'transaction'),
             ...flattenForTemplate(invoiceData, 'invoice'),
@@ -148,7 +200,9 @@ async function sendInvoiceEmail(transaction, event, emailTemplateId = null) {
             ? replaceTemplateVariables(emailTemplate.content, userLike, eventDoc, additionalVars)
             : getDefaultInvoiceEmailContent(transaction, eventDoc);
         messageBody = replaceTemplateVariables(messageBody, userLike, eventDoc, additionalVars);
-        const userId = findEventUserIdByEmail(eventDoc, email);
+        const userId = (userLike._id && String(userLike._id))
+            || (transaction.userId && String(transaction.userId))
+            || null;
         await sendEmailWithRecord({
             recipient: email,
             subject,
@@ -174,10 +228,10 @@ async function sendPaymentReceiptEmail(transaction, event, user, emailTemplateId
         let emailTemplate = emailTemplateId ? await EmailTemplate.findById(emailTemplateId) : null;
         if (!emailTemplate) emailTemplate = await EmailTemplate.findOne({ eventId: eventDoc._id, type: 'payment_receipt' });
         if (!emailTemplate) emailTemplate = await EmailTemplate.findOne({ eventId: null, type: 'payment_receipt' });
-        const userLike = user ? (user.toObject ? user.toObject() : user) : { name: transaction.userName || '', email: transaction.userEmail || '' };
+        const userLike = resolveUserForPaymentEmail(transaction, eventDoc, user);
         const invoiceData = transaction.transactionData && Object.keys(transaction.transactionData).length > 0
             ? transaction.transactionData
-            : { paid_total: transaction.ticketPrice, currency: 'HKD', number: transaction.stripeSessionId || transaction._id, state: transaction.status || 'paid' };
+            : { paid_total: transaction.ticketPrice, currency: getCurrencyUpper(), number: transaction.stripeSessionId || transaction._id, state: transaction.status || 'paid' };
         const additionalVars = {
             ...flattenForTemplate(transaction.toObject ? transaction.toObject() : transaction, 'transaction'),
             ...flattenForTemplate(invoiceData, 'invoice'),
@@ -193,7 +247,9 @@ async function sendPaymentReceiptEmail(transaction, event, user, emailTemplateId
             ? replaceTemplateVariables(emailTemplate.content, userLike, eventDoc, additionalVars)
             : getDefaultPaymentReceiptEmailContent(transaction, eventDoc);
         messageBody = replaceTemplateVariables(messageBody, userLike, eventDoc, additionalVars);
-        const userId = (userLike._id && String(userLike._id)) || findEventUserIdByEmail(eventDoc, email);
+        const userId = (userLike._id && String(userLike._id))
+            || (transaction.userId && String(transaction.userId))
+            || null;
         await sendEmailWithRecord({
             recipient: email,
             subject,
@@ -399,6 +455,7 @@ exports.copyEvent = async (req, res) => {
             luckydrawListFieldNames: source.luckydrawListFieldNames || [],
             luckydrawAwardPassword: source.luckydrawAwardPassword || '',
             isPaymentEvent: !!source.isPaymentEvent,
+            promoCodeDisplayEnabled: source.promoCodeDisplayEnabled !== false,
             PaymentTickets: Array.isArray(source.PaymentTickets)
                 ? source.PaymentTickets.map((t) => {
                     const ticket = { ...t };
@@ -593,6 +650,301 @@ exports.copyEvent = async (req, res) => {
             return res.status(400).json({ success: false, message: 'FormConfig slug 衝突，請稍後再試' });
         }
         return res.status(500).json({ success: false, message: error.message || '複製活動失敗' });
+    }
+};
+
+const FORM_PACKAGE_KIND = 'event-form-package';
+const FORM_PACKAGE_VERSION = 1;
+const MAX_FORM_PACKAGE_EVENTS = 6;
+
+function stripFormConfigForExport(srcForm) {
+    const formObj = clonePlainWithoutIds(srcForm);
+    if (!formObj) return null;
+    delete formObj.eventId;
+    delete formObj.createdAt;
+    delete formObj.updatedAt;
+    delete formObj.registerSlug; // 唔帶走 slug，避免撞 unique
+    if (Array.isArray(formObj.sections)) {
+        formObj.sections = formObj.sections.map((sec) => {
+            const s = { ...sec };
+            delete s._id;
+            if (Array.isArray(s.fields)) {
+                s.fields = s.fields.map((f) => {
+                    const field = { ...f };
+                    delete field._id;
+                    if (Array.isArray(field.options)) {
+                        field.options = field.options.map((o) => {
+                            const opt = { ...o };
+                            delete opt._id;
+                            return opt;
+                        });
+                    }
+                    return field;
+                });
+            }
+            return s;
+        });
+    }
+    if (Array.isArray(formObj.agreements)) {
+        formObj.agreements = formObj.agreements.map((a) => {
+            const next = { ...a };
+            delete next._id;
+            return next;
+        });
+    }
+    return formObj;
+}
+
+async function buildEventFormPackage(event) {
+    const FormConfig = require('../model/FormConfig');
+    const emailTemplates = await EmailTemplate.find({ eventId: event._id }).lean();
+    const srcForm = await FormConfig.findOne({ eventId: event._id }).lean();
+    const templates = (emailTemplates || []).map((tpl) => ({
+        exportId: String(tpl._id),
+        subject: tpl.subject || '',
+        content: tpl.content || '',
+        type: tpl.type || 'welcome'
+    }));
+    let eventEmailTemplateExportId = null;
+    if (event.emailTemplate) {
+        const match = templates.find((t) => t.exportId === String(event.emailTemplate));
+        if (match) eventEmailTemplateExportId = match.exportId;
+    }
+    return {
+        sourceEventId: String(event._id),
+        sourceEventName: event.name || String(event._id),
+        eventEmailTemplateExportId,
+        emailTemplates: templates,
+        formConfig: srcForm ? stripFormConfigForExport(srcForm) : null
+    };
+}
+
+/** 匯出選中活動的 FormConfig + Email templates（不含用戶） */
+exports.exportEventFormPackages = async (req, res) => {
+    try {
+        const resolved = await resolveBatchReportEvents(req);
+        if (resolved.error) {
+            return res.status(resolved.error.status).json({ success: false, message: resolved.error.message });
+        }
+        if (resolved.eventIds.length > MAX_FORM_PACKAGE_EVENTS) {
+            return res.status(400).json({
+                success: false,
+                message: `一次最多選擇 ${MAX_FORM_PACKAGE_EVENTS} 個活動。`
+            });
+        }
+
+        const packages = [];
+        for (const event of resolved.ordered) {
+            packages.push(await buildEventFormPackage(event));
+        }
+
+        const payload = {
+            version: FORM_PACKAGE_VERSION,
+            kind: FORM_PACKAGE_KIND,
+            exportedAt: new Date().toISOString(),
+            packages
+        };
+
+        const stamp = new Date().toISOString().slice(0, 10);
+        // Content-Disposition 只允許 ASCII；中文活動名改用 eventId
+        const namePart = packages.length === 1
+            ? String(packages[0].sourceEventId || 'event').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24) || 'event'
+            : `events_${packages.length}`;
+        const filename = `form_package_${namePart}_${stamp}.json`;
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        return res.status(200).send(JSON.stringify(payload, null, 2));
+    } catch (error) {
+        console.error('exportEventFormPackages error:', error);
+        return res.status(500).json({ success: false, message: error.message || '匯出失敗' });
+    }
+};
+
+function parseFormPackagePayload(raw) {
+    let data = raw;
+    if (Buffer.isBuffer(data)) data = data.toString('utf8');
+    if (typeof data === 'string') {
+        try {
+            data = JSON.parse(data);
+        } catch (e) {
+            return { error: '無效的 JSON 檔案' };
+        }
+    }
+    if (!data || typeof data !== 'object') {
+        return { error: '無效的套件格式' };
+    }
+    if (data.kind && data.kind !== FORM_PACKAGE_KIND) {
+        return { error: '檔案類型不符（需要 event-form-package）' };
+    }
+    let packages = Array.isArray(data.packages) ? data.packages : null;
+    if (!packages && (data.formConfig || data.emailTemplates)) {
+        packages = [data];
+    }
+    if (!packages || !packages.length) {
+        return { error: '檔案內沒有可匯入的活動套件' };
+    }
+    return { data, packages };
+}
+
+async function assertCanAccessEvent(sessionUser, eventId) {
+    if (!sessionUser || !sessionUser._id) {
+        return { error: { status: 401, message: '未授權：請先登入' } };
+    }
+    if (!mongoose.Types.ObjectId.isValid(eventId)) {
+        return { error: { status: 400, message: '無效的活動 ID' } };
+    }
+    const event = await Event.findById(eventId);
+    if (!event) {
+        return { error: { status: 404, message: '找不到目標活動' } };
+    }
+    if (sessionUser.role !== 'admin') {
+        const allowed = (sessionUser.allowedEvents || []).map(String);
+        if (!allowed.includes(String(eventId)) && String(event.owner) !== String(sessionUser._id)) {
+            return { error: { status: 403, message: '無權限寫入此活動' } };
+        }
+    }
+    return { event };
+}
+
+/**
+ * 將 FormConfig + Email templates 匯入到目標活動（覆蓋該活動既有 event-scoped email templates；FormConfig upsert）
+ * body: targetEventId, packageIndex?；file: JSON（multer memory）或 body.packageJson
+ */
+exports.importEventFormPackage = async (req, res) => {
+    try {
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.status(401).json({ success: false, message: '未授權：請先登入' });
+        }
+
+        const targetEventId = (req.body && req.body.targetEventId) || '';
+        const access = await assertCanAccessEvent(req.session.user, targetEventId);
+        if (access.error) {
+            return res.status(access.error.status).json({ success: false, message: access.error.message });
+        }
+        const targetEvent = access.event;
+
+        let raw = null;
+        if (req.file && req.file.buffer) {
+            raw = req.file.buffer;
+        } else if (req.body && req.body.packageJson) {
+            raw = req.body.packageJson;
+        }
+        const parsed = parseFormPackagePayload(raw);
+        if (parsed.error) {
+            return res.status(400).json({ success: false, message: parsed.error });
+        }
+
+        const packageIndex = Math.max(0, parseInt(req.body && req.body.packageIndex, 10) || 0);
+        if (packageIndex >= parsed.packages.length) {
+            return res.status(400).json({
+                success: false,
+                message: `packageIndex 超出範圍（共 ${parsed.packages.length} 個套件）`,
+                packageCount: parsed.packages.length,
+                packages: parsed.packages.map((p, i) => ({
+                    index: i,
+                    sourceEventName: p.sourceEventName || '',
+                    sourceEventId: p.sourceEventId || ''
+                }))
+            });
+        }
+
+        // 僅預覽套件列表（前端選完再真正匯入）
+        if (req.body && (req.body.preview === '1' || req.body.preview === 'true' || req.body.preview === true)) {
+            return res.status(200).json({
+                success: true,
+                preview: true,
+                packageCount: parsed.packages.length,
+                packages: parsed.packages.map((p, i) => ({
+                    index: i,
+                    sourceEventName: p.sourceEventName || '',
+                    sourceEventId: p.sourceEventId || '',
+                    emailTemplateCount: Array.isArray(p.emailTemplates) ? p.emailTemplates.length : 0,
+                    hasFormConfig: !!p.formConfig
+                }))
+            });
+        }
+
+        const pkg = parsed.packages[packageIndex];
+        const FormConfig = require('../model/FormConfig');
+        const now = new Date();
+
+        // 覆蓋該活動的 email templates（唔動 global eventId:null）
+        await EmailTemplate.deleteMany({ eventId: targetEvent._id });
+        const emailIdMap = {};
+        const importedTemplates = Array.isArray(pkg.emailTemplates) ? pkg.emailTemplates : [];
+        for (const tpl of importedTemplates) {
+            const created = await EmailTemplate.create({
+                eventId: targetEvent._id,
+                subject: tpl.subject || 'Untitled',
+                content: tpl.content || '',
+                type: tpl.type || 'welcome',
+                created_at: now,
+                modified_at: now
+            });
+            if (tpl.exportId) {
+                emailIdMap[String(tpl.exportId)] = String(created._id);
+            }
+        }
+
+        if (pkg.eventEmailTemplateExportId && emailIdMap[String(pkg.eventEmailTemplateExportId)]) {
+            targetEvent.emailTemplate = emailIdMap[String(pkg.eventEmailTemplateExportId)];
+        } else {
+            targetEvent.emailTemplate = undefined;
+        }
+        targetEvent.modified_at = now;
+        await targetEvent.save();
+
+        if (pkg.formConfig && typeof pkg.formConfig === 'object') {
+            const formObj = JSON.parse(JSON.stringify(pkg.formConfig));
+            delete formObj._id;
+            delete formObj.__v;
+            delete formObj.id;
+            delete formObj.eventId;
+            delete formObj.createdAt;
+            delete formObj.updatedAt;
+            delete formObj.registerSlug;
+            remapFormConfigEmailTemplateIds(formObj, emailIdMap);
+
+            const existing = await FormConfig.findOne({ eventId: targetEvent._id });
+            if (existing) {
+                const keepSlug = existing.registerSlug;
+                Object.keys(formObj).forEach((key) => {
+                    existing[key] = formObj[key];
+                });
+                existing.registerSlug = keepSlug;
+                existing.updatedAt = now;
+                existing.markModified('sections');
+                existing.markModified('thankYou');
+                existing.markModified('terms');
+                existing.markModified('agreement');
+                existing.markModified('agreements');
+                existing.markModified('paymentTicketUi');
+                await existing.save();
+            } else {
+                await FormConfig.create({
+                    ...formObj,
+                    eventId: targetEvent._id,
+                    createdAt: now,
+                    updatedAt: now
+                });
+            }
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: '已匯入 FormConfig 與 Email templates',
+            targetEventId: String(targetEvent._id),
+            targetEventName: targetEvent.name,
+            sourceEventName: pkg.sourceEventName || '',
+            emailTemplateCount: importedTemplates.length,
+            formConfigImported: !!(pkg.formConfig && typeof pkg.formConfig === 'object')
+        });
+    } catch (error) {
+        console.error('importEventFormPackage error:', error);
+        if (error && error.code === 11000 && error.keyPattern && error.keyPattern.registerSlug) {
+            return res.status(400).json({ success: false, message: 'FormConfig slug 衝突' });
+        }
+        return res.status(500).json({ success: false, message: error.message || '匯入失敗' });
     }
 };
 
@@ -1551,11 +1903,21 @@ exports.resendEmail = async (req, res) => {
         const type = emailType || 'welcome';
 
         if (type === 'payment_receipt') {
-            const transaction = await Transaction.findOne({
-                eventId,
-                userEmail: user.email,
-                status: 'paid',
-            }).sort({ updatedAt: -1 });
+            let transaction = null;
+            if (userData._id) {
+                transaction = await Transaction.findOne({
+                    eventId,
+                    userId: userData._id,
+                    status: 'paid',
+                }).sort({ updatedAt: -1 });
+            }
+            if (!transaction) {
+                transaction = await Transaction.findOne({
+                    eventId,
+                    userEmail: user.email,
+                    status: 'paid',
+                }).sort({ updatedAt: -1 });
+            }
             if (!transaction) {
                 return res.status(400).json({ message: '找不到此用戶的已付款訂單，無法重發付款憑證' });
             }
@@ -1564,10 +1926,19 @@ exports.resendEmail = async (req, res) => {
             if (!isInvoiceEmailEnabled()) {
                 return res.status(400).json({ message: '發票郵件功能已停用' });
             }
-            const transaction = await Transaction.findOne({
-                eventId,
-                userEmail: user.email,
-            }).sort({ createdAt: -1 });
+            let transaction = null;
+            if (userData._id) {
+                transaction = await Transaction.findOne({
+                    eventId,
+                    userId: userData._id,
+                }).sort({ createdAt: -1 });
+            }
+            if (!transaction) {
+                transaction = await Transaction.findOne({
+                    eventId,
+                    userEmail: user.email,
+                }).sort({ createdAt: -1 });
+            }
             if (!transaction) {
                 return res.status(400).json({ message: '找不到此用戶的訂單記錄，無法重發發票' });
             }
@@ -4724,13 +5095,16 @@ function normalizePaymentTicket(ticket) {
 // 更新付費活動設定
 exports.updatePaymentEvent = async (req, res) => {
     const { eventId } = req.params;
-    const { isPaymentEvent, PaymentTickets, promoCodes } = req.body;
+    const { isPaymentEvent, PaymentTickets, promoCodes, promoCodeDisplayEnabled } = req.body;
     try {
         const event = await Event.findById(eventId);
         if (!event) {
             return res.status(404).json({ message: 'Event not found' });
         }
         if (typeof isPaymentEvent !== 'undefined') event.isPaymentEvent = isPaymentEvent;
+        if (typeof promoCodeDisplayEnabled !== 'undefined') {
+            event.promoCodeDisplayEnabled = !!promoCodeDisplayEnabled;
+        }
         if (Array.isArray(PaymentTickets)) {
             event.PaymentTickets = PaymentTickets.map(normalizePaymentTicket);
         }
@@ -4760,7 +5134,8 @@ exports.updatePaymentEvent = async (req, res) => {
         res.status(200).json({
             message: 'Payment event updated',
             PaymentTickets: ticketsForClient,
-            promoCodes: event.promoCodes || []
+            promoCodes: event.promoCodes || [],
+            promoCodeDisplayEnabled: event.promoCodeDisplayEnabled !== false
         });
     } catch (error) {
         console.error('Error updating payment event:', error);
@@ -4847,7 +5222,11 @@ exports.renderPaymentSettings = async (req, res) => {
         }
         const eventForView = event.toObject ? event.toObject() : event;
         eventForView.PaymentTickets = normalizeTicketsForView(event.PaymentTickets);
-        res.render('admin/payment_settings', { event: eventForView, eventId });
+        res.render('admin/payment_settings', {
+            event: eventForView,
+            eventId,
+            currencyCode: getCurrencyUpper()
+        });
     } catch (error) {
         console.error('Error rendering payment settings page:', error);
         res.status(500).send('Error rendering payment settings page.');
@@ -4987,6 +5366,13 @@ exports.validatePromoCode = async (req, res) => {
             });
         }
 
+        if (event.promoCodeDisplayEnabled === false) {
+            return res.status(400).json({
+                valid: false,
+                message: isEn ? 'Promocode is not available for this event.' : '此活動未開放折扣碼。'
+            });
+        }
+
         const promo = findPromoDocByCode(event, code);
         if (!promo) {
             return res.status(400).json({
@@ -5023,21 +5409,22 @@ exports.validatePromoCode = async (req, res) => {
         }
 
         const freeAfterDiscount = paidTicketPrice !== null && paidTicketPrice <= 0;
+        const cur = getCurrencyUpper();
         let message;
         if (paidTicketPrice !== null) {
             if (freeAfterDiscount) {
                 message = isEn
-                    ? `Promocode valid. Discount HKD ${discountAmount}. Final price: free (payment skipped).`
-                    : `折扣碼有效。減價 HKD ${discountAmount}。折後免費（無需付款）。`;
+                    ? `Promocode valid. Discount ${cur} ${discountAmount}. Final price: free (payment skipped).`
+                    : `折扣碼有效。減價 ${cur} ${discountAmount}。折後免費（無需付款）。`;
             } else {
                 message = isEn
-                    ? `Promocode valid. Discount HKD ${discountAmount}. Final price: HKD ${paidTicketPrice}.`
-                    : `折扣碼有效。減價 HKD ${discountAmount}。折後價 HKD ${paidTicketPrice}。`;
+                    ? `Promocode valid. Discount ${cur} ${discountAmount}. Final price: ${cur} ${paidTicketPrice}.`
+                    : `折扣碼有效。減價 ${cur} ${discountAmount}。折後價 ${cur} ${paidTicketPrice}。`;
             }
         } else {
             message = isEn
-                ? `Promocode valid. Discount HKD ${discountAmount}.`
-                : `折扣碼有效。減價 HKD ${discountAmount}。`;
+                ? `Promocode valid. Discount ${cur} ${discountAmount}.`
+                : `折扣碼有效。減價 ${cur} ${discountAmount}。`;
         }
 
         return res.json({
@@ -5123,7 +5510,8 @@ async function completeFreePaymentTicketRegistration(event, ticket, userFormData
             paymentGateway: 'none',
             status: 'free',
             userFormData,
-            transactionData: { currency: 'HKD', paid_total: '0.00', state: 'free' },
+            userId: savedUser._id || null,
+            transactionData: { currency: getCurrencyUpper(), paid_total: '0.00', state: 'free' },
         });
         try {
             const invoiceTemplate = await findEmailTemplateForEvent(event._id, 'invoice');
@@ -5177,7 +5565,8 @@ exports.stripeCheckout = async (req, res) => {
         const ticketTitleDisplay = getPaymentTicketTitle(ticket, lang);
 
         const originalTicketPrice = Number(ticket.price) || 0;
-        const promoCodeNormalized = promoCode ? normalizePromoCodeInput(promoCode) : '';
+        const promoDisplayOn = event.promoCodeDisplayEnabled !== false;
+        const promoCodeNormalized = (promoDisplayOn && promoCode) ? normalizePromoCodeInput(promoCode) : '';
 
         const appliedPromo = promoCodeNormalized ? findPromoDocByCode(event, promoCodeNormalized) : null;
         const appliedPromoCode = appliedPromo ? normalizePromoCodeInput(appliedPromo.code) : '';
@@ -5185,6 +5574,9 @@ exports.stripeCheckout = async (req, res) => {
 
         if (promoCodeNormalized && !appliedPromo) {
             return res.status(400).json({ message: '無效 promocode' });
+        }
+        if (appliedPromo && appliedPromo.enabled === false) {
+            return res.status(400).json({ message: '此 promocode 已停用' });
         }
         if (appliedPromo && !promoHasRemaining(appliedPromo)) {
             return res.status(400).json({ message: '此 promocode 已用完（超出使用次數）' });
@@ -5229,11 +5621,13 @@ exports.stripeCheckout = async (req, res) => {
             const eventDisplayName = getEventDisplayName(event, formConfig, lang);
             const callbackUrl = `${baseUrl}/web/webhook/wonder`;
             const redirectUrl = `${baseUrl}/web/${event_id}/register/success?session_id=${transaction._id}${langQuery}`;
+            const wonderChargeAmount = computeGatewayChargeAmount(paidTicketPrice);
+            const wonderCurrency = getCurrencyUpper();
             const { paymentUrl, orderId } = await wonderPayment.createOrder({
                 referenceNumber: transaction._id.toString(),
-                currency: 'HKD',
+                currency: wonderCurrency,
                 ticketTitle: ticketTitleDisplay,
-                amount: paidTicketPrice,
+                amount: wonderChargeAmount,
                 callbackUrl,
                 redirectUrl,
                 note: `Event: ${eventDisplayName}, Ticket: ${ticketTitleDisplay}`
@@ -5264,9 +5658,9 @@ exports.stripeCheckout = async (req, res) => {
             payment_method_types: ['card'],
             line_items: [{
                 price_data: {
-                    currency: (process.env.STRIPE_CURRENCY || 'hkd').toLowerCase(),
+                    currency: getCurrencyLower(),
                     product_data: { name: ticketTitleDisplay || 'Ticket' },
-                    unit_amount: Math.round(Number(paidTicketPrice) * 100) // 轉為分
+                    unit_amount: computeGatewayChargeAmountCents(paidTicketPrice)
                 },
                 quantity: 1
             }],
@@ -5338,11 +5732,12 @@ exports.wonderWebhook = async (req, res) => {
         );
 
         if (isPaid) {
-            await markTransactionPaidAndAddUser(transaction);
-            const eventDoc = await Event.findById(transaction.eventId);
-            if (eventDoc) {
+            const { eventDoc, addedUser, transaction: paidTx } = await markTransactionPaidAndAddUser(transaction) || {};
+            const txForEmail = paidTx || updatedTransaction;
+            const evt = eventDoc || await Event.findById(transaction.eventId);
+            if (evt) {
                 try {
-                    await sendPaymentReceiptEmail(updatedTransaction, eventDoc, { email: updatedTransaction.userEmail, name: updatedTransaction.userName });
+                    await sendPaymentReceiptEmail(txForEmail, evt, addedUser || null);
                 } catch (e) { console.error('[Wonder Webhook] Payment receipt email error:', e); }
             }
             console.log('[Wonder Webhook] Result: transaction marked paid, user added to event. Transaction _id:', transaction._id);
@@ -5359,7 +5754,9 @@ exports.wonderWebhook = async (req, res) => {
     }
 };
 
-/** 共用：將 transaction 標為已付款並將 user 加入 event（Stripe / Wonder webhook 皆用） */
+/** 共用：將 transaction 標為已付款並將 user 加入 event（Stripe / Wonder webhook 皆用）
+ *  @returns {{ eventDoc, addedUser, transaction }|undefined}
+ */
 async function markTransactionPaidAndAddUser(transaction) {
     await Transaction.findOneAndUpdate(
         { _id: transaction._id },
@@ -5423,12 +5820,28 @@ async function markTransactionPaidAndAddUser(transaction) {
     eventDoc.users.push(newUser);
     await eventDoc.save();
     const addedUser = eventDoc.users[eventDoc.users.length - 1];
+    const addedUserObj = addedUser
+        ? (addedUser.toObject ? addedUser.toObject({ minimize: false }) : addedUser)
+        : null;
+
+    // 寫回 transaction.userId，之後 receipt／重發可用 MongoId 對準呢個 RSVP
+    let paidTx = transaction;
+    if (addedUserObj && addedUserObj._id) {
+        paidTx = await Transaction.findOneAndUpdate(
+            { _id: transaction._id },
+            { userId: addedUserObj._id, updatedAt: new Date() },
+            { new: true }
+        ) || transaction;
+        if (!paidTx.userId) paidTx.userId = addedUserObj._id;
+    }
+
     if (addedUser) {
         await exports.sendPostRegistrationEmailByPolicy(addedUser, eventDoc, {
             mode: 'confirmation',
-            transaction,
+            transaction: paidTx,
         });
     }
+    return { eventDoc, addedUser: addedUserObj, transaction: paidTx };
 }
 
 // Stripe Webhook（需用 raw body 驗證簽名，路由在 app.js 以 express.raw 註冊）
@@ -5461,10 +5874,12 @@ exports.stripeWebhook = async (req, res) => {
             console.error('Stripe webhook: Transaction not found for session', sessionId);
             return res.status(200).json({ received: true, warning: 'Transaction not found' });
         }
-        await markTransactionPaidAndAddUser(transaction);
-        const eventDoc = await Event.findById(transaction.eventId);
-        if (eventDoc) {
-            try { await sendPaymentReceiptEmail(transaction, eventDoc, { email: transaction.userEmail, name: transaction.userName }); } catch (e) { console.error('Stripe webhook receipt email error:', e); }
+        const paid = await markTransactionPaidAndAddUser(transaction) || {};
+        const evt = paid.eventDoc || await Event.findById(transaction.eventId);
+        if (evt) {
+            try {
+                await sendPaymentReceiptEmail(paid.transaction || transaction, evt, paid.addedUser || null);
+            } catch (e) { console.error('Stripe webhook receipt email error:', e); }
         }
         return res.status(200).json({ received: true });
     } catch (error) {
@@ -5495,7 +5910,8 @@ exports.renderTransactionRecords = async (req, res) => {
         res.render('admin/transaction_records', { 
             event, 
             transactions,
-            eventId: eventId 
+            eventId: eventId,
+            currencyCode: getCurrencyUpper()
         });
     } catch (error) {
         console.error('Error fetching transaction records:', error);
@@ -5542,7 +5958,7 @@ exports.exportTransactionRecords = async (req, res) => {
             { header: 'User Name (用戶姓名)', key: 'userName', width: 20 },
             { header: 'User Email (用戶電郵)', key: 'userEmail', width: 28 },
             { header: 'Ticket Title (票券標題)', key: 'ticketTitle', width: 25 },
-            { header: 'Price HKD (價格)', key: 'ticketPrice', width: 14 },
+            { header: `Price ${getCurrencyUpper()} (價格)`, key: 'ticketPrice', width: 14 },
             { header: 'Status (狀態)', key: 'status', width: 12 },
             { header: 'Payment Gateway (付款閘道)', key: 'paymentGateway', width: 18 },
             { header: 'Session / Reference ID', key: 'stripeSessionId', width: 30 },
@@ -5575,7 +5991,7 @@ exports.exportTransactionRecords = async (req, res) => {
                 invoiceNumber: td.number || td.invoice_number || td.reference_number || '',
                 invoiceState: td.state || td.correspondence_state || '',
                 paidTotal: td.paid_total != null ? td.paid_total : '',
-                currency: td.currency || 'HKD',
+                currency: td.currency || getCurrencyUpper(),
             });
         });
 
@@ -5714,7 +6130,7 @@ function listEventReportColumns(formConfig) {
 
     [
         { header: 'Ticket Title (票券)', key: 'ticketTitle', width: 25 },
-        { header: 'Ticket Price HKD (票價)', key: 'ticketPrice', width: 14 },
+        { header: `Ticket Price ${getCurrencyUpper()} (票價)`, key: 'ticketPrice', width: 14 },
         { header: 'Transaction ID', key: 'transactionId', width: 26 },
         { header: 'Transaction Status (交易狀態)', key: 'transactionStatus', width: 16 },
         { header: 'Payment Gateway (付款閘道)', key: 'paymentGateway', width: 16 },
