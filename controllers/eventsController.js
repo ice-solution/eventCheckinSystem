@@ -5166,6 +5166,84 @@ exports.exportPaymentTickets = async (req, res) => {
     }
 };
 
+/** 匯出指定 promocode 完整使用名單 */
+exports.exportPromoCodeUses = async (req, res) => {
+    const { eventId } = req.params;
+    const codeRaw = (req.query.code || req.params.code || '').toString();
+    try {
+        if (!req.session || !req.session.user || !req.session.user._id) {
+            return res.status(401).send('Unauthorized');
+        }
+        const code = normalizePromoCodeInput(codeRaw);
+        if (!code) {
+            return res.status(400).json({ message: 'Missing promocode' });
+        }
+
+        const event = await Event.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        const promo = findPromoDocByCode(event, code);
+        if (!promo) {
+            return res.status(404).json({ message: 'Promocode not found' });
+        }
+
+        const uses = Array.isArray(promo.uses) ? promo.uses : [];
+        const rows = uses.map((u, i) => {
+            const usedAt = u && u.usedAt ? new Date(u.usedAt) : null;
+            return {
+                '#': i + 1,
+                Code: promo.code || code,
+                Email: (u && u.userEmail) || '',
+                Name: (u && u.userName) || '',
+                'Transaction ID': u && u.transactionId ? String(u.transactionId) : '',
+                'Original Price': Number(u && u.originalTicketPrice != null ? u.originalTicketPrice : 0) || 0,
+                Discount: Number(u && u.discountAmount != null ? u.discountAmount : 0) || 0,
+                'Paid Price': Number(u && u.paidTicketPrice != null ? u.paidTicketPrice : 0) || 0,
+                'Used At': usedAt && !Number.isNaN(usedAt.getTime())
+                    ? usedAt.toLocaleString('zh-HK', {
+                        timeZone: 'Asia/Hong_Kong',
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false,
+                    })
+                    : '',
+            };
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(rows.length ? rows : [{
+            '#': '',
+            Code: promo.code || code,
+            Email: '',
+            Name: '',
+            'Transaction ID': '',
+            'Original Price': '',
+            Discount: '',
+            'Paid Price': '',
+            'Used At': '',
+        }]);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'PromoUses');
+        const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+        const safeCode = String(promo.code || code).replace(/[^A-Za-z0-9_-]+/g, '_').slice(0, 40);
+        const dateStamp = new Date().toISOString().slice(0, 10);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader(
+            'Content-Disposition',
+            `attachment; filename=promo_uses_${safeCode}_${eventId}_${dateStamp}.xlsx`
+        );
+        res.send(buffer);
+    } catch (error) {
+        console.error('Error exporting promocode uses:', error);
+        res.status(500).json({ message: '匯出折扣碼使用名單失敗' });
+    }
+};
+
 /** 從 Excel 匯入付費票券（相同 _id 則更新取代） */
 exports.importPaymentTickets = async (req, res) => {
     const { eventId } = req.params;

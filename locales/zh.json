@@ -354,7 +354,8 @@
     "statsTitle": "郵件追蹤統計",
     "statsOpened": "打開數", "statsOpenRate": "打開率",
     "statsClicked": "點擊數", "statsClickRate": "點擊率", "statsClickToOpen": "點擊打開比",
-    "sendRecordsTitle": "發送記錄"
+    "sendRecordsTitle": "發送記錄",
+    "exportSendRecordsBtn": "匯出 Excel"
   },
   "staff_list": {
     "title": "用戶列表", "listHeading": "用戶列表", "detailHeading": "用戶詳細信息",
@@ -617,6 +618,17 @@
     "addPromoCodeBtn": "新增折扣碼",
     "promoCodesEmpty": "尚未新增折扣碼",
     "promoUnlimited": "無限",
+    "promoUsesTitle": "使用名單",
+    "promoUsesEmpty": "尚未有使用紀錄",
+    "promoUsesShow": "顯示全部",
+    "promoUsesHide": "收起",
+    "promoUsesExport": "匯出使用名單",
+    "promoUsesColEmail": "Email",
+    "promoUsesColName": "姓名",
+    "promoUsesColTx": "Transaction ID",
+    "promoUsesColPaid": "實付",
+    "promoUsesColDiscount": "折扣",
+    "promoUsesColAt": "使用時間",
     "viewQrCode": "查看 QR Code", "deleteBtn": "刪除",
     "batchEmailSummaryTitle": "發送摘要", "emailTypeResultLabel": "郵件類型",
     "successLabel": "成功", "failedLabel": "失敗", "skippedLabel": "跳過", "totalLabel": "總計", "detailsLabel": "詳情",

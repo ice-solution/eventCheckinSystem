@@ -315,6 +315,7 @@ router.get('/:eventId/email/:userId', eventsController.renderEmailHtml);
 
 router.get('/:eventId/payment-settings', eventsController.renderPaymentSettings);
 router.get('/:eventId/payment-settings/export', eventsController.exportPaymentTickets);
+router.get('/:eventId/payment-settings/promo-uses/export', eventsController.exportPromoCodeUses);
 router.post('/:eventId/payment-settings/import', upload, eventsController.importPaymentTickets);
 router.patch('/:eventId/paymentEvent', eventsController.updatePaymentEvent);
 router.patch('/:eventId/emailSettings', eventsController.updateEmailSettings);
@@ -338,6 +339,7 @@ router.get('/:eventId/email-records/:trackingId', eventsController.getEmailRecor
 router.get('/:eventId/emailTemplate/create', emailTemplateController.renderCreateEmailTemplatePage); // 創建頁面（必須在 /:id 之前）
 router.get('/:eventId/emailTemplate/seed', emailTemplateController.getEmailTemplateSeed); // 建立時載入已存／預設模板
 router.post('/:eventId/emailTemplate/:id/send', emailTemplateController.sendEmailById); // 發送電子郵件
+router.get('/:eventId/emailTemplate/:id/send-records/export', emailTemplateController.exportEmailTemplateSendRecords); // 匯出此模板發送記錄
 router.get('/:eventId/emailTemplate', emailTemplateController.renderEmailTemplateList); // 列表頁面
 router.post('/:eventId/emailTemplate', emailTemplateController.createEmailTemplate); // 創建郵件
 router.get('/:eventId/emailTemplate/:id', emailTemplateController.renderEmailTemplateDetail); // 詳情頁面（必須在通用路由之後）

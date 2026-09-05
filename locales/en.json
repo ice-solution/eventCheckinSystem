@@ -355,7 +355,8 @@
     "statsTitle": "Email Tracking Statistics",
     "statsOpened": "Opened", "statsOpenRate": "Open Rate",
     "statsClicked": "Clicked", "statsClickRate": "Click Rate", "statsClickToOpen": "Click-to-Open Rate",
-    "sendRecordsTitle": "Send Records"
+    "sendRecordsTitle": "Send Records",
+    "exportSendRecordsBtn": "Export Excel"
   },
   "staff_list": {
     "title": "User List", "listHeading": "User List", "detailHeading": "User Details",
@@ -618,6 +619,17 @@
     "addPromoCodeBtn": "Add Promo Code",
     "promoCodesEmpty": "No promo codes yet",
     "promoUnlimited": "unlimited",
+    "promoUsesTitle": "Usage list",
+    "promoUsesEmpty": "No usage records yet",
+    "promoUsesShow": "Show all",
+    "promoUsesHide": "Hide",
+    "promoUsesExport": "Export usage list",
+    "promoUsesColEmail": "Email",
+    "promoUsesColName": "Name",
+    "promoUsesColTx": "Transaction ID",
+    "promoUsesColPaid": "Paid",
+    "promoUsesColDiscount": "Discount",
+    "promoUsesColAt": "Used at",
     "viewQrCode": "View QR Code", "deleteBtn": "Delete",
     "batchEmailSummaryTitle": "Send Summary", "emailTypeResultLabel": "Email Type",
     "successLabel": "Success", "failedLabel": "Failed", "skippedLabel": "Skipped", "totalLabel": "Total", "detailsLabel": "Details",

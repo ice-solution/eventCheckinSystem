@@ -17,6 +17,7 @@ router
   .post(emailTemplateController.createEmailTemplate)
 
 router.route("/:id/send").post(emailTemplateController.sendEmailById)
+router.get("/:id/send-records/export", emailTemplateController.exportEmailTemplateSendRecords)
 
 router
   .route("/:id")
