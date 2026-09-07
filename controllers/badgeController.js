@@ -5,6 +5,7 @@ const QRCode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
 const { registerBadgeFonts, formatCanvasFont, getBadgeFontCatalog, getDefaultBadgeFontFamily, getBadgeFontCssUrl } = require('../utils/badgeFonts');
+const { resolveUserDisplayName } = require('../utils/userDisplayName');
 
 // 動態載入 canvas（如果可用）
 let createCanvas, loadImage;
@@ -41,6 +42,14 @@ exports.renderBadgeDesignPage = async (req, res) => {
             await badgeConfig.save();
         }
         
+        const testUsers = (event.users || []).map((u) => {
+            const obj = u.toObject ? u.toObject({ minimize: false }) : u;
+            const name = resolveUserDisplayName(obj) || '';
+            const email = (obj.email && String(obj.email).trim()) || '';
+            const label = [name, email].filter(Boolean).join(' · ') || String(obj._id);
+            return { id: String(obj._id), label };
+        });
+
         res.render('admin/badge_design', {
             eventId,
             event,
@@ -49,6 +58,7 @@ exports.renderBadgeDesignPage = async (req, res) => {
             badgeFonts: getBadgeFontCatalog(),
             defaultBadgeFont: getDefaultBadgeFontFamily(),
             avantGardeFontUrl: getBadgeFontCssUrl('ITC Avant Garde Gothic Demi'),
+            testUsers,
         });
     } catch (error) {
         console.error('Error rendering badge design page:', error);
@@ -109,6 +119,7 @@ exports.saveBadgeConfig = async (req, res) => {
 // 生成測試圖片
 exports.generateTestImage = async (req, res) => {
     const { eventId } = req.params;
+    const userId = req.body && req.body.userId;
     
     try {
         const badgeConfig = await BadgeConfig.findOne({ eventId });
@@ -119,16 +130,25 @@ exports.generateTestImage = async (req, res) => {
         // 嘗試從 event 中取得實際用戶資料
         const event = await Event.findById(eventId);
         let testData;
+        let usedRealUser = false;
         
         if (event && event.users && event.users.length > 0) {
-            // 使用 event 中第一個用戶的實際資料
-            const user = event.users[0];
+            let user = null;
+            if (userId) {
+                user = event.users.id(userId);
+                if (!user) {
+                    return res.status(404).json({ message: 'User not found' });
+                }
+            } else {
+                user = event.users[0];
+            }
             const userObject = user.toObject ? user.toObject({ minimize: false }) : user;
             
             testData = {
                 user: userObject,
                 qrcodeUrl: `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=200x200`
             };
+            usedRealUser = true;
         } else {
             // 如果沒有用戶，使用預設測試數據
             testData = {
@@ -152,7 +172,10 @@ exports.generateTestImage = async (req, res) => {
         res.json({ 
             message: 'Test image generated successfully',
             imageUrl,
-            usedRealUser: event && event.users && event.users.length > 0
+            usedRealUser,
+            userId: usedRealUser && testData.user && testData.user._id
+                ? String(testData.user._id)
+                : null
         });
     } catch (error) {
         console.error('Error generating test image:', error);

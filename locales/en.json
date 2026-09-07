@@ -383,6 +383,9 @@
   },
   "badge_design": {
     "saveConfig": "Save Config", "generateTestImage": "Generate Test Image",
+    "testUser": "Test user",
+    "testUserSample": "(No users — use sample data)",
+    "selectTestUser": "Please select a test user",
     "deleteSelectedElement": "Delete Selected Element", "clear": "Clear",
     "hideCenterLines": "Hide Center Lines", "showCenterLines": "Show Center Lines",
     "formFields": "Form Fields", "customText": "Custom Text",

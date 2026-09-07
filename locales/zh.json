@@ -382,6 +382,9 @@
   },
   "badge_design": {
     "saveConfig": "儲存設定", "generateTestImage": "生成測試圖片",
+    "testUser": "測試用戶",
+    "testUserSample": "（無用戶，使用範例資料）",
+    "selectTestUser": "請選擇測試用戶",
     "deleteSelectedElement": "刪除選中元素", "clear": "清除",
     "hideCenterLines": "隱藏中線", "showCenterLines": "顯示中線",
     "formFields": "表單欄位", "customText": "自訂文字",

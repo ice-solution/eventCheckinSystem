@@ -94,8 +94,18 @@
         <div class="row mb-3">
             <div class="col-12">
                 <h2><%= t('badge_design.canvasDimensions').split(' (')[0] %> - <%= event.name %></h2>
-                <div class="d-flex flex-wrap" style="gap: 8px; margin-top: 5px;">
+                <div class="d-flex flex-wrap align-items-center" style="gap: 8px; margin-top: 5px;">
                     <button class="btn btn-primary" onclick="saveConfig()"><i class="fa fa-save mr-1"></i><%= t('badge_design.saveConfig') %></button>
+                    <label class="mb-0 small text-muted" for="testUserSelect"><%= t('badge_design.testUser') %></label>
+                    <select id="testUserSelect" class="form-control form-control-sm" style="min-width: 220px; max-width: 360px; width: auto;">
+                        <% if (!testUsers || testUsers.length === 0) { %>
+                            <option value=""><%= t('badge_design.testUserSample') %></option>
+                        <% } else { %>
+                            <% testUsers.forEach(function(u, idx) { %>
+                                <option value="<%= u.id %>" <%= idx === 0 ? 'selected' : '' %>><%= u.label %></option>
+                            <% }) %>
+                        <% } %>
+                    </select>
                     <button class="btn btn-success" onclick="generateTestImage()"><i class="fa fa-image mr-1"></i><%= t('badge_design.generateTestImage') %></button>
                     <button class="btn btn-danger" onclick="deleteSelectedElement()" id="deleteElementBtn" disabled><i class="fa fa-trash mr-1"></i><%= t('badge_design.deleteSelectedElement') %></button>
                     <button class="btn btn-secondary" onclick="clearCanvas()"><i class="fa fa-times mr-1"></i><%= t('badge_design.clear') %></button>
@@ -222,6 +232,7 @@
             testImageSuccess: '<%= t("badge_design.testImageSuccess") %>',
             testImageFailed: '<%= t("badge_design.testImageFailed") %>',
             testImageError: '<%= t("badge_design.testImageError") %>',
+            selectTestUser: '<%= t("badge_design.selectTestUser") %>',
             clearConfirm: '<%= t("badge_design.clearConfirm") %>',
             deleteElementConfirm: '<%= t("badge_design.deleteElementConfirm") %>',
             deleteSelectedConfirm: '<%= t("badge_design.deleteSelectedConfirm") %>',
@@ -888,8 +899,16 @@
                 // 先保存配置
                 await saveConfig();
 
+                const selectedUserId = ($('#testUserSelect').val() || '').trim();
+                const payload = {};
+                if (selectedUserId) {
+                    payload.userId = selectedUserId;
+                }
+
                 const response = await fetch(`/events/${eventId}/badges/test-image`, {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
 
                 const result = await response.json();
