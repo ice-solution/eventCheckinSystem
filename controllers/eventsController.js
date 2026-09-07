@@ -27,7 +27,7 @@ const { replaceTemplateVariables, buildEmailTemplateAdditionalVars, flattenForTe
 const { isInvoiceEmailEnabled } = require('../utils/featureFlags');
 const { normalizeAgreementAgreed, formatAgreementAgreedLabel, agreementAgreedSortOrder, getEnabledAgreements, isAgreementMetaKey } = require('../utils/agreementFields');
 const { resolveUserDisplayName, ensureUserNameField } = require('../utils/userDisplayName');
-const { getCurrencyUpper, getCurrencyLower, computeGatewayChargeAmount, computeGatewayChargeAmountCents } = require('../utils/currency');
+const { getCurrencyUpper, getCurrencyLower } = require('../utils/currency');
 
 /** 取得對外 base URL（依 DOMAIN/domain，缺協議時自動補 https://） */
 function getPublicBaseUrl() {
@@ -5699,7 +5699,7 @@ exports.stripeCheckout = async (req, res) => {
             const eventDisplayName = getEventDisplayName(event, formConfig, lang);
             const callbackUrl = `${baseUrl}/web/webhook/wonder`;
             const redirectUrl = `${baseUrl}/web/${event_id}/register/success?session_id=${transaction._id}${langQuery}`;
-            const wonderChargeAmount = computeGatewayChargeAmount(paidTicketPrice);
+            const wonderChargeAmount = Math.round(Number(paidTicketPrice) * 100) / 100;
             const wonderCurrency = getCurrencyUpper();
             const { paymentUrl, orderId } = await wonderPayment.createOrder({
                 referenceNumber: transaction._id.toString(),
@@ -5738,7 +5738,7 @@ exports.stripeCheckout = async (req, res) => {
                 price_data: {
                     currency: getCurrencyLower(),
                     product_data: { name: ticketTitleDisplay || 'Ticket' },
-                    unit_amount: computeGatewayChargeAmountCents(paidTicketPrice)
+                    unit_amount: Math.round(Number(paidTicketPrice) * 100) // 轉為分
                 },
                 quantity: 1
             }],
