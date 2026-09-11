@@ -109,6 +109,11 @@ const formConfigSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    /** true = 標題可留空（不套用預設文案）；false = 留空時用預設 */
+    registerClosedTitleAllowBlank: {
+        type: Boolean,
+        default: false
+    },
     // 關閉註冊時顯示的訊息（支援多行）
     registerClosedMessage: {
         type: String,

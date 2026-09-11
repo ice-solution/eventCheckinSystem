@@ -44,8 +44,13 @@ async function renderRegisterPage(req, res, eventId) {
             (event && event.name) ||
             'Event'
         );
-        const closedTitle = (formConfig.registerClosedTitle && String(formConfig.registerClosedTitle).trim())
-            || '報名已關閉 / Registration is closed';
+        const closedTitleRaw = formConfig.registerClosedTitle != null
+            ? String(formConfig.registerClosedTitle).trim()
+            : '';
+        const closedTitle = closedTitleRaw
+            || (formConfig.registerClosedTitleAllowBlank
+                ? ''
+                : '報名已關閉 / Registration is closed');
         return res.render('exvent/register_closed', {
             event_id: eventId,
             event,

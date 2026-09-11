@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= typeof closedTitle !== 'undefined' && closedTitle ? closedTitle : '報名已關閉' %> - <%= typeof displayName !== 'undefined' && displayName ? displayName : (event ? event.name : 'Event') %></title>
+    <title><%= typeof displayName !== 'undefined' && displayName ? displayName : (event ? event.name : 'Event') %><%= typeof closedTitle !== 'undefined' && closedTitle ? (' - ' + closedTitle) : '' %></title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         body {
@@ -79,7 +79,9 @@
 
         <div class="closed-container">
             <h1 class="closed-title"><%= typeof displayName !== 'undefined' && displayName ? displayName : (event ? event.name : 'Event') %></h1>
-            <p class="closed-subtitle"><%= typeof closedTitle !== 'undefined' && closedTitle ? closedTitle : '報名已關閉 / Registration is closed' %></p>
+            <% if (typeof closedTitle !== 'undefined' && String(closedTitle).trim()) { %>
+            <p class="closed-subtitle"><%= closedTitle %></p>
+            <% } %>
             <% if (typeof message === 'string' && message.trim()) { %>
             <div class="closed-message"><%= message %></div>
             <% } %>
