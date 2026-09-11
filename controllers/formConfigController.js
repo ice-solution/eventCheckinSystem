@@ -2,7 +2,7 @@ const FormConfig = require('../model/FormConfig');
 const Event = require('../model/Event');
 const { normalizePaymentTicketUi } = require('../utils/paymentTicket');
 const { normalizeRegisterSlug, validateRegisterSlug } = require('../utils/registerSlug');
-const { syncAgreementsOnConfig, cloneDefaultAgreement } = require('../utils/agreementFields');
+const { syncAgreementsOnConfig, cloneDefaultAgreement, cloneDefaultAgreementSection } = require('../utils/agreementFields');
 
 async function applyRegisterSlugToFormConfig(formConfig, rawSlug, eventId) {
     if (rawSlug === undefined) {
@@ -377,6 +377,7 @@ exports.getDefaultFormConfig = () => ({
     },
     agreement: cloneDefaultAgreement(),
     agreements: [cloneDefaultAgreement()],
+    agreementSections: [cloneDefaultAgreementSection()],
     thankYou: {
         title: { zh: '感謝你參加！', en: 'Thank you for participating!' },
         message: { zh: '我們會透過 Email 把資訊發送給你。', en: 'We will send the information to you via Email.' },
@@ -667,7 +668,7 @@ exports.getFormConfig = async (req, res) => {
 exports.updateFormConfig = async (req, res) => {
     try {
         const { eventId } = req.params;
-        const { sections, defaultLanguage, languageSwitcherEnabled, registerPageEnabled, registerClosedTitle, registerClosedTitleAllowBlank, registerClosedMessage, registerSlug, terms, agreement, agreements, thankYou, applicationCompletedPage, eventDisplayName, registerSubHeader, registerSubtitle, paymentTicketUi, customFormEnabled, customFormHtml } = req.body;
+        const { sections, defaultLanguage, languageSwitcherEnabled, registerPageEnabled, registerClosedTitle, registerClosedTitleAllowBlank, registerClosedMessage, registerSlug, terms, agreement, agreements, agreementSections, thankYou, applicationCompletedPage, eventDisplayName, registerSubHeader, registerSubtitle, paymentTicketUi, customFormEnabled, customFormHtml } = req.body;
         
         // 驗證事件是否存在
         const event = await Event.findById(eventId);
@@ -722,12 +723,20 @@ exports.updateFormConfig = async (req, res) => {
                 const migrated = migrateFormConfig({ sections: formConfig.sections, terms });
                 formConfig.terms = migrated.terms;
             }
-            if ((Array.isArray(agreements) && agreements.length) || (agreement && typeof agreement === 'object')) {
+            if (
+                (Array.isArray(agreementSections) && agreementSections.length) ||
+                (Array.isArray(agreements) && agreements.length) ||
+                (agreement && typeof agreement === 'object')
+            ) {
                 const migrated = migrateFormConfig({
                     sections: formConfig.sections,
-                    agreements: Array.isArray(agreements) && agreements.length ? agreements : [agreement],
+                    agreementSections: Array.isArray(agreementSections) && agreementSections.length
+                        ? agreementSections
+                        : undefined,
+                    agreements: Array.isArray(agreements) && agreements.length ? agreements : (agreement ? [agreement] : undefined),
                     agreement: Array.isArray(agreements) && agreements.length ? agreements[0] : agreement
                 });
+                formConfig.agreementSections = migrated.agreementSections;
                 formConfig.agreements = migrated.agreements;
                 formConfig.agreement = migrated.agreement;
             }
@@ -778,6 +787,7 @@ exports.updateFormConfig = async (req, res) => {
                     : defaultConfig.terms,
                 agreement: defaultConfig.agreement,
                 agreements: defaultConfig.agreements,
+                agreementSections: defaultConfig.agreementSections,
                 thankYou: thankYou && typeof thankYou === 'object'
                     ? migrateFormConfig({ sections: (sections || defaultConfig.sections), thankYou }).thankYou
                     : defaultConfig.thankYou,
@@ -790,12 +800,20 @@ exports.updateFormConfig = async (req, res) => {
                     ? normalizePaymentTicketUi(paymentTicketUi)
                     : defaultConfig.paymentTicketUi
             });
-            if ((Array.isArray(agreements) && agreements.length) || (agreement && typeof agreement === 'object')) {
+            if (
+                (Array.isArray(agreementSections) && agreementSections.length) ||
+                (Array.isArray(agreements) && agreements.length) ||
+                (agreement && typeof agreement === 'object')
+            ) {
                 const migrated = migrateFormConfig({
                     sections: formConfig.sections,
-                    agreements: Array.isArray(agreements) && agreements.length ? agreements : [agreement],
+                    agreementSections: Array.isArray(agreementSections) && agreementSections.length
+                        ? agreementSections
+                        : undefined,
+                    agreements: Array.isArray(agreements) && agreements.length ? agreements : (agreement ? [agreement] : undefined),
                     agreement: Array.isArray(agreements) && agreements.length ? agreements[0] : agreement
                 });
+                formConfig.agreementSections = migrated.agreementSections;
                 formConfig.agreements = migrated.agreements;
                 formConfig.agreement = migrated.agreement;
             }

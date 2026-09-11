@@ -1035,30 +1035,95 @@ var registerPageTitleSuffix = isApplicationMode
                 }) %></script>
             <% } %>
 
-            <!-- Agreement（可多份；共用一個頂部標題） -->
+            <!-- Agreement：多個 title section，每個 section 可有一個或多個 agreements -->
             <%
-                const _agreementsAll = (formConfig && Array.isArray(formConfig.agreements) && formConfig.agreements.length)
-                    ? formConfig.agreements
-                    : (formConfig && formConfig.agreement ? [formConfig.agreement] : []);
-                const _agreementsEnabled = _agreementsAll
-                    .map(function(agr, agrIndex) { return { agr: agr, agrIndex: agrIndex }; })
-                    .filter(function(x) { return x.agr && x.agr.enabled; });
-                const _agrSharedTitle = (_agreementsAll[0] && _agreementsAll[0].title) ? _agreementsAll[0].title : {};
+                function _normalizeAgrItem(src) {
+                    const d = {
+                        enabled: false,
+                        title: { zh: '協議', en: 'Agreement' },
+                        linkLabel: { zh: '(協議)', en: '(agreement)' },
+                        showLinkLabel: true,
+                        label: { zh: '', en: '' },
+                        content: { zh: '', en: '' }
+                    };
+                    if (!src || typeof src !== 'object') return d;
+                    return {
+                        enabled: !!src.enabled,
+                        title: {
+                            zh: (src.title && src.title.zh) || d.title.zh,
+                            en: (src.title && src.title.en) || d.title.en
+                        },
+                        linkLabel: {
+                            zh: (src.linkLabel && src.linkLabel.zh) || d.linkLabel.zh,
+                            en: (src.linkLabel && src.linkLabel.en) || d.linkLabel.en
+                        },
+                        showLinkLabel: src.showLinkLabel !== false,
+                        label: {
+                            zh: (src.label && src.label.zh) || '',
+                            en: (src.label && src.label.en) || ''
+                        },
+                        content: {
+                            zh: (src.content && src.content.zh) || '',
+                            en: (src.content && src.content.en) || ''
+                        }
+                    };
+                }
+                let _rawSections = [];
+                if (formConfig && Array.isArray(formConfig.agreementSections) && formConfig.agreementSections.length) {
+                    _rawSections = formConfig.agreementSections;
+                } else if (formConfig && Array.isArray(formConfig.agreements) && formConfig.agreements.length) {
+                    const first = formConfig.agreements[0] || {};
+                    _rawSections = [{
+                        title: (first.title && (first.title.zh || first.title.en))
+                            ? first.title
+                            : { zh: '協議', en: 'Agreement' },
+                        agreements: formConfig.agreements
+                    }];
+                } else if (formConfig && formConfig.agreement) {
+                    _rawSections = [{
+                        title: (formConfig.agreement.title) || { zh: '協議', en: 'Agreement' },
+                        agreements: [formConfig.agreement]
+                    }];
+                }
+                const _agreementSectionsEnabled = [];
+                let _agrGlobalIndex = 0;
+                _rawSections.forEach(function(sec) {
+                    const secTitle = {
+                        zh: (sec.title && sec.title.zh) ? sec.title.zh : '協議',
+                        en: (sec.title && sec.title.en) ? sec.title.en : 'Agreement'
+                    };
+                    const enabledItems = [];
+                    (Array.isArray(sec.agreements) ? sec.agreements : []).forEach(function(raw) {
+                        const item = _normalizeAgrItem(raw);
+                        const index = _agrGlobalIndex;
+                        _agrGlobalIndex += 1;
+                        if (!item.enabled) return;
+                        enabledItems.push(Object.assign({}, item, {
+                            index: index,
+                            agreedField: index === 0 ? 'agreementAgreed' : ('agreementAgreed_' + (index + 1)),
+                            recordedAtField: index === 0 ? 'agreementRecordedAt' : ('agreementRecordedAt_' + (index + 1)),
+                            title: { zh: secTitle.zh, en: secTitle.en }
+                        }));
+                    });
+                    if (enabledItems.length) {
+                        _agreementSectionsEnabled.push({ title: secTitle, agreements: enabledItems });
+                    }
+                });
             %>
-            <% if (_agreementsEnabled.length) { %>
+            <% _agreementSectionsEnabled.forEach(function(sec) { %>
+                <% const secTitle = sec.title || {}; %>
                 <div class="form-section agreement-section">
-                    <h3 class="section-title" id="agreementSectionTitle"
-                        data-zh="<%= (_agrSharedTitle.zh ? _agrSharedTitle.zh : '協議') %>"
-                        data-en="<%= (_agrSharedTitle.en ? _agrSharedTitle.en : 'Agreement') %>"><%= (_agrSharedTitle.zh ? _agrSharedTitle.zh : '協議') %></h3>
-                    <% _agreementsEnabled.forEach(function(entry) { %>
-                        <% const agr = entry.agr; %>
-                        <% const agrIndex = entry.agrIndex; %>
-                        <% const agrTitle = agr.title || _agrSharedTitle || {}; %>
+                    <h3 class="section-title"
+                        data-zh="<%= (secTitle.zh ? secTitle.zh : '協議') %>"
+                        data-en="<%= (secTitle.en ? secTitle.en : 'Agreement') %>"><%= (secTitle.zh ? secTitle.zh : '協議') %></h3>
+                    <% (sec.agreements || []).forEach(function(agr) { %>
+                        <% const agrIndex = agr.index; %>
+                        <% const agrTitle = agr.title || secTitle || {}; %>
                         <% const agrLink = agr.linkLabel || {}; %>
                         <% const showAgrLink = agr.showLinkLabel !== false; %>
                         <% const agrId = agrIndex === 0 ? '' : ('_' + (agrIndex + 1)); %>
-                        <% const agrAgreedName = agrIndex === 0 ? 'agreementAgreed' : ('agreementAgreed_' + (agrIndex + 1)); %>
-                        <% const agrRecordedName = agrIndex === 0 ? 'agreementRecordedAt' : ('agreementRecordedAt_' + (agrIndex + 1)); %>
+                        <% const agrAgreedName = agr.agreedField; %>
+                        <% const agrRecordedName = agr.recordedAtField; %>
                         <div class="agreement-item mb-3">
                             <% if (showAgrLink) { %>
                             <div class="terms-header">
@@ -1083,8 +1148,8 @@ var registerPageTitleSuffix = isApplicationMode
                             <div class="terms-modal" role="dialog" aria-modal="true" aria-labelledby="agreementModalTitle<%= agrId %>">
                                 <div class="terms-modal-header">
                                     <h4 id="agreementModalTitle<%= agrId %>" class="lang-text"
-                                        data-zh="<%= (agrTitle.zh || _agrSharedTitle.zh || '協議') %>"
-                                        data-en="<%= (agrTitle.en || _agrSharedTitle.en || 'Agreement') %>"><%= (agrTitle.zh || _agrSharedTitle.zh || '協議') %></h4>
+                                        data-zh="<%= (agrTitle.zh || secTitle.zh || '協議') %>"
+                                        data-en="<%= (agrTitle.en || secTitle.en || 'Agreement') %>"><%= (agrTitle.zh || secTitle.zh || '協議') %></h4>
                                     <button type="button" class="terms-modal-close" id="agreementModalClose<%= agrId %>" aria-label="Close">&times;</button>
                                 </div>
                                 <div class="terms-modal-body js-agreement-content" id="agreementContent<%= agrId %>"></div>
@@ -1100,7 +1165,7 @@ var registerPageTitleSuffix = isApplicationMode
                         }) %></script>
                     <% }); %>
                 </div>
-            <% } %>
+            <% }); %>
 
             <!-- Thank You Yes/No 問題 -->
             <% if (formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled) { %>

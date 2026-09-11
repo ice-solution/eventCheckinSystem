@@ -372,7 +372,7 @@
                                 </div>
                             </div>
 
-                            <!-- Agreement（可新增多份） -->
+                            <!-- Agreement：多個 Title Section，每個可包住一個或多個 agreements -->
                             <div class="card mb-3">
                                 <div class="card-header collapsible-card-header" data-toggle="collapse" data-target="#collapseAgreement" aria-expanded="false">
                                     <i class="fa fa-plus-circle collapse-icon mr-2 text-primary"></i><h6 class="d-inline mb-0"><%= t('form_config.cardAgreementTitle') %></h6>
@@ -380,26 +380,9 @@
                                 <div id="collapseAgreement" class="collapse">
                                 <div class="card-body">
                                     <p class="text-muted small mb-3"><%- t('form_config.agreementHint') %></p>
-                                    <%
-                                        const _agr0 = (formConfig.agreements && formConfig.agreements[0])
-                                            ? formConfig.agreements[0]
-                                            : (formConfig.agreement || {});
-                                    %>
-                                    <div class="row mb-3">
-                                        <div class="col-md-6">
-                                            <label class="form-label" for="agreementTitleZh"><%= t('form_config.agreementTitleZhLabel') %></label>
-                                            <input type="text" class="form-control" id="agreementTitleZh"
-                                                   value="<%= (_agr0.title && _agr0.title.zh) ? _agr0.title.zh : '協議' %>">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label" for="agreementTitleEn"><%= t('form_config.agreementTitleEnLabel') %></label>
-                                            <input type="text" class="form-control" id="agreementTitleEn"
-                                                   value="<%= (_agr0.title && _agr0.title.en) ? _agr0.title.en : 'Agreement' %>">
-                                        </div>
-                                    </div>
-                                    <div id="agreementsList"></div>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" id="addAgreementBtn">
-                                        <i class="fa fa-plus"></i> <%= t('form_config.addAgreement') %>
+                                    <div id="agreementSectionsList"></div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="addAgreementSectionBtn">
+                                        <i class="fa fa-plus"></i> <%= t('form_config.addAgreementSection') %>
                                     </button>
                                 </div>
                                 </div>
@@ -1155,8 +1138,11 @@
         ptCategoryLabelEnPh: '<%= t("form_config.ptCategoryLabelEnPh") %>',
         ptCategoryDelete: '<%= t("form_config.ptCategoryDelete") %>',
         addAgreement: '<%= t("form_config.addAgreement") %>',
+        addAgreementSection: '<%= t("form_config.addAgreementSection") %>',
         removeAgreement: '<%= t("form_config.removeAgreement") %>',
+        removeAgreementSection: '<%= t("form_config.removeAgreementSection") %>',
         agreementItemHeading: '<%= t("form_config.agreementItemHeading") %>',
+        agreementSectionHeading: '<%= t("form_config.agreementSectionHeading") %>',
         agreementEnabledLabel: '<%= t("form_config.agreementEnabledLabel") %>',
         agreementTitleZhLabel: '<%= t("form_config.agreementTitleZhLabel") %>',
         agreementTitleEnLabel: '<%= t("form_config.agreementTitleEnLabel") %>',
@@ -1212,6 +1198,15 @@
     }
     if (!Array.isArray(formConfig.agreements) || !formConfig.agreements.length) {
         formConfig.agreements = [JSON.parse(JSON.stringify(formConfig.agreement))];
+    }
+    if (!Array.isArray(formConfig.agreementSections) || !formConfig.agreementSections.length) {
+        const first = formConfig.agreements[0] || formConfig.agreement || {};
+        formConfig.agreementSections = [{
+            title: (first.title && (first.title.zh || first.title.en))
+                ? first.title
+                : { zh: '協議', en: 'Agreement' },
+            agreements: formConfig.agreements
+        }];
     }
     if (!formConfig.thankYou) {
         formConfig.thankYou = {
@@ -1719,6 +1714,13 @@
         };
     }
 
+    function defaultAgreementSection() {
+        return {
+            title: { zh: '協議', en: 'Agreement' },
+            agreements: [defaultAgreementItem()]
+        };
+    }
+
     function escapeAttr(s) {
         return String(s == null ? '' : s)
             .replace(/&/g, '&amp;')
@@ -1726,87 +1728,161 @@
             .replace(/</g, '&lt;');
     }
 
-    function collectAgreementsFromDom() {
-        const sharedTitle = {
-            zh: ((document.getElementById('agreementTitleZh') || {}).value || '').trim() || '協議',
-            en: ((document.getElementById('agreementTitleEn') || {}).value || '').trim() || 'Agreement'
+    function collectAgreementItemFromEl(el, sectionTitle) {
+        return {
+            enabled: !!(el.querySelector('.js-agr-enabled') || {}).checked,
+            title: {
+                zh: (sectionTitle && sectionTitle.zh) || '協議',
+                en: (sectionTitle && sectionTitle.en) || 'Agreement'
+            },
+            linkLabel: {
+                zh: ((el.querySelector('.js-agr-link-zh') || {}).value || '').trim() || '(協議)',
+                en: ((el.querySelector('.js-agr-link-en') || {}).value || '').trim() || '(agreement)'
+            },
+            showLinkLabel: !!(el.querySelector('.js-agr-show-link') || {}).checked,
+            label: {
+                zh: (el.querySelector('.js-agr-label-zh') || {}).value || '',
+                en: (el.querySelector('.js-agr-label-en') || {}).value || ''
+            },
+            content: {
+                zh: (el.querySelector('.js-agr-content-zh') || {}).value || '',
+                en: (el.querySelector('.js-agr-content-en') || {}).value || ''
+            }
         };
-        const rows = [];
-        document.querySelectorAll('#agreementsList .js-agreement-item').forEach(function(el) {
-            rows.push({
-                enabled: !!(el.querySelector('.js-agr-enabled') || {}).checked,
-                title: { zh: sharedTitle.zh, en: sharedTitle.en },
-                linkLabel: {
-                    zh: ((el.querySelector('.js-agr-link-zh') || {}).value || '').trim() || '(協議)',
-                    en: ((el.querySelector('.js-agr-link-en') || {}).value || '').trim() || '(agreement)'
-                },
-                showLinkLabel: !!(el.querySelector('.js-agr-show-link') || {}).checked,
-                label: {
-                    zh: (el.querySelector('.js-agr-label-zh') || {}).value || '',
-                    en: (el.querySelector('.js-agr-label-en') || {}).value || ''
-                },
-                content: {
-                    zh: (el.querySelector('.js-agr-content-zh') || {}).value || '',
-                    en: (el.querySelector('.js-agr-content-en') || {}).value || ''
-                }
-            });
-        });
-        return rows.length ? rows : [Object.assign(defaultAgreementItem(), { title: sharedTitle })];
     }
 
-    function renderAgreementsList(list) {
-        const wrap = document.getElementById('agreementsList');
+    function collectAgreementSectionsFromDom() {
+        const sections = [];
+        document.querySelectorAll('#agreementSectionsList .js-agreement-section').forEach(function(secEl) {
+            const title = {
+                zh: ((secEl.querySelector('.js-agr-sec-title-zh') || {}).value || '').trim() || '協議',
+                en: ((secEl.querySelector('.js-agr-sec-title-en') || {}).value || '').trim() || 'Agreement'
+            };
+            const agreements = [];
+            secEl.querySelectorAll('.js-agreement-item').forEach(function(el) {
+                agreements.push(collectAgreementItemFromEl(el, title));
+            });
+            if (!agreements.length) {
+                agreements.push(Object.assign(defaultAgreementItem(), { title: { zh: title.zh, en: title.en } }));
+            }
+            sections.push({ title: title, agreements: agreements });
+        });
+        return sections.length ? sections : [defaultAgreementSection()];
+    }
+
+    function flattenAgreementSections(sections) {
+        const out = [];
+        (sections || []).forEach(function(sec) {
+            const title = (sec && sec.title) || { zh: '協議', en: 'Agreement' };
+            (sec.agreements || []).forEach(function(item) {
+                out.push(Object.assign({}, item, {
+                    title: { zh: title.zh || '協議', en: title.en || 'Agreement' }
+                }));
+            });
+        });
+        return out.length ? out : [defaultAgreementItem()];
+    }
+
+    function collectAgreementsFromDom() {
+        return flattenAgreementSections(collectAgreementSectionsFromDom());
+    }
+
+    function renderAgreementItemHtml(a, canRemoveItem) {
+        const showLink = a.showLinkLabel !== false;
+        return (
+            '<div class="border rounded p-3 mb-2 js-agreement-item bg-white">' +
+                '<div class="d-flex justify-content-between align-items-center mb-2">' +
+                    '<strong class="small text-muted">' + _t.agreementItemHeading + '</strong>' +
+                    (canRemoveItem
+                        ? '<button type="button" class="btn btn-sm btn-outline-danger js-agr-remove">' + _t.removeAgreement + '</button>'
+                        : '') +
+                '</div>' +
+                '<div class="form-check form-switch mb-3">' +
+                    '<input class="form-check-input js-agr-enabled" type="checkbox" ' + (a.enabled ? 'checked' : '') + '>' +
+                    '<label class="form-check-label">' + _t.agreementEnabledLabel + '</label>' +
+                '</div>' +
+                '<div class="form-check form-switch mb-2">' +
+                    '<input class="form-check-input js-agr-show-link" type="checkbox" ' + (showLink ? 'checked' : '') + '>' +
+                    '<label class="form-check-label">' + _t.showLinkLabel + '</label>' +
+                '</div>' +
+                '<div class="js-agr-link-wrap" style="' + (showLink ? '' : 'display:none;') + '">' +
+                    '<div class="row">' +
+                        '<div class="col-md-6"><label class="form-label">' + _t.agreementLinkLabelZhLabel + '</label>' +
+                            '<input type="text" class="form-control js-agr-link-zh" value="' + escapeAttr((a.linkLabel && a.linkLabel.zh) || '(協議)') + '"></div>' +
+                        '<div class="col-md-6"><label class="form-label">' + _t.agreementLinkLabelEnLabel + '</label>' +
+                            '<input type="text" class="form-control js-agr-link-en" value="' + escapeAttr((a.linkLabel && a.linkLabel.en) || '(agreement)') + '"></div>' +
+                    '</div>' +
+                    '<small class="text-muted d-block mt-1 mb-2">' + _t.agreementLinkHint + '</small>' +
+                '</div>' +
+                '<div class="row mt-2">' +
+                    '<div class="col-md-6"><label class="form-label">' + _t.checkboxLabelZh + '</label>' +
+                        '<textarea class="form-control js-agr-label-zh" rows="4" placeholder="' + _t.multilinePlaceholder + '">' + escapeAttr((a.label && a.label.zh) || '') + '</textarea></div>' +
+                    '<div class="col-md-6"><label class="form-label">' + _t.checkboxLabelEn + '</label>' +
+                        '<textarea class="form-control js-agr-label-en" rows="4" placeholder="' + _t.multilinePlaceholder + '">' + escapeAttr((a.label && a.label.en) || '') + '</textarea></div>' +
+                '</div>' +
+                '<small class="text-muted d-block mt-1 mb-2">' + _t.agreementCheckboxLabelHint + '</small>' +
+                '<div class="row mt-2">' +
+                    '<div class="col-md-6"><label class="form-label">' + _t.agreementContentZhLabel + '</label>' +
+                        '<textarea class="form-control js-agr-content-zh" rows="6" placeholder="' + _t.multilinePlaceholder + '">' + escapeAttr((a.content && a.content.zh) || '') + '</textarea></div>' +
+                    '<div class="col-md-6"><label class="form-label">' + _t.agreementContentEnLabel + '</label>' +
+                        '<textarea class="form-control js-agr-content-en" rows="6" placeholder="' + _t.multilinePlaceholder + '">' + escapeAttr((a.content && a.content.en) || '') + '</textarea></div>' +
+                '</div>' +
+            '</div>'
+        );
+    }
+
+    function renderAgreementSectionsList(list) {
+        const wrap = document.getElementById('agreementSectionsList');
         if (!wrap) return;
-        const items = (Array.isArray(list) && list.length) ? list : [defaultAgreementItem()];
-        const first = items[0] || defaultAgreementItem();
-        const titleZhEl = document.getElementById('agreementTitleZh');
-        const titleEnEl = document.getElementById('agreementTitleEn');
-        if (titleZhEl && first.title && first.title.zh) titleZhEl.value = first.title.zh;
-        if (titleEnEl && first.title && first.title.en) titleEnEl.value = first.title.en;
-        wrap.innerHTML = items.map(function(item, idx) {
-            const a = item || defaultAgreementItem();
-            const showLink = a.showLinkLabel !== false;
+        const sections = (Array.isArray(list) && list.length) ? list : [defaultAgreementSection()];
+        wrap.innerHTML = sections.map(function(sec, secIdx) {
+            const title = (sec && sec.title) || { zh: '協議', en: 'Agreement' };
+            const items = (sec && Array.isArray(sec.agreements) && sec.agreements.length)
+                ? sec.agreements
+                : [defaultAgreementItem()];
+            const canRemoveSection = sections.length > 1;
             return (
-                '<div class="border rounded p-3 mb-3 js-agreement-item">' +
-                    '<div class="d-flex justify-content-between align-items-center mb-2">' +
-                        '<strong>' + _t.agreementItemHeading + ' ' + (idx + 1) + '</strong>' +
-                        (items.length > 1
-                            ? '<button type="button" class="btn btn-sm btn-outline-danger js-agr-remove">' + _t.removeAgreement + '</button>'
+                '<div class="border rounded p-3 mb-3 js-agreement-section" style="background:#f8f9fa;">' +
+                    '<div class="d-flex justify-content-between align-items-center mb-3">' +
+                        '<strong>' + _t.agreementSectionHeading + ' ' + (secIdx + 1) + '</strong>' +
+                        (canRemoveSection
+                            ? '<button type="button" class="btn btn-sm btn-outline-danger js-agr-sec-remove">' + _t.removeAgreementSection + '</button>'
                             : '') +
                     '</div>' +
-                    '<div class="form-check form-switch mb-3">' +
-                        '<input class="form-check-input js-agr-enabled" type="checkbox" ' + (a.enabled ? 'checked' : '') + '>' +
-                        '<label class="form-check-label">' + _t.agreementEnabledLabel + '</label>' +
+                    '<div class="row mb-3">' +
+                        '<div class="col-md-6"><label class="form-label">' + _t.agreementTitleZhLabel + '</label>' +
+                            '<input type="text" class="form-control js-agr-sec-title-zh" value="' + escapeAttr(title.zh || '協議') + '"></div>' +
+                        '<div class="col-md-6"><label class="form-label">' + _t.agreementTitleEnLabel + '</label>' +
+                            '<input type="text" class="form-control js-agr-sec-title-en" value="' + escapeAttr(title.en || 'Agreement') + '"></div>' +
                     '</div>' +
-                    '<div class="form-check form-switch mb-2">' +
-                        '<input class="form-check-input js-agr-show-link" type="checkbox" ' + (showLink ? 'checked' : '') + '>' +
-                        '<label class="form-check-label">' + _t.showLinkLabel + '</label>' +
+                    '<div class="js-agr-items">' +
+                        items.map(function(item) {
+                            return renderAgreementItemHtml(item || defaultAgreementItem(), items.length > 1);
+                        }).join('') +
                     '</div>' +
-                    '<div class="js-agr-link-wrap" style="' + (showLink ? '' : 'display:none;') + '">' +
-                        '<div class="row">' +
-                            '<div class="col-md-6"><label class="form-label">' + _t.agreementLinkLabelZhLabel + '</label>' +
-                                '<input type="text" class="form-control js-agr-link-zh" value="' + escapeAttr((a.linkLabel && a.linkLabel.zh) || '(協議)') + '"></div>' +
-                            '<div class="col-md-6"><label class="form-label">' + _t.agreementLinkLabelEnLabel + '</label>' +
-                                '<input type="text" class="form-control js-agr-link-en" value="' + escapeAttr((a.linkLabel && a.linkLabel.en) || '(agreement)') + '"></div>' +
-                        '</div>' +
-                        '<small class="text-muted d-block mt-1 mb-2">' + _t.agreementLinkHint + '</small>' +
-                    '</div>' +
-                    '<div class="row mt-2">' +
-                        '<div class="col-md-6"><label class="form-label">' + _t.checkboxLabelZh + '</label>' +
-                            '<textarea class="form-control js-agr-label-zh" rows="4" placeholder="' + _t.multilinePlaceholder + '">' + escapeAttr((a.label && a.label.zh) || '') + '</textarea></div>' +
-                        '<div class="col-md-6"><label class="form-label">' + _t.checkboxLabelEn + '</label>' +
-                            '<textarea class="form-control js-agr-label-en" rows="4" placeholder="' + _t.multilinePlaceholder + '">' + escapeAttr((a.label && a.label.en) || '') + '</textarea></div>' +
-                    '</div>' +
-                    '<small class="text-muted d-block mt-1 mb-2">' + _t.agreementCheckboxLabelHint + '</small>' +
-                    '<div class="row mt-2">' +
-                        '<div class="col-md-6"><label class="form-label">' + _t.agreementContentZhLabel + '</label>' +
-                            '<textarea class="form-control js-agr-content-zh" rows="6" placeholder="' + _t.multilinePlaceholder + '">' + escapeAttr((a.content && a.content.zh) || '') + '</textarea></div>' +
-                        '<div class="col-md-6"><label class="form-label">' + _t.agreementContentEnLabel + '</label>' +
-                            '<textarea class="form-control js-agr-content-en" rows="6" placeholder="' + _t.multilinePlaceholder + '">' + escapeAttr((a.content && a.content.en) || '') + '</textarea></div>' +
-                    '</div>' +
+                    '<button type="button" class="btn btn-sm btn-outline-secondary js-agr-add-item">' +
+                        '<i class="fa fa-plus"></i> ' + _t.addAgreement +
+                    '</button>' +
                 '</div>'
             );
         }).join('');
+    }
+
+    // backward-compatible alias
+    function renderAgreementsList(list) {
+        if (Array.isArray(list) && list.length && list[0] && Array.isArray(list[0].agreements)) {
+            renderAgreementSectionsList(list);
+            return;
+        }
+        if (Array.isArray(formConfig.agreementSections) && formConfig.agreementSections.length) {
+            renderAgreementSectionsList(formConfig.agreementSections);
+            return;
+        }
+        const first = (Array.isArray(list) && list[0]) ? list[0] : defaultAgreementItem();
+        renderAgreementSectionsList([{
+            title: (first.title && (first.title.zh || first.title.en)) ? first.title : { zh: '協議', en: 'Agreement' },
+            agreements: Array.isArray(list) && list.length ? list : [defaultAgreementItem()]
+        }]);
     }
 
     function collectMetaConfigFromForm() {
@@ -1871,6 +1947,7 @@
                 content: { zh: '', en: '' }
             },
             agreements: collectAgreementsFromDom(),
+            agreementSections: collectAgreementSectionsFromDom(),
             thankYou: {
                 title: {
                     zh: trimVal('thankYouTitleZh', ''),
@@ -1978,6 +2055,7 @@
             terms: meta.terms,
             agreement: meta.agreement,
             agreements: meta.agreements,
+            agreementSections: meta.agreementSections,
             thankYou: meta.thankYou,
             applicationCompletedPage: meta.applicationCompletedPage,
             paymentTicketUi: meta.paymentTicketUi,
@@ -2040,6 +2118,7 @@
                     terms: meta.terms,
                     agreement: meta.agreement,
                     agreements: meta.agreements,
+                    agreementSections: meta.agreementSections,
                     thankYou: meta.thankYou,
                     applicationCompletedPage: meta.applicationCompletedPage,
                     paymentTicketUi: meta.paymentTicketUi
@@ -2186,10 +2265,23 @@
                         label: { zh: '', en: '' },
                         content: { zh: '', en: '' }
                     };
-                    if (Array.isArray(importedData.agreements) && importedData.agreements.length) {
+                    if (Array.isArray(importedData.agreementSections) && importedData.agreementSections.length) {
+                        formConfig.agreementSections = importedData.agreementSections;
+                        formConfig.agreements = flattenAgreementSections(importedData.agreementSections);
+                        formConfig.agreement = formConfig.agreements[0] || formConfig.agreement;
+                    } else if (Array.isArray(importedData.agreements) && importedData.agreements.length) {
                         formConfig.agreements = importedData.agreements;
+                        const first = importedData.agreements[0] || {};
+                        formConfig.agreementSections = [{
+                            title: (first.title && (first.title.zh || first.title.en)) ? first.title : { zh: '協議', en: 'Agreement' },
+                            agreements: importedData.agreements
+                        }];
                     } else {
                         formConfig.agreements = [JSON.parse(JSON.stringify(formConfig.agreement))];
+                        formConfig.agreementSections = [{
+                            title: (formConfig.agreement && formConfig.agreement.title) || { zh: '協議', en: 'Agreement' },
+                            agreements: formConfig.agreements
+                        }];
                     }
                     formConfig.thankYou = importedData.thankYou || formConfig.thankYou || {
                         title: { zh: '感謝你參加！', en: 'Thank you for participating!' },
@@ -2326,8 +2418,12 @@
         setInputValue('termsContentZh', (t.content && t.content.zh) || '');
         setInputValue('termsContentEn', (t.content && t.content.en) || '');
 
-        const a = data.agreements && data.agreements.length ? data.agreements : (data.agreement ? [data.agreement] : [defaultAgreementItem()]);
-        renderAgreementsList(a);
+        if (Array.isArray(data.agreementSections) && data.agreementSections.length) {
+            renderAgreementSectionsList(data.agreementSections);
+        } else {
+            const a = data.agreements && data.agreements.length ? data.agreements : (data.agreement ? [data.agreement] : [defaultAgreementItem()]);
+            renderAgreementsList(a);
+        }
 
         const ty = data.thankYou || {};
         setInputValue('thankYouTitleZh', (ty.title && ty.title.zh) || '');
@@ -2440,25 +2536,67 @@
         } catch (_) {}
     })();
 
-    // 初始化 Agreement UI
-    renderAgreementsList(formConfig.agreements);
-    document.getElementById('addAgreementBtn')?.addEventListener('click', function() {
-        const list = collectAgreementsFromDom();
-        list.push(defaultAgreementItem());
-        renderAgreementsList(list);
+    // 初始化 Agreement UI（title sections）
+    renderAgreementSectionsList(
+        (Array.isArray(formConfig.agreementSections) && formConfig.agreementSections.length)
+            ? formConfig.agreementSections
+            : null
+    );
+    document.getElementById('addAgreementSectionBtn')?.addEventListener('click', function() {
+        const sections = collectAgreementSectionsFromDom();
+        sections.push(defaultAgreementSection());
+        renderAgreementSectionsList(sections);
     });
-    document.getElementById('agreementsList')?.addEventListener('click', function(e) {
-        const btn = e.target.closest('.js-agr-remove');
-        if (!btn) return;
-        const list = collectAgreementsFromDom();
-        const row = btn.closest('.js-agreement-item');
-        const idx = Array.prototype.indexOf.call(document.querySelectorAll('#agreementsList .js-agreement-item'), row);
-        if (idx >= 0 && list.length > 1) {
-            list.splice(idx, 1);
-            renderAgreementsList(list);
+    document.getElementById('agreementSectionsList')?.addEventListener('click', function(e) {
+        const addItemBtn = e.target.closest('.js-agr-add-item');
+        if (addItemBtn) {
+            const sections = collectAgreementSectionsFromDom();
+            const secEl = addItemBtn.closest('.js-agreement-section');
+            const secIdx = Array.prototype.indexOf.call(
+                document.querySelectorAll('#agreementSectionsList .js-agreement-section'),
+                secEl
+            );
+            if (secIdx >= 0 && sections[secIdx]) {
+                sections[secIdx].agreements.push(defaultAgreementItem());
+                renderAgreementSectionsList(sections);
+            }
+            return;
+        }
+        const removeItemBtn = e.target.closest('.js-agr-remove');
+        if (removeItemBtn) {
+            const sections = collectAgreementSectionsFromDom();
+            const secEl = removeItemBtn.closest('.js-agreement-section');
+            const itemEl = removeItemBtn.closest('.js-agreement-item');
+            const secIdx = Array.prototype.indexOf.call(
+                document.querySelectorAll('#agreementSectionsList .js-agreement-section'),
+                secEl
+            );
+            if (secIdx < 0 || !sections[secIdx]) return;
+            const itemIdx = Array.prototype.indexOf.call(
+                secEl.querySelectorAll('.js-agreement-item'),
+                itemEl
+            );
+            if (itemIdx >= 0 && sections[secIdx].agreements.length > 1) {
+                sections[secIdx].agreements.splice(itemIdx, 1);
+                renderAgreementSectionsList(sections);
+            }
+            return;
+        }
+        const removeSecBtn = e.target.closest('.js-agr-sec-remove');
+        if (removeSecBtn) {
+            const sections = collectAgreementSectionsFromDom();
+            const secEl = removeSecBtn.closest('.js-agreement-section');
+            const secIdx = Array.prototype.indexOf.call(
+                document.querySelectorAll('#agreementSectionsList .js-agreement-section'),
+                secEl
+            );
+            if (secIdx >= 0 && sections.length > 1) {
+                sections.splice(secIdx, 1);
+                renderAgreementSectionsList(sections);
+            }
         }
     });
-    document.getElementById('agreementsList')?.addEventListener('change', function(e) {
+    document.getElementById('agreementSectionsList')?.addEventListener('change', function(e) {
         if (!e.target.classList.contains('js-agr-show-link')) return;
         const wrap = e.target.closest('.js-agreement-item')?.querySelector('.js-agr-link-wrap');
         if (wrap) wrap.style.display = e.target.checked ? '' : 'none';

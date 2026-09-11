@@ -198,6 +198,36 @@ const formConfigSchema = new mongoose.Schema({
             en: { type: String, default: '' }
         }
     }],
+    /**
+     * Agreement title sections：每個 title 可包住一個或多個 agreements。
+     * 舊資料只有 flat agreements 時，migrate 會變成單一 section。
+     */
+    agreementSections: [{
+        title: {
+            zh: { type: String, default: '協議' },
+            en: { type: String, default: 'Agreement' }
+        },
+        agreements: [{
+            enabled: { type: Boolean, default: false },
+            title: {
+                zh: { type: String, default: '協議' },
+                en: { type: String, default: 'Agreement' }
+            },
+            linkLabel: {
+                zh: { type: String, default: '(協議)' },
+                en: { type: String, default: '(agreement)' }
+            },
+            showLinkLabel: { type: Boolean, default: true },
+            label: {
+                zh: { type: String, default: '本人已閱讀並同意上述協議內容。' },
+                en: { type: String, default: 'I have read and agree to the agreement above.' }
+            },
+            content: {
+                zh: { type: String, default: '' },
+                en: { type: String, default: '' }
+            }
+        }]
+    }],
     // 報名成功頁 Thank You 文案
     thankYou: {
         title: {
