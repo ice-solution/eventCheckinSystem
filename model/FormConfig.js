@@ -104,6 +104,11 @@ const formConfigSchema = new mongoose.Schema({
         trim: true,
         lowercase: true
     },
+    // 關閉註冊時顯示的標題（例如：報名已關閉 / Registration is closed）
+    registerClosedTitle: {
+        type: String,
+        default: ''
+    },
     // 關閉註冊時顯示的訊息（支援多行）
     registerClosedMessage: {
         type: String,

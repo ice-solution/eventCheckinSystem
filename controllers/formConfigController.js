@@ -355,6 +355,7 @@ exports.getDefaultFormConfig = () => ({
     defaultLanguage: 'zh',
     languageSwitcherEnabled: true,
     registerPageEnabled: true,
+    registerClosedTitle: '',
     registerClosedMessage: '',
     eventDisplayName: { zh: '', en: '' },
     registerSubHeader: { zh: '', en: '' },
@@ -665,7 +666,7 @@ exports.getFormConfig = async (req, res) => {
 exports.updateFormConfig = async (req, res) => {
     try {
         const { eventId } = req.params;
-        const { sections, defaultLanguage, languageSwitcherEnabled, registerPageEnabled, registerClosedMessage, registerSlug, terms, agreement, agreements, thankYou, applicationCompletedPage, eventDisplayName, registerSubHeader, registerSubtitle, paymentTicketUi, customFormEnabled, customFormHtml } = req.body;
+        const { sections, defaultLanguage, languageSwitcherEnabled, registerPageEnabled, registerClosedTitle, registerClosedMessage, registerSlug, terms, agreement, agreements, thankYou, applicationCompletedPage, eventDisplayName, registerSubHeader, registerSubtitle, paymentTicketUi, customFormEnabled, customFormHtml } = req.body;
         
         // 驗證事件是否存在
         const event = await Event.findById(eventId);
@@ -690,6 +691,9 @@ exports.updateFormConfig = async (req, res) => {
             }
             if (typeof registerPageEnabled === 'boolean') {
                 formConfig.registerPageEnabled = registerPageEnabled;
+            }
+            if (typeof registerClosedTitle === 'string') {
+                formConfig.registerClosedTitle = registerClosedTitle;
             }
             if (typeof registerClosedMessage === 'string') {
                 formConfig.registerClosedMessage = registerClosedMessage;
@@ -753,6 +757,7 @@ exports.updateFormConfig = async (req, res) => {
                 defaultLanguage: defaultLanguage || defaultConfig.defaultLanguage,
                 languageSwitcherEnabled: typeof languageSwitcherEnabled === 'boolean' ? languageSwitcherEnabled : defaultConfig.languageSwitcherEnabled,
                 registerPageEnabled: typeof registerPageEnabled === 'boolean' ? registerPageEnabled : defaultConfig.registerPageEnabled,
+                registerClosedTitle: typeof registerClosedTitle === 'string' ? registerClosedTitle : (defaultConfig.registerClosedTitle || ''),
                 registerClosedMessage: typeof registerClosedMessage === 'string' ? registerClosedMessage : (defaultConfig.registerClosedMessage || ''),
                 eventDisplayName: eventDisplayName && typeof eventDisplayName === 'object'
                     ? migrateFormConfig({ sections: (sections || defaultConfig.sections), eventDisplayName }).eventDisplayName

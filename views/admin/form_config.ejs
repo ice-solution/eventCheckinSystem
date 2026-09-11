@@ -97,6 +97,13 @@
                                         </label>
                                     </div>
                                     <div class="mb-2">
+                                        <label class="form-label"><%= t('form_config.closedTitleLabel') %></label>
+                                        <input type="text" class="form-control" id="registerClosedTitle"
+                                               value="<%= (formConfig.registerClosedTitle || '') %>"
+                                               placeholder="<%= t('form_config.closedTitlePlaceholder') %>">
+                                        <small class="text-muted"><%= t('form_config.closedTitleHint') %></small>
+                                    </div>
+                                    <div class="mb-2">
                                         <label class="form-label"><%= t('form_config.closedMessageLabel') %></label>
                                         <textarea class="form-control" id="registerClosedMessage" rows="4"
                                                   placeholder="<%= t('form_config.closedMessagePlaceholder') %>"><%= (formConfig.registerClosedMessage || '') %></textarea>
@@ -1810,6 +1817,7 @@
         return {
             languageSwitcherEnabled: checked('languageSwitcherEnabled', true),
             registerPageEnabled: checked('registerPageEnabled', true),
+            registerClosedTitle: val('registerClosedTitle', ''),
             registerClosedMessage: val('registerClosedMessage', ''),
             registerSlug: trimVal('registerSlug', '').toLowerCase().replace(/\s+/g, '-'),
             customFormEnabled: checked('customFormEnabled', false),
@@ -1950,6 +1958,7 @@
             defaultLanguage: formConfig.defaultLanguage || 'zh',
             languageSwitcherEnabled: meta.languageSwitcherEnabled,
             registerPageEnabled: meta.registerPageEnabled,
+            registerClosedTitle: meta.registerClosedTitle,
             registerClosedMessage: meta.registerClosedMessage,
             registerSlug: meta.registerSlug,
             customFormEnabled: meta.customFormEnabled,
@@ -2010,6 +2019,7 @@
                     defaultLanguage: formConfig.defaultLanguage,
                     languageSwitcherEnabled: meta.languageSwitcherEnabled,
                     registerPageEnabled: meta.registerPageEnabled,
+                    registerClosedTitle: meta.registerClosedTitle,
                     registerClosedMessage: meta.registerClosedMessage,
                     registerSlug: meta.registerSlug,
                     customFormEnabled: meta.customFormEnabled,
@@ -2131,6 +2141,9 @@
                     }
                     if (typeof importedData.registerPageEnabled === 'boolean') {
                         formConfig.registerPageEnabled = importedData.registerPageEnabled;
+                    }
+                    if (typeof importedData.registerClosedTitle === 'string') {
+                        formConfig.registerClosedTitle = importedData.registerClosedTitle;
                     }
                     if (typeof importedData.registerClosedMessage === 'string') {
                         formConfig.registerClosedMessage = importedData.registerClosedMessage;
@@ -2271,6 +2284,7 @@
         if (!data) return;
         if (typeof data.languageSwitcherEnabled === 'boolean') setInputValue('languageSwitcherEnabled', data.languageSwitcherEnabled);
         if (typeof data.registerPageEnabled === 'boolean') setInputValue('registerPageEnabled', data.registerPageEnabled);
+        if (typeof data.registerClosedTitle === 'string') setInputValue('registerClosedTitle', data.registerClosedTitle);
         if (typeof data.registerClosedMessage === 'string') setInputValue('registerClosedMessage', data.registerClosedMessage);
         if (typeof data.registerSlug === 'string') setInputValue('registerSlug', data.registerSlug);
         updateRegisterSlugPreview();
