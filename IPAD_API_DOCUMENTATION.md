@@ -288,6 +288,7 @@ curl -X PUT "http://localhost:3377/api/ipad/events/$EVENT_ID/users/$USER_ID" \
 - 回傳指定 `eventId` 的 badge 設計配置
 - 包含所有已添加的 elements（文字、QR Code、圖片等）
 - 如果該 event 尚未有設定，系統會自動建立一份預設 config（空的 elements 陣列）並回傳
+- **不會回傳** `testImageUrl`（後台預覽圖）；列印請用下方 `GET .../users/:userId/badge` 依用戶即時生成
 
 ### 權限規則
 
@@ -487,8 +488,9 @@ curl -X PUT "http://localhost:3377/api/ipad/events/$EVENT_ID/badge-config" \
 
 ### 功能說明
 
-根據該 event 的 **badge 設計配置**，使用用戶的實際資料生成 badge 圖片。
+根據該 event 的 **badge 設計配置**，使用**該 `userId` 的實際資料**即時生成 badge 圖片（與後台共用同一套產生邏輯／字型）。
 
+- **不要**使用 badge-config 的 `testImageUrl` 來列印（該欄位只供後台預覽）
 - 會自動替換 badge 配置中的變量（如 `{{user.name}}`、`{{user.email}}` 等）
 - 生成 QR Code（如果 badge 配置中有 QR Code 元素）
 - 返回生成的 badge 圖片 URL

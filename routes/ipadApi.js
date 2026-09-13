@@ -10,8 +10,18 @@ const permission = require('../middleware/permission');
 const formConfigController = require('../controllers/formConfigController');
 const eventsController = require('../controllers/eventsController');
 const stationCheckinController = require('../controllers/stationCheckinController');
+const badgeController = require('../controllers/badgeController');
 
 const router = express.Router();
+
+/** iPad 不應拿到後台預覽用的 testImageUrl，避免誤印同一張 test image */
+function serializeBadgeConfigForIpad(badgeConfig) {
+  const obj = badgeConfig && badgeConfig.toObject
+    ? badgeConfig.toObject({ minimize: false })
+    : { ...(badgeConfig || {}) };
+  delete obj.testImageUrl;
+  return obj;
+}
 
 // 1) iPad API 登入：回傳 JWT（供後續 API 使用）
 router.post('/login', async (req, res) => {
@@ -292,7 +302,7 @@ router.get('/events/:eventId/badge-config', authenticateJwt, async (req, res) =>
       await badgeConfig.save();
     }
 
-    return res.json(badgeConfig);
+    return res.json(serializeBadgeConfigForIpad(badgeConfig));
   } catch (err) {
     console.error('iPad API get badge config error:', err);
     return res.status(500).json({ message: 'Server error' });
@@ -335,7 +345,7 @@ router.delete('/events/:eventId/badge-config/elements/:elementId', authenticateJ
 
     return res.json({
       message: 'Element deleted successfully',
-      badgeConfig
+      badgeConfig: serializeBadgeConfigForIpad(badgeConfig)
     });
   } catch (err) {
     console.error('iPad API delete badge element error:', err);
@@ -376,7 +386,7 @@ router.put('/events/:eventId/badge-config', authenticateJwt, async (req, res) =>
 
     return res.json({
       message: 'Badge config updated successfully',
-      badgeConfig
+      badgeConfig: serializeBadgeConfigForIpad(badgeConfig)
     });
   } catch (err) {
     console.error('iPad API update badge config error:', err);
@@ -384,13 +394,12 @@ router.put('/events/:eventId/badge-config', authenticateJwt, async (req, res) =>
   }
 });
 
-// 5d) 生成用戶的 Badge 圖片（根據 badge 配置排版）
+// 5d) 生成用戶的 Badge 圖片（根據 badge 配置 + 該用戶真實資料；唔用 testImageUrl）
 router.get('/events/:eventId/users/:userId/badge', authenticateJwt, async (req, res) => {
   const { eventId, userId } = req.params;
 
   try {
-    // 檢查權限：確認 event 存在且用戶有權限
-    const event = await Event.findById(eventId);
+    const event = await Event.findById(eventId).select({ owner: 1 });
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
@@ -399,259 +408,17 @@ router.get('/events/:eventId/users/:userId/badge', authenticateJwt, async (req, 
       return;
     }
 
-    // 查找用戶
-    const user = event.users.id(userId);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // 檢查 badge 配置是否存在
-    const badgeConfig = await BadgeConfig.findOne({ eventId });
-    if (!badgeConfig) {
-      return res.status(404).json({ message: 'Badge config not found. Please configure badge design first.' });
-    }
-
-    // 準備用戶數據（和 badgeController 一樣的格式）
-    const userData = {
-      user: user.toObject ? user.toObject() : user,
-      qrcodeUrl: `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=200x200`
-    };
-
-    // 直接調用 badgeController 的內部生成函數
-    // 需要訪問內部函數，所以我們直接實現相同的邏輯
-    const QRCode = require('qrcode');
-    let createCanvas, loadImage;
-    try {
-      const canvasLib = require('canvas');
-      createCanvas = canvasLib.createCanvas;
-      loadImage = canvasLib.loadImage;
-    } catch (error) {
-      return res.status(500).json({ message: 'Canvas package not installed. Please install canvas: npm install canvas' });
-    }
-
-    // 生成 badge 圖片（使用 badgeController 的邏輯）
-    const dimensions = badgeConfig.getPixelDimensions();
-    const badgeCanvas = createCanvas(dimensions.width, dimensions.height);
-    const ctx = badgeCanvas.getContext('2d');
-
-    // 設置白色背景
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, dimensions.width, dimensions.height);
-
-    // 繪製每個元素
-    for (const element of badgeConfig.elements) {
-      await drawBadgeElement(ctx, element, userData, dimensions);
-    }
-
-    // 保存圖片
-    const path = require('path');
-    const fs = require('fs');
-    const filename = `badge_${eventId}_${userId}_${Date.now()}.png`;
-    const filepath = path.join(__dirname, '../public/badges', filename);
-
-    // 確保目錄存在
-    const dir = path.dirname(filepath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-
-    // 保存文件
-    const buffer = badgeCanvas.toBuffer('image/png');
-    fs.writeFileSync(filepath, buffer);
-
-    // 返回 URL
-    const imageUrl = `/badges/${filename}`;
+    const { imageUrl } = await badgeController.generateUserBadgeImage(eventId, userId);
     return res.json({ imageUrl });
   } catch (err) {
     console.error('iPad API generate badge image error:', err);
-    return res.status(500).json({ message: 'Server error', error: err.message });
+    const status = err.status || 500;
+    return res.status(status).json({
+      message: status === 500 ? 'Server error' : err.message,
+      error: status === 500 ? err.message : undefined
+    });
   }
 });
-
-// 輔助函數：繪製 badge 元素（從 badgeController 複製邏輯）
-async function drawBadgeElement(ctx, element, data, dimensions) {
-  switch (element.type) {
-    case 'text':
-      await drawBadgeText(ctx, element, data, dimensions);
-      break;
-    case 'qrcode':
-      await drawBadgeQRCode(ctx, element, data);
-      break;
-    case 'image':
-      await drawBadgeImage(ctx, element, data);
-      break;
-  }
-}
-
-// 文字換行函數
-function wrapBadgeText(ctx, text, maxWidth) {
-  const words = text.split(' ');
-  const lines = [];
-  let currentLine = words[0] || '';
-
-  for (let i = 1; i < words.length; i++) {
-    const word = words[i];
-    const width = ctx.measureText(currentLine + ' ' + word).width;
-    if (width < maxWidth) {
-      currentLine += ' ' + word;
-    } else {
-      lines.push(currentLine);
-      currentLine = word;
-    }
-  }
-  lines.push(currentLine);
-  return lines;
-}
-
-// 繪製文本
-async function drawBadgeText(ctx, element, data, dimensions) {
-  let content = element.content || '';
-  content = replaceBadgeVariables(content, data);
-  if (content.trim() === '') return;
-
-  // 計算實際 font-size（根據 size 百分比）
-  const baseFontSize = element.fontSize || 16;
-  const sizePercent = element.size || 100;
-  const actualFontSize = Math.round(baseFontSize * (sizePercent / 100));
-
-  ctx.font = `${element.fontWeight || 'normal'} ${actualFontSize}px ${element.fontFamily || 'Arial'}`;
-  ctx.fillStyle = element.color || '#000000';
-  
-  // 處理 fullWidth：如果 fullWidth，則元素寬度為整個 canvas 寬度，x 為 0
-  let elementX = element.x;
-  let elementWidth = element.width || 300;
-  
-  if (element.fullWidth) {
-    elementX = 0;
-    elementWidth = dimensions.width;
-  }
-  
-  // 設定文字對齊方式
-  // fullWidth 時強制置中，否則使用設定的 textAlign（預設 center）
-  const textAlign = element.fullWidth ? 'center' : (element.textAlign || 'center');
-  ctx.textAlign = textAlign;
-  ctx.textBaseline = 'top';
-
-  // 計算文字繪製的 x 座標
-  let x = elementX;
-  if (textAlign === 'center') {
-    x = elementX + elementWidth / 2;
-  } else if (textAlign === 'right') {
-    x = elementX + elementWidth;
-  } else {
-    x = elementX;
-  }
-
-  // 處理文字換行
-  const maxWidth = elementWidth - 10; // 留一點邊距
-  const lines = wrapBadgeText(ctx, content, maxWidth);
-  
-  // 繪製多行文字
-  const lineHeight = actualFontSize * 1.2; // 行高
-  lines.forEach((line, index) => {
-    ctx.fillText(line, x, element.y + index * lineHeight);
-  });
-}
-
-// 繪製 QR Code
-async function drawBadgeQRCode(ctx, element, data) {
-  try {
-    const QRCode = require('qrcode');
-    let loadImage;
-    try {
-      const canvasLib = require('canvas');
-      loadImage = canvasLib.loadImage;
-    } catch (error) {
-      throw new Error('Canvas package not installed');
-    }
-
-    let qrData = element.qrData || '{{qrcodeUrl}}';
-    qrData = replaceBadgeVariables(qrData, data);
-    if (qrData.trim() === '') return;
-
-    let image;
-    if (qrData.startsWith('http')) {
-      image = await loadImage(qrData);
-    } else {
-      const qrDataUrl = await QRCode.toDataURL(qrData, {
-        width: element.width || 200,
-        margin: 1
-      });
-      image = await loadImage(qrDataUrl);
-    }
-
-    ctx.drawImage(
-      image,
-      element.x,
-      element.y,
-      element.width || image.width,
-      element.height || image.height
-    );
-  } catch (error) {
-    console.error('Error drawing QR code:', error);
-  }
-}
-
-// 繪製圖片
-async function drawBadgeImage(ctx, element, data) {
-  try {
-    let loadImage;
-    try {
-      const canvasLib = require('canvas');
-      loadImage = canvasLib.loadImage;
-    } catch (error) {
-      throw new Error('Canvas package not installed');
-    }
-
-    let imageUrl = element.imageUrl || '';
-    imageUrl = replaceBadgeVariables(imageUrl, data);
-    if (!imageUrl || imageUrl.trim() === '') return;
-
-    if (imageUrl) {
-      const image = await loadImage(imageUrl);
-      ctx.drawImage(
-        image,
-        element.x,
-        element.y,
-        element.width || image.width,
-        element.height || image.height
-      );
-    }
-  } catch (error) {
-    console.error('Error drawing image:', error);
-  }
-}
-
-// 若值為 '-' 則視為不顯示，回傳空字串（與 badgeController 一致，含 formConfig fields）
-function emptyIfDash(value) {
-  if (value == null || value === '') return '';
-  const s = String(value).trim();
-  return s === '-' ? '' : s;
-}
-
-// 替換變量
-function replaceBadgeVariables(text, data) {
-  if (!text) return '';
-
-  // 替換 {{user.fieldName}}（含 formConfig 的 fields）
-  text = text.replace(/\{\{user\.(\w+)\}\}/g, (match, field) => {
-    const value = data.user && data.user[field] != null ? data.user[field] : '';
-    return emptyIfDash(value);
-  });
-
-  // 替換 {{qrcodeUrl}}
-  text = text.replace(/\{\{qrcodeUrl\}\}/g, () => emptyIfDash(data.qrcodeUrl));
-
-  // 替換其他變量
-  Object.keys(data).forEach(key => {
-    if (key !== 'user') {
-      const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
-      text = text.replace(regex, emptyIfDash(data[key]));
-    }
-  });
-
-  return text;
-}
 
 // ── Station Check-in（分站簽到）────────────────────────────────
 // 6a) 取得活動下所有分站
