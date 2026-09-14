@@ -869,7 +869,11 @@
                                                                        <%= fieldEnabled ? 'checked' : '' %>
                                                                        onchange="toggleField(<%= actualSectionIndex %>, <%= actualFieldIndex %>)">
                                                                 <label class="form-check-label">
+                                                                    <% if (field.type === 'display') { %>
+                                                                    <strong><%- safeDisplayHtml(fcLangText(field.label, fcHeaderLang) || field.fieldName || '欄位') %></strong>
+                                                                    <% } else { %>
                                                                     <strong><%= fcLangText(field.label, fcHeaderLang) || field.fieldName || '欄位' %></strong>
+                                                                    <% } %>
                                                                     <% if (field.required) { %>
                                                                         <span class="text-danger">*</span>
                                                                     <% } %>
@@ -978,7 +982,7 @@
                                                         <% } else { %>
                                                         <div class="row mt-2">
                                                             <div class="col-12">
-                                                                <small class="text-muted">Display：僅顯示 Label 文字，不需用戶填寫、不會儲存。</small>
+                                                                <small class="text-muted">Display：僅顯示 Label 文字（支援簡單 HTML，如 &lt;b&gt;粗體&lt;/b&gt;），不需用戶填寫、不會儲存。</small>
                                                             </div>
                                                         </div>
                                                         <% } %>
@@ -1627,6 +1631,16 @@
         if (obj && obj.zh) return obj.zh; // 回退到中文
         return '';
     }
+
+    function sanitizeDisplayHtml(input) {
+        let s = String(input == null ? '' : input);
+        if (!s) return '';
+        s = s.replace(/<\s*(script|style|iframe|object|embed|link|meta|form|input|button|textarea|select|svg|math)(\s[^>]*)?>[\s\S]*?<\s*\/\s*\1\s*>/gi, '');
+        s = s.replace(/<\s*\/?\s*(script|style|iframe|object|embed|link|meta|form|input|button|textarea|select|svg|math)(\s[^>]*)?\/?\s*>/gi, '');
+        s = s.replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+        s = s.replace(/\s(href|src|xlink:href)\s*=\s*(["'])\s*(javascript|data|vbscript):[\s\S]*?\2/gi, ' $1=$2#$2');
+        return s;
+    }
     
     // 更新預覽
     function updatePreview() {
@@ -1642,7 +1656,7 @@
                     if (isFieldDisplayed(field)) {
                         html += '<div class="mb-2">';
                         if (field.type === 'display') {
-                            html += '<div class="form-text" style="white-space:pre-wrap;color:#2c3e50;">' + getMultilingualText(field.label, previewLanguage) + '</div>';
+                            html += '<div class="form-text" style="white-space:pre-wrap;color:#2c3e50;">' + sanitizeDisplayHtml(getMultilingualText(field.label, previewLanguage)) + '</div>';
                         } else {
                         html += '<label class="form-label">' + getMultilingualText(field.label, previewLanguage);
                         if (field.required) html += ' <span class="text-danger">*</span>';

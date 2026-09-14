@@ -647,11 +647,17 @@ var registerPageTitleSuffix = isApplicationMode
                                         <% var _isChoiceField = field.type === 'radio' || field.type === 'checkbox'; %>
                                         <% var _isDisplayField = field.type === 'display'; %>
                                         <% if (_isDisplayField) { %>
+                                        <%
+                                            var _dispZh = field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '');
+                                            var _dispEn = field.label && field.label.en ? field.label.en : '';
+                                            var _dispLang = (typeof formConfig !== 'undefined' && formConfig && formConfig.defaultLanguage === 'en') ? 'en' : 'zh';
+                                            var _dispInitial = (_dispLang === 'en' && _dispEn) ? _dispEn : (_dispZh || _dispEn);
+                                        %>
                                         <div class="form-row form-row-display">
                                             <div class="form-display-text field-display-text"
-                                                 data-zh="<%= field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '') %>"
-                                                 data-en="<%= field.label && field.label.en ? field.label.en : '' %>">
-                                                <%= field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '') %>
+                                                 data-zh="<%= _dispZh %>"
+                                                 data-en="<%= _dispEn %>">
+                                                <%- safeDisplayHtml(_dispInitial) %>
                                             </div>
                                         </div>
                                         <% } else { %>
@@ -1572,6 +1578,17 @@ var registerPageTitleSuffix = isApplicationMode
             return div.innerHTML;
         }
 
+        /** Display 欄位 Label：允許 <b> 等簡單 HTML，過濾危險標籤／事件 */
+        function sanitizeDisplayHtml(input) {
+            let s = String(input == null ? '' : input);
+            if (!s) return '';
+            s = s.replace(/<\s*(script|style|iframe|object|embed|link|meta|form|input|button|textarea|select|svg|math)(\s[^>]*)?>[\s\S]*?<\s*\/\s*\1\s*>/gi, '');
+            s = s.replace(/<\s*\/?\s*(script|style|iframe|object|embed|link|meta|form|input|button|textarea|select|svg|math)(\s[^>]*)?\/?\s*>/gi, '');
+            s = s.replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+            s = s.replace(/\s(href|src|xlink:href)\s*=\s*(["'])\s*(javascript|data|vbscript):[\s\S]*?\2/gi, ' $1=$2#$2');
+            return s;
+        }
+
         /** 純文字中的 http(s) URL 自動變為可點連結 */
         function linkifyPlainUrls(escapedText) {
             return escapedText.replace(/(https?:\/\/[^\s<>"']+)/gi, function(url) {
@@ -1733,15 +1750,15 @@ var registerPageTitleSuffix = isApplicationMode
                 }
             });
 
-            // Display 欄位（純文字）
+            // Display 欄位（允許簡單 HTML，如 <b>）
             $('.field-display-text').each(function() {
                 const $el = $(this);
-                const zhText = $el.data('zh');
-                const enText = $el.data('en');
+                const zhText = $el.attr('data-zh');
+                const enText = $el.attr('data-en');
                 if (currentLanguage === 'zh' && zhText != null && zhText !== '') {
-                    $el.text(zhText);
+                    $el.html(sanitizeDisplayHtml(zhText));
                 } else if (currentLanguage === 'en' && enText != null && enText !== '') {
-                    $el.text(enText);
+                    $el.html(sanitizeDisplayHtml(enText));
                 }
             });
 

@@ -33,6 +33,7 @@ const bcrypt = require('bcrypt');
 const { render } = require('ejs');
 const { initSocket } = require('./socket'); // 引入 socket.js
 const { translate, getDict, resolveLang } = require('./utils/i18n');
+const { safeDisplayHtml } = require('./utils/safeDisplayHtml');
 
 const app = express();
 const PORT = process.env.PORT || 3377;
@@ -102,6 +103,7 @@ app.use((req, res, next) => {
     res.locals.lang = lang;
     res.locals.t = (key) => translate(lang, key);
     res.locals.i18nDict = getDict(lang);
+    res.locals.safeDisplayHtml = safeDisplayHtml;
     next();
 });
 
