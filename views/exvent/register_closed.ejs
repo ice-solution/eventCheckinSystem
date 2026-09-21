@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>報名已關閉 - <%= event ? event.name : 'Event' %></title>
+    <title><%= typeof displayName !== 'undefined' && displayName ? displayName : (event ? event.name : 'Event') %><%= typeof closedTitle !== 'undefined' && closedTitle ? (' - ' + closedTitle) : '' %></title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         body {
@@ -42,13 +42,15 @@
             color: #6c757d;
             font-size: 1rem;
             margin-bottom: 24px;
+            white-space: pre-wrap;
+            word-break: break-word;
         }
         .closed-message {
             background: #f1f3f5;
             border: 1px solid #dee2e6;
             border-radius: 8px;
             padding: 24px;
-            text-align: left;
+            text-align: center;
             white-space: pre-wrap;
             word-break: break-word;
             color: #212529;
@@ -76,9 +78,13 @@
         </div>
 
         <div class="closed-container">
-            <h1 class="closed-title"><%= event ? event.name : 'Event' %></h1>
-            <p class="closed-subtitle">報名已關閉 / Registration is closed</p>
-            <div class="closed-message"><%= typeof message === 'string' ? message : 'Registration is currently closed.' %></div>
+            <h1 class="closed-title"><%= typeof displayName !== 'undefined' && displayName ? displayName : (event ? event.name : 'Event') %></h1>
+            <% if (typeof closedTitle !== 'undefined' && String(closedTitle).trim()) { %>
+            <p class="closed-subtitle"><%= closedTitle %></p>
+            <% } %>
+            <% if (typeof message === 'string' && message.trim()) { %>
+            <div class="closed-message"><%= message %></div>
+            <% } %>
         </div>
     </div>
 </body>

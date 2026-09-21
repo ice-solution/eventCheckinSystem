@@ -210,6 +210,10 @@
       font-weight: 600;
       color: var(--text);
     }
+    .attendee-category-other {
+      display: none;
+      margin-top: 10px;
+    }
 
     .btn-row {
       display: flex;
@@ -397,6 +401,34 @@
   var attendeeSeq = 0;
   var logoFile = null;
 
+  var ATTENDEE_CATEGORY_OPTIONS = [
+    'Same Firm as Primary Contact',
+    'SPAC Sponsor',
+    'Issuer / Potential Target',
+    'Investor',
+    'Vendor / Service Provider'
+  ];
+
+  function buildAttendeeCategorySelectHtml() {
+    var html = '<option value="">Select attendee category...</option>';
+    ATTENDEE_CATEGORY_OPTIONS.forEach(function (label) {
+      html += '<option value="' + label.replace(/"/g, '&quot;') + '">' + label + '</option>';
+    });
+    html += '<option value="Other">Other</option>';
+    return html;
+  }
+
+  function syncAttendeeCategoryOther(selectEl) {
+    if (!selectEl) return;
+    var card = selectEl.closest('.attendee-card');
+    if (!card) return;
+    var otherInput = card.querySelector('[data-f="attendeeCategoryOther"]');
+    if (!otherInput) return;
+    var isOther = selectEl.value === 'Other';
+    otherInput.style.display = isOther ? 'block' : 'none';
+    if (!isOther) otherInput.value = '';
+  }
+
   function syncPhoneCodeOther() {
     var isOther = phoneCodeEl.value === 'other';
     phoneCodeOtherEl.style.display = isOther ? 'block' : 'none';
@@ -454,6 +486,12 @@
         '<div class="field"><label>Last Name</label><input type="text" data-f="lastname"></div>' +
       '</div>' +
       '<div class="field" style="margin-top:10px;"><label>Email</label><input type="email" data-f="email"></div>' +
+      '<div class="field" style="margin-top:10px;"><label>Company Name</label><input type="text" data-f="company"></div>' +
+      '<div class="field" style="margin-top:10px;">' +
+        '<label>Attendee Category</label>' +
+        '<select data-f="attendeeCategory" class="js-attendee-category">' + buildAttendeeCategorySelectHtml() + '</select>' +
+        '<input type="text" data-f="attendeeCategoryOther" class="attendee-category-other" placeholder="Please specify">' +
+      '</div>' +
       '<div class="field" style="margin-top:10px;"><label>Title</label><input type="text" data-f="title"></div>';
     return card;
   }
@@ -510,6 +548,12 @@
     syncAddButton();
   });
 
+  listEl.addEventListener('change', function (e) {
+    if (e.target && e.target.matches('[data-f="attendeeCategory"]')) {
+      syncAttendeeCategoryOther(e.target);
+    }
+  });
+
   logoInput.addEventListener('change', function () {
     logoFile = null;
     logoMeta.className = 'file-meta';
@@ -545,13 +589,20 @@
         var el = card.querySelector('[data-f="' + key + '"]');
         return el ? String(el.value || '').trim() : '';
       };
+      var categorySelect = card.querySelector('[data-f="attendeeCategory"]');
+      var category = categorySelect ? String(categorySelect.value || '').trim() : '';
+      var categoryOther = get('attendeeCategoryOther');
       var row = {
         firstname: get('firstname'),
         lastname: get('lastname'),
         email: get('email'),
+        company: get('company'),
+        attendeeCategory: category,
+        attendeeCategoryOther: category === 'Other' ? categoryOther : '',
         title: get('title')
       };
-      if (!row.firstname && !row.lastname && !row.email && !row.title) return;
+      if (!row.firstname && !row.lastname && !row.email && !row.company &&
+          !row.attendeeCategory && !row.attendeeCategoryOther && !row.title) return;
       out.push(row);
     });
     return out;
@@ -564,8 +615,11 @@
     }
     for (var j = 0; j < list.length; j += 1) {
       var a = list[j];
-      var any = a.firstname || a.lastname || a.email || a.title;
-      var all = a.firstname && a.lastname && a.email && a.title;
+      var any = a.firstname || a.lastname || a.email || a.company || a.attendeeCategory || a.attendeeCategoryOther || a.title;
+      var categoryOk = a.attendeeCategory && (
+        a.attendeeCategory !== 'Other' || (a.attendeeCategoryOther && a.attendeeCategoryOther.trim())
+      );
+      var all = a.firstname && a.lastname && a.email && a.company && a.title && categoryOk;
       if (any && !all) {
         return 'Please complete all fields for each attendee you started, or leave the row empty.';
       }

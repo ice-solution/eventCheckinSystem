@@ -186,8 +186,14 @@ If you cannot read this message, please &lt;a href="{{emailPreviewUrl}}" target=
                     <% } %>
 
                     <div class="card mt-3">
-                        <div class="card-header">
-                            <strong class="card-title"><%= t('create_email_template.sendRecordsTitle') %></strong>
+                        <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
+                            <strong class="card-title mb-0"><%= t('create_email_template.sendRecordsTitle') %></strong>
+                            <% const exportSendRecordsUrl = eventId
+                                ? ('/events/' + eventId + '/emailTemplate/' + template._id + '/send-records/export')
+                                : ('/emailTemplate/' + template._id + '/send-records/export'); %>
+                            <a href="<%= exportSendRecordsUrl %>" class="btn btn-sm btn-outline-primary" download>
+                                <i class="fa fa-download"></i> <%= t('create_email_template.exportSendRecordsBtn') %>
+                            </a>
                         </div>
                         <div class="card-body">
 

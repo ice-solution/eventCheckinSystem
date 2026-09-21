@@ -155,7 +155,18 @@
         importSuccess:           '<%= t("users.importPaymentTicketsSuccess") %>',
         importFailed:            '<%= t("users.importPaymentTicketsFailed") %>',
         promoCodesEmpty:        '<%= t("users.promoCodesEmpty") %>',
-        promoUnlimited:        '<%= t("users.promoUnlimited") %>'
+        promoUnlimited:        '<%= t("users.promoUnlimited") %>',
+        promoUsesTitle:        '<%= t("users.promoUsesTitle") %>',
+        promoUsesEmpty:        '<%= t("users.promoUsesEmpty") %>',
+        promoUsesShow:         '<%= t("users.promoUsesShow") %>',
+        promoUsesHide:         '<%= t("users.promoUsesHide") %>',
+        promoUsesExport:       '<%= t("users.promoUsesExport") %>',
+        promoUsesColEmail:     '<%= t("users.promoUsesColEmail") %>',
+        promoUsesColName:      '<%= t("users.promoUsesColName") %>',
+        promoUsesColTx:        '<%= t("users.promoUsesColTx") %>',
+        promoUsesColPaid:      '<%= t("users.promoUsesColPaid") %>',
+        promoUsesColDiscount:  '<%= t("users.promoUsesColDiscount") %>',
+        promoUsesColAt:        '<%= t("users.promoUsesColAt") %>'
     };
 
     const eventId      = '<%= event._id %>';
@@ -244,6 +255,78 @@
         });
     }
 
+    function escapeHtml(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function formatPromoUsedAt(value) {
+        if (!value) return '';
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return '';
+        try {
+            return d.toLocaleString('zh-HK', {
+                timeZone: 'Asia/Hong_Kong',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+        } catch (_) {
+            return d.toISOString();
+        }
+    }
+
+    function renderPromoUsesTable(usedList) {
+        if (!usedList.length) {
+            return `<div class="text-muted small mt-2">${_PS.promoUsesEmpty}</div>`;
+        }
+        let rows = '';
+        usedList.forEach((u, i) => {
+            const email = (u && u.userEmail) ? String(u.userEmail) : '';
+            const name = (u && u.userName) ? String(u.userName) : '';
+            const txId = (u && u.transactionId) ? String(u.transactionId) : '';
+            const discount = Number(u && u.discountAmount != null ? u.discountAmount : 0) || 0;
+            const paid = Number(u && u.paidTicketPrice != null ? u.paidTicketPrice : 0) || 0;
+            const usedAt = formatPromoUsedAt(u && u.usedAt);
+            rows += `
+                <tr>
+                    <td class="small">${i + 1}</td>
+                    <td class="small">${escapeHtml(email)}</td>
+                    <td class="small">${escapeHtml(name)}</td>
+                    <td class="small text-monospace">${escapeHtml(txId)}</td>
+                    <td class="small">${displayCurrency} ${discount}</td>
+                    <td class="small">${displayCurrency} ${paid}</td>
+                    <td class="small">${escapeHtml(usedAt)}</td>
+                </tr>
+            `;
+        });
+        return `
+            <div class="table-responsive mt-2">
+                <table class="table table-sm table-bordered mb-0">
+                    <thead class="thead-light">
+                        <tr>
+                            <th class="small">#</th>
+                            <th class="small">${_PS.promoUsesColEmail}</th>
+                            <th class="small">${_PS.promoUsesColName}</th>
+                            <th class="small">${_PS.promoUsesColTx}</th>
+                            <th class="small">${_PS.promoUsesColDiscount}</th>
+                            <th class="small">${_PS.promoUsesColPaid}</th>
+                            <th class="small">${_PS.promoUsesColAt}</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+    }
+
     function renderPromoCodes() {
         const $wrap = $('#promoCodesList');
         if (!$wrap.length) return;
@@ -259,27 +342,32 @@
             const code = pc.code ? String(pc.code) : '';
             const discountValue = Number(pc.discountValue ?? pc.discountAmount ?? 0) || 0;
             const maxUses = Number(pc.maxUses ?? 0) || 0;
-            const usedCount = Number(pc.usedCount ?? 0) || 0;
+            const usedList = Array.isArray(pc.uses) ? pc.uses : [];
+            // 以 uses 長度為準，避免 usedCount 同 uses 不一致
+            const usedCount = usedList.length || Number(pc.usedCount ?? 0) || 0;
             const enabled = pc.enabled !== false;
 
             const maxUsesText = maxUses ? String(maxUses) : _PS.promoUnlimited;
-            const usedList = Array.isArray(pc.uses) ? pc.uses : [];
-            const recentUses = usedList.slice(-3).map(u => u && u.userEmail ? u.userEmail : '').filter(Boolean);
-            const recentUsesText = recentUses.length ? recentUses.join(', ') : '';
+            const exportUrl = `/events/${eventId}/payment-settings/promo-uses/export?code=${encodeURIComponent(code)}`;
 
             html += `
                 <div class="promo-code-item mb-3 p-3 border rounded" data-idx="${idx}">
                     <div class="d-flex flex-wrap align-items-center" style="gap:10px;">
                         <div style="min-width:140px;">
-                            <div class="font-weight-bold">${code}</div>
+                            <div class="font-weight-bold">${escapeHtml(code)}</div>
                             <div class="text-muted small">-${discountValue} ${displayCurrency}</div>
                         </div>
                         <div class="text-muted small">max: ${maxUsesText}</div>
                         <div class="text-muted small">used: ${usedCount}</div>
                         <div class="text-muted small">${enabled ? 'enabled' : 'disabled'}</div>
+                        <button type="button" class="btn btn-outline-secondary btn-sm toggle-promo-uses">${_PS.promoUsesShow}</button>
+                        <a class="btn btn-outline-primary btn-sm" href="${exportUrl}" download>${_PS.promoUsesExport}</a>
                         <button type="button" class="btn btn-danger btn-sm remove-promo-code">Delete</button>
                     </div>
-                    ${recentUsesText ? `<div class="text-muted small mt-2">Recent uses: ${recentUsesText}</div>` : ''}
+                    <div class="promo-uses-panel mt-2" style="display:none;">
+                        <div class="font-weight-bold small mb-1">${_PS.promoUsesTitle} (${usedCount})</div>
+                        ${renderPromoUsesTable(usedList)}
+                    </div>
                 </div>
             `;
         });
@@ -425,6 +513,14 @@
 
         $('#promoCodeInput').val('');
         renderPromoCodes();
+    });
+
+    $(document).on('click', '.toggle-promo-uses', function() {
+        const $item = $(this).closest('.promo-code-item');
+        const $panel = $item.find('.promo-uses-panel');
+        const willShow = !$panel.is(':visible');
+        $panel.toggle(willShow);
+        $(this).text(willShow ? _PS.promoUsesHide : _PS.promoUsesShow);
     });
 
     $(document).on('click', '.remove-promo-code', function() {

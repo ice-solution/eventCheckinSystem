@@ -75,18 +75,6 @@
         .transaction-item:last-child {
             border-bottom: none;
         }
-        .transaction-item-sub {
-            padding-top: 0;
-            padding-left: 12px;
-            font-size: 0.95rem;
-            color: #6c757d;
-        }
-        .transaction-item-sub strong {
-            font-weight: 500;
-        }
-        .transaction-item-total {
-            font-weight: 600;
-        }
     </style>
 </head>
 <body>
@@ -172,16 +160,6 @@
                         <strong id="priceLabel" data-zh="票券價格：" data-en="Ticket Price: ">票券價格：</strong>
                         <span><%= typeof currencySymbol !== 'undefined' ? currencySymbol : '$' %><%= paymentBreakdown ? paymentBreakdown.ticketPrice.toFixed(2) : (transaction && transaction.ticketPrice != null ? Number(transaction.ticketPrice).toFixed(2) : '') %></span>
                     </div>
-                    <% if (paymentBreakdown) { %>
-                    <div class="transaction-item transaction-item-sub">
-                        <strong id="processingFeeLabel" data-zh="手續費 (5.8%)：" data-en="Processing fee (5.8%): ">手續費 (5.8%)：</strong>
-                        <span><%= typeof currencySymbol !== 'undefined' ? currencySymbol : '$' %><%= paymentBreakdown.processingFee.toFixed(2) %></span>
-                    </div>
-                    <div class="transaction-item transaction-item-total">
-                        <strong id="totalLabel" data-zh="總計：" data-en="Total: ">總計：</strong>
-                        <span><%= typeof currencySymbol !== 'undefined' ? currencySymbol : '$' %><%= paymentBreakdown.totalCharge.toFixed(2) %></span>
-                    </div>
-                    <% } %>
                     <div class="transaction-item">
                         <strong id="statusLabel" data-zh="付款狀態：" data-en="Payment Status: ">付款狀態：</strong>
                         <span><%= transaction && transaction.status ? transaction.status : '' %></span>

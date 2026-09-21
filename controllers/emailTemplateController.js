@@ -268,6 +268,109 @@ exports.renderEmailTemplateDetail = async (req, res) => {
   }
 }
 
+/** 匯出此 Email Template 的 Send Records 為 XLSX */
+exports.exportEmailTemplateSendRecords = async (req, res) => {
+  const { eventId, id } = req.params
+
+  try {
+    if (!req.session || !req.session.user || !req.session.user._id) {
+      return res.status(401).json({ message: "Unauthorized" })
+    }
+
+    const template = await EmailTemplate.findById(id).lean()
+    if (!template) {
+      return res.status(404).json({ message: "電子郵件模板未找到！" })
+    }
+
+    // 若路徑帶 eventId，確認模板屬於該活動（或全域 null）
+    if (eventId && template.eventId && String(template.eventId) !== String(eventId)) {
+      return res.status(403).json({ message: "此模板不屬於該活動" })
+    }
+
+    const emailRecords = await EmailRecord.find({ emailTemplate: id })
+      .sort({ created_at: -1 })
+      .lean()
+
+    const ExcelJS = require("exceljs")
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet("Send Records")
+
+    worksheet.columns = [
+      { header: "發送時間 (Send Time)", key: "created_at", width: 20 },
+      { header: "收件人 (Recipient)", key: "recipient", width: 30 },
+      { header: "主題 (Subject)", key: "subject", width: 40 },
+      { header: "狀態 (Status)", key: "status", width: 15 },
+      { header: "已打開 (Opened)", key: "opened", width: 12 },
+      { header: "打開次數 (Open Count)", key: "opened_count", width: 14 },
+      { header: "首次打開時間 (First Opened)", key: "opened_at", width: 20 },
+      { header: "已點擊 (Clicked)", key: "clicked", width: 12 },
+      { header: "點擊次數 (Click Count)", key: "clicked_count", width: 14 },
+      { header: "首次點擊時間 (First Clicked)", key: "clicked_at", width: 20 },
+      { header: "已送達時間 (Delivered At)", key: "delivered_at", width: 20 },
+      { header: "User ID", key: "userId", width: 28 },
+      { header: "Message ID", key: "messageId", width: 40 },
+      { header: "Tracking ID", key: "trackingId", width: 35 },
+      { header: "錯誤訊息 (Error)", key: "errorLog", width: 50 },
+    ]
+
+    worksheet.getRow(1).font = { bold: true }
+    worksheet.getRow(1).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFE0E0E0" },
+    }
+
+    const formatHk = (d) => {
+      if (!d) return "-"
+      return new Date(d).toLocaleString("zh-HK", {
+        timeZone: "Asia/Hong_Kong",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      })
+    }
+
+    emailRecords.forEach((record) => {
+      worksheet.addRow({
+        created_at: formatHk(record.created_at),
+        recipient: record.recipient || "-",
+        subject: record.subject || template.subject || "-",
+        status: record.status || "pending",
+        opened: record.opened_at ? "是 (Yes)" : "否 (No)",
+        opened_count: record.opened_count || 0,
+        opened_at: formatHk(record.opened_at),
+        clicked: record.clicked_at ? "是 (Yes)" : "否 (No)",
+        clicked_count: record.clicked_count || 0,
+        clicked_at: formatHk(record.clicked_at),
+        delivered_at: formatHk(record.delivered_at),
+        userId: record.userId ? String(record.userId) : "-",
+        messageId: record.messageId || "-",
+        trackingId: record.trackingId || "-",
+        errorLog: record.errorLog || "-",
+      })
+    })
+
+    const dateStamp = new Date().toISOString().slice(0, 10)
+    const safeId = String(id).replace(/[^a-fA-F0-9]/g, "").slice(0, 24) || "template"
+    const filename = `email_send_records_${safeId}_${dateStamp}.xlsx`
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    res.setHeader("Content-Disposition", `attachment; filename=${filename}`)
+    await workbook.xlsx.write(res)
+    res.end()
+  } catch (error) {
+    console.error("Error exporting email template send records:", error)
+    res.status(500).json({ message: "匯出發送記錄失敗" })
+  }
+}
+
 exports.renderCreateEmailTemplatePage = async (req, res) => {
   try {
     const { eventId } = req.params

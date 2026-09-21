@@ -9,8 +9,16 @@
     "contentType": "multipart/form-data",
     "payloadField": "payload",
     "fileField": "companyLogo",
-    "notes": "JSON fields in payload; logo as file. Nested attendees supported."
+    "notes": "JSON fields in payload; logo as file. Nested attendees.list[] supports company, attendeeCategory, attendeeCategoryOther."
   },
+  "attendeeCategoryOptions": [
+    "Same Firm as Primary Contact",
+    "SPAC Sponsor",
+    "Issuer / Potential Target",
+    "Investor",
+    "Vendor / Service Provider",
+    "Other"
+  ],
   "sampleUser": {
     "firstname": "Tai",
     "lastname": "Chan",
@@ -29,6 +37,9 @@
           "firstname": "May",
           "lastname": "Lee",
           "email": "may@example.com",
+          "company": "Example Co",
+          "attendeeCategory": "SPAC Sponsor",
+          "attendeeCategoryOther": "",
           "title": "Manager"
         }
       ]
@@ -41,12 +52,15 @@
     { "fieldName": "email", "type": "email", "label": { "zh": "Email", "en": "Email" }, "required": true, "display": false, "visible": true },
     { "fieldName": "phone_code", "type": "text", "label": { "zh": "Contact Number (Code)", "en": "Contact Number (Code)" }, "required": false, "display": false, "visible": true },
     { "fieldName": "phone", "type": "tel", "label": { "zh": "Contact Number", "en": "Contact Number" }, "required": false, "display": false, "visible": true },
-    { "fieldName": "company", "type": "text", "label": { "zh": "Company", "en": "Company" }, "required": false, "display": false, "visible": true },
+    { "fieldName": "company", "type": "text", "label": { "zh": "Company Name", "en": "Company Name" }, "required": false, "display": false, "visible": true },
     { "fieldName": "jobTitle", "type": "text", "label": { "zh": "Job Title", "en": "Job Title" }, "required": false, "display": false, "visible": true },
     { "fieldName": "companyLogo", "type": "text", "label": { "zh": "Company Logo", "en": "Company Logo" }, "required": false, "display": false, "visible": true },
     { "fieldName": "companyLogoFileName", "type": "text", "label": { "zh": "Logo File Name", "en": "Logo File Name" }, "required": false, "display": false, "visible": true },
     { "fieldName": "attendees", "type": "textarea", "label": { "zh": "Attendees", "en": "Attendees" }, "required": false, "display": false, "visible": true },
-    { "fieldName": "sponsorTier", "type": "text", "label": { "zh": "Sponsor Tier", "en": "Sponsor Tier" }, "required": false, "display": false, "visible": true }
+    { "fieldName": "sponsorTier", "type": "text", "label": { "zh": "Sponsor Tier", "en": "Sponsor Tier" }, "required": false, "display": false, "visible": true },
+    { "fieldName": "attendeeCompany", "type": "text", "label": { "zh": "Attendee Company Name", "en": "Attendee Company Name" }, "required": false, "display": false, "visible": true },
+    { "fieldName": "attendeeCategory", "type": "text", "label": { "zh": "Attendee Category", "en": "Attendee Category" }, "required": false, "display": false, "visible": true },
+    { "fieldName": "attendeeCategoryOther", "type": "text", "label": { "zh": "Attendee Category (Other)", "en": "Attendee Category (Other)" }, "required": false, "display": false, "visible": true }
   ],
   "tierRules": {
     "Diamond": { "mode": "dynamic", "max": null, "note": "unlimited additional attendees via +" },

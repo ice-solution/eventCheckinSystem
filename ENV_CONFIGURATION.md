@@ -125,6 +125,8 @@ SENDER_EMAIL=noreply@yourdomain.com
 ### 郵件追蹤（開信 pixel / 連結 click）
 預設全部啟用。設為 `false` 後須 **重啟 Node / pm2** 才生效。
 
+Click 追蹤連結會帶 HMAC `sig=`，防止 CWE-601 Open Redirect（竄改 `url=`）。簽名用 `EMAIL_TRACKING_SECRET`（沒有則用 `SESSION_SECRET`）。
+
 ```env
 # 關閉全部追蹤（唔改 link、唔加 pixel）；Email Records 仍會記錄「已發送」
 EMAIL_TRACKING_ENABLED=false
@@ -134,6 +136,12 @@ EMAIL_LINK_TRACKING_ENABLED=false
 
 # 只關開信 pixel（保留連結改寫）
 EMAIL_OPEN_TRACKING_ENABLED=false
+
+# （建議）專用簽名密鑰；唔設則用 SESSION_SECRET
+EMAIL_TRACKING_SECRET=a_long_random_secret
+
+# （選填）舊信無 sig 時額外允許嘅 redirect host，逗號分隔（預設只允許 DOMAIN 嘅 host）
+# EMAIL_TRACKING_ALLOWED_HOSTS=swire.brandactivation.hk,www.example.com
 ```
 
 可接受值：`true` / `false`（亦支援 `1`/`0`、`yes`/`no`、`on`/`off`）。
