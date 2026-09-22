@@ -40,6 +40,9 @@ const PORT = process.env.PORT || 3377;
 const server = http.createServer(app);
 const io = initSocket(server); // 初始化 Socket.IO
 
+// 全站 EJS 可用（不依賴單一 request middleware 有冇跑到）
+app.locals.safeDisplayHtml = safeDisplayHtml;
+
 // CORS：由 .env 的 CORS_ENABLED 開關（true=允許跨域，false/未設=僅同源）
 const corsEnabled = (process.env.CORS_ENABLED || '').toString().trim().toLowerCase() === 'true' || process.env.CORS_ENABLED === '1';
 if (corsEnabled) {

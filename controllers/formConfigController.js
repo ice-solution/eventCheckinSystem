@@ -3,6 +3,7 @@ const Event = require('../model/Event');
 const { normalizePaymentTicketUi } = require('../utils/paymentTicket');
 const { normalizeRegisterSlug, validateRegisterSlug } = require('../utils/registerSlug');
 const { syncAgreementsOnConfig, cloneDefaultAgreement, cloneDefaultAgreementSection } = require('../utils/agreementFields');
+const { safeDisplayHtml } = require('../utils/safeDisplayHtml');
 
 async function applyRegisterSlugToFormConfig(formConfig, rawSlug, eventId) {
     if (rawSlug === undefined) {
@@ -986,6 +987,7 @@ exports.renderFormConfigPage = async (req, res) => {
             emailTemplates,
             publicDomain: (process.env.DOMAIN || '').replace(/\/$/, ''),
             editLang,
+            safeDisplayHtml,
         });
         
     } catch (error) {
