@@ -45,6 +45,11 @@
         padding: 6px 8px; margin-bottom: 6px; background: #fff; border: 1px solid #e9ecef; border-radius: 6px;
         cursor: grab; font-size: 13px;
     }
+    .guest-row.rt-checked-in {
+        border-color: #1b8a3e;
+        background: #d4edda;
+        box-shadow: inset 0 0 0 1px #c3e6cb;
+    }
     .guest-row.dragging { opacity: 0.5; }
     .guest-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .companion-stepper { display: inline-flex; align-items: center; border: 1px solid #ced4da; border-radius: 6px; overflow: hidden; background: #fff; }
@@ -232,6 +237,30 @@
     .rt-slot.guest.rt-swap-pick {
         box-shadow: 0 0 0 3px #007bff, 0 2px 8px rgba(0,123,255,.35);
         z-index: 8;
+    }
+    .rt-slot.guest.rt-checked-in {
+        --rt-brd: #1b8a3e;
+        --rt-bg: #d4edda;
+        border-top-color: #1b8a3e;
+        border-right-color: #1b8a3e;
+        border-bottom-color: #1b8a3e;
+        background: #d4edda;
+        color: #155724;
+    }
+    .rt-slot.guest.rt-checked-in .rt-seat-no {
+        background: #1b8a3e;
+    }
+    .rt-slot.companion.rt-checked-in {
+        background: linear-gradient(180deg, #d4edda 0%, #c3e6cb 100%);
+        border-color: #1b8a3e;
+        color: #155724;
+    }
+    .rt-slot.companion.rt-checked-in .rt-seat-no {
+        background: #1b8a3e;
+    }
+    .rt-assigned-row.rt-checked-in {
+        background: #d4edda;
+        border-color: #c3e6cb;
     }
     .rt-slot.guest .rt-name {
         display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -681,6 +710,10 @@
     function findUser(uid) {
         return users.find(u => u._id === uid);
     }
+    function isUserCheckedIn(uid) {
+        var u = findUser(uid);
+        return !!(u && u.isCheckIn);
+    }
     function userDisplayName(uOrId) {
         var u = (typeof uOrId === 'object' && uOrId) ? uOrId : findUser(uOrId);
         if (!u) return String(uOrId || '');
@@ -748,7 +781,7 @@
                 const uid = u._id;
                 const comp = parseInt(state.companionByUserId[uid], 10) || 0;
                 const dn = userDisplayName(u);
-                html += '<div class="guest-row" draggable="true" data-user-id="' + uid + '">' +
+                html += '<div class="guest-row' + (isUserCheckedIn(uid) ? ' rt-checked-in' : '') + '" draggable="true" data-user-id="' + uid + '">' +
                     '<span class="guest-name" title="' + escapeAttr(dn) + '">' + escapeHtml(dn) + '</span>' +
                     '<span class="text-muted small mr-1">' + _SA.companions + '</span>' +
                     '<div class="companion-stepper" data-user-id="' + uid + '">' +
@@ -1400,6 +1433,9 @@
                 } else if (slot.kind === 'companion') {
                     var ownerName = userDisplayName(slot.forUid);
                     slotEl.className = 'rt-slot companion';
+                    if (isUserCheckedIn(slot.forUid)) {
+                        slotEl.classList.add('rt-checked-in');
+                    }
                     slotEl.title = _SA.companionSlotTitle.replace('{num}', seatNo) +
                         ' · ' + _SA.companionOf.replace('{name}', ownerName);
                     slotEl.appendChild(badge);
@@ -1412,10 +1448,15 @@
                     if (isThisTableSwap && swapPick.uid === slot.uid) {
                         slotEl.classList.add('rt-swap-pick');
                     }
+                    if (isUserCheckedIn(slot.uid)) {
+                        slotEl.classList.add('rt-checked-in');
+                    }
                     slotEl.title = _SA.clickToUnassign + ' · ' + _SA.seatNum.replace('{num}', seatNo);
                     var cols = categoryColorsForUser(slot.uid);
-                    slotEl.style.setProperty('--rt-brd', cols.brd);
-                    slotEl.style.setProperty('--rt-bg', cols.bg);
+                    if (!isUserCheckedIn(slot.uid)) {
+                        slotEl.style.setProperty('--rt-brd', cols.brd);
+                        slotEl.style.setProperty('--rt-bg', cols.bg);
+                    }
                     slotEl.appendChild(badge);
                     var nm = document.createElement('span');
                     nm.className = 'rt-name';
@@ -1471,7 +1512,8 @@
                 guestSlots.forEach(function(s) {
                     var info = guestSeatInfo(slots, s.uid);
                     var pickCls = (isThisTableSwap && swapPick.uid === s.uid) ? ' rt-swap-pick-row' : '';
-                    listHtml += '<div class="rt-assigned-row' + pickCls + '" data-uid="' + escapeAttr(s.uid) + '">' +
+                    var checkedCls = isUserCheckedIn(s.uid) ? ' rt-checked-in' : '';
+                    listHtml += '<div class="rt-assigned-row' + pickCls + checkedCls + '" data-uid="' + escapeAttr(s.uid) + '">' +
                         '<span class="seat-badge">' + escapeHtml(formatSeatBadge(info, t)) + '</span>' +
                         '<span class="meta">' +
                         '<span class="name" title="' + escapeAttr(userDisplayName(s.uid)) + '">' + escapeHtml(userDisplayName(s.uid)) + '</span>' +
@@ -1725,15 +1767,18 @@
                     });
                     var guestName = '';
                     var company = '';
+                    var checkedIn = false;
                     if (slot.kind === 'guest') {
                         guestName = userDisplayName(slot.uid);
                         company = guestCompanyRaw(slot.uid);
+                        checkedIn = isUserCheckedIn(slot.uid);
                     } else if (slot.kind === 'companion') {
                         guestName = userDisplayName(slot.forUid) + _SA.exportCompanionSuffix;
                         company = guestCompanyRaw(slot.forUid);
+                        checkedIn = isUserCheckedIn(slot.forUid);
                     }
                     if (company) anyCompany = true;
-                    seatRows.push({ seat: seatLabel, guest: guestName, company: company });
+                    seatRows.push({ seat: seatLabel, guest: guestName, company: company, checkedIn: checkedIn });
                 });
 
                 // Row 1: table name (bold + larger)
@@ -1773,6 +1818,20 @@
                         row.getCell(1).value = r.seat;
                         row.getCell(2).value = r.guest;
                         if (anyCompany) row.getCell(3).value = r.company || '';
+                        if (r.checkedIn) {
+                            var colCount = anyCompany ? 3 : 2;
+                            var ci;
+                            for (ci = 1; ci <= colCount; ci++) {
+                                row.getCell(ci).fill = {
+                                    type: 'pattern',
+                                    pattern: 'solid',
+                                    fgColor: { argb: 'FFD4EDDA' }
+                                };
+                                row.getCell(ci).font = {
+                                    color: { argb: 'FF155724' }
+                                };
+                            }
+                        }
                     });
                 }
 

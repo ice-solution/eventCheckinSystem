@@ -7165,7 +7165,8 @@ function flattenSeatingUser(userDoc) {
         name,
         email,
         company,
-        displayName
+        displayName,
+        isCheckIn: !!o.isCheckIn
     };
 }
 
