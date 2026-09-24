@@ -2265,10 +2265,105 @@ exports.renderEventsList = async (req, res) => {
             const allowed = (user.allowedEvents || []).filter(Boolean);
             events = allowed.length ? await Event.find({ _id: { $in: allowed } }) : [];
         }
-        res.render('admin/events_list', { events });
+        res.render('admin/events_list', {
+            events,
+            isAdmin: user.role === 'admin'
+        });
     } catch (error) {
         console.error('Error fetching events:', error);
         res.status(500).json({ message: 'Error fetching events' });
+    }
+};
+
+/**
+ * 刪除活動及其關聯資料（FormConfig、模板、獎品、投票、交易、權限等）
+ */
+async function deleteEventsAndRelated(eventIds) {
+    const ids = [...new Set((eventIds || [])
+        .map((id) => (id != null ? String(id).trim() : ''))
+        .filter((id) => mongoose.Types.ObjectId.isValid(id))
+        .map((id) => new mongoose.Types.ObjectId(id)))];
+
+    if (!ids.length) {
+        return { deletedCount: 0, eventIds: [] };
+    }
+
+    const FormConfig = require('../model/FormConfig');
+    const Prize = require('../model/Prize');
+    const BadgeConfig = require('../model/BadgeConfig');
+    const LuckydrawGameConfig = require('../model/LuckydrawGameConfig');
+    const Vote = require('../model/Vote');
+
+    await Promise.all([
+        FormConfig.deleteMany({ eventId: { $in: ids } }),
+        EmailTemplate.deleteMany({ eventId: { $in: ids } }),
+        SmsTemplate.deleteMany({ eventId: { $in: ids } }),
+        EmailRecord.deleteMany({ eventId: { $in: ids } }),
+        Prize.deleteMany({ eventId: { $in: ids } }),
+        Transaction.deleteMany({ eventId: { $in: ids } }),
+        Vote.deleteMany({ eventId: { $in: ids } }),
+        BadgeConfig.deleteMany({ eventId: { $in: ids } }),
+        LuckydrawGameConfig.deleteMany({ eventId: { $in: ids } }),
+        Auth.updateMany(
+            {},
+            {
+                $pull: {
+                    allowedEvents: { $in: ids },
+                    eventPermissions: { eventId: { $in: ids } }
+                }
+            }
+        )
+    ]);
+
+    const result = await Event.deleteMany({ _id: { $in: ids } });
+    return {
+        deletedCount: result.deletedCount || 0,
+        eventIds: ids.map((id) => String(id))
+    };
+}
+
+/** DELETE /events/:eventId — 刪除單一活動（僅 admin） */
+exports.deleteEvent = async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        if (!eventId || !mongoose.Types.ObjectId.isValid(eventId)) {
+            return res.status(400).json({ success: false, message: 'Invalid event id' });
+        }
+        const event = await Event.findById(eventId).select('_id name').lean();
+        if (!event) {
+            return res.status(404).json({ success: false, message: 'Event not found' });
+        }
+        const { deletedCount } = await deleteEventsAndRelated([eventId]);
+        return res.json({
+            success: true,
+            deletedCount,
+            eventName: event.name || ''
+        });
+    } catch (error) {
+        console.error('Error deleting event:', error);
+        return res.status(500).json({ success: false, message: 'Error deleting event' });
+    }
+};
+
+/** POST /events/batch-delete — 批量刪除活動（僅 admin） body: { eventIds: [] } */
+exports.batchDeleteEvents = async (req, res) => {
+    try {
+        const rawIds = (req.body && req.body.eventIds) || [];
+        if (!Array.isArray(rawIds) || rawIds.length === 0) {
+            return res.status(400).json({ success: false, message: 'eventIds are required' });
+        }
+        if (rawIds.length > 100) {
+            return res.status(400).json({ success: false, message: 'Too many events (max 100)' });
+        }
+        const { deletedCount, eventIds } = await deleteEventsAndRelated(rawIds);
+        return res.json({
+            success: true,
+            deletedCount,
+            eventIds
+        });
+    } catch (error) {
+        console.error('Error batch deleting events:', error);
+        return res.status(500).json({ success: false, message: 'Error batch deleting events' });
     }
 };
 exports.getUserById = async (req, res) => {

@@ -138,7 +138,16 @@
     "importing": "匯入中…",
     "importSuccess": "匯入成功：",
     "importFailed": "匯入失敗，請稍後再試",
-    "formPackageNoFile": "請選擇 JSON 檔案"
+    "formPackageNoFile": "請選擇 JSON 檔案",
+    "deleteEvent": "刪除",
+    "batchDelete": "批量刪除活動",
+    "deleteConfirm": "確定要刪除此活動「{name}」？相關表單、郵件／SMS 模板、獎品、投票與報名資料都會一併刪除，且無法復原。",
+    "batchDeleteConfirm": "確定要刪除已勾選的 {count} 個活動？相關資料都會一併刪除，且無法復原。",
+    "deleting": "刪除中…",
+    "deleteSuccess": "已刪除活動",
+    "batchDeleteSuccess": "已刪除 {count} 個活動",
+    "deleteFailed": "刪除失敗，請稍後再試",
+    "deleteAdminOnly": "僅管理員可刪除活動"
   },
   "create_event": {
     "title": "建立新活動", "eventName": "活動名稱", "startTime": "活動開始時間",

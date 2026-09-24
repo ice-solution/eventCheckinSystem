@@ -138,7 +138,16 @@
     "importing": "Importing…",
     "importSuccess": "Imported into: ",
     "importFailed": "Import failed. Please try again.",
-    "formPackageNoFile": "Please choose a JSON file"
+    "formPackageNoFile": "Please choose a JSON file",
+    "deleteEvent": "Delete",
+    "batchDelete": "Batch Delete Events",
+    "deleteConfirm": "Delete event \"{name}\"? Form config, email/SMS templates, prizes, votes and registrations will also be removed. This cannot be undone.",
+    "batchDeleteConfirm": "Delete {count} selected event(s)? Related data will also be removed. This cannot be undone.",
+    "deleting": "Deleting…",
+    "deleteSuccess": "Event deleted",
+    "batchDeleteSuccess": "Deleted {count} event(s)",
+    "deleteFailed": "Delete failed. Please try again.",
+    "deleteAdminOnly": "Only admins can delete events"
   },
   "create_event": {
     "title": "Create New Event", "eventName": "Event Name", "startTime": "Event Start Time",
