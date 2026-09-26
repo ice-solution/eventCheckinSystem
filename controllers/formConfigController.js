@@ -117,6 +117,22 @@ const migrateFormConfig = (formConfig) => {
                 if (migratedField.type !== 'email') {
                     migratedField.confirmEmail = false;
                 }
+
+                // 條件顯示：依賴另一欄位嘅值
+                const sw = migratedField.showWhen;
+                if (!sw || typeof sw !== 'object' || Array.isArray(sw)) {
+                    migratedField.showWhen = { fieldName: '', values: [] };
+                } else {
+                    migratedField.showWhen = {
+                        fieldName: typeof sw.fieldName === 'string' ? sw.fieldName.trim() : '',
+                        values: Array.isArray(sw.values)
+                            ? sw.values.map((v) => String(v == null ? '' : v)).filter((v) => v !== '')
+                            : []
+                    };
+                }
+                if (migratedField.type === 'display') {
+                    migratedField.showWhen = { fieldName: '', values: [] };
+                }
                 
                 if (field.options && migratedField.type !== 'display') {
                     migratedField.options = field.options.map(option => {

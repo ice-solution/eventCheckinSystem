@@ -648,6 +648,11 @@ var registerPageTitleSuffix = isApplicationMode
                                         <% var _fieldControlId = (field.type === 'select' && _selectHasOther) ? (field.fieldName + '_sel') : field.fieldName; %>
                                         <% var _isChoiceField = field.type === 'radio' || field.type === 'checkbox'; %>
                                         <% var _isDisplayField = field.type === 'display'; %>
+                                        <% var _swFieldName = (field.showWhen && field.showWhen.fieldName) ? String(field.showWhen.fieldName).trim() : ''; %>
+                                        <% var _swValuesArr = (_swFieldName && field.showWhen && Array.isArray(field.showWhen.values))
+                                            ? field.showWhen.values.map(function (v) { return String(v == null ? '' : v); }).filter(Boolean)
+                                            : []; %>
+                                        <% var _swValuesJson = encodeURIComponent(JSON.stringify(_swValuesArr)); %>
                                         <% if (_isDisplayField) { %>
                                         <%
                                             var _dispZh = field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '');
@@ -655,7 +660,8 @@ var registerPageTitleSuffix = isApplicationMode
                                             var _dispLang = (typeof formConfig !== 'undefined' && formConfig && formConfig.defaultLanguage === 'en') ? 'en' : 'zh';
                                             var _dispInitial = (_dispLang === 'en' && _dispEn) ? _dispEn : (_dispZh || _dispEn);
                                         %>
-                                        <div class="form-row form-row-display">
+                                        <div class="form-row form-row-display<%= _swFieldName ? ' js-show-when-field' : '' %>"
+                                             <% if (_swFieldName) { %>data-show-when-field="<%= _swFieldName %>" data-show-when-values="<%= _swValuesJson %>"<% } %>>
                                             <div class="form-display-text field-display-text"
                                                  data-zh="<%= _dispZh %>"
                                                  data-en="<%= _dispEn %>">
@@ -663,7 +669,8 @@ var registerPageTitleSuffix = isApplicationMode
                                             </div>
                                         </div>
                                         <% } else { %>
-                                        <div class="form-row form-row-stacked">
+                                        <div class="form-row form-row-stacked<%= _swFieldName ? ' js-show-when-field' : '' %>"
+                                             <% if (_swFieldName) { %>data-show-when-field="<%= _swFieldName %>" data-show-when-values="<%= _swValuesJson %>"<% } %>>
                                             <label class="form-label field-label" for="<%= _fieldControlId %>" 
                                                    data-zh="<%= field.label && field.label.zh ? field.label.zh : (typeof field.label === 'string' ? field.label : '') %>" 
                                                    data-en="<%= field.label && field.label.en ? field.label.en : '' %>">
@@ -767,7 +774,17 @@ var registerPageTitleSuffix = isApplicationMode
                                                                 let invalid = false;
 
                                                                 function validateCheckboxGroup() {
-                                                                    invalid = !Array.from(checkboxes).some(cb => cb.checked);
+                                                                    // 條件顯示隱藏時唔擋 submit
+                                                                    if (group && group.closest && group.closest('.js-show-when-hidden')) {
+                                                                        invalid = false;
+                                                                        return true;
+                                                                    }
+                                                                    const enabled = Array.from(checkboxes).filter(function(cb) { return !cb.disabled; });
+                                                                    if (!enabled.length) {
+                                                                        invalid = false;
+                                                                        return true;
+                                                                    }
+                                                                    invalid = !enabled.some(function(cb) { return cb.checked; });
                                                                     return !invalid;
                                                                 }
 
@@ -856,7 +873,9 @@ var registerPageTitleSuffix = isApplicationMode
                                             </div>
                                         </div>
                                         <% if (field.type === 'email' && field.confirmEmail && !_fieldLocked) { %>
-                                        <div class="form-row form-row-stacked email-confirm-row" data-email-field="<%= field.fieldName %>">
+                                        <div class="form-row form-row-stacked email-confirm-row<%= _swFieldName ? ' js-show-when-field' : '' %>"
+                                             data-email-field="<%= field.fieldName %>"
+                                             <% if (_swFieldName) { %>data-show-when-field="<%= _swFieldName %>" data-show-when-values="<%= _swValuesJson %>"<% } %>>
                                             <label class="form-label field-label" for="<%= field.fieldName %>_confirm"
                                                    data-zh="確認電子郵件"
                                                    data-en="Confirm Email">
@@ -1665,6 +1684,7 @@ var registerPageTitleSuffix = isApplicationMode
             initPaymentTickets();
             // 總是更新頁面語言（確保初始狀態正確）
             updatePageLanguage();
+            initShowWhenFields();
             
             // 頁面載入後，清除所有有效字段的驗證訊息
             setTimeout(function() {
@@ -1684,6 +1704,102 @@ var registerPageTitleSuffix = isApplicationMode
                 });
             }, 100);
         });
+
+        function getShowWhenControlValues(fieldName) {
+            if (!fieldName) return [];
+            const vals = [];
+            const nameSel = String(fieldName).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+            $('input[type="radio"][name="' + nameSel + '"]:checked').each(function() {
+                vals.push(String($(this).val() || ''));
+            });
+            $('input[type="checkbox"][name="' + nameSel + '"]:checked, input[type="checkbox"][name="' + nameSel + '[]"]:checked').each(function() {
+                vals.push(String($(this).val() || ''));
+            });
+            let $sel = $('#userForm select[id="' + nameSel + '_sel"]');
+            if (!$sel.length) $sel = $('#userForm select[name="' + nameSel + '"]');
+            if (!$sel.length) $sel = $('#userForm select[id="' + nameSel + '"]');
+            if ($sel.length) {
+                const v = $sel.val();
+                if (v != null && String(v) !== '') vals.push(String(v));
+            }
+            return vals.filter(function(v) { return v !== ''; });
+        }
+
+        function setShowWhenRowVisible($row, visible) {
+            $row.toggleClass('d-none', !visible);
+            $row.toggleClass('js-show-when-hidden', !visible);
+            $row.find('input, select, textarea').each(function() {
+                const el = this;
+                const $el = $(el);
+                const type = (el.type || '').toLowerCase();
+                if (visible) {
+                    if ($el.attr('data-show-when-disabled') === '1') {
+                        $el.prop('disabled', false).removeAttr('data-show-when-disabled');
+                    }
+                    if ($el.attr('data-was-required') === '1') {
+                        $el.prop('required', true).removeAttr('data-was-required');
+                    }
+                    if ($el.attr('data-was-data-required') === '1') {
+                        $el.attr('data-required', 'true').removeAttr('data-was-data-required');
+                    }
+                } else {
+                    if ($el.prop('required')) {
+                        $el.attr('data-was-required', '1');
+                        $el.prop('required', false);
+                    }
+                    if ($el.attr('data-required') === 'true') {
+                        $el.attr('data-was-data-required', '1');
+                        $el.removeAttr('data-required');
+                    }
+                    if (!$el.prop('disabled')) {
+                        $el.attr('data-show-when-disabled', '1');
+                        $el.prop('disabled', true);
+                    }
+                    if (type === 'checkbox' || type === 'radio') {
+                        el.checked = false;
+                    } else if ($el.hasClass('js-select-other-text') || $el.hasClass('js-choice-other-text')) {
+                        $el.val('').addClass('d-none').prop('required', false);
+                    } else if (el.tagName === 'SELECT') {
+                        $el.val('');
+                    } else if (type === 'hidden' && $el.attr('name')) {
+                        $el.val('');
+                    } else if (type !== 'hidden') {
+                        $el.val('');
+                    }
+                    if (typeof el.setCustomValidity === 'function') el.setCustomValidity('');
+                }
+            });
+        }
+
+        function refreshShowWhenFields() {
+            $('.js-show-when-field').each(function() {
+                const $row = $(this);
+                const dep = String($row.attr('data-show-when-field') || '').trim();
+                if (!dep) {
+                    setShowWhenRowVisible($row, true);
+                    return;
+                }
+                let want = [];
+                try {
+                    want = JSON.parse(decodeURIComponent($row.attr('data-show-when-values') || '%5B%5D'));
+                } catch (_) {
+                    want = [];
+                }
+                if (!Array.isArray(want)) want = [];
+                const wantSet = new Set(want.map(String));
+                const current = getShowWhenControlValues(dep);
+                const match = current.some(function(v) { return wantSet.has(String(v)); });
+                setShowWhenRowVisible($row, match);
+            });
+        }
+
+        function initShowWhenFields() {
+            if (!$('.js-show-when-field').length) return;
+            refreshShowWhenFields();
+            $(document).on('change', '#userForm input[type="radio"], #userForm input[type="checkbox"], #userForm select', function() {
+                refreshShowWhenFields();
+            });
+        }
 
         // 切換語言
         function switchLanguage(lang) {
@@ -2105,6 +2221,15 @@ var registerPageTitleSuffix = isApplicationMode
             const emailEl = document.getElementById(emailFieldName);
             const confirmEl = document.getElementById(emailFieldName + '_confirm');
             if (!emailEl || !confirmEl) return true;
+            // 條件隱藏／disabled 時唔驗證
+            if (confirmEl.disabled || emailEl.disabled) {
+                confirmEl.setCustomValidity('');
+                return true;
+            }
+            if (confirmEl.closest && confirmEl.closest('.js-show-when-hidden')) {
+                confirmEl.setCustomValidity('');
+                return true;
+            }
             const emailVal = (emailEl.value || '').trim();
             const confirmVal = (confirmEl.value || '').trim();
             if (!emailVal && !confirmVal) {
@@ -2189,6 +2314,7 @@ var registerPageTitleSuffix = isApplicationMode
                 const fieldName = $(this).attr('name');
                 if (!fieldName || fieldName === 'ticketId' || /^(agreementAgreed|agreementRecordedAt)(_\d+)?$/.test(fieldName)) return;
                 if ($(this).prop('disabled')) return;
+                if ($(this).closest('.js-show-when-hidden').length) return;
                 if ($(this).hasClass('js-email-confirm') || String(fieldName).endsWith('_confirm')) return;
                 const type = (this.type || '').toLowerCase();
                 if (type === 'checkbox') {

@@ -979,6 +979,65 @@
                                                             </div>
                                                             <% } %>
                                                         </div>
+                                                        <%
+                                                            const _sw = (field.showWhen && typeof field.showWhen === 'object') ? field.showWhen : { fieldName: '', values: [] };
+                                                            const _swField = (_sw.fieldName || '').trim();
+                                                            const _swValues = Array.isArray(_sw.values) ? _sw.values.map(String) : [];
+                                                            const _choiceFields = [];
+                                                            (formConfig.sections || []).forEach(function(sec) {
+                                                                (sec.fields || []).forEach(function(f) {
+                                                                    if (!f || !f.fieldName) return;
+                                                                    if (f.fieldName === field.fieldName) return;
+                                                                    if (f.type === 'radio' || f.type === 'select' || f.type === 'checkbox') {
+                                                                        _choiceFields.push(f);
+                                                                    }
+                                                                });
+                                                            });
+                                                            let _swDepField = null;
+                                                            for (let _i = 0; _i < _choiceFields.length; _i++) {
+                                                                if (_choiceFields[_i].fieldName === _swField) { _swDepField = _choiceFields[_i]; break; }
+                                                            }
+                                                        %>
+                                                        <div class="row mt-2 align-items-start border-top pt-2">
+                                                            <div class="col-md-4">
+                                                                <label class="form-label"><%= t('form_config.showWhenField') %></label>
+                                                                <select class="form-control form-control-sm"
+                                                                        onchange="updateShowWhenField(<%= actualSectionIndex %>, <%= actualFieldIndex %>, this.value)">
+                                                                    <option value=""><%= t('form_config.showWhenFieldNone') %></option>
+                                                                    <% _choiceFields.forEach(function(cf) { %>
+                                                                        <option value="<%= cf.fieldName %>" <%= _swField === cf.fieldName ? 'selected' : '' %>>
+                                                                            <%= cf.fieldName %><%= cf.type ? ' (' + cf.type + ')' : '' %>
+                                                                        </option>
+                                                                    <% }); %>
+                                                                </select>
+                                                                <small class="text-muted d-block mt-1"><%= t('form_config.showWhenHint') %></small>
+                                                            </div>
+                                                            <div class="col-md-8">
+                                                                <label class="form-label"><%= t('form_config.showWhenValues') %></label>
+                                                                <% if (_swField && _swDepField && _swDepField.options && _swDepField.options.length) { %>
+                                                                    <div class="d-flex flex-wrap">
+                                                                        <% _swDepField.options.forEach(function(opt, optIdx) { %>
+                                                                            <% const ov = String(opt.value != null ? opt.value : ''); %>
+                                                                            <div class="form-check form-check-inline mr-3 mb-1">
+                                                                                <input class="form-check-input" type="checkbox"
+                                                                                       id="sw-val-<%= actualSectionIndex %>-<%= actualFieldIndex %>-<%= optIdx %>"
+                                                                                       value="<%= ov %>"
+                                                                                       <%= _swValues.indexOf(ov) !== -1 ? 'checked' : '' %>
+                                                                                       onchange="toggleShowWhenValue(<%= actualSectionIndex %>, <%= actualFieldIndex %>, this.value, this.checked)">
+                                                                                <label class="form-check-label small" for="sw-val-<%= actualSectionIndex %>-<%= actualFieldIndex %>-<%= optIdx %>">
+                                                                                    <%= (opt.label && (opt.label.zh || opt.label.en)) ? (opt.label.zh || opt.label.en) : ov %>
+                                                                                    <span class="text-muted">(<%= ov %>)</span>
+                                                                                </label>
+                                                                            </div>
+                                                                        <% }); %>
+                                                                    </div>
+                                                                <% } else if (_swField) { %>
+                                                                    <small class="text-muted"><%= t('form_config.showWhenValuesHint') %> — 依賴欄位未有 options。</small>
+                                                                <% } else { %>
+                                                                    <small class="text-muted"><%= t('form_config.showWhenValuesHint') %></small>
+                                                                <% } %>
+                                                            </div>
+                                                        </div>
                                                         <% } else { %>
                                                         <div class="row mt-2">
                                                             <div class="col-12">
@@ -1427,6 +1486,7 @@
                 // Display 僅輸出文字，不可設為必填
                 if (value === 'display') {
                     formConfig.sections[sectionIndex].fields[fieldIndex].required = false;
+                    formConfig.sections[sectionIndex].fields[fieldIndex].showWhen = { fieldName: '', values: [] };
                 }
                 if (value !== 'email') {
                     formConfig.sections[sectionIndex].fields[fieldIndex].confirmEmail = false;
@@ -1444,6 +1504,41 @@
                 updatePreview();
             }
         }
+    }
+
+    function ensureShowWhen(field) {
+        if (!field.showWhen || typeof field.showWhen !== 'object' || Array.isArray(field.showWhen)) {
+            field.showWhen = { fieldName: '', values: [] };
+        }
+        if (!Array.isArray(field.showWhen.values)) field.showWhen.values = [];
+        if (typeof field.showWhen.fieldName !== 'string') field.showWhen.fieldName = '';
+        return field.showWhen;
+    }
+
+    async function updateShowWhenField(sectionIndex, fieldIndex, fieldName) {
+        const field = formConfig.sections[sectionIndex] && formConfig.sections[sectionIndex].fields[fieldIndex];
+        if (!field) return;
+        const sw = ensureShowWhen(field);
+        sw.fieldName = (fieldName || '').trim();
+        sw.values = [];
+        try {
+            await saveConfig();
+            location.reload();
+        } catch (error) {
+            console.error('保存失敗:', error);
+            alert('保存失敗，請重試');
+        }
+    }
+
+    function toggleShowWhenValue(sectionIndex, fieldIndex, value, checked) {
+        const field = formConfig.sections[sectionIndex] && formConfig.sections[sectionIndex].fields[fieldIndex];
+        if (!field) return;
+        const sw = ensureShowWhen(field);
+        const v = String(value == null ? '' : value);
+        const set = new Set((sw.values || []).map(String));
+        if (checked) set.add(v); else set.delete(v);
+        sw.values = Array.from(set);
+        updatePreview();
     }
 
     // 更新選項
@@ -1541,6 +1636,7 @@
             display: true,
             visible: true,
             placeholder: '',
+            showWhen: { fieldName: '', values: [] },
             order: formConfig.sections[sectionIndex].fields.length + 1
         };
         formConfig.sections[sectionIndex].fields.push(newField);
@@ -1660,6 +1756,9 @@
                         } else {
                         html += '<label class="form-label">' + getMultilingualText(field.label, previewLanguage);
                         if (field.required) html += ' <span class="text-danger">*</span>';
+                        if (field.showWhen && field.showWhen.fieldName) {
+                            html += ' <span class="badge badge-secondary">' + <%- JSON.stringify(t('form_config.showWhenPreviewHint')) %> + '</span>';
+                        }
                         html += '</label>';
                         
                         if (field.type === 'select' && field.options) {
@@ -2097,6 +2196,12 @@
                                 };
                             }),
                             validation: field.validation || {},
+                            showWhen: {
+                                fieldName: (field.showWhen && field.showWhen.fieldName) ? String(field.showWhen.fieldName) : '',
+                                values: (field.showWhen && Array.isArray(field.showWhen.values))
+                                    ? field.showWhen.values.map(function(v) { return String(v == null ? '' : v); }).filter(Boolean)
+                                    : []
+                            },
                             order: field.order || 0
                         };
                     })
@@ -2363,6 +2468,12 @@
                                 };
                             }),
                             validation: field.validation || {},
+                            showWhen: {
+                                fieldName: (field.showWhen && field.showWhen.fieldName) ? String(field.showWhen.fieldName).trim() : '',
+                                values: (field.showWhen && Array.isArray(field.showWhen.values))
+                                    ? field.showWhen.values.map(function(v) { return String(v == null ? '' : v); }).filter(Boolean)
+                                    : []
+                            },
                             order: field.order || 0
                         };
                         })

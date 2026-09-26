@@ -4,6 +4,7 @@ npm-debug.log
 yarn-error.log
 package-lock.json
 yarn.lock
+data/
 
 # 環境變數文件
 .env

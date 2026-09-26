@@ -51,6 +51,15 @@ const formFieldSchema = new mongoose.Schema({
         maxLength: Number,
         pattern: String
     },
+    /**
+     * 條件顯示：當指定欄位（通常係 radio / select / checkbox）嘅值
+     * 屬於 values 其中之一時，先喺報名頁顯示此欄。
+     * fieldName 留空 = 永遠顯示（唔啟用條件）。
+     */
+    showWhen: {
+        fieldName: { type: String, default: '' },
+        values: [{ type: String }]
+    },
     order: { 
         type: Number, 
         default: 0 
