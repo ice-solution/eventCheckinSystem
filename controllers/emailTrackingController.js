@@ -1,5 +1,6 @@
 const EmailRecord = require('../model/EmailRecord');
 const crypto = require('crypto');
+const emailTracking = require('../utils/emailTracking');
 
 /**
  * 記錄郵件打開事件
@@ -49,53 +50,49 @@ exports.trackEmailOpen = async (req, res) => {
 };
 
 /**
- * 記錄郵件連結點擊事件
+ * 記錄郵件連結點擊事件（防 CWE-601：必須通過簽名／白名單驗證先）
  * @param {string} trackingId - 追蹤 ID
  * @param {string} url - 被點擊的連結 URL
+ * @param {string} sig - HMAC 簽名（新郵件必備）
  */
 exports.trackEmailClick = async (req, res) => {
     try {
         const { trackingId } = req.params;
-        const { url } = req.query;
+        const { url, sig } = req.query;
 
         if (!trackingId || !url) {
             return res.status(400).send('Missing tracking ID or URL');
         }
 
+        const target = emailTracking.resolveSafeRedirectTarget(url, sig);
+        if (!target) {
+            return res.status(400).send('Invalid or unauthorized redirect');
+        }
+
         const emailRecord = await EmailRecord.findOne({ trackingId });
 
-        if (!emailRecord) {
-            // 重定向到原始 URL
-            return res.redirect(decodeURIComponent(url));
+        if (emailRecord) {
+            if (!emailRecord.clicked_at) {
+                emailRecord.clicked_at = new Date();
+            }
+            emailRecord.clicked_count = (emailRecord.clicked_count || 0) + 1;
+
+            if (!emailRecord.clicked_links) {
+                emailRecord.clicked_links = [];
+            }
+            emailRecord.clicked_links.push({
+                url: target,
+                clicked_at: new Date()
+            });
+
+            await emailRecord.save();
         }
 
-        // 更新點擊記錄
-        if (!emailRecord.clicked_at) {
-            emailRecord.clicked_at = new Date();
-        }
-        emailRecord.clicked_count = (emailRecord.clicked_count || 0) + 1;
-
-        // 記錄點擊的連結
-        if (!emailRecord.clicked_links) {
-            emailRecord.clicked_links = [];
-        }
-        emailRecord.clicked_links.push({
-            url: decodeURIComponent(url),
-            clicked_at: new Date()
-        });
-
-        await emailRecord.save();
-
-        // 重定向到原始 URL
-        res.redirect(decodeURIComponent(url));
+        return res.redirect(302, target);
     } catch (error) {
         console.error('Error tracking email click:', error);
-        // 即使出錯也重定向，避免影響用戶體驗
-        if (req.query.url) {
-            res.redirect(decodeURIComponent(req.query.url));
-        } else {
-            res.status(500).send('Error tracking click');
-        }
+        // 出錯時唔再盲 redirect，避免 open redirect
+        return res.status(500).send('Error tracking click');
     }
 };
 
@@ -152,4 +149,3 @@ exports.getEmailTrackingStats = async (req, res) => {
 exports.generateTrackingId = () => {
     return crypto.randomBytes(16).toString('hex');
 };
-

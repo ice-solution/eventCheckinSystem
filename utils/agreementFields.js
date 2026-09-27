@@ -35,6 +35,13 @@ function cloneDefaultAgreement() {
     return JSON.parse(JSON.stringify(DEFAULT_AGREEMENT));
 }
 
+function cloneDefaultAgreementSection() {
+    return {
+        title: { zh: '協議', en: 'Agreement' },
+        agreements: [cloneDefaultAgreement()]
+    };
+}
+
 function normalizeAgreementItem(src) {
     const d = cloneDefaultAgreement();
     if (!src || typeof src !== 'object' || Array.isArray(src)) return d;
@@ -60,7 +67,26 @@ function normalizeAgreementItem(src) {
     };
 }
 
-/** 第一份沿用舊欄位 agreementAgreed；其後為 agreementAgreed_2、_3… */
+function normalizeAgreementSection(src) {
+    const d = cloneDefaultAgreementSection();
+    if (!src || typeof src !== 'object' || Array.isArray(src)) return d;
+    const title = {
+        zh: (src.title && src.title.zh) || d.title.zh,
+        en: (src.title && src.title.en) || d.title.en
+    };
+    const rawItems = Array.isArray(src.agreements) && src.agreements.length
+        ? src.agreements
+        : (Array.isArray(src.items) && src.items.length ? src.items : [cloneDefaultAgreement()]);
+    const agreements = rawItems.map((item) => {
+        const normalized = normalizeAgreementItem(item);
+        // section title 覆蓋 item.title（flat list / report 欄位標籤用）
+        normalized.title = { zh: title.zh, en: title.en };
+        return normalized;
+    });
+    return { title, agreements };
+}
+
+/** 第一份沿用舊欄位 agreementAgreed；其後為 agreementAgreed_2、_3…（跨所有 sections 全局編號） */
 function getAgreementFieldNames(index) {
     if (!index) {
         return { agreed: 'agreementAgreed', recordedAt: 'agreementRecordedAt' };
@@ -73,19 +99,63 @@ function isAgreementMetaKey(key) {
     return /^(agreementAgreed|agreementRecordedAt)(_\d+)?$/.test(String(key || ''));
 }
 
-function getAgreementsList(formConfig) {
-    if (!formConfig) return [cloneDefaultAgreement()];
-    if (Array.isArray(formConfig.agreements) && formConfig.agreements.length) {
-        return formConfig.agreements.map(normalizeAgreementItem);
+function flattenAgreementSections(sections) {
+    const out = [];
+    (Array.isArray(sections) ? sections : []).forEach((sec) => {
+        const normalized = normalizeAgreementSection(sec);
+        normalized.agreements.forEach((item) => out.push(item));
+    });
+    return out;
+}
+
+/** 取得 title sections（優先 agreementSections；否則由舊 flat agreements 遷成單一 section） */
+function getAgreementSections(formConfig) {
+    if (!formConfig) return [cloneDefaultAgreementSection()];
+
+    if (Array.isArray(formConfig.agreementSections) && formConfig.agreementSections.length) {
+        return formConfig.agreementSections.map(normalizeAgreementSection);
     }
-    return [normalizeAgreementItem(formConfig.agreement)];
+
+    // 舊資料：flat agreements（共用第一份 title）
+    if (Array.isArray(formConfig.agreements) && formConfig.agreements.length) {
+        const list = formConfig.agreements.map(normalizeAgreementItem);
+        const title = {
+            zh: (list[0].title && list[0].title.zh) || '協議',
+            en: (list[0].title && list[0].title.en) || 'Agreement'
+        };
+        return [{
+            title,
+            agreements: list.map((item) => ({
+                ...item,
+                title: { zh: title.zh, en: title.en }
+            }))
+        }];
+    }
+
+    if (formConfig.agreement) {
+        const one = normalizeAgreementItem(formConfig.agreement);
+        return [{
+            title: { zh: one.title.zh, en: one.title.en },
+            agreements: [one]
+        }];
+    }
+
+    return [cloneDefaultAgreementSection()];
+}
+
+function getAgreementsList(formConfig) {
+    const sections = getAgreementSections(formConfig);
+    const flat = flattenAgreementSections(sections);
+    return flat.length ? flat : [cloneDefaultAgreement()];
 }
 
 function syncAgreementsOnConfig(migratedConfig) {
     if (!migratedConfig) return migratedConfig;
-    const list = getAgreementsList(migratedConfig);
-    migratedConfig.agreements = list;
-    migratedConfig.agreement = list[0] || cloneDefaultAgreement();
+    const sections = getAgreementSections(migratedConfig);
+    const list = flattenAgreementSections(sections);
+    migratedConfig.agreementSections = sections;
+    migratedConfig.agreements = list.length ? list : [cloneDefaultAgreement()];
+    migratedConfig.agreement = migratedConfig.agreements[0] || cloneDefaultAgreement();
     return migratedConfig;
 }
 
@@ -106,16 +176,50 @@ function getEnabledAgreements(formConfig) {
         .filter((item) => item.enabled);
 }
 
+/** Register 頁用：每個 title section + 其 enabled agreements（帶全局 index） */
+function getEnabledAgreementSections(formConfig) {
+    const sections = getAgreementSections(formConfig);
+    let globalIndex = 0;
+    const out = [];
+    sections.forEach((sec) => {
+        const enabledItems = [];
+        (sec.agreements || []).forEach((item) => {
+            const index = globalIndex;
+            globalIndex += 1;
+            if (!item.enabled) return;
+            const fields = getAgreementFieldNames(index);
+            enabledItems.push({
+                ...item,
+                index,
+                agreedField: fields.agreed,
+                recordedAtField: fields.recordedAt
+            });
+        });
+        if (enabledItems.length) {
+            out.push({
+                title: sec.title || { zh: '協議', en: 'Agreement' },
+                agreements: enabledItems
+            });
+        }
+    });
+    return out;
+}
+
 module.exports = {
     DEFAULT_AGREEMENT,
     normalizeAgreementAgreed,
     formatAgreementAgreedLabel,
     agreementAgreedSortOrder,
     cloneDefaultAgreement,
+    cloneDefaultAgreementSection,
     normalizeAgreementItem,
+    normalizeAgreementSection,
     getAgreementFieldNames,
     isAgreementMetaKey,
+    flattenAgreementSections,
+    getAgreementSections,
     getAgreementsList,
     syncAgreementsOnConfig,
-    getEnabledAgreements
+    getEnabledAgreements,
+    getEnabledAgreementSections
 };

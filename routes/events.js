@@ -8,6 +8,7 @@ const smsTemplateController = require("../controllers/smsTemplateController");
 const badgeController = require('../controllers/badgeController');
 const luckydrawGameConfigController = require('../controllers/luckydrawGameConfigController');
 const stationCheckinController = require('../controllers/stationCheckinController');
+const permission = require('../middleware/permission');
 
 const Event = require('../model/Event'); // 引入 Event 模型
 const multer = require('multer');
@@ -81,7 +82,9 @@ router.post('/export-checkin-list/fields', eventsController.getBatchReportFields
 router.post('/export-checkin-list', eventsController.exportEventsCheckInList);
 router.post('/export-form-package', eventsController.exportEventFormPackages);
 router.post('/import-form-package', upload, eventsController.importEventFormPackage);
+router.post('/batch-delete', permission.requireAdmin, eventsController.batchDeleteEvents);
 router.post('/:eventId/copy', eventsController.copyEvent);
+router.delete('/:eventId', permission.requireAdmin, eventsController.deleteEvent);
 
 
 

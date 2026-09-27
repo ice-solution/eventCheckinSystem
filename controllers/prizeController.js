@@ -43,12 +43,23 @@ exports.getPrizesByEvent = async (req, res) => {
     }
 };
 
+function parsePrizeUnit(raw, fallback = 1) {
+    const n = parseInt(raw, 10);
+    if (!Number.isFinite(n) || n < 0) return fallback;
+    return n;
+}
+
 // 創建獎品
 exports.createPrize = async (req, res) => {
     const { eventId } = req.params;
-    const { name, picture, unit } = req.body;
+    const { name, picture } = req.body;
+    const unit = parsePrizeUnit(req.body.unit, 1);
     
     try {
+        if (!name || !String(name).trim()) {
+            return res.status(400).json({ message: 'Prize name is required' });
+        }
+
         let picturePath = picture;
         
         // 如果有上傳的圖片文件
@@ -58,9 +69,9 @@ exports.createPrize = async (req, res) => {
         
         const newPrize = new Prize({
             eventId,
-            name,
+            name: String(name).trim(),
             picture: picturePath,
-            unit: unit || 1
+            unit
         });
         
         await newPrize.save();
@@ -74,25 +85,37 @@ exports.createPrize = async (req, res) => {
 // 更新獎品
 exports.updatePrize = async (req, res) => {
     const { prizeId } = req.params;
-    const { name, picture, unit } = req.body;
+    const { name, picture } = req.body;
     
     try {
-        let picturePath = picture;
-        
-        // 如果有上傳的圖片文件
+        if (req.body.unit === undefined || req.body.unit === null || String(req.body.unit).trim() === '') {
+            return res.status(400).json({ message: 'Quantity (unit) is required' });
+        }
+        const unit = parsePrizeUnit(req.body.unit, NaN);
+        if (!Number.isFinite(unit)) {
+            return res.status(400).json({ message: 'Quantity must be a non-negative integer' });
+        }
+        if (!name || !String(name).trim()) {
+            return res.status(400).json({ message: 'Prize name is required' });
+        }
+
+        const $set = {
+            name: String(name).trim(),
+            unit,
+            modified_at: Date.now()
+        };
+
+        // 有新圖檔 → 用上傳路徑；有提供非空 URL → 更新；否則保留原 picture
         if (req.file) {
-            picturePath = `/prizes/img/${req.file.filename}`;
+            $set.picture = `/prizes/img/${req.file.filename}`;
+        } else if (typeof picture === 'string' && picture.trim() !== '') {
+            $set.picture = picture.trim();
         }
         
         const updatedPrize = await Prize.findByIdAndUpdate(
             prizeId,
-            { 
-                name, 
-                picture: picturePath, 
-                unit, 
-                modified_at: Date.now() 
-            },
-            { new: true }
+            { $set },
+            { new: true, runValidators: true }
         );
         
         if (!updatedPrize) {

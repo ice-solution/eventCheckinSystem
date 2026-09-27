@@ -5,6 +5,7 @@ const QRCode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
 const { registerBadgeFonts, formatCanvasFont, getBadgeFontCatalog, getDefaultBadgeFontFamily, getBadgeFontCssUrl } = require('../utils/badgeFonts');
+const { resolveUserDisplayName } = require('../utils/userDisplayName');
 
 // 動態載入 canvas（如果可用）
 let createCanvas, loadImage;
@@ -41,6 +42,14 @@ exports.renderBadgeDesignPage = async (req, res) => {
             await badgeConfig.save();
         }
         
+        const testUsers = (event.users || []).map((u) => {
+            const obj = u.toObject ? u.toObject({ minimize: false }) : u;
+            const name = resolveUserDisplayName(obj) || '';
+            const email = (obj.email && String(obj.email).trim()) || '';
+            const label = [name, email].filter(Boolean).join(' · ') || String(obj._id);
+            return { id: String(obj._id), label };
+        });
+
         res.render('admin/badge_design', {
             eventId,
             event,
@@ -49,6 +58,7 @@ exports.renderBadgeDesignPage = async (req, res) => {
             badgeFonts: getBadgeFontCatalog(),
             defaultBadgeFont: getDefaultBadgeFontFamily(),
             avantGardeFontUrl: getBadgeFontCssUrl('ITC Avant Garde Gothic Demi'),
+            testUsers,
         });
     } catch (error) {
         console.error('Error rendering badge design page:', error);
@@ -109,6 +119,7 @@ exports.saveBadgeConfig = async (req, res) => {
 // 生成測試圖片
 exports.generateTestImage = async (req, res) => {
     const { eventId } = req.params;
+    const userId = req.body && req.body.userId;
     
     try {
         const badgeConfig = await BadgeConfig.findOne({ eventId });
@@ -119,16 +130,25 @@ exports.generateTestImage = async (req, res) => {
         // 嘗試從 event 中取得實際用戶資料
         const event = await Event.findById(eventId);
         let testData;
+        let usedRealUser = false;
         
         if (event && event.users && event.users.length > 0) {
-            // 使用 event 中第一個用戶的實際資料
-            const user = event.users[0];
+            let user = null;
+            if (userId) {
+                user = event.users.id(userId);
+                if (!user) {
+                    return res.status(404).json({ message: 'User not found' });
+                }
+            } else {
+                user = event.users[0];
+            }
             const userObject = user.toObject ? user.toObject({ minimize: false }) : user;
             
             testData = {
                 user: userObject,
                 qrcodeUrl: `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=200x200`
             };
+            usedRealUser = true;
         } else {
             // 如果沒有用戶，使用預設測試數據
             testData = {
@@ -152,7 +172,10 @@ exports.generateTestImage = async (req, res) => {
         res.json({ 
             message: 'Test image generated successfully',
             imageUrl,
-            usedRealUser: event && event.users && event.users.length > 0
+            usedRealUser,
+            userId: usedRealUser && testData.user && testData.user._id
+                ? String(testData.user._id)
+                : null
         });
     } catch (error) {
         console.error('Error generating test image:', error);
@@ -160,44 +183,70 @@ exports.generateTestImage = async (req, res) => {
     }
 };
 
+/**
+ * 依 event + user 生成真實 badge 圖片（iPad / 後台打印共用）
+ * 不會使用 / 回傳 testImageUrl。
+ * @returns {Promise<{ imageUrl: string, badgeConfig: object }>}
+ */
+exports.generateUserBadgeImage = async (eventId, userId) => {
+    if (!eventId || !userId) {
+        const err = new Error('eventId and userId are required');
+        err.status = 400;
+        throw err;
+    }
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+        const err = new Error('Event not found');
+        err.status = 404;
+        throw err;
+    }
+
+    const user = event.users.id(userId);
+    if (!user) {
+        const err = new Error('User not found');
+        err.status = 404;
+        throw err;
+    }
+
+    const badgeConfig = await BadgeConfig.findOne({ eventId });
+    if (!badgeConfig) {
+        const err = new Error('Badge config not found. Please configure badge design first.');
+        err.status = 404;
+        throw err;
+    }
+
+    const userObject = user.toObject ? user.toObject({ minimize: false }) : user;
+    const userData = {
+        user: userObject,
+        qrcodeUrl: `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=200x200`
+    };
+
+    const imageUrl = await generateBadgeImage(badgeConfig, userData, {
+        filenameHint: String(userId)
+    });
+
+    return { imageUrl, badgeConfig };
+};
+
 // 生成實際 badge 圖片（用於打印）
 exports.generateBadgeImage = async (req, res) => {
     const { eventId, userId } = req.params;
-    
+
     try {
-        const event = await Event.findById(eventId);
-        if (!event) {
-            return res.status(404).json({ message: 'Event not found' });
-        }
-        
-        const user = event.users.id(userId);
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-        
-        const badgeConfig = await BadgeConfig.findOne({ eventId });
-        if (!badgeConfig) {
-            return res.status(404).json({ message: 'Badge config not found' });
-        }
-        
-        // 準備用戶數據
-        const userData = {
-            user: user.toObject ? user.toObject() : user,
-            qrcodeUrl: `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=200x200`
-        };
-        
-        // 生成圖片
-        const imageUrl = await generateBadgeImage(badgeConfig, userData);
-        
+        const { imageUrl } = await exports.generateUserBadgeImage(eventId, userId);
         res.json({ imageUrl });
     } catch (error) {
         console.error('Error generating badge image:', error);
-        res.status(500).json({ message: 'Error generating badge image' });
+        const status = error.status || 500;
+        res.status(status).json({
+            message: status === 500 ? 'Error generating badge image' : error.message
+        });
     }
 };
 
 // 內部函數：生成 badge 圖片
-async function generateBadgeImage(badgeConfig, data) {
+async function generateBadgeImage(badgeConfig, data, options = {}) {
     if (!createCanvas || !loadImage) {
         throw new Error('Canvas package is not installed. Please install it: npm install canvas');
     }
@@ -215,8 +264,8 @@ async function generateBadgeImage(badgeConfig, data) {
         await drawElement(ctx, element, data, dimensions);
     }
     
-    // 保存圖片
-    const filename = `badge_${badgeConfig.eventId}_${Date.now()}.png`;
+    const hint = options.filenameHint ? `_${options.filenameHint}` : '';
+    const filename = `badge_${badgeConfig.eventId}${hint}_${Date.now()}.png`;
     const filepath = path.join(__dirname, '../public/badges', filename);
     
     // 確保目錄存在

@@ -35,10 +35,28 @@ async function renderRegisterPage(req, res, eventId) {
     const formConfig = await loadOrCreateFormConfig(eventId);
 
     if (formConfig.registerPageEnabled === false) {
+        const lang = formConfig.defaultLanguage || 'zh';
+        const edn = formConfig.eventDisplayName || {};
+        const displayName = (
+            (edn[lang] && String(edn[lang]).trim()) ||
+            (edn.zh && String(edn.zh).trim()) ||
+            (edn.en && String(edn.en).trim()) ||
+            (event && event.name) ||
+            'Event'
+        );
+        const closedTitleRaw = formConfig.registerClosedTitle != null
+            ? String(formConfig.registerClosedTitle).trim()
+            : '';
+        const closedTitle = closedTitleRaw
+            || (formConfig.registerClosedTitleAllowBlank
+                ? ''
+                : '報名已關閉 / Registration is closed');
         return res.render('exvent/register_closed', {
             event_id: eventId,
             event,
-            message: formConfig.registerClosedMessage || 'Registration is currently closed.'
+            displayName,
+            closedTitle,
+            message: formConfig.registerClosedMessage || ''
         });
     }
 
