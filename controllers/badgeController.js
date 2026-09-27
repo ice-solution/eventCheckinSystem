@@ -6,6 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const { registerBadgeFonts, formatCanvasFont, getBadgeFontCatalog, getDefaultBadgeFontFamily, getBadgeFontCssUrl } = require('../utils/badgeFonts');
 const { resolveUserDisplayName } = require('../utils/userDisplayName');
+const { findUserAcrossLinkedEvents } = require('../utils/linkedCheckIn');
 
 // 動態載入 canvas（如果可用）
 let createCanvas, loadImage;
@@ -127,39 +128,45 @@ exports.generateTestImage = async (req, res) => {
             return res.status(404).json({ message: 'Badge config not found' });
         }
         
-        // 嘗試從 event 中取得實際用戶資料
-        const event = await Event.findById(eventId);
+        // 嘗試從 event（及 linked check-in events）取得實際用戶資料
         let testData;
         let usedRealUser = false;
-        
-        if (event && event.users && event.users.length > 0) {
-            let user = null;
-            if (userId) {
-                user = event.users.id(userId);
-                if (!user) {
-                    return res.status(404).json({ message: 'User not found' });
-                }
-            } else {
-                user = event.users[0];
+
+        if (userId) {
+            const found = await findUserAcrossLinkedEvents(Event, eventId, userId);
+            if (!found) {
+                return res.status(404).json({ message: 'User not found' });
             }
-            const userObject = user.toObject ? user.toObject({ minimize: false }) : user;
-            
+            const userObject = found.user.toObject
+                ? found.user.toObject({ minimize: false })
+                : found.user;
             testData = {
                 user: userObject,
-                qrcodeUrl: `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=200x200`
+                qrcodeUrl: `https://api.qrserver.com/v1/create-qr-code/?data=${found.user._id}&size=200x200`
             };
             usedRealUser = true;
         } else {
-            // 如果沒有用戶，使用預設測試數據
-            testData = {
-                user: {
-                    name: '測試用戶',
-                    email: 'test@example.com',
-                    company: '測試公司',
-                    phone: '12345678'
-                },
-                qrcodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?data=test123&size=200x200'
-            };
+            const event = await Event.findById(eventId);
+            if (event && event.users && event.users.length > 0) {
+                const user = event.users[0];
+                const userObject = user.toObject ? user.toObject({ minimize: false }) : user;
+                testData = {
+                    user: userObject,
+                    qrcodeUrl: `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=200x200`
+                };
+                usedRealUser = true;
+            } else {
+                // 如果沒有用戶，使用預設測試數據
+                testData = {
+                    user: {
+                        name: '測試用戶',
+                        email: 'test@example.com',
+                        company: '測試公司',
+                        phone: '12345678'
+                    },
+                    qrcodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?data=test123&size=200x200'
+                };
+            }
         }
         
         // 生成圖片
@@ -195,15 +202,9 @@ exports.generateUserBadgeImage = async (eventId, userId) => {
         throw err;
     }
 
-    const event = await Event.findById(eventId);
-    if (!event) {
-        const err = new Error('Event not found');
-        err.status = 404;
-        throw err;
-    }
-
-    const user = event.users.id(userId);
-    if (!user) {
+    // Badge 設計用當前 event（例如 DBC）；user 可喺 linked event（例如 DBC-V2）
+    const found = await findUserAcrossLinkedEvents(Event, eventId, userId);
+    if (!found) {
         const err = new Error('User not found');
         err.status = 404;
         throw err;
@@ -216,6 +217,7 @@ exports.generateUserBadgeImage = async (eventId, userId) => {
         throw err;
     }
 
+    const user = found.user;
     const userObject = user.toObject ? user.toObject({ minimize: false }) : user;
     const userData = {
         user: userObject,
