@@ -28,6 +28,8 @@ const { isInvoiceEmailEnabled } = require('../utils/featureFlags');
 const { normalizeAgreementAgreed, formatAgreementAgreedLabel, agreementAgreedSortOrder, getEnabledAgreements, isAgreementMetaKey } = require('../utils/agreementFields');
 const { resolveUserDisplayName, ensureUserNameField } = require('../utils/userDisplayName');
 const { getCurrencyUpper, getCurrencyLower, computeGatewayChargeAmount, computeGatewayChargeAmountCents } = require('../utils/currency');
+const { findUserAcrossLinkedEvents, listUsersAcrossLinkedEvents, userToPlain } = require('../utils/linkedCheckIn');
+const { promoteAttendeesForPrimary } = require('../utils/promoteAttendees');
 
 /** 取得對外 base URL（依 DOMAIN/domain，缺協議時自動補 https://） */
 function getPublicBaseUrl() {
@@ -1039,12 +1041,11 @@ exports.getEventUsersByEventID = async (req, res) => {
 exports.fetchUsersByEvent = async (req, res) => {
     const { eventId } = req.params;
     try {
-        const event = await Event.findById(eventId); // 獲取事件數據
-        if (!event) {
+        const { rootEvent, users } = await listUsersAcrossLinkedEvents(Event, eventId);
+        if (!rootEvent) {
             return res.status(404).json({ message: 'Event not found' });
         }
-        console.log('Fetched event users:', event.users); // Debug log
-        res.json(event.users);
+        res.json(users);
     } catch (error) {
         console.error('Error fetching users by event:', error);
         res.status(500).json({ message: 'Error fetching users' });
@@ -1473,15 +1474,39 @@ exports.addUserToEvent = async (req, res) => {
         const savedUser = event.users[event.users.length - 1]; // 獲取剛剛添加的用戶
         newUser._id = savedUser._id; // 將 _id 添加到 newUser 對象中
 
+        // Custom form nested attendees → 真正 Event.users（有 _id，可供 QR／check-in）
+        const promoteResult = promoteAttendeesForPrimary(event, savedUser);
+        let promotedSaved = [];
+        if (promoteResult.created > 0) {
+            await event.save();
+            promotedSaved = (event.users || []).filter((u) =>
+                promoteResult.createdUsers.some((c) => c.nestedAttendeeKey && u.nestedAttendeeKey === c.nestedAttendeeKey)
+            );
+        }
+
         // 報名後寄信：有 Yes/No question → 只寄對應 template；否則用 auto welcome
         if (newUser.role !== 'guest') {
             await exports.sendPostRegistrationEmailByPolicy(savedUser, event, { mode: 'welcome' });
+        }
+        // 為新 promote 嘅 attendees 發 welcome／QR（有 email 先發）
+        for (const att of promotedSaved) {
+            if (!att || !att.email) continue;
+            try {
+                await exports.sendPostRegistrationEmailByPolicy(att, event, { mode: 'welcome' });
+            } catch (mailErr) {
+                console.error('Attendee welcome email failed:', att.email, mailErr.message);
+            }
         }
 
         // 返回新用戶資料（包含 _id），保持向後兼容
         const responseData = { 
             _id: savedUser._id,
-            ...newUser
+            ...newUser,
+            promotedAttendees: promotedSaved.map((u) => ({
+                _id: u._id,
+                name: u.name,
+                email: u.email
+            }))
         };
         res.status(201).json(responseData); // 返回新用戶資料
     } catch (error) {
@@ -2275,26 +2300,23 @@ exports.getUserById = async (req, res) => {
     const { eventId, userId } = req.params; // 從請求參數中獲取事件 ID 和用戶的 _id
 
     try {
-        // 查詢事件以確保存在
-        const event = await Event.findById(eventId); // 根據事件 ID 查詢事件
-        if (!event) {
-            return res.status(404).json({ message: 'Event not found' }); // 如果事件不存在，返回 404 錯誤
+        const found = await findUserAcrossLinkedEvents(Event, eventId, userId);
+        if (!found) {
+            const root = await Event.findById(eventId).select('_id');
+            if (!root) {
+                return res.status(404).json({ message: 'Event not found' });
+            }
+            return res.status(404).json({ message: 'User not found' });
         }
 
-        // 查找用戶
-        const user = event.users.id(userId); // 使用 _id 查找用戶
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' }); // 如果用戶不存在，返回 404 錯誤
-        }
+        const userObject = userToPlain(found.user);
+        userObject._sourceEventId = found.sourceEventId;
+        userObject._sourceEventName = found.sourceEventName;
 
-        // GET 請求不應該修改數據，只返回用戶資料
-        // 使用 toObject() 確保所有字段都被序列化（包括動態字段）
-        const userObject = user.toObject ? user.toObject({ minimize: false }) : user;
-
-        res.status(200).json(userObject); // 返回用戶資料（JSON 格式）
+        res.status(200).json(userObject);
     } catch (error) {
         console.error('Error fetching user:', error);
-        res.status(500).json({ message: 'Server error' }); // 返回伺服器錯誤（JSON 格式）
+        res.status(500).json({ message: 'Server error' });
     }
 };
 exports.updateUser = async (req, res) => {
@@ -2302,17 +2324,18 @@ exports.updateUser = async (req, res) => {
     const updateData = req.body; // 從請求中獲取更新的用戶信息
 
     try {
-        // 查詢事件以確保存在
-        const event = await Event.findById(eventId); // 根據事件 ID 查詢事件
-        if (!event) {
-            return res.status(404).send('找不到該事件 ID'); // 如果事件不存在，返回 404 錯誤
+        // 支援 linked check-in：user 可能住喺 linked event
+        const found = await findUserAcrossLinkedEvents(Event, eventId, userId);
+        if (!found) {
+            const root = await Event.findById(eventId).select('_id');
+            if (!root) {
+                return res.status(404).json({ message: 'Event not found' });
+            }
+            return res.status(404).json({ message: 'User not found' });
         }
-
-        // 查找用戶
-        const user = event.users.id(userId); // 使用 _id 查找用戶
-        if (!user) {
-            return res.status(404).send('找不到該用戶'); // 如果用戶不存在，返回 404 錯誤
-        }
+        const event = found.event;
+        const user = found.user;
+        const homeUserId = user._id;
         
         // 處理 isCheckIn 特殊邏輯
         let checkInUpdated = false;
@@ -2330,7 +2353,7 @@ exports.updateUser = async (req, res) => {
         
         // 動態更新所有傳入的欄位（包括 formConfig 中定義的動態字段）
         // 排除 MongoDB 內部字段和特殊處理的字段
-        const excludedFields = ['_id', '__v', 'isCheckIn', 'checkInAt', 'create_at', 'modified_at'];
+        const excludedFields = ['_id', '__v', 'isCheckIn', 'checkInAt', 'create_at', 'modified_at', '_sourceEventId', '_sourceEventName'];
         
         // 記錄更新前的字段值（用於調試）
         const updatedFields = [];
@@ -2338,8 +2361,8 @@ exports.updateUser = async (req, res) => {
         // 構建更新對象，用於直接更新 MongoDB
         const updateFields = {};
         
-        // 獲取用戶索引（用於構建 MongoDB 更新路徑）
-        const userIndex = event.users.findIndex(u => u._id.toString() === userId.toString());
+        // 獲取用戶索引（用於構建 MongoDB 更新路徑）— 用 home event
+        const userIndex = event.users.findIndex(u => u._id.toString() === homeUserId.toString());
         
         // 如果 isCheckIn 被更新，需要加入到 updateFields 中
         if (checkInUpdated && userIndex !== -1) {
@@ -2400,10 +2423,11 @@ exports.updateUser = async (req, res) => {
         console.log('User object before save:', JSON.stringify(userBeforeSave, null, 2));
         console.log('Update fields for MongoDB:', updateFields);
         
-        // 使用 findByIdAndUpdate 直接更新，避免 Mongoose 序列化問題
+        // 使用 findByIdAndUpdate 直接更新，避免 Mongoose 序列化問題（必須用 user 所屬 home event）
         // 確保 isCheckIn 和 checkInAt 也被包含在更新中
+        const homeEventId = event._id;
         if (Object.keys(updateFields).length > 0) {
-            await Event.findByIdAndUpdate(eventId, {
+            await Event.findByIdAndUpdate(homeEventId, {
                 $set: updateFields,
                 $setOnInsert: { modified_at: new Date() }
             }, { new: true });
@@ -2412,12 +2436,12 @@ exports.updateUser = async (req, res) => {
         }
         
         // 重新從數據庫獲取事件，確保獲取最新數據
-        const refreshedEvent = await Event.findById(eventId);
+        const refreshedEvent = await Event.findById(homeEventId);
         if (!refreshedEvent) {
             return res.status(404).send('找不到事件');
         }
         
-        const updatedUser = refreshedEvent.users.id(userId);
+        const updatedUser = refreshedEvent.users.id(homeUserId);
         if (!updatedUser) {
             return res.status(404).send('找不到更新後的用戶');
         }
@@ -2425,6 +2449,8 @@ exports.updateUser = async (req, res) => {
         // 使用 toObject() 確保所有字段都被序列化（包括動態字段）
         // 使用 { minimize: false } 確保包含所有字段，即使是 undefined
         const userObject = updatedUser.toObject ? updatedUser.toObject({ minimize: false }) : updatedUser;
+        userObject._sourceEventId = found.sourceEventId;
+        userObject._sourceEventName = found.sourceEventName;
         
         console.log('Updated user object after save:', JSON.stringify(userObject, null, 2));
         console.log('Updated fields:', updatedFields);
@@ -6468,25 +6494,27 @@ exports.checkInUser = async (req, res) => {
     const { eventId, userId } = req.params;
     
     try {
-        const event = await Event.findById(eventId);
-        if (!event) {
-            return res.status(404).json({ message: 'Event not found' });
-        }
-        
-        // 查找用戶
-        const user = event.users.find(user => user._id.toString() === userId);
-        if (!user) {
+        const found = await findUserAcrossLinkedEvents(Event, eventId, userId);
+        if (!found) {
+            const root = await Event.findById(eventId).select('_id');
+            if (!root) {
+                return res.status(404).json({ message: 'Event not found' });
+            }
             return res.status(404).json({ message: 'User not found in this event' });
         }
+
+        const event = found.event;
+        const user = found.user;
         
         // 檢查用戶是否已經 check-in
         if (user.isCheckIn) {
             return res.status(400).json({ message: 'User has already checked in' });
         }
         
-        // 更新用戶的 check-in 狀態
+        // 更新用戶的 check-in 狀態（寫喺 user 真正所屬 event）
         user.isCheckIn = true;
         user.checkInAt = new Date(); // 添加 check-in 時間
+        event.markModified('users');
         
         await event.save();
         
@@ -6495,7 +6523,9 @@ exports.checkInUser = async (req, res) => {
             user: {
                 name: user.name,
                 email: user.email,
-                checkInAt: user.checkInAt
+                checkInAt: user.checkInAt,
+                _sourceEventId: found.sourceEventId,
+                _sourceEventName: found.sourceEventName
             }
         });
         

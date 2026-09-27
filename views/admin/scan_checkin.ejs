@@ -373,17 +373,23 @@
                     const rowsData = [];
                     users.forEach(user => {
                         const rowData = [];
+                        const sourceTag = (user._sourceEventId && String(user._sourceEventId) !== String(eventId) && user._sourceEventName)
+                            ? (' [' + user._sourceEventName + ']')
+                            : '';
                         
                         // Add data fields based on formConfig
                         if (visibleFields.length > 0) {
                             visibleFields.forEach(field => {
-                                const value = user[field.fieldName] || '-';
+                                let value = user[field.fieldName] || '-';
+                                if (field.fieldName === 'name' && sourceTag && value !== '-') {
+                                    value = value + sourceTag;
+                                }
                                 rowData.push(value);
                             });
                         } else {
                             // Default fields if no formConfig
                             rowData.push(user.email || '-');
-                            rowData.push(user.name || '-');
+                            rowData.push((user.name || '-') + sourceTag);
                             rowData.push(user.phone || '-');
                         }
                         

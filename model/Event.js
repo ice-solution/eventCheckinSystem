@@ -194,7 +194,12 @@ const eventSchema = new mongoose.Schema({
         size: { type: Number, required: true }, // 文件大小（字節）
         mimeType: { type: String, required: true }, // MIME 類型
         uploadedAt: { type: Date, default: Date.now } // 上傳時間
-    }]
+    }],
+    /**
+     * 跨 event check-in：掃本活動 QR／名單時，亦會喺呢啲 linked event 搵 user 並寫返其所屬 event 嘅 isCheckIn。
+     * 例：DBC 掛 DBC-V2，已發 V2 QR 唔使重發。
+     */
+    linkedCheckInEventIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Event' }]
 });
 
 // 在保存之前更新 modified_at 字段

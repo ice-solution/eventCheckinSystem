@@ -10,6 +10,7 @@ const permission = require('../middleware/permission');
 const formConfigController = require('../controllers/formConfigController');
 const eventsController = require('../controllers/eventsController');
 const stationCheckinController = require('../controllers/stationCheckinController');
+const { findUserAcrossLinkedEvents, listUsersAcrossLinkedEvents, userToPlain } = require('../utils/linkedCheckIn');
 
 const router = express.Router();
 
@@ -71,11 +72,11 @@ router.get('/events', authenticateJwt, async (req, res) => {
   }
 });
 
-// 3) 透過 event _id 拿到 users（回傳該 Event.users）
+// 3) 透過 event _id 拿到 users（含 linked check-in events）
 router.get('/events/:eventId/users', authenticateJwt, async (req, res) => {
   const { eventId } = req.params;
   try {
-    const event = await Event.findById(eventId).select({ users: 1, owner: 1 });
+    const event = await Event.findById(eventId).select({ owner: 1, linkedCheckInEventIds: 1 });
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
@@ -84,7 +85,8 @@ router.get('/events/:eventId/users', authenticateJwt, async (req, res) => {
       return;
     }
 
-    return res.json(event.users || []);
+    const { users } = await listUsersAcrossLinkedEvents(Event, eventId);
+    return res.json(users);
   } catch (err) {
     console.error('iPad API get users by event error:', err);
     return res.status(500).json({ message: 'Server error' });
@@ -114,13 +116,12 @@ router.get('/events/:eventId/registration-config', authenticateJwt, async (req, 
   }
 });
 
-// 3c) 取得單個用戶詳細資料
+// 3c) 取得單個用戶詳細資料（含 linked check-in events）
 router.get('/events/:eventId/users/:userId', authenticateJwt, async (req, res) => {
   const { eventId, userId } = req.params;
 
   try {
-    // 檢查權限：確認 event 存在且用戶有權限
-    const event = await Event.findById(eventId).select({ users: 1, owner: 1 });
+    const event = await Event.findById(eventId).select({ owner: 1, linkedCheckInEventIds: 1 });
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
@@ -129,14 +130,14 @@ router.get('/events/:eventId/users/:userId', authenticateJwt, async (req, res) =
       return;
     }
 
-    // 查找用戶
-    const user = event.users.id(userId);
-    if (!user) {
+    const found = await findUserAcrossLinkedEvents(Event, eventId, userId);
+    if (!found) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // 返回用戶完整資料（包括所有動態字段）
-    const userObject = user.toObject ? user.toObject({ minimize: false }) : user;
+    const userObject = userToPlain(found.user);
+    userObject._sourceEventId = found.sourceEventId;
+    userObject._sourceEventName = found.sourceEventName;
     return res.json(userObject);
   } catch (err) {
     console.error('iPad API get user by id error:', err);
@@ -144,27 +145,28 @@ router.get('/events/:eventId/users/:userId', authenticateJwt, async (req, res) =
   }
 });
 
-// 4) 更新用戶 checkin 狀態（和 users.ejs 中的功能一樣）
+// 4) 更新用戶 checkin 狀態（和 users.ejs 中的功能一樣；寫返 user 所屬 event）
 router.put('/events/:eventId/users/:userId', authenticateJwt, async (req, res) => {
   const { eventId, userId } = req.params;
   const updateData = req.body || {};
 
   try {
-    // 檢查權限：確認 event 存在且用戶有權限
-    const event = await Event.findById(eventId).select({ users: 1, owner: 1 });
-    if (!event) {
+    const accessEvent = await Event.findById(eventId).select({ owner: 1, linkedCheckInEventIds: 1 });
+    if (!accessEvent) {
       return res.status(404).json({ message: 'Event not found' });
     }
 
-    if (!(await permission.assertJwtEventAccess(req, res, event))) {
+    if (!(await permission.assertJwtEventAccess(req, res, accessEvent))) {
       return;
     }
 
-    // 查找用戶
-    const user = event.users.id(userId);
-    if (!user) {
+    const found = await findUserAcrossLinkedEvents(Event, eventId, userId);
+    if (!found) {
       return res.status(404).json({ message: 'User not found' });
     }
+
+    const event = found.event;
+    const user = found.user;
 
     // 處理 isCheckIn 特殊邏輯（和 eventsController.updateUser 一樣）
     let checkInUpdated = false;
@@ -181,7 +183,7 @@ router.put('/events/:eventId/users/:userId', authenticateJwt, async (req, res) =
     }
 
     // 更新其他字段（排除內部字段）
-    const excludedFields = ['_id', '__v', 'isCheckIn', 'checkInAt', 'create_at', 'modified_at'];
+    const excludedFields = ['_id', '__v', 'isCheckIn', 'checkInAt', 'create_at', 'modified_at', '_sourceEventId', '_sourceEventName'];
     Object.keys(updateData).forEach(key => {
       if (!excludedFields.includes(key) && updateData[key] !== undefined) {
         user[key] = updateData[key];
@@ -202,7 +204,9 @@ router.put('/events/:eventId/users/:userId', authenticateJwt, async (req, res) =
     await event.save();
 
     // 返回更新後的完整用戶資料（供簽到與修改個人資料共用）
-    const userObject = user.toObject ? user.toObject({ minimize: false }) : user;
+    const userObject = userToPlain(user);
+    userObject._sourceEventId = found.sourceEventId;
+    userObject._sourceEventName = found.sourceEventName;
     return res.json(userObject);
   } catch (err) {
     console.error('iPad API update user checkin error:', err);
