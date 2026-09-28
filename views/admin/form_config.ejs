@@ -468,6 +468,32 @@
                                     <hr class="my-4">
                                         <div class="row">
                                             <div class="col-md-6">
+                                                <label class="form-label"><%= t('form_config.thankYouYesNoSectionName') %></label>
+                                                <%
+                                                    const _ynqSectionName = (ynq.sectionName != null) ? String(ynq.sectionName) : '';
+                                                    const _ynqOrderVal = (ynq.order != null && ynq.order !== '') ? Number(ynq.order) : 0;
+                                                %>
+                                                <select class="form-control" id="thankYouYesNoSectionName">
+                                                    <option value="" <%= _ynqSectionName === '' ? 'selected' : '' %>><%= t('form_config.thankYouYesNoSectionFirst') %></option>
+                                                    <% (formConfig.sections || []).forEach(function(sec) { %>
+                                                        <% if (!sec || !sec.sectionName) return; %>
+                                                        <option value="<%= sec.sectionName %>" <%= _ynqSectionName === sec.sectionName ? 'selected' : '' %>>
+                                                            <%= sec.sectionName %><%= (sec.sectionTitle && (sec.sectionTitle.zh || sec.sectionTitle.en)) ? (' — ' + (sec.sectionTitle.zh || sec.sectionTitle.en)) : '' %>
+                                                        </option>
+                                                    <% }); %>
+                                                    <option value="__after_agreements__" <%= _ynqSectionName === '__after_agreements__' ? 'selected' : '' %>><%= t('form_config.thankYouYesNoSectionAfterAgreements') %></option>
+                                                </select>
+                                                <small class="text-muted d-block mt-1"><%= t('form_config.thankYouYesNoSectionNameHint') %></small>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label"><%= t('form_config.thankYouYesNoOrder') %></label>
+                                                <input type="number" class="form-control" id="thankYouYesNoOrder"
+                                                       step="1" value="<%= Number.isFinite(_ynqOrderVal) ? _ynqOrderVal : 0 %>">
+                                                <small class="text-muted d-block mt-1"><%= t('form_config.thankYouYesNoOrderHint') %></small>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-md-6">
                                                 <label class="form-label"><%= t('form_config.thankYouYesNoQuestionZh') %></label>
                                                 <input type="text" class="form-control" id="thankYouYesNoQuestionZh"
                                                        value="<%= (ynq.question && ynq.question.zh) ? ynq.question.zh : '' %>"
@@ -993,6 +1019,33 @@
                                                                     }
                                                                 });
                                                             });
+                                                            // Thank You Yes/No 問題亦可作為條件依賴來源（fieldName = thankYouYesNo）
+                                                            const _ynqCfg = (formConfig.thankYou && formConfig.thankYou.yesNoQuestion) ? formConfig.thankYou.yesNoQuestion : null;
+                                                            const _ynqEnabled = !!( _ynqCfg && _ynqCfg.enabled);
+                                                            if (_ynqEnabled) {
+                                                                const _ynYesZh = (_ynqCfg.yesLabel && _ynqCfg.yesLabel.zh) ? _ynqCfg.yesLabel.zh : '是';
+                                                                const _ynYesEn = (_ynqCfg.yesLabel && _ynqCfg.yesLabel.en) ? _ynqCfg.yesLabel.en : 'Yes';
+                                                                const _ynNoZh = (_ynqCfg.noLabel && _ynqCfg.noLabel.zh) ? _ynqCfg.noLabel.zh : '否';
+                                                                const _ynNoEn = (_ynqCfg.noLabel && _ynqCfg.noLabel.en) ? _ynqCfg.noLabel.en : 'No';
+                                                                _choiceFields.push({
+                                                                    fieldName: 'thankYouYesNo',
+                                                                    type: 'yesNo',
+                                                                    options: [
+                                                                        { value: 'yes', label: { zh: _ynYesZh, en: _ynYesEn } },
+                                                                        { value: 'no', label: { zh: _ynNoZh, en: _ynNoEn } }
+                                                                    ]
+                                                                });
+                                                            } else if (_swField === 'thankYouYesNo') {
+                                                                // 已選但而家未啟用：仍顯示 options 方便改／清
+                                                                _choiceFields.push({
+                                                                    fieldName: 'thankYouYesNo',
+                                                                    type: 'yesNo',
+                                                                    options: [
+                                                                        { value: 'yes', label: { zh: '是', en: 'Yes' } },
+                                                                        { value: 'no', label: { zh: '否', en: 'No' } }
+                                                                    ]
+                                                                });
+                                                            }
                                                             let _swDepField = null;
                                                             for (let _i = 0; _i < _choiceFields.length; _i++) {
                                                                 if (_choiceFields[_i].fieldName === _swField) { _swDepField = _choiceFields[_i]; break; }
@@ -1006,7 +1059,11 @@
                                                                     <option value=""><%= t('form_config.showWhenFieldNone') %></option>
                                                                     <% _choiceFields.forEach(function(cf) { %>
                                                                         <option value="<%= cf.fieldName %>" <%= _swField === cf.fieldName ? 'selected' : '' %>>
-                                                                            <%= cf.fieldName %><%= cf.type ? ' (' + cf.type + ')' : '' %>
+                                                                            <% if (cf.fieldName === 'thankYouYesNo') { %>
+                                                                                thankYouYesNo (<%= t('form_config.showWhenThankYouYesNo') %>)
+                                                                            <% } else { %>
+                                                                                <%= cf.fieldName %><%= cf.type ? ' (' + cf.type + ')' : '' %>
+                                                                            <% } %>
                                                                         </option>
                                                                     <% }); %>
                                                                 </select>
@@ -1282,6 +1339,8 @@
             },
             yesNoQuestion: {
                 enabled: false,
+                sectionName: '__after_agreements__',
+                order: 0,
                 question: { zh: '', en: '' },
                 yesLabel: { zh: '是', en: 'Yes' },
                 noLabel: { zh: '否', en: 'No' },
@@ -1301,6 +1360,8 @@
     if (!formConfig.thankYou.yesNoQuestion) {
         formConfig.thankYou.yesNoQuestion = {
             enabled: false,
+            sectionName: '__after_agreements__',
+            order: 0,
             question: { zh: '', en: '' },
             yesLabel: { zh: '是', en: 'Yes' },
             noLabel: { zh: '否', en: 'No' },
@@ -1316,6 +1377,24 @@
             noPurchaseMessage: { zh: '', en: '' }
         };
     }
+    // 舊 placement → sectionName / order（一次性相容）
+    (function migrateYnqPlacement() {
+        const ynq = formConfig.thankYou.yesNoQuestion;
+        if (!ynq) return;
+        if (ynq.sectionName == null) ynq.sectionName = '';
+        if (ynq.order == null || ynq.order === '') ynq.order = 0;
+        if (ynq.placement && !ynq._placementMigrated) {
+            if (ynq.placement === 'bottom') ynq.sectionName = '__after_agreements__';
+            else if (ynq.placement === 'after_fields') {
+                ynq.sectionName = '';
+                ynq.order = 9999;
+            } else if (ynq.placement === 'top') {
+                ynq.sectionName = '';
+                ynq.order = 0;
+            }
+            ynq._placementMigrated = true;
+        }
+    })();
     if (!formConfig.eventDisplayName) {
         formConfig.eventDisplayName = { zh: '', en: '' };
     }
@@ -2080,6 +2159,11 @@
                 },
                 yesNoQuestion: {
                     enabled: checked('thankYouYesNoEnabled', false),
+                    sectionName: trimVal('thankYouYesNoSectionName', ''),
+                    order: (function() {
+                        const n = Number(val('thankYouYesNoOrder', '0'));
+                        return Number.isFinite(n) ? n : 0;
+                    })(),
                     question: {
                         zh: trimVal('thankYouYesNoQuestionZh', ''),
                         en: trimVal('thankYouYesNoQuestionEn', '')
@@ -2412,6 +2496,8 @@
                         },
                         yesNoQuestion: {
                             enabled: false,
+                            sectionName: '__after_agreements__',
+                            order: 0,
                             question: { zh: '', en: '' },
                             yesLabel: { zh: '是', en: 'Yes' },
                             noLabel: { zh: '否', en: 'No' },
@@ -2561,6 +2647,16 @@
         setInputValue('thankYouPurchaseMessageEn', (ty.purchaseMessage && ty.purchaseMessage.en) || '');
         const ynq = ty.yesNoQuestion || {};
         setInputValue('thankYouYesNoEnabled', !!ynq.enabled);
+        (function syncYnqPlacementToSection() {
+            let sectionName = (ynq.sectionName != null) ? String(ynq.sectionName) : '';
+            let order = (ynq.order != null && ynq.order !== '') ? Number(ynq.order) : 0;
+            if (!Number.isFinite(order)) order = 0;
+            if (!sectionName && ynq.placement === 'bottom') sectionName = '__after_agreements__';
+            if (!sectionName && ynq.placement === 'after_fields') { sectionName = ''; order = 9999; }
+            if (!sectionName && ynq.placement === 'top') { sectionName = ''; order = 0; }
+            setInputValue('thankYouYesNoSectionName', sectionName);
+            setInputValue('thankYouYesNoOrder', order);
+        })();
         setInputValue('thankYouYesNoQuestionZh', (ynq.question && ynq.question.zh) || '');
         setInputValue('thankYouYesNoQuestionEn', (ynq.question && ynq.question.en) || '');
         setInputValue('thankYouYesLabelZh', (ynq.yesLabel && ynq.yesLabel.zh) || '');

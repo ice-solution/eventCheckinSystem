@@ -52,7 +52,8 @@ const formFieldSchema = new mongoose.Schema({
         pattern: String
     },
     /**
-     * 條件顯示：當指定欄位（通常係 radio / select / checkbox）嘅值
+     * 條件顯示：當指定欄位（通常係 radio / select / checkbox，
+     * 或 Thank You Yes/No：fieldName = thankYouYesNo，values: yes|no）嘅值
      * 屬於 values 其中之一時，先喺報名頁顯示此欄。
      * fieldName 留空 = 永遠顯示（唔啟用條件）。
      */
@@ -258,6 +259,14 @@ const formConfigSchema = new mongoose.Schema({
         /** Yes/No 問題（顯示於報名表；Yes 時可覆寫成功頁文案並發送指定 Email Template） */
         yesNoQuestion: {
             enabled: { type: Boolean, default: false },
+            /**
+             * 插入哪個 Form section（用 sectionName）。
+             * 空字串 = 第一個可見區塊。
+             * 特殊值 __after_agreements__ = 協議之後、提交前（唔跟欄位 order）。
+             */
+            sectionName: { type: String, default: '__after_agreements__' },
+            /** 同該 section 內 fields.order 一齊排序（愈細愈上）；僅喺插入區塊時生效 */
+            order: { type: Number, default: 0 },
             question: {
                 zh: { type: String, default: '' },
                 en: { type: String, default: '' }

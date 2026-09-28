@@ -616,6 +616,41 @@ var registerPageTitleSuffix = isApplicationMode
             <% if (isApplicationMode) { %>
             <input type="hidden" name="token" id="applicationTokenField" value="<%= applicationTokenVal %>">
             <% } %>
+            <%
+                var _ynqEnabledReg = !!(formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled);
+                var _ynq = _ynqEnabledReg ? formConfig.thankYou.yesNoQuestion : null;
+                var _ynqHasSectionName = !!(!_ynq === false && _ynq && _ynq.sectionName != null && String(_ynq.sectionName).trim() !== '');
+                var _ynqSectionName = (_ynq && _ynq.sectionName != null) ? String(_ynq.sectionName).trim() : '';
+                var _ynqOrder = (_ynq && _ynq.order != null && _ynq.order !== '') ? Number(_ynq.order) : 0;
+                if (!Number.isFinite(_ynqOrder)) _ynqOrder = 0;
+                // 相容舊 placement
+                if (_ynq && _ynq.placement && !_ynqHasSectionName) {
+                    if (_ynq.placement === 'bottom') _ynqSectionName = '__after_agreements__';
+                    else if (_ynq.placement === 'after_fields') { _ynqSectionName = ''; _ynqOrder = 9999; }
+                    else if (_ynq.placement === 'top') { _ynqSectionName = ''; _ynqOrder = 0; }
+                } else if (_ynqEnabledReg && _ynq.sectionName == null && !(_ynq && _ynq.placement)) {
+                    // 舊資料未有 sectionName → 維持協議後
+                    _ynqSectionName = '__after_agreements__';
+                }
+                // sectionName === '' → 第一個可見區塊
+                var _ynqAfterAgreements = _ynqEnabledReg && _ynqSectionName === '__after_agreements__';
+                var _ynqFirstVisibleSectionName = '';
+                if (_ynqEnabledReg && formConfig && formConfig.sections) {
+                    var _secsSorted = formConfig.sections.slice().sort(function(a, b) {
+                        return (a.order || 0) - (b.order || 0);
+                    });
+                    for (var _si = 0; _si < _secsSorted.length; _si++) {
+                        if (_secsSorted[_si] && _secsSorted[_si].visible !== false) {
+                            _ynqFirstVisibleSectionName = String(_secsSorted[_si].sectionName || '');
+                            break;
+                        }
+                    }
+                }
+                var _ynqTargetSectionName = _ynqAfterAgreements
+                    ? ''
+                    : (_ynqSectionName || _ynqFirstVisibleSectionName);
+                var _ynqRenderedInFields = false;
+            %>
             <% if (formConfig && formConfig.sections && formConfig.sections.length > 0) { %>
                 <% 
                 // 根據 order 排序 sections
@@ -627,21 +662,30 @@ var registerPageTitleSuffix = isApplicationMode
                 %>
                 <% sortedSections.forEach((section, sectionIndex) => { %>
                     <% if (section.visible) { %>
+                        <%
+                            var _ynqInThisSection = _ynqEnabledReg && !_ynqAfterAgreements
+                                && String(section.sectionName || '') === String(_ynqTargetSectionName || '');
+                            var _ynqPending = _ynqInThisSection && !_ynqRenderedInFields;
+                        %>
                         <div class="form-section">
                             <h3 class="section-title" data-zh="<%= section.sectionTitle && section.sectionTitle.zh ? section.sectionTitle.zh : section.sectionTitle %>" data-en="<%= section.sectionTitle && section.sectionTitle.en ? section.sectionTitle.en : '' %>">
                                 <%= section.sectionTitle && section.sectionTitle.zh ? section.sectionTitle.zh : (typeof section.sectionTitle === 'string' ? section.sectionTitle : '') %>
                             </h3>
                             
-                            <% if (section.fields && section.fields.length > 0) { %>
+                            <% if ((section.fields && section.fields.length > 0) || _ynqPending) { %>
                                 <% 
                                 // 根據 order 排序 fields
-                                const sortedFields = section.fields.slice().sort((a, b) => {
+                                const sortedFields = (section.fields || []).slice().sort((a, b) => {
                                     const orderA = a.order || 0;
                                     const orderB = b.order || 0;
                                     return orderA - orderB;
                                 });
                                 %>
                                 <% sortedFields.forEach((field, fieldIndex) => { %>
+                                    <% if (_ynqPending && _ynqOrder <= (field.order || 0)) { %>
+                                        <%- include('partials/thankyou_yesno', { ynq: _ynq }) %>
+                                        <% _ynqPending = false; _ynqRenderedInFields = true; %>
+                                    <% } %>
                                     <% const fieldDisplayed = (field.visible !== false) && (field.display !== undefined ? field.display : true); %>
                                     <% if (fieldDisplayed) { %>
                                         <% var _selectHasOther = (field.type === 'select' && field.options && field.options.some(function (o) { return o && o.isOther; })); %>
@@ -899,6 +943,10 @@ var registerPageTitleSuffix = isApplicationMode
                                         <% } %>
                                     <% } %>
                                 <% }); %>
+                                <% if (_ynqPending) { %>
+                                    <%- include('partials/thankyou_yesno', { ynq: _ynq }) %>
+                                    <% _ynqPending = false; _ynqRenderedInFields = true; %>
+                                <% } %>
                             <% } %>
                         </div>
                     <% } %>
@@ -1194,32 +1242,9 @@ var registerPageTitleSuffix = isApplicationMode
                 </div>
             <% }); %>
 
-            <!-- Thank You Yes/No 問題 -->
-            <% if (formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled) { %>
-                <% const ynq = formConfig.thankYou.yesNoQuestion; %>
-                <div class="form-section thankyou-yesno-section">
-                    <h3 class="section-title"
-                        data-zh="<%= (ynq.question && ynq.question.zh) ? ynq.question.zh : '請選擇' %>"
-                        data-en="<%= (ynq.question && ynq.question.en) ? ynq.question.en : 'Please choose' %>">
-                        <%= (ynq.question && ynq.question.zh) ? ynq.question.zh : '請選擇' %>
-                    </h3>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="thankYouYesNo" id="thankYouYesNoYes" value="yes" required>
-                        <label class="form-check-label field-label" for="thankYouYesNoYes"
-                               data-zh="<%= (ynq.yesLabel && ynq.yesLabel.zh) ? ynq.yesLabel.zh : '是' %>"
-                               data-en="<%= (ynq.yesLabel && ynq.yesLabel.en) ? ynq.yesLabel.en : 'Yes' %>">
-                            <%= (ynq.yesLabel && ynq.yesLabel.zh) ? ynq.yesLabel.zh : '是' %>
-                        </label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="thankYouYesNo" id="thankYouYesNoNo" value="no" required>
-                        <label class="form-check-label field-label" for="thankYouYesNoNo"
-                               data-zh="<%= (ynq.noLabel && ynq.noLabel.zh) ? ynq.noLabel.zh : '否' %>"
-                               data-en="<%= (ynq.noLabel && ynq.noLabel.en) ? ynq.noLabel.en : 'No' %>">
-                            <%= (ynq.noLabel && ynq.noLabel.zh) ? ynq.noLabel.zh : '否' %>
-                        </label>
-                    </div>
-                </div>
+            <!-- Thank You Yes/No：協議之後 -->
+            <% if (_ynqEnabledReg && _ynqAfterAgreements) { %>
+                <%- include('partials/thankyou_yesno', { ynq: _ynq }) %>
             <% } %>
 
             <div class="btn-container">
