@@ -619,7 +619,7 @@ var registerPageTitleSuffix = isApplicationMode
             <%
                 var _ynqEnabledReg = !!(formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled);
                 var _ynq = _ynqEnabledReg ? formConfig.thankYou.yesNoQuestion : null;
-                var _ynqHasSectionName = !!(!_ynq === false && _ynq && _ynq.sectionName != null && String(_ynq.sectionName).trim() !== '');
+                var _ynqHasSectionName = !!(_ynq && _ynq.sectionName != null && String(_ynq.sectionName).trim() !== '');
                 var _ynqSectionName = (_ynq && _ynq.sectionName != null) ? String(_ynq.sectionName).trim() : '';
                 var _ynqOrder = (_ynq && _ynq.order != null && _ynq.order !== '') ? Number(_ynq.order) : 0;
                 if (!Number.isFinite(_ynqOrder)) _ynqOrder = 0;

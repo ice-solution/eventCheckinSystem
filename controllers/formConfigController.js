@@ -276,6 +276,8 @@ function applyFormConfigMetaDefaults(migratedConfig) {
         },
         yesNoQuestion: {
             enabled: false,
+            sectionName: '__after_agreements__',
+            order: 0,
             question: { zh: '', en: '' },
             yesLabel: { zh: '是', en: 'Yes' },
             noLabel: { zh: '否', en: 'No' },
@@ -311,8 +313,18 @@ function applyFormConfigMetaDefaults(migratedConfig) {
                 zh: (obj && obj.zh) || '',
                 en: (obj && obj.en) || ''
             });
+            let sectionName = (ynq.sectionName != null) ? String(ynq.sectionName) : '';
+            let order = (ynq.order != null && ynq.order !== '') ? Number(ynq.order) : 0;
+            if (!Number.isFinite(order)) order = 0;
+            // 相容舊 placement
+            if (!sectionName && ynq.placement === 'bottom') sectionName = '__after_agreements__';
+            else if (!sectionName && ynq.placement === 'after_fields') { sectionName = ''; order = 9999; }
+            else if (!sectionName && ynq.placement === 'top') { sectionName = ''; order = 0; }
+            if (ynq.sectionName == null && !ynq.placement) sectionName = '__after_agreements__';
             migratedConfig.thankYou.yesNoQuestion = {
                 enabled: ynq.enabled === true,
+                sectionName,
+                order,
                 question: bilingual(ynq.question),
                 yesLabel: {
                     zh: (ynq.yesLabel && ynq.yesLabel.zh) || defaultYnq.yesLabel.zh,
@@ -405,6 +417,8 @@ exports.getDefaultFormConfig = () => ({
         },
         yesNoQuestion: {
             enabled: false,
+            sectionName: '__after_agreements__',
+            order: 0,
             question: { zh: '', en: '' },
             yesLabel: { zh: '是', en: 'Yes' },
             noLabel: { zh: '否', en: 'No' },

@@ -490,6 +490,7 @@
                                                 <input type="number" class="form-control" id="thankYouYesNoOrder"
                                                        step="1" value="<%= Number.isFinite(_ynqOrderVal) ? _ynqOrderVal : 0 %>">
                                                 <small class="text-muted d-block mt-1"><%= t('form_config.thankYouYesNoOrderHint') %></small>
+                                                <small class="text-danger d-none" id="thankYouYesNoOrderWarn"><%= t('form_config.thankYouYesNoOrderWarn') %></small>
                                             </div>
                                         </div>
                                         <div class="row mt-3">
@@ -1408,11 +1409,26 @@
         const yesNo = document.getElementById('thankYouYesNoSettings');
         if (general) general.style.display = enabled ? 'none' : '';
         if (yesNo) yesNo.style.display = enabled ? '' : 'none';
+        syncYnqOrderWarn();
+    }
+    function syncYnqOrderWarn() {
+        const sel = document.getElementById('thankYouYesNoSectionName');
+        const warn = document.getElementById('thankYouYesNoOrderWarn');
+        const orderEl = document.getElementById('thankYouYesNoOrder');
+        if (!sel || !warn) return;
+        const afterAgreements = sel.value === '__after_agreements__';
+        warn.classList.toggle('d-none', !afterAgreements);
+        if (orderEl) orderEl.disabled = afterAgreements;
     }
     const thankYouYesNoEnabledEl = document.getElementById('thankYouYesNoEnabled');
     if (thankYouYesNoEnabledEl) {
         thankYouYesNoEnabledEl.addEventListener('change', syncThankYouModeUI);
         syncThankYouModeUI();
+    }
+    const thankYouYesNoSectionNameEl = document.getElementById('thankYouYesNoSectionName');
+    if (thankYouYesNoSectionNameEl) {
+        thankYouYesNoSectionNameEl.addEventListener('change', syncYnqOrderWarn);
+        syncYnqOrderWarn();
     }
 
     if (!formConfig.registerSubtitle) {
