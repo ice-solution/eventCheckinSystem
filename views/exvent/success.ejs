@@ -135,33 +135,41 @@
                 let purchaseMsgEn = (ty.purchaseMessage && ty.purchaseMessage.en) ? ty.purchaseMessage.en : 'Your payment was successful. Here are your transaction details:';
 
                 if (useYesCopy) {
-                    if (ynq.yesTitle && ynq.yesTitle.zh) freeTitleZh = ynq.yesTitle.zh;
-                    if (ynq.yesTitle && ynq.yesTitle.en) freeTitleEn = ynq.yesTitle.en;
-                    if (ynq.yesMessage && ynq.yesMessage.zh) freeMsgZh = ynq.yesMessage.zh;
-                    if (ynq.yesMessage && ynq.yesMessage.en) freeMsgEn = ynq.yesMessage.en;
-                    if (ynq.yesPurchaseTitle && ynq.yesPurchaseTitle.zh) purchaseTitleZh = ynq.yesPurchaseTitle.zh;
-                    if (ynq.yesPurchaseTitle && ynq.yesPurchaseTitle.en) purchaseTitleEn = ynq.yesPurchaseTitle.en;
-                    if (ynq.yesPurchaseMessage && ynq.yesPurchaseMessage.zh) purchaseMsgZh = ynq.yesPurchaseMessage.zh;
-                    if (ynq.yesPurchaseMessage && ynq.yesPurchaseMessage.en) purchaseMsgEn = ynq.yesPurchaseMessage.en;
+                    // Yes 專用文案：留空就顯示空，唔 fallback 一般 thank you default
+                    freeTitleZh = (ynq.yesTitle && ynq.yesTitle.zh) ? ynq.yesTitle.zh : '';
+                    freeTitleEn = (ynq.yesTitle && ynq.yesTitle.en) ? ynq.yesTitle.en : '';
+                    freeMsgZh = (ynq.yesMessage && ynq.yesMessage.zh) ? ynq.yesMessage.zh : '';
+                    freeMsgEn = (ynq.yesMessage && ynq.yesMessage.en) ? ynq.yesMessage.en : '';
+                    purchaseTitleZh = (ynq.yesPurchaseTitle && ynq.yesPurchaseTitle.zh) ? ynq.yesPurchaseTitle.zh : '';
+                    purchaseTitleEn = (ynq.yesPurchaseTitle && ynq.yesPurchaseTitle.en) ? ynq.yesPurchaseTitle.en : '';
+                    purchaseMsgZh = (ynq.yesPurchaseMessage && ynq.yesPurchaseMessage.zh) ? ynq.yesPurchaseMessage.zh : '';
+                    purchaseMsgEn = (ynq.yesPurchaseMessage && ynq.yesPurchaseMessage.en) ? ynq.yesPurchaseMessage.en : '';
                 } else if (useNoCopy) {
-                    if (ynq.noTitle && ynq.noTitle.zh) freeTitleZh = ynq.noTitle.zh;
-                    if (ynq.noTitle && ynq.noTitle.en) freeTitleEn = ynq.noTitle.en;
-                    if (ynq.noMessage && ynq.noMessage.zh) freeMsgZh = ynq.noMessage.zh;
-                    if (ynq.noMessage && ynq.noMessage.en) freeMsgEn = ynq.noMessage.en;
-                    if (ynq.noPurchaseTitle && ynq.noPurchaseTitle.zh) purchaseTitleZh = ynq.noPurchaseTitle.zh;
-                    if (ynq.noPurchaseTitle && ynq.noPurchaseTitle.en) purchaseTitleEn = ynq.noPurchaseTitle.en;
-                    if (ynq.noPurchaseMessage && ynq.noPurchaseMessage.zh) purchaseMsgZh = ynq.noPurchaseMessage.zh;
-                    if (ynq.noPurchaseMessage && ynq.noPurchaseMessage.en) purchaseMsgEn = ynq.noPurchaseMessage.en;
+                    // No 專用文案：留空就顯示空，唔 fallback 一般 thank you default
+                    freeTitleZh = (ynq.noTitle && ynq.noTitle.zh) ? ynq.noTitle.zh : '';
+                    freeTitleEn = (ynq.noTitle && ynq.noTitle.en) ? ynq.noTitle.en : '';
+                    freeMsgZh = (ynq.noMessage && ynq.noMessage.zh) ? ynq.noMessage.zh : '';
+                    freeMsgEn = (ynq.noMessage && ynq.noMessage.en) ? ynq.noMessage.en : '';
+                    purchaseTitleZh = (ynq.noPurchaseTitle && ynq.noPurchaseTitle.zh) ? ynq.noPurchaseTitle.zh : '';
+                    purchaseTitleEn = (ynq.noPurchaseTitle && ynq.noPurchaseTitle.en) ? ynq.noPurchaseTitle.en : '';
+                    purchaseMsgZh = (ynq.noPurchaseMessage && ynq.noPurchaseMessage.zh) ? ynq.noPurchaseMessage.zh : '';
+                    purchaseMsgEn = (ynq.noPurchaseMessage && ynq.noPurchaseMessage.en) ? ynq.noPurchaseMessage.en : '';
                 }
 
                 const successPageLang = (typeof pageLang !== 'undefined' && pageLang === 'en') ? 'en' : 'zh';
                 const pickTy = function(zh, en) {
                     return successPageLang === 'en' ? (en || zh || '') : (zh || en || '');
                 };
+                const initTyTitle = transaction
+                    ? pickTy(purchaseTitleZh, purchaseTitleEn)
+                    : pickTy(freeTitleZh, freeTitleEn);
+                const initTyMessage = transaction
+                    ? pickTy(purchaseMsgZh, purchaseMsgEn)
+                    : pickTy(freeMsgZh, freeMsgEn);
             %>
             <% if (transaction) { %>
-                <h5 id="thankYouTitle"><%= pickTy(purchaseTitleZh, purchaseTitleEn) %></h5>
-                <div id="emailMessage"><%- (typeof formatDisplayHtml === 'function' ? formatDisplayHtml(pickTy(purchaseMsgZh, purchaseMsgEn)) : (typeof safeDisplayHtml === 'function' ? safeDisplayHtml(pickTy(purchaseMsgZh, purchaseMsgEn)) : pickTy(purchaseMsgZh, purchaseMsgEn))) %></div>
+                <h5 id="thankYouTitle"<%= initTyTitle ? '' : ' style="display:none;"' %>><%= initTyTitle %></h5>
+                <div id="emailMessage"<%= initTyMessage ? '' : ' style="display:none;"' %>><%- (typeof formatDisplayHtml === 'function' ? formatDisplayHtml(initTyMessage) : (typeof safeDisplayHtml === 'function' ? safeDisplayHtml(initTyMessage) : initTyMessage)) %></div>
                 
                 <div class="transaction-details">
                     <h5 id="transactionTitle" data-zh="交易詳情" data-en="Transaction Details">交易詳情</h5>
@@ -183,8 +191,8 @@
                     </div>
                 </div>
             <% } else { %>
-                <h5 id="thankYouTitle"><%= pickTy(freeTitleZh, freeTitleEn) %></h5>
-                <div id="emailMessage"><%- (typeof formatDisplayHtml === 'function' ? formatDisplayHtml(pickTy(freeMsgZh, freeMsgEn)) : (typeof safeDisplayHtml === 'function' ? safeDisplayHtml(pickTy(freeMsgZh, freeMsgEn)) : pickTy(freeMsgZh, freeMsgEn))) %></div>
+                <h5 id="thankYouTitle"<%= initTyTitle ? '' : ' style="display:none;"' %>><%= initTyTitle %></h5>
+                <div id="emailMessage"<%= initTyMessage ? '' : ' style="display:none;"' %>><%- (typeof formatDisplayHtml === 'function' ? formatDisplayHtml(initTyMessage) : (typeof safeDisplayHtml === 'function' ? safeDisplayHtml(initTyMessage) : initTyMessage)) %></div>
             <% } %>
                 <textarea id="thankYouCopyJson" hidden readonly style="display:none"><%= JSON.stringify({
                     title: { zh: freeTitleZh, en: freeTitleEn },
@@ -278,7 +286,16 @@
                     ? pick(thankYouCopy.purchaseMessage)
                     : pick(thankYouCopy.message);
                 $('#thankYouTitle').text(title);
-                $('#emailMessage').html(formatDisplayHtmlClient(message));
+                if (title) {
+                    $('#thankYouTitle').show();
+                } else {
+                    $('#thankYouTitle').hide().empty();
+                }
+                if (message) {
+                    $('#emailMessage').html(formatDisplayHtmlClient(message)).show();
+                } else {
+                    $('#emailMessage').hide().empty();
+                }
             }
         }
     </script>
