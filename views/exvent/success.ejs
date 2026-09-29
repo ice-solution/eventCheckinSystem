@@ -144,7 +144,7 @@
             %>
             <% if (transaction) { %>
                 <h5 id="thankYouTitle"><%= pickTy(purchaseTitleZh, purchaseTitleEn) %></h5>
-                <p id="emailMessage"><%= pickTy(purchaseMsgZh, purchaseMsgEn) %></p>
+                <div id="emailMessage"><%- (typeof safeDisplayHtml === 'function' ? safeDisplayHtml(pickTy(purchaseMsgZh, purchaseMsgEn)) : pickTy(purchaseMsgZh, purchaseMsgEn)) %></div>
                 
                 <div class="transaction-details">
                     <h5 id="transactionTitle" data-zh="交易詳情" data-en="Transaction Details">交易詳情</h5>
@@ -167,7 +167,7 @@
                 </div>
             <% } else { %>
                 <h5 id="thankYouTitle"><%= pickTy(freeTitleZh, freeTitleEn) %></h5>
-                <p id="emailMessage"><%= pickTy(freeMsgZh, freeMsgEn) %></p>
+                <div id="emailMessage"><%- (typeof safeDisplayHtml === 'function' ? safeDisplayHtml(pickTy(freeMsgZh, freeMsgEn)) : pickTy(freeMsgZh, freeMsgEn)) %></div>
             <% } %>
                 <script type="application/json" id="thankYouCopyJson"><%- JSON.stringify({
                     title: { zh: freeTitleZh, en: freeTitleEn },
@@ -202,6 +202,16 @@
             try { return JSON.parse(el.textContent); } catch (_) { return null; }
         })();
 
+        function sanitizeDisplayHtml(input) {
+            let s = String(input == null ? '' : input);
+            if (!s) return '';
+            s = s.replace(/<\s*(script|style|iframe|object|embed|link|meta|form|input|button|textarea|select|svg|math)(\s[^>]*)?>[\s\S]*?<\s*\/\s*\1\s*>/gi, '');
+            s = s.replace(/<\s*\/?\s*(script|style|iframe|object|embed|link|meta|form|input|button|textarea|select|svg|math)(\s[^>]*)?\/?\s*>/gi, '');
+            s = s.replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+            s = s.replace(/\s(href|src|xlink:href)\s*=\s*(["'])\s*(javascript|data|vbscript):[\s\S]*?\2/gi, ' $1=$2#$2');
+            return s;
+        }
+
         $(document).ready(function() {
             updatePageLanguage();
         });
@@ -232,7 +242,7 @@
                     ? pick(thankYouCopy.purchaseMessage)
                     : pick(thankYouCopy.message);
                 $('#thankYouTitle').text(title);
-                $('#emailMessage').text(message);
+                $('#emailMessage').html(sanitizeDisplayHtml(message));
             }
         }
     </script>
