@@ -33,7 +33,7 @@ const bcrypt = require('bcrypt');
 const { render } = require('ejs');
 const { initSocket } = require('./socket'); // 引入 socket.js
 const { translate, getDict, resolveLang } = require('./utils/i18n');
-const { safeDisplayHtml } = require('./utils/safeDisplayHtml');
+const { safeDisplayHtml, formatDisplayHtml } = require('./utils/safeDisplayHtml');
 
 const app = express();
 const PORT = process.env.PORT || 3377;
@@ -42,6 +42,7 @@ const io = initSocket(server); // 初始化 Socket.IO
 
 // 全站 EJS 可用（不依賴單一 request middleware 有冇跑到）
 app.locals.safeDisplayHtml = safeDisplayHtml;
+app.locals.formatDisplayHtml = formatDisplayHtml;
 
 // CORS：由 .env 的 CORS_ENABLED 開關（true=允許跨域，false/未設=僅同源）
 const corsEnabled = (process.env.CORS_ENABLED || '').toString().trim().toLowerCase() === 'true' || process.env.CORS_ENABLED === '1';
@@ -107,6 +108,7 @@ app.use((req, res, next) => {
     res.locals.t = (key) => translate(lang, key);
     res.locals.i18nDict = getDict(lang);
     res.locals.safeDisplayHtml = safeDisplayHtml;
+    res.locals.formatDisplayHtml = formatDisplayHtml;
     next();
 });
 

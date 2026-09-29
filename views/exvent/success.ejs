@@ -55,7 +55,24 @@
             color: #6c757d;
             font-size: 1.1rem;
             margin-bottom: 30px;
-            white-space: pre-line;
+            white-space: normal;
+            overflow-wrap: break-word;
+            word-break: normal;
+            hyphens: none;
+            -webkit-hyphens: none;
+            line-height: 1.6;
+        }
+        #emailMessage p {
+            margin: 0 0 0.85em;
+        }
+        #emailMessage p:last-child {
+            margin-bottom: 0;
+        }
+        /* email / 連結唔好喺連字號中間斷開（例如 nvl-hk） */
+        #emailMessage a {
+            white-space: nowrap;
+            overflow-wrap: normal;
+            word-break: keep-all;
         }
         .transaction-details {
             background-color: #f8f9fa;
@@ -144,7 +161,7 @@
             %>
             <% if (transaction) { %>
                 <h5 id="thankYouTitle"><%= pickTy(purchaseTitleZh, purchaseTitleEn) %></h5>
-                <div id="emailMessage"><%- (typeof safeDisplayHtml === 'function' ? safeDisplayHtml(pickTy(purchaseMsgZh, purchaseMsgEn)) : pickTy(purchaseMsgZh, purchaseMsgEn)) %></div>
+                <div id="emailMessage"><%- (typeof formatDisplayHtml === 'function' ? formatDisplayHtml(pickTy(purchaseMsgZh, purchaseMsgEn)) : (typeof safeDisplayHtml === 'function' ? safeDisplayHtml(pickTy(purchaseMsgZh, purchaseMsgEn)) : pickTy(purchaseMsgZh, purchaseMsgEn))) %></div>
                 
                 <div class="transaction-details">
                     <h5 id="transactionTitle" data-zh="交易詳情" data-en="Transaction Details">交易詳情</h5>
@@ -167,15 +184,15 @@
                 </div>
             <% } else { %>
                 <h5 id="thankYouTitle"><%= pickTy(freeTitleZh, freeTitleEn) %></h5>
-                <div id="emailMessage"><%- (typeof safeDisplayHtml === 'function' ? safeDisplayHtml(pickTy(freeMsgZh, freeMsgEn)) : pickTy(freeMsgZh, freeMsgEn)) %></div>
+                <div id="emailMessage"><%- (typeof formatDisplayHtml === 'function' ? formatDisplayHtml(pickTy(freeMsgZh, freeMsgEn)) : (typeof safeDisplayHtml === 'function' ? safeDisplayHtml(pickTy(freeMsgZh, freeMsgEn)) : pickTy(freeMsgZh, freeMsgEn))) %></div>
             <% } %>
-                <script type="application/json" id="thankYouCopyJson"><%- JSON.stringify({
+                <textarea id="thankYouCopyJson" hidden readonly style="display:none"><%= JSON.stringify({
                     title: { zh: freeTitleZh, en: freeTitleEn },
                     message: { zh: freeMsgZh, en: freeMsgEn },
                     purchaseTitle: { zh: purchaseTitleZh, en: purchaseTitleEn },
                     purchaseMessage: { zh: purchaseMsgZh, en: purchaseMsgEn },
                     hasTransaction: !!transaction
-                }) %></script>
+                }) %></textarea>
         </div>
     </div>
 
@@ -199,7 +216,10 @@
         const thankYouCopy = (function() {
             const el = document.getElementById('thankYouCopyJson');
             if (!el) return null;
-            try { return JSON.parse(el.textContent); } catch (_) { return null; }
+            try {
+                const raw = (el.value != null && el.value !== '') ? el.value : el.textContent;
+                return JSON.parse(raw);
+            } catch (_) { return null; }
         })();
 
         function sanitizeDisplayHtml(input) {
@@ -210,6 +230,22 @@
             s = s.replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
             s = s.replace(/\s(href|src|xlink:href)\s*=\s*(["'])\s*(javascript|data|vbscript):[\s\S]*?\2/gi, ' $1=$2#$2');
             return s;
+        }
+
+        function formatDisplayHtmlClient(input) {
+            let s = String(input == null ? '' : input);
+            if (!s) return '';
+            if (/&lt;\s*\/?\s*[a-z]/i.test(s) && !/<[a-z]/i.test(s)) {
+                s = s
+                    .replace(/&amp;/g, '&')
+                    .replace(/&lt;/g, '<')
+                    .replace(/&gt;/g, '>')
+                    .replace(/&quot;/g, '"')
+                    .replace(/&#0*39;/g, "'")
+                    .replace(/&#x0*27;/gi, "'");
+            }
+            s = sanitizeDisplayHtml(s);
+            return s.replace(/\r\n|\r|\n/g, '<br>');
         }
 
         $(document).ready(function() {
@@ -242,7 +278,7 @@
                     ? pick(thankYouCopy.purchaseMessage)
                     : pick(thankYouCopy.message);
                 $('#thankYouTitle').text(title);
-                $('#emailMessage').html(sanitizeDisplayHtml(message));
+                $('#emailMessage').html(formatDisplayHtmlClient(message));
             }
         }
     </script>

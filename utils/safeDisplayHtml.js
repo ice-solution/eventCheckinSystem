@@ -19,4 +19,29 @@ function safeDisplayHtml(input) {
     return s;
 }
 
-module.exports = { safeDisplayHtml };
+/**
+ * Thank-you / display 文案：允許 HTML，並把純文字換行轉成 <br>。
+ * 若內容被存成 &lt;br&gt; 等 entity，會先解一次再渲染。
+ */
+function formatDisplayHtml(input) {
+    let s = String(input == null ? '' : input);
+    if (!s) return '';
+
+    // 雙重編碼／entity 形式的標籤 → 還原一次
+    if (/&lt;\s*\/?\s*[a-z]/i.test(s) && !/<[a-z]/i.test(s)) {
+        s = s
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#0*39;/g, "'")
+            .replace(/&#x0*27;/gi, "'");
+    }
+
+    s = safeDisplayHtml(s);
+    // Enter 換行同 <br> 一齊生效
+    s = s.replace(/\r\n|\r|\n/g, '<br>');
+    return s;
+}
+
+module.exports = { safeDisplayHtml, formatDisplayHtml };
