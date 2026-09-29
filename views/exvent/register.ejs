@@ -606,7 +606,7 @@ var registerPageTitleSuffix = isApplicationMode
         <div class="form-header">
             <br><br>
             <h1 id="formTitle"<%= registerEventTitle ? '' : ' style="display:none;"' %>><%= registerEventTitle %></h1>
-            <p id="formSubHeader" class="form-subheader"<%= initSubHeader ? '' : ' style="display:none;"' %>><%= initSubHeader %></p>
+            <div id="formSubHeader" class="form-subheader"<%= initSubHeader ? '' : ' style="display:none;"' %>><%- safeDisplayHtml(initSubHeader) %></div>
             <p class="text-muted" id="formSubtitle"><%= initSubtitle %></p>
         </div>
 
@@ -1272,7 +1272,7 @@ var registerPageTitleSuffix = isApplicationMode
             document.title = (name || fallbackEventName) + (currentLanguage === 'en' ? ' - Register' : ' - 登記');
             const sub = getRegisterSubHeader(currentLanguage);
             if (sub) {
-                $('#formSubHeader').text(sub).show();
+                $('#formSubHeader').html(sanitizeDisplayHtml(sub)).show();
             } else {
                 $('#formSubHeader').hide().empty();
             }

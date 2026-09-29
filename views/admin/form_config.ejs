@@ -266,15 +266,13 @@
                                     <div class="row">
                                         <div class="col-md-6">
                                             <label class="form-label"><%= t('form_config.subHeaderZhLabel') %></label>
-                                            <input type="text" class="form-control" id="registerSubHeaderZh"
-                                                   value="<%= (formConfig.registerSubHeader && formConfig.registerSubHeader.zh) ? formConfig.registerSubHeader.zh : '' %>"
-                                                   placeholder="<%= t('form_config.subHeaderZhPlaceholder') %>">
+                                            <textarea class="form-control" id="registerSubHeaderZh" rows="3"
+                                                      placeholder="<%= t('form_config.subHeaderZhPlaceholder') %>"><%= (formConfig.registerSubHeader && formConfig.registerSubHeader.zh) ? formConfig.registerSubHeader.zh : '' %></textarea>
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label"><%= t('form_config.subHeaderEnLabel') %></label>
-                                            <input type="text" class="form-control" id="registerSubHeaderEn"
-                                                   value="<%= (formConfig.registerSubHeader && formConfig.registerSubHeader.en) ? formConfig.registerSubHeader.en : '' %>"
-                                                   placeholder="<%= t('form_config.subHeaderEnPlaceholder') %>">
+                                            <textarea class="form-control" id="registerSubHeaderEn" rows="3"
+                                                      placeholder="<%= t('form_config.subHeaderEnPlaceholder') %>"><%= (formConfig.registerSubHeader && formConfig.registerSubHeader.en) ? formConfig.registerSubHeader.en : '' %></textarea>
                                         </div>
                                     </div>
                                     <div class="row mt-2">
