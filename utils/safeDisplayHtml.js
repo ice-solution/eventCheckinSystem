@@ -19,4 +19,18 @@ function safeDisplayHtml(input) {
     return s;
 }
 
-module.exports = { safeDisplayHtml };
+/** safeDisplayHtml + 將 Enter 換行轉成 <br> */
+function formatDisplayHtml(input) {
+    return safeDisplayHtml(input).replace(/\r\n|\r|\n/g, '<br>');
+}
+
+/** 移除所有 HTML 標籤（用於 <title> 等純文字位置） */
+function stripHtml(input) {
+    return String(input == null ? '' : input)
+        .replace(/<br\s*\/?>/gi, ' ')
+        .replace(/<[^>]*>/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+module.exports = { safeDisplayHtml, formatDisplayHtml, stripHtml };

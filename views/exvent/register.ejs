@@ -108,7 +108,7 @@ var registerPageTitleSuffix = isApplicationMode
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= registerBrowserTitle %><%= registerPageTitleSuffix %></title>
+    <title><%= stripHtml(registerBrowserTitle) %><%= registerPageTitleSuffix %></title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         body {
@@ -605,9 +605,9 @@ var registerPageTitleSuffix = isApplicationMode
         %>
         <div class="form-header">
             <br><br>
-            <h1 id="formTitle"<%= registerEventTitle ? '' : ' style="display:none;"' %>><%= registerEventTitle %></h1>
-            <div id="formSubHeader" class="form-subheader"<%= initSubHeader ? '' : ' style="display:none;"' %>><%- safeDisplayHtml(initSubHeader) %></div>
-            <p class="text-muted" id="formSubtitle"><%= initSubtitle %></p>
+            <h1 id="formTitle"<%= registerEventTitle ? '' : ' style="display:none;"' %>><%- formatDisplayHtml(registerEventTitle) %></h1>
+            <div id="formSubHeader" class="form-subheader"<%= initSubHeader ? '' : ' style="display:none;"' %>><%- formatDisplayHtml(initSubHeader) %></div>
+            <div class="text-muted" id="formSubtitle"><%- formatDisplayHtml(initSubtitle) %></div>
         </div>
 
         <form id="userForm" method="POST" action="#" onsubmit="return false;">
@@ -1264,19 +1264,19 @@ var registerPageTitleSuffix = isApplicationMode
         function updateRegisterHeaderText() {
             var name = getHeaderEventName(currentLanguage);
             if (name) {
-                $('#formTitle').text(name).show();
+                $('#formTitle').html(formatDisplayHtmlClient(name)).show();
             } else {
                 $('#formTitle').hide().empty();
             }
             // 瀏覽器 tab 標題：無自訂名稱時仍用 event.name，避免空白 tab
-            document.title = (name || fallbackEventName) + (currentLanguage === 'en' ? ' - Register' : ' - 登記');
+            document.title = stripHtmlClient(name || fallbackEventName) + (currentLanguage === 'en' ? ' - Register' : ' - 登記');
             const sub = getRegisterSubHeader(currentLanguage);
             if (sub) {
-                $('#formSubHeader').html(sanitizeDisplayHtml(sub)).show();
+                $('#formSubHeader').html(formatDisplayHtmlClient(sub)).show();
             } else {
                 $('#formSubHeader').hide().empty();
             }
-            $('#formSubtitle').text(getRegisterSubtitle(currentLanguage));
+            $('#formSubtitle').html(formatDisplayHtmlClient(getRegisterSubtitle(currentLanguage)));
         }
         const termsContentByLang = (function() {
             const el = document.getElementById('termsContentJson');
@@ -1587,6 +1587,18 @@ var registerPageTitleSuffix = isApplicationMode
             s = s.replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
             s = s.replace(/\s(href|src|xlink:href)\s*=\s*(["'])\s*(javascript|data|vbscript):[\s\S]*?\2/gi, ' $1=$2#$2');
             return s;
+        }
+
+        function formatDisplayHtmlClient(input) {
+            return sanitizeDisplayHtml(input).replace(/\r\n|\r|\n/g, '<br>');
+        }
+
+        function stripHtmlClient(input) {
+            return String(input == null ? '' : input)
+                .replace(/<br\s*\/?>/gi, ' ')
+                .replace(/<[^>]*>/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
         }
 
         /** 純文字中的 http(s) URL 自動變為可點連結 */

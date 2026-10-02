@@ -26,6 +26,8 @@
     }
     .section-controls {
         display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
         gap: 10px;
         margin-bottom: 15px;
     }
@@ -250,15 +252,13 @@
                                     <div class="row">
                                         <div class="col-md-6">
                                             <label class="form-label"><%= t('form_config.eventNameZhLabel') %></label>
-                                            <input type="text" class="form-control" id="eventDisplayNameZh"
-                                                   value="<%= (formConfig.eventDisplayName && formConfig.eventDisplayName.zh) ? formConfig.eventDisplayName.zh : '' %>"
-                                                   placeholder="<%= t('form_config.eventNameZhPlaceholder') %>">
+                                            <textarea class="form-control" id="eventDisplayNameZh" rows="2"
+                                                      placeholder="<%= t('form_config.eventNameZhPlaceholder') %>"><%= (formConfig.eventDisplayName && formConfig.eventDisplayName.zh) ? formConfig.eventDisplayName.zh : '' %></textarea>
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label"><%= t('form_config.eventNameEnLabel') %></label>
-                                            <input type="text" class="form-control" id="eventDisplayNameEn"
-                                                   value="<%= (formConfig.eventDisplayName && formConfig.eventDisplayName.en) ? formConfig.eventDisplayName.en : '' %>"
-                                                   placeholder="<%= t('form_config.eventNameEnPlaceholder') %>">
+                                            <textarea class="form-control" id="eventDisplayNameEn" rows="2"
+                                                      placeholder="<%= t('form_config.eventNameEnPlaceholder') %>"><%= (formConfig.eventDisplayName && formConfig.eventDisplayName.en) ? formConfig.eventDisplayName.en : '' %></textarea>
                                         </div>
                                     </div>
                                     <small class="text-muted d-block mt-2"><%= t('form_config.eventNameHint') %></small>
@@ -278,13 +278,11 @@
                                     <div class="row mt-2">
                                         <div class="col-md-6">
                                             <label class="form-label"><%= t('form_config.subtitleZhLabel') %></label>
-                                            <input type="text" class="form-control" id="registerSubtitleZh"
-                                                   value="<%= (formConfig.registerSubtitle && formConfig.registerSubtitle.zh) ? formConfig.registerSubtitle.zh : '請填寫以下資料完成活動報名' %>">
+                                            <textarea class="form-control" id="registerSubtitleZh" rows="2"><%= (formConfig.registerSubtitle && formConfig.registerSubtitle.zh) ? formConfig.registerSubtitle.zh : '請填寫以下資料完成活動報名' %></textarea>
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label"><%= t('form_config.subtitleEnLabel') %></label>
-                                            <input type="text" class="form-control" id="registerSubtitleEn"
-                                                   value="<%= (formConfig.registerSubtitle && formConfig.registerSubtitle.en) ? formConfig.registerSubtitle.en : 'Please fill in the following information to complete event registration' %>">
+                                            <textarea class="form-control" id="registerSubtitleEn" rows="2"><%= (formConfig.registerSubtitle && formConfig.registerSubtitle.en) ? formConfig.registerSubtitle.en : 'Please fill in the following information to complete event registration' %></textarea>
                                         </div>
                                     </div>
                                     <small class="text-muted d-block mt-2"><%= t('form_config.subHeaderHint') %></small>
@@ -831,6 +829,18 @@
                                                     <label class="form-check-label">
                                                         <strong><%= fcLangText(section.sectionTitle, fcHeaderLang) || section.sectionName || '區塊' %></strong>
                                                     </label>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label"><%= t('form_config.sectionTitleZh') %></label>
+                                                    <input type="text" class="form-control form-control-sm"
+                                                           value="<%= section.sectionTitle && section.sectionTitle.zh ? section.sectionTitle.zh : (typeof section.sectionTitle === 'string' ? section.sectionTitle : '') %>"
+                                                           onchange="updateSectionTitle(<%= actualSectionIndex %>, 'zh', this.value)">
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label"><%= t('form_config.sectionTitleEn') %></label>
+                                                    <input type="text" class="form-control form-control-sm"
+                                                           value="<%= section.sectionTitle && section.sectionTitle.en ? section.sectionTitle.en : '' %>"
+                                                           onchange="updateSectionTitle(<%= actualSectionIndex %>, 'en', this.value)">
                                                 </div>
                                                 <div class="col-md-2">
                                                     <label class="form-label"><%= t('form_config.sectionOrder') %></label>
@@ -1572,8 +1582,8 @@
     // 添加區塊
     async function addSection() {
         const newSection = {
-            sectionName: 'new_section',
-            sectionTitle: '新區塊',
+            sectionName: 'new_section_' + Date.now(),
+            sectionTitle: { zh: '新區塊', en: 'New Section' },
             visible: true,
             order: formConfig.sections.length + 1,
             fields: []
@@ -2188,6 +2198,17 @@
             formConfig.sections[sectionIndex][property] = value;
             updatePreview();
         }
+    }
+
+    function updateSectionTitle(sectionIndex, lang, value) {
+        const section = formConfig.sections[sectionIndex];
+        if (!section) return;
+        if (!section.sectionTitle || typeof section.sectionTitle !== 'object') {
+            const legacy = typeof section.sectionTitle === 'string' ? section.sectionTitle : '';
+            section.sectionTitle = { zh: legacy, en: '' };
+        }
+        section.sectionTitle[lang] = value;
+        updatePreview();
     }
 
     // 導出配置為 JSON
