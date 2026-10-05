@@ -367,8 +367,8 @@
             border-bottom: 1px solid #e4e9f0;
             background: #f8fafc;
         }
-        #usersTable_wrapper #usersTable thead th:nth-last-child(2),
-        #usersTable_wrapper #usersTable tbody td:nth-last-child(2) {
+        #usersTable_wrapper #usersTable thead th:nth-last-child(1),
+        #usersTable_wrapper #usersTable tbody td:nth-last-child(1) {
             text-align: center !important;
         }
         #usersTable_wrapper #usersTable thead th.sorting,
@@ -1519,6 +1519,7 @@
                                 <thead>
                                     <tr>
                                         <th><input type="checkbox" id="selectAll" /></th>
+                                        <th><%= t('users.colActions') %></th>
                                         <% if (formConfig && formConfig.sections) { %>
                                             <% const sortedSections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
                                             <% sortedSections.forEach(section => { %>
@@ -1571,7 +1572,6 @@
                                         <% } %>
                                         <th><%= t('users.colCreatedAt') %></th>
                                         <th><%= t('users.colCheckedIn') %></th>
-                                        <th></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1579,6 +1579,25 @@
                                         <% const userRow = user && typeof user.toObject === 'function' ? user.toObject() : user; %>
                                         <tr class="<%= userRow.isCheckIn ? 'checkin-true' : 'checkin-false' %>" data-id="<%= userRow._id %>">
                                             <td><input type="checkbox" class="user-select" data-_id="<%= user._id %>" /></td>
+                                            <td>
+                                                <div class="user-action-buttons">
+                                                    <div class="qrcode-container">
+                                                        <button type="button" class="btn btn-sm btn-info qrcode-btn" data-user-id="<%= user._id %>" title="<%= t('users.downloadQrCodeBtn') %>">
+                                                            <i class="fa fa-qrcode"></i>
+                                                        </button>
+                                                        <div class="qrcode-popup">
+                                                            <img src="https://api.qrserver.com/v1/create-qr-code/?data=<%= user._id %>&size=200x200" alt="QR Code" class="qrcode-image" id="qrcode-<%= user._id %>">
+                                                            <button type="button" class="btn btn-primary btn-sm qrcode-download-btn" data-user-id="<%= user._id %>" data-user-name="<%= user.name || user.email %>">
+                                                                <i class="fa fa-download"></i> <%= t('users.downloadQrCodeBtn') %>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <button type="button" class="btn btn-sm btn-primary resend-email-btn" data-_id="<%= user._id %>" data-user-name="<%= user.name || '' %>" data-user-email="<%= user.email || '' %>">
+                                                        <i class="fa fa-envelope mr-1"></i> <%= t('users.resendDropdown') %>
+                                                    </button>
+                                                    <button class="btn btn-delete-x delete-user" data-_id="<%= user._id %>" title="<%= t('common.delete') %>">✕</button>
+                                                </div>
+                                            </td>
                                             <% if (formConfig && formConfig.sections) { %>
                                                 <% const sortedSections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
                                                 <% sortedSections.forEach(section => { %>
@@ -1664,25 +1683,6 @@
                                             </td>
                                             <td data-order="<%= user.isCheckIn ? 1 : 0 %>">
                                                 <input type="checkbox" class="checkin-toggle" data-_id="<%= user._id %>" <%= user.isCheckIn ? 'checked' : '' %> />
-                                            </td>
-                                            <td>
-                                                <div class="user-action-buttons">
-                                                    <div class="qrcode-container">
-                                                        <button type="button" class="btn btn-sm btn-info qrcode-btn" data-user-id="<%= user._id %>" title="<%= t('users.downloadQrCodeBtn') %>">
-                                                            <i class="fa fa-qrcode"></i>
-                                                        </button>
-                                                        <div class="qrcode-popup">
-                                                            <img src="https://api.qrserver.com/v1/create-qr-code/?data=<%= user._id %>&size=200x200" alt="QR Code" class="qrcode-image" id="qrcode-<%= user._id %>">
-                                                            <button type="button" class="btn btn-primary btn-sm qrcode-download-btn" data-user-id="<%= user._id %>" data-user-name="<%= user.name || user.email %>">
-                                                                <i class="fa fa-download"></i> <%= t('users.downloadQrCodeBtn') %>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    <button type="button" class="btn btn-sm btn-primary resend-email-btn" data-_id="<%= user._id %>" data-user-name="<%= user.name || '' %>" data-user-email="<%= user.email || '' %>">
-                                                        <i class="fa fa-envelope mr-1"></i> <%= t('users.resendDropdown') %>
-                                                    </button>
-                                                    <button class="btn btn-delete-x delete-user" data-_id="<%= user._id %>" title="<%= t('common.delete') %>">✕</button>
-                                                </div>
                                             </td>
                                         </tr>
                                     <% }) %>
@@ -1912,7 +1912,7 @@ const _US = {
         // Initialize DataTable with inline editing
         // Calculate the Created At column index dynamically
         const totalColumns = $('#usersTable thead th').length;
-        const createdAtColumnIndex = totalColumns - 3;
+        const createdAtColumnIndex = totalColumns - 2;
 
         const table = $('#usersTable').DataTable({
             pageLength: 50,
@@ -1925,13 +1925,18 @@ const _US = {
                     searchable: false
                 },
                 {
+                    targets: 1,
+                    orderable: false,
+                    searchable: false
+                },
+                {
                     targets: createdAtColumnIndex,
                     type: 'num',
                     orderable: true,
                     searchable: false
                 },
                 {
-                    targets: -2,
+                    targets: -1,
                     type: 'num',
                     orderable: true,
                     searchable: false,
@@ -1944,11 +1949,6 @@ const _US = {
                         }
                         return data;
                     }
-                },
-                {
-                    targets: -1,
-                    orderable: false,
-                    searchable: false
                 }
             ],
             order: [[createdAtColumnIndex, 'desc']],
@@ -1996,7 +1996,7 @@ const _US = {
             $list.empty();
             $('#usersTable thead th').each(function(idx) {
                 const headerText = ($(this).text() || '').trim() || ('Column ' + (idx + 1));
-                const isProtected = idx === 0 || idx === (totalColumns - 1); // 勾選欄、Actions 欄不提供隱藏
+                const isProtected = idx === 0 || idx === 1; // 勾選欄、Actions 欄不提供隱藏
                 if (isProtected) return;
                 const checked = table.column(idx).visible();
                 const safeLabel = $('<div>').text(headerText).html();
@@ -2970,7 +2970,7 @@ const _US = {
         });
 
         // Add inline editing functionality
-        $('#usersTable tbody').on('dblclick', 'td:not(:last-child):not(:nth-last-child(2)):not(:first-child):not(.agreement-meta-cell)', function() {
+        $('#usersTable tbody').on('dblclick', 'td:not(:first-child):not(:nth-child(2)):not(:last-child):not(.agreement-meta-cell)', function() {
             const cell = $(this);
             const currentText = cell.text().trim();
             // Try multiple ways to get field-name (compatible with data-field-name and data-fieldName)
@@ -3333,6 +3333,19 @@ const _US = {
                     const newRow = [
                         '<input type="checkbox" class="user-select" data-_id="' + response._id + '" />'
                     ];
+                    const userNameForQR = userData.name || userData.email || 'user';
+                    const actionsHtml = '<div class="user-action-buttons">' +
+                        '<div class="qrcode-container">' +
+                        '<button type="button" class="btn btn-sm btn-info qrcode-btn" data-user-id="' + response._id + '" title="' + _US.viewQrCode + '"><i class="fa fa-qrcode"></i></button>' +
+                        '<div class="qrcode-popup">' +
+                        '<img src="https://api.qrserver.com/v1/create-qr-code/?data=' + response._id + '&size=200x200" alt="QR Code" class="qrcode-image" id="qrcode-' + response._id + '">' +
+                        '<button type="button" class="btn btn-primary btn-sm qrcode-download-btn" data-user-id="' + response._id + '" data-user-name="' + userNameForQR + '"><i class="fa fa-download"></i> ' + _US.downloadQrCodeBtn + '</button>' +
+                        '</div>' +
+                        '</div>' +
+                        '<button type="button" class="btn btn-sm btn-primary resend-email-btn" data-_id="' + response._id + '" data-user-name="' + (userData.name || '') + '" data-user-email="' + (userData.email || '') + '"><i class="fa fa-envelope mr-1"></i> ' + _US.resendDropdown + '</button>' +
+                        '<button class="btn btn-delete-x delete-user" data-_id="' + response._id + '" title="' + _US.deleteBtn + '">✕</button>' +
+                        '</div>';
+                    newRow.push(actionsHtml);
                     
                     // 根據formConfig添加字段數據（順序需與 table 欄位一致）
                     const fieldNames = [];
@@ -3386,41 +3399,28 @@ const _US = {
                     // 直接 push 文本內容，DataTable 會自動創建 td
                     newRow.push(formattedDate);
                     
-                    // 添加Checked In和Actions列
+                    // 添加Checked In列
                     newRow.push('<input type="checkbox" class="checkin-toggle" data-_id="' + response._id + '" />');
-                    const userNameForQR = userData.name || userData.email || 'user';
-                    const actionsHtml = '<div class="user-action-buttons">' +
-                        '<div class="qrcode-container">' +
-                        '<button type="button" class="btn btn-sm btn-info qrcode-btn" data-user-id="' + response._id + '" title="' + _US.viewQrCode + '"><i class="fa fa-qrcode"></i></button>' +
-                        '<div class="qrcode-popup">' +
-                        '<img src="https://api.qrserver.com/v1/create-qr-code/?data=' + response._id + '&size=200x200" alt="QR Code" class="qrcode-image" id="qrcode-' + response._id + '">' +
-                        '<button type="button" class="btn btn-primary btn-sm qrcode-download-btn" data-user-id="' + response._id + '" data-user-name="' + userNameForQR + '"><i class="fa fa-download"></i> ' + _US.downloadQrCodeBtn + '</button>' +
-                        '</div>' +
-                        '</div>' +
-                        '<button type="button" class="btn btn-sm btn-primary resend-email-btn" data-_id="' + response._id + '" data-user-name="' + (userData.name || '') + '" data-user-email="' + (userData.email || '') + '"><i class="fa fa-envelope mr-1"></i> ' + _US.resendDropdown + '</button>' +
-                        '<button class="btn btn-delete-x delete-user" data-_id="' + response._id + '" title="' + _US.deleteBtn + '">✕</button>' +
-                        '</div>';
-                    newRow.push(actionsHtml);
                     
                     const rowNode = table.row.add(newRow).draw().node();
                     $(rowNode).addClass('checkin-false').attr('data-id', response._id);
                     
                     // 為新行的每個數據欄位設置 data-field-name 屬性
-                    // 跳過第一個 checkbox 列、Checked In 列和 Actions 列
+                    // 跳過 checkbox 列、Actions 列
                     $(rowNode).find('td').each(function(index) {
-                        if (index > 0 && index <= fieldNames.length) {
-                            $(this).attr('data-field-name', fieldNames[index - 1]);
+                        if (index > 1 && index <= fieldNames.length + 1) {
+                            $(this).attr('data-field-name', fieldNames[index - 2]);
                         }
                     });
                     
-                    // 設置 Created At 列的 data-order 屬性（倒數第 3 列）
+                    // 設置 Created At 列的 data-order 屬性（倒數第 2 列）
                     const totalTds = $(rowNode).find('td').length;
-                    const createdAtTdIndex = totalTds - 3;
+                    const createdAtTdIndex = totalTds - 2;
                     const createdAtTd = $(rowNode).find('td').eq(createdAtTdIndex);
                     if (createdAtTd.length) {
                         createdAtTd.attr('data-order', timestamp);
                     }
-                    const checkInTdIndex = totalTds - 2;
+                    const checkInTdIndex = totalTds - 1;
                     const checkInTd = $(rowNode).find('td').eq(checkInTdIndex);
                     if (checkInTd.length) {
                         checkInTd.attr('data-order', 0);
