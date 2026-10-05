@@ -328,12 +328,12 @@
                                         <th style="width:42px;">
                                             <input type="checkbox" id="selectAllEvents" title="<%= t('events_list.selectAll') %>">
                                         </th>
+                                        <th><%= t('events_list.actions') %></th>
                                         <th><%= t('events_list.eventName') %></th>
                                         <th><%= t('events_list.startTime') %></th>
                                         <th><%= t('events_list.endTime') %></th>
                                         <th><%= t('events_list.createdAt') %></th>
                                         <th><%= t('events_list.userCount') %></th>
-                                        <th><%= t('events_list.actions') %></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -343,11 +343,6 @@
                                                 <td>
                                                     <input type="checkbox" class="event-export-cb" value="<%= event._id %>">
                                                 </td>
-                                                <td><a href="/events/<%= event._id %>"><%= event.name %></a></td>
-                                                <td><%= new Date(event.from).toLocaleString() %></td>
-                                                <td><%= new Date(event.to).toLocaleString() %></td>
-                                                <td data-order="<%= new Date(event.created_at).getTime() %>"><%= new Date(event.created_at).toLocaleString() %></td>
-                                                <td><%= event.users.length %></td>
                                                 <td>
                                                     <button type="button" class="btn btn-sm btn-outline-secondary copy-event-btn"
                                                             data-event-id="<%= event._id %>"
@@ -364,6 +359,11 @@
                                                     </button>
                                                     <% } %>
                                                 </td>
+                                                <td><a href="/events/<%= event._id %>"><%= event.name %></a></td>
+                                                <td><%= new Date(event.from).toLocaleString() %></td>
+                                                <td><%= new Date(event.to).toLocaleString() %></td>
+                                                <td data-order="<%= new Date(event.created_at).getTime() %>"><%= new Date(event.created_at).toLocaleString() %></td>
+                                                <td><%= event.users.length %></td>
                                             </tr>
                                         <% }); %>
                                     <% } else { %>
@@ -513,11 +513,11 @@ $(document).ready(function() {
         autoWidth: true,
         columnDefs: [
             { targets: 0, orderable: false, searchable: false },
-            { targets: 4, type: 'num', orderable: true, searchable: false },
-            { targets: 5, type: 'num', orderable: true },
-            { targets: 6, orderable: false, searchable: false }
+            { targets: 1, orderable: false, searchable: false },
+            { targets: 5, type: 'num', orderable: true, searchable: false },
+            { targets: 6, type: 'num', orderable: true }
         ],
-        order: [[4, 'desc']],
+        order: [[5, 'desc']],
         initComplete: function() {
             if (!$('#eventsTable').parent().hasClass('events-table-xscroll')) {
                 $('#eventsTable').wrap('<div class="events-table-xscroll"></div>');
