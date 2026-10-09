@@ -1235,9 +1235,15 @@
                                                                                     </option>
                                                                                 <% }); %>
                                                                             </select>
+                                                                            <%
+                                                                                var _addSelectOtherOpt = field.options.find(function (o) { return o && o.isOther; });
+                                                                                var _addSelectOtherPh = (_addSelectOtherOpt && _addSelectOtherOpt.otherPlaceholder && (_addSelectOtherOpt.otherPlaceholder[lang] || _addSelectOtherOpt.otherPlaceholder.zh))
+                                                                                    ? (_addSelectOtherOpt.otherPlaceholder[lang] || _addSelectOtherOpt.otherPlaceholder.zh)
+                                                                                    : t('users.pleaseSpecify');
+                                                                            %>
                                                                             <input type="text" class="form-control mt-2 d-none js-select-other-text"
                                                                                    id="newUser_<%= field.fieldName %>_other"
-                                                                                   placeholder="<%= t('users.pleaseSpecify') %>"
+                                                                                   placeholder="<%= _addSelectOtherPh %>"
                                                                                    autocomplete="off">
                                                                             <input type="hidden" name="<%= field.fieldName %>" id="newUser_<%= field.fieldName %>_hidden" value="">
                                                                             <% } else { %>
@@ -1289,9 +1295,14 @@
                                                                                             </label>
                                                                                         </div>
                                                                                         <% if (option.isOther) { %>
+                                                                                        <%
+                                                                                            var _addCbOtherPh = (option.otherPlaceholder && (option.otherPlaceholder[lang] || option.otherPlaceholder.zh))
+                                                                                                ? (option.otherPlaceholder[lang] || option.otherPlaceholder.zh)
+                                                                                                : (lang === 'en' ? 'Please specify' : '請填寫');
+                                                                                        %>
                                                                                         <input type="text" class="form-control form-control-sm mt-1 d-none js-choice-other-text"
                                                                                                id="newUser<%= field.fieldName %>_<%= optionIndex %>_other"
-                                                                                               placeholder="<%= lang === 'en' ? 'Please specify' : '請填寫' %>"
+                                                                                               placeholder="<%= _addCbOtherPh %>"
                                                                                                autocomplete="off">
                                                                                         <% } %>
                                                                                     </div>
@@ -1324,9 +1335,14 @@
                                                                                             </label>
                                                                                         </div>
                                                                                         <% if (option.isOther) { %>
+                                                                                        <%
+                                                                                            var _addRadioOtherPh = (option.otherPlaceholder && (option.otherPlaceholder[lang] || option.otherPlaceholder.zh))
+                                                                                                ? (option.otherPlaceholder[lang] || option.otherPlaceholder.zh)
+                                                                                                : (lang === 'en' ? 'Please specify' : '請填寫');
+                                                                                        %>
                                                                                         <input type="text" class="form-control form-control-sm mt-1 d-none js-choice-other-text"
                                                                                                id="newUser<%= field.fieldName %>_<%= optionIndex %>_other"
-                                                                                               placeholder="<%= lang === 'en' ? 'Please specify' : '請填寫' %>"
+                                                                                               placeholder="<%= _addRadioOtherPh %>"
                                                                                                autocomplete="off">
                                                                                         <% } %>
                                                                                     </div>
@@ -1334,10 +1350,10 @@
                                                                             </div>
                                                                         <% } else if (field.type === 'textarea') { %>
                                                                             <textarea class="form-control" id="newUser<%= field.fieldName %>" name="<%= field.fieldName %>" 
-                                                                                      placeholder="<%= (typeof field.placeholder === 'string' ? field.placeholder : (field.placeholder && field.placeholder[lang] ? field.placeholder[lang] : (field.placeholder && field.placeholder.zh ? field.placeholder.zh : ''))) || '' %>" rows="3"></textarea>
+                                                                                      placeholder="<%= (typeof field.placeholder === 'string' ? field.placeholder : (field.placeholder && field.placeholder[lang] ? field.placeholder[lang] : (field.placeholder && field.placeholder.zh ? field.placeholder.zh : ''))) || '' %>" rows="3"<% if (field.validation && Number(field.validation.maxLength) > 0) { %> maxlength="<%= Math.floor(Number(field.validation.maxLength)) %>"<% } %>></textarea>
                                                                         <% } else { %>
                                                                             <input type="<%= field.type === 'email' ? 'text' : field.type %>" class="form-control" id="newUser<%= field.fieldName %>" name="<%= field.fieldName %>" 
-                                                                                   placeholder="<%= (typeof field.placeholder === 'string' ? field.placeholder : (field.placeholder && field.placeholder[lang] ? field.placeholder[lang] : (field.placeholder && field.placeholder.zh ? field.placeholder.zh : ''))) || '' %>">
+                                                                                   placeholder="<%= (typeof field.placeholder === 'string' ? field.placeholder : (field.placeholder && field.placeholder[lang] ? field.placeholder[lang] : (field.placeholder && field.placeholder.zh ? field.placeholder.zh : ''))) || '' %>"<% if (field.validation && Number(field.validation.maxLength) > 0) { %> maxlength="<%= Math.floor(Number(field.validation.maxLength)) %>"<% } %>>
                                                                         <% } %>
                                                                     </div>
                                                                 </div>

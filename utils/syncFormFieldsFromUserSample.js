@@ -95,6 +95,7 @@ function buildSectionFromFields(fields) {
             zh: 'Custom Form 欄位',
             en: 'Custom Form Fields'
         },
+        sectionSubHeader: { zh: '', en: '' },
         visible: true,
         order: 1,
         fields

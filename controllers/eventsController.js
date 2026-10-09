@@ -27,6 +27,7 @@ const { replaceTemplateVariables, buildEmailTemplateAdditionalVars, flattenForTe
 const { isInvoiceEmailEnabled } = require('../utils/featureFlags');
 const { normalizeAgreementAgreed, formatAgreementAgreedLabel, agreementAgreedSortOrder, getEnabledAgreements, isAgreementMetaKey } = require('../utils/agreementFields');
 const { resolveUserDisplayName, ensureUserNameField } = require('../utils/userDisplayName');
+const { assertPayloadMaxLength } = require('../utils/formFieldMaxLength');
 const { getCurrencyUpper, getCurrencyLower } = require('../utils/currency');
 
 /** 取得對外 base URL（依 DOMAIN/domain，缺協議時自動補 https://） */
@@ -1335,6 +1336,11 @@ exports.submitApplicationForm = async (req, res) => {
         let formConfig = await FormConfig.findOne({ eventId: event_id });
         if (formConfig) formConfig = formConfigController.getFormConfigForRender(formConfig);
 
+        const lengthCheck = assertPayloadMaxLength(formConfig, body);
+        if (!lengthCheck.ok) {
+            return res.status(400).json({ message: lengthCheck.message, fieldName: lengthCheck.fieldName, maxLength: lengthCheck.maxLength });
+        }
+
         const allowedFieldNames = new Set();
         if (formConfig && formConfig.sections) {
             formConfig.sections.forEach((section) => {
@@ -1420,6 +1426,17 @@ exports.addUserToEvent = async (req, res) => {
         const event = await Event.findById(eventId); // 查找事件
         if (!event) {
             return res.status(404).json({ message: 'Event not found' });
+        }
+
+        const FormConfig = require('../model/FormConfig');
+        const formConfigController = require('./formConfigController');
+        let formConfig = await FormConfig.findOne({ eventId });
+        if (formConfig) {
+            formConfig = formConfigController.getFormConfigForRender(formConfig);
+            const lengthCheck = assertPayloadMaxLength(formConfig, userData);
+            if (!lengthCheck.ok) {
+                return res.status(400).json({ message: lengthCheck.message, fieldName: lengthCheck.fieldName, maxLength: lengthCheck.maxLength });
+            }
         }
         
         // 創建新的用戶對象，動態包含所有傳入的字段
@@ -2407,6 +2424,17 @@ exports.updateUser = async (req, res) => {
         const user = event.users.id(userId); // 使用 _id 查找用戶
         if (!user) {
             return res.status(404).send('找不到該用戶'); // 如果用戶不存在，返回 404 錯誤
+        }
+
+        const FormConfig = require('../model/FormConfig');
+        const formConfigController = require('./formConfigController');
+        let formConfig = await FormConfig.findOne({ eventId });
+        if (formConfig) {
+            formConfig = formConfigController.getFormConfigForRender(formConfig);
+            const lengthCheck = assertPayloadMaxLength(formConfig, updateData);
+            if (!lengthCheck.ok) {
+                return res.status(400).json({ message: lengthCheck.message, fieldName: lengthCheck.fieldName, maxLength: lengthCheck.maxLength });
+            }
         }
         
         // 處理 isCheckIn 特殊邏輯

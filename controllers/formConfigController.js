@@ -66,6 +66,15 @@ const migrateFormConfig = (formConfig) => {
                 en: 'Contact Information'
             };
         }
+
+        if (!section.sectionSubHeader || typeof section.sectionSubHeader !== 'object') {
+            migratedSection.sectionSubHeader = { zh: '', en: '' };
+        } else {
+            migratedSection.sectionSubHeader = {
+                zh: section.sectionSubHeader.zh || '',
+                en: section.sectionSubHeader.en || ''
+            };
+        }
         
         // 遷移 fields
         if (section.fields) {
@@ -116,6 +125,22 @@ const migrateFormConfig = (formConfig) => {
                 if (migratedField.type !== 'email') {
                     migratedField.confirmEmail = false;
                 }
+                if (!field.confirmEmailLabel || typeof field.confirmEmailLabel !== 'object') {
+                    migratedField.confirmEmailLabel = { zh: '', en: '' };
+                } else {
+                    migratedField.confirmEmailLabel = {
+                        zh: field.confirmEmailLabel.zh || '',
+                        en: field.confirmEmailLabel.en || ''
+                    };
+                }
+
+                const v = field.validation && typeof field.validation === 'object' ? field.validation : {};
+                const maxLengthNum = Number(v.maxLength);
+                migratedField.validation = {
+                    minLength: Number.isFinite(Number(v.minLength)) && Number(v.minLength) > 0 ? Math.floor(Number(v.minLength)) : undefined,
+                    maxLength: Number.isFinite(maxLengthNum) && maxLengthNum > 0 ? Math.floor(maxLengthNum) : undefined,
+                    pattern: typeof v.pattern === 'string' ? v.pattern : undefined
+                };
                 
                 if (field.options && migratedField.type !== 'display') {
                     migratedField.options = field.options.map(option => {
@@ -134,6 +159,14 @@ const migrateFormConfig = (formConfig) => {
                         }
                         if (migratedOption.isOther === undefined) {
                             migratedOption.isOther = false;
+                        }
+                        if (!option.otherPlaceholder || typeof option.otherPlaceholder !== 'object') {
+                            migratedOption.otherPlaceholder = { zh: '', en: '' };
+                        } else {
+                            migratedOption.otherPlaceholder = {
+                                zh: option.otherPlaceholder.zh || '',
+                                en: option.otherPlaceholder.en || ''
+                            };
                         }
                         
                         return migratedOption;

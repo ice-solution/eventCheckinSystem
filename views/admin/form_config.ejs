@@ -851,6 +851,21 @@
                                                 <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSection(<%= actualSectionIndex %>)">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
+                                                <div class="col-md-3">
+                                                    <label class="form-label"><%= t('form_config.sectionSubHeaderZh') %></label>
+                                                    <input type="text" class="form-control form-control-sm"
+                                                           value="<%= section.sectionSubHeader && section.sectionSubHeader.zh ? section.sectionSubHeader.zh : '' %>"
+                                                           onchange="updateSectionSubHeader(<%= actualSectionIndex %>, 'zh', this.value)">
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label"><%= t('form_config.sectionSubHeaderEn') %></label>
+                                                    <input type="text" class="form-control form-control-sm"
+                                                           value="<%= section.sectionSubHeader && section.sectionSubHeader.en ? section.sectionSubHeader.en : '' %>"
+                                                           onchange="updateSectionSubHeader(<%= actualSectionIndex %>, 'en', this.value)">
+                                                </div>
+                                                <div class="col-12">
+                                                    <small class="text-muted"><%= t('form_config.sectionSubHeaderHint') %></small>
+                                                </div>
                                             </div>
                                             
                                             <% if (section.fields) { %>
@@ -981,9 +996,34 @@
                                                                 <div class="form-check mt-1">
                                                                     <input class="form-check-input" type="checkbox"
                                                                            <%= field.confirmEmail ? 'checked' : '' %>
-                                                                           onchange="updateFieldProperty(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'confirmEmail', this.checked)">
+                                                                           onchange="updateFieldProperty(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'confirmEmail', this.checked); toggleConfirmEmailLabelRow(<%= actualSectionIndex %>, <%= actualFieldIndex %>, this.checked)">
                                                                     <label class="form-check-label"><%= t('form_config.confirmEmailHint') %></label>
                                                                 </div>
+                                                            </div>
+                                                            <div class="col-md-3 confirm-email-label-row-<%= actualSectionIndex %>-<%= actualFieldIndex %>" style="<%= field.confirmEmail ? '' : 'display:none;' %>">
+                                                                <label class="form-label"><%= t('form_config.confirmEmailCustomLabelZh') %></label>
+                                                                <input type="text" class="form-control form-control-sm"
+                                                                       value="<%= field.confirmEmailLabel && field.confirmEmailLabel.zh ? field.confirmEmailLabel.zh : '' %>"
+                                                                       placeholder="確認電子郵件"
+                                                                       onchange="updateFieldConfirmEmailLabel(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'zh', this.value)">
+                                                            </div>
+                                                            <div class="col-md-3 confirm-email-label-row-<%= actualSectionIndex %>-<%= actualFieldIndex %>" style="<%= field.confirmEmail ? '' : 'display:none;' %>">
+                                                                <label class="form-label"><%= t('form_config.confirmEmailCustomLabelEn') %></label>
+                                                                <input type="text" class="form-control form-control-sm"
+                                                                       value="<%= field.confirmEmailLabel && field.confirmEmailLabel.en ? field.confirmEmailLabel.en : '' %>"
+                                                                       placeholder="Confirm Email"
+                                                                       onchange="updateFieldConfirmEmailLabel(<%= actualSectionIndex %>, <%= actualFieldIndex %>, 'en', this.value)">
+                                                                <small class="text-muted d-block"><%= t('form_config.confirmEmailCustomLabelHint') %></small>
+                                                            </div>
+                                                            <% } %>
+                                                            <% if (field.type === 'text' || field.type === 'email' || field.type === 'tel' || field.type === 'textarea') { %>
+                                                            <div class="col-md-3">
+                                                                <label class="form-label"><%= t('form_config.maxLengthLabel') %></label>
+                                                                <input type="number" class="form-control form-control-sm" min="0" step="1"
+                                                                       placeholder="0"
+                                                                       value="<%= (field.validation && field.validation.maxLength) ? field.validation.maxLength : '' %>"
+                                                                       onchange="updateFieldMaxLength(<%= actualSectionIndex %>, <%= actualFieldIndex %>, this.value)">
+                                                                <small class="text-muted d-block"><%= t('form_config.maxLengthHint') %></small>
                                                             </div>
                                                             <% } %>
                                                         </div>
@@ -1000,7 +1040,8 @@
                                                                 <label class="form-label"><%= t('form_config.optionsLabel') %></label>
                                                                 <div id="options-<%= actualSectionIndex %>-<%= actualFieldIndex %>">
                                                                     <% field.options.forEach((option, optionIndex) => { %>
-                                                                        <div class="row mb-2 align-items-center">
+                                                                        <div class="mb-2">
+                                                                        <div class="row align-items-center">
                                                                             <div class="col-md-2">
                                                                                 <input type="text" class="form-control form-control-sm"
                                                                                        placeholder="<%= t('form_config.optionValuePh') %>" value="<%= option.value %>"
@@ -1023,7 +1064,7 @@
                                                                                 <div class="form-check mb-0">
                                                                                     <input type="checkbox" class="form-check-input" id="opt-other-<%= actualSectionIndex %>-<%= actualFieldIndex %>-<%= optionIndex %>"
                                                                                            <%= option.isOther ? 'checked' : '' %>
-                                                                                           onchange="updateOptionFlag(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>, 'isOther', this.checked)">
+                                                                                           onchange="updateOptionFlag(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>, 'isOther', this.checked); toggleOptionOtherPlaceholderRow(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>, this.checked)">
                                                                                     <label class="form-check-label small" for="opt-other-<%= actualSectionIndex %>-<%= actualFieldIndex %>-<%= optionIndex %>"><%= t('form_config.optionIsOther') %></label>
                                                                                 </div>
                                                                             </div>
@@ -1036,6 +1077,26 @@
                                                                                     <i class="fas fa-trash"></i>
                                                                                 </button>
                                                                             </div>
+                                                                        </div>
+                                                                        <div class="row mt-1 option-other-ph-row-<%= actualSectionIndex %>-<%= actualFieldIndex %>-<%= optionIndex %>" style="<%= option.isOther ? '' : 'display:none;' %>">
+                                                                            <div class="col-md-3">
+                                                                                <label class="form-label small mb-0"><%= t('form_config.optionOtherPlaceholderZh') %></label>
+                                                                                <input type="text" class="form-control form-control-sm"
+                                                                                       value="<%= option.otherPlaceholder && option.otherPlaceholder.zh ? option.otherPlaceholder.zh : '' %>"
+                                                                                       placeholder="請填寫"
+                                                                                       onchange="updateOptionOtherPlaceholder(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>, 'zh', this.value)">
+                                                                            </div>
+                                                                            <div class="col-md-3">
+                                                                                <label class="form-label small mb-0"><%= t('form_config.optionOtherPlaceholderEn') %></label>
+                                                                                <input type="text" class="form-control form-control-sm"
+                                                                                       value="<%= option.otherPlaceholder && option.otherPlaceholder.en ? option.otherPlaceholder.en : '' %>"
+                                                                                       placeholder="Please specify"
+                                                                                       onchange="updateOptionOtherPlaceholder(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>, 'en', this.value)">
+                                                                            </div>
+                                                                            <div class="col-md-6">
+                                                                                <small class="text-muted d-block mt-4"><%= t('form_config.optionOtherPlaceholderHint') %></small>
+                                                                            </div>
+                                                                        </div>
                                                                         </div>
                                                                     <% }); %>
                                                                 </div>
@@ -1384,6 +1445,21 @@
         }
     }
 
+    function updateFieldMaxLength(sectionIndex, fieldIndex, value) {
+        const field = formConfig.sections[sectionIndex] && formConfig.sections[sectionIndex].fields[fieldIndex];
+        if (!field) return;
+        if (!field.validation || typeof field.validation !== 'object') {
+            field.validation = {};
+        }
+        const n = parseInt(value, 10);
+        if (!Number.isFinite(n) || n <= 0) {
+            delete field.validation.maxLength;
+        } else {
+            field.validation.maxLength = n;
+        }
+        updatePreview();
+    }
+
     // 更新選項標籤（多語言）
     function updateOptionLabel(sectionIndex, fieldIndex, optionIndex, lang, value) {
         if (formConfig.sections[sectionIndex] && 
@@ -1473,6 +1549,40 @@
         }
     }
 
+    function toggleOptionOtherPlaceholderRow(sectionIndex, fieldIndex, optionIndex, show) {
+        document.querySelectorAll('.option-other-ph-row-' + sectionIndex + '-' + fieldIndex + '-' + optionIndex).forEach(function(el) {
+            el.style.display = show ? '' : 'none';
+        });
+    }
+
+    function updateOptionOtherPlaceholder(sectionIndex, fieldIndex, optionIndex, lang, value) {
+        const opt = formConfig.sections[sectionIndex] &&
+            formConfig.sections[sectionIndex].fields[fieldIndex] &&
+            formConfig.sections[sectionIndex].fields[fieldIndex].options[optionIndex];
+        if (!opt) return;
+        if (!opt.otherPlaceholder || typeof opt.otherPlaceholder !== 'object') {
+            opt.otherPlaceholder = { zh: '', en: '' };
+        }
+        opt.otherPlaceholder[lang] = value;
+        updatePreview();
+    }
+
+    function toggleConfirmEmailLabelRow(sectionIndex, fieldIndex, show) {
+        document.querySelectorAll('.confirm-email-label-row-' + sectionIndex + '-' + fieldIndex).forEach(function(el) {
+            el.style.display = show ? '' : 'none';
+        });
+    }
+
+    function updateFieldConfirmEmailLabel(sectionIndex, fieldIndex, lang, value) {
+        const field = formConfig.sections[sectionIndex] && formConfig.sections[sectionIndex].fields[fieldIndex];
+        if (!field) return;
+        if (!field.confirmEmailLabel || typeof field.confirmEmailLabel !== 'object') {
+            field.confirmEmailLabel = { zh: '', en: '' };
+        }
+        field.confirmEmailLabel[lang] = value;
+        updatePreview();
+    }
+
     // 添加選項
     async function addOption(sectionIndex, fieldIndex) {
         if (!formConfig.sections[sectionIndex].fields[fieldIndex].options) {
@@ -1484,7 +1594,8 @@
                 zh: '',
                 en: ''
             },
-            isOther: false
+            isOther: false,
+            otherPlaceholder: { zh: '', en: '' }
         });
         
         // 先保存到資料庫，然後重新載入頁面
@@ -1546,6 +1657,7 @@
             type: 'text',
             required: false,
             confirmEmail: false,
+            confirmEmailLabel: { zh: '', en: '' },
             display: true,
             visible: true,
             placeholder: '',
@@ -1584,6 +1696,7 @@
         const newSection = {
             sectionName: 'new_section_' + Date.now(),
             sectionTitle: { zh: '新區塊', en: 'New Section' },
+            sectionSubHeader: { zh: '', en: '' },
             visible: true,
             order: formConfig.sections.length + 1,
             fields: []
@@ -1659,6 +1772,10 @@
             if (section.visible) {
                 html += '<div class="form-section-preview mb-3">';
                 html += '<h5>' + getMultilingualText(section.sectionTitle, previewLanguage) + '</h5>';
+                var sectionSub = getMultilingualText(section.sectionSubHeader, previewLanguage);
+                if (sectionSub) {
+                    html += '<p class="text-muted small mb-2">' + sectionSub + '</p>';
+                }
                 
                 section.fields.forEach(function(field) {
                     if (isFieldDisplayed(field)) {
@@ -1702,11 +1819,15 @@
                             });
                             html += '</div>';
                         } else if (field.type === 'textarea') {
-                            html += '<textarea class="form-control" placeholder="' + getMultilingualText(field.placeholder, previewLanguage) + '" disabled></textarea>';
+                            var maxLen = field.validation && Number(field.validation.maxLength) > 0 ? ' maxlength="' + Math.floor(Number(field.validation.maxLength)) + '"' : '';
+                            html += '<textarea class="form-control" placeholder="' + getMultilingualText(field.placeholder, previewLanguage) + '"' + maxLen + ' disabled></textarea>';
                         } else {
-                            html += '<input type="' + field.type + '" class="form-control" placeholder="' + getMultilingualText(field.placeholder, previewLanguage) + '" disabled>';
+                            var maxLen = field.validation && Number(field.validation.maxLength) > 0 ? ' maxlength="' + Math.floor(Number(field.validation.maxLength)) + '"' : '';
+                            html += '<input type="' + field.type + '" class="form-control" placeholder="' + getMultilingualText(field.placeholder, previewLanguage) + '"' + maxLen + ' disabled>';
                             if (field.type === 'email' && field.confirmEmail) {
-                                html += '<label class="form-label mt-2">' + (previewLanguage === 'zh' ? '確認電子郵件' : 'Confirm Email');
+                                var confirmLbl = getMultilingualText(field.confirmEmailLabel, previewLanguage)
+                                    || (previewLanguage === 'zh' ? '確認電子郵件' : 'Confirm Email');
+                                html += '<label class="form-label mt-2">' + confirmLbl;
                                 if (field.required) html += ' <span class="text-danger">*</span>';
                                 html += '</label>';
                                 html += '<input type="email" class="form-control" placeholder="' + getMultilingualText(field.placeholder, previewLanguage) + '" disabled>';
@@ -2085,6 +2206,7 @@
                 return {
                     sectionName: section.sectionName,
                     sectionTitle: section.sectionTitle,
+                    sectionSubHeader: section.sectionSubHeader || { zh: '', en: '' },
                     visible: section.visible,
                     order: section.order || 0,
                     fields: (section.fields || []).map(function(field) {
@@ -2094,6 +2216,7 @@
                             type: field.type,
                             required: field.required,
                             confirmEmail: !!field.confirmEmail,
+                            confirmEmailLabel: field.confirmEmailLabel || { zh: '', en: '' },
                             display: field.display !== undefined ? field.display : true,
                             visible: field.visible !== false,
                             placeholder: field.placeholder,
@@ -2101,7 +2224,8 @@
                                 return {
                                     value: opt.value,
                                     label: opt.label,
-                                    isOther: !!opt.isOther
+                                    isOther: !!opt.isOther,
+                                    otherPlaceholder: opt.otherPlaceholder || { zh: '', en: '' }
                                 };
                             }),
                             validation: field.validation || {},
@@ -2208,6 +2332,16 @@
             section.sectionTitle = { zh: legacy, en: '' };
         }
         section.sectionTitle[lang] = value;
+        updatePreview();
+    }
+
+    function updateSectionSubHeader(sectionIndex, lang, value) {
+        const section = formConfig.sections[sectionIndex];
+        if (!section) return;
+        if (!section.sectionSubHeader || typeof section.sectionSubHeader !== 'object') {
+            section.sectionSubHeader = { zh: '', en: '' };
+        }
+        section.sectionSubHeader[lang] = value;
         updatePreview();
     }
 
@@ -2360,6 +2494,7 @@
                     formConfig.sections = importedData.sections.map(section => ({
                         sectionName: section.sectionName || '新區塊',
                         sectionTitle: section.sectionTitle || { zh: '新區塊', en: 'New Section' },
+                        sectionSubHeader: section.sectionSubHeader || { zh: '', en: '' },
                         visible: section.visible !== undefined ? section.visible : true,
                         order: section.order || 0,
                         fields: (section.fields || []).map(field => {
@@ -2371,6 +2506,7 @@
                             type: field.type || 'text',
                             required: field.required || false,
                             confirmEmail: !!field.confirmEmail,
+                            confirmEmailLabel: field.confirmEmailLabel || { zh: '', en: '' },
                             display: disp,
                             visible: vis,
                             placeholder: field.placeholder || { zh: '', en: '' },
@@ -2378,7 +2514,8 @@
                                 return {
                                     value: opt.value,
                                     label: opt.label || { zh: '', en: '' },
-                                    isOther: !!opt.isOther
+                                    isOther: !!opt.isOther,
+                                    otherPlaceholder: opt.otherPlaceholder || { zh: '', en: '' }
                                 };
                             }),
                             validation: field.validation || {},

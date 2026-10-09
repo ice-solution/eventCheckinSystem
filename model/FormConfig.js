@@ -23,6 +23,11 @@ const formFieldSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    /** 確認電子郵件欄位標籤（留空則用預設：確認電子郵件 / Confirm Email） */
+    confirmEmailLabel: {
+        zh: { type: String, default: '' },
+        en: { type: String, default: '' }
+    },
     // 是否在報名／申請頁顯示給用戶填寫；關閉後僅後台 RSVP 可登記
     display: {
         type: Boolean,
@@ -44,10 +49,16 @@ const formFieldSchema = new mongoose.Schema({
             en: String  // 英文選項標籤
         },
         // select：勾選後，用戶選此選項時可另行輸入自訂文字（儲存為該欄位最終值）
-        isOther: { type: Boolean, default: false }
+        isOther: { type: Boolean, default: false },
+        /** Others 自填 input 的 placeholder（留空則用預設：請填寫 / Please specify） */
+        otherPlaceholder: {
+            zh: { type: String, default: '' },
+            en: { type: String, default: '' }
+        }
     }],
     validation: {
         minLength: Number,
+        /** 報名／RSVP 輸入最多字元數；未填或 0 代表不限 */
         maxLength: Number,
         pattern: String
     },
@@ -65,6 +76,11 @@ const formSectionSchema = new mongoose.Schema({
     sectionTitle: {
         zh: { type: String, default: '' }, // 中文區塊標題
         en: { type: String, default: '' }  // 英文區塊標題
+    },
+    /** Section title 下方副標題（留空不顯示） */
+    sectionSubHeader: {
+        zh: { type: String, default: '' },
+        en: { type: String, default: '' }
     },
     visible: { 
         type: Boolean, 

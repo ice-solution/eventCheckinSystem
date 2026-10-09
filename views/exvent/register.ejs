@@ -26,6 +26,10 @@ function appValStr(fieldName) {
     if (Array.isArray(v)) return v.join(', ');
     return String(v);
 }
+function fieldMaxLen(field) {
+    var n = field && field.validation ? Number(field.validation.maxLength) : 0;
+    return (Number.isFinite(n) && n > 0) ? Math.floor(n) : 0;
+}
 function appHasStoredValue(v) {
     if (v === undefined || v === null) return false;
     if (Array.isArray(v)) return v.length > 0;
@@ -171,6 +175,16 @@ var registerPageTitleSuffix = isApplicationMode
             font-size: 1.3rem;
             margin-bottom: 20px;
             font-weight: 600;
+        }
+        .form-section h3 + .section-subheader {
+            margin-top: -12px;
+        }
+        .form-section .section-subheader {
+            color: #7f8c8d;
+            font-size: 0.95rem;
+            font-weight: 400;
+            margin: 0 0 20px;
+            line-height: 1.45;
         }
 
         .language-switcher .btn-group .btn {
@@ -629,6 +643,15 @@ var registerPageTitleSuffix = isApplicationMode
                             <h3 class="section-title" data-zh="<%= section.sectionTitle && section.sectionTitle.zh ? section.sectionTitle.zh : section.sectionTitle %>" data-en="<%= section.sectionTitle && section.sectionTitle.en ? section.sectionTitle.en : '' %>">
                                 <%= section.sectionTitle && section.sectionTitle.zh ? section.sectionTitle.zh : (typeof section.sectionTitle === 'string' ? section.sectionTitle : '') %>
                             </h3>
+                            <%
+                                var _secSubZh = section.sectionSubHeader && section.sectionSubHeader.zh ? section.sectionSubHeader.zh : '';
+                                var _secSubEn = section.sectionSubHeader && section.sectionSubHeader.en ? section.sectionSubHeader.en : '';
+                            %>
+                            <% if (_secSubZh || _secSubEn) { %>
+                            <p class="section-subheader" data-zh="<%= _secSubZh %>" data-en="<%= _secSubEn %>">
+                                <%= _secSubZh || _secSubEn %>
+                            </p>
+                            <% } %>
                             
                             <% if (section.fields && section.fields.length > 0) { %>
                                 <% 
@@ -643,6 +666,9 @@ var registerPageTitleSuffix = isApplicationMode
                                     <% const fieldDisplayed = (field.visible !== false) && (field.display !== undefined ? field.display : true); %>
                                     <% if (fieldDisplayed) { %>
                                         <% var _selectHasOther = (field.type === 'select' && field.options && field.options.some(function (o) { return o && o.isOther; })); %>
+                                        <% var _selectOtherOpt = _selectHasOther ? field.options.find(function (o) { return o && o.isOther; }) : null; %>
+                                        <% var _selectOtherPhZh = (_selectOtherOpt && _selectOtherOpt.otherPlaceholder && _selectOtherOpt.otherPlaceholder.zh) ? _selectOtherOpt.otherPlaceholder.zh : '請填寫'; %>
+                                        <% var _selectOtherPhEn = (_selectOtherOpt && _selectOtherOpt.otherPlaceholder && _selectOtherOpt.otherPlaceholder.en) ? _selectOtherOpt.otherPlaceholder.en : 'Please specify'; %>
                                         <% var _fieldControlId = (field.type === 'select' && _selectHasOther) ? (field.fieldName + '_sel') : field.fieldName; %>
                                         <% var _isChoiceField = field.type === 'radio' || field.type === 'checkbox'; %>
                                         <% var _isDisplayField = field.type === 'display'; %>
@@ -693,8 +719,9 @@ var registerPageTitleSuffix = isApplicationMode
                                                         </select>
                                                         <input type="text" class="form-control mt-2 d-none js-select-other-text"
                                                                id="<%= field.fieldName %>_other"
-                                                               data-placeholder-zh="請填寫"
-                                                               data-placeholder-en="Please specify"
+                                                               placeholder="<%= _selectOtherPhZh %>"
+                                                               data-placeholder-zh="<%= _selectOtherPhZh %>"
+                                                               data-placeholder-en="<%= _selectOtherPhEn %>"
                                                                <%= _fieldLocked ? 'readonly' : '' %>
                                                                autocomplete="off">
                                                         <input type="hidden" name="<%= field.fieldName %>" id="<%= field.fieldName %>_hidden" value="<%= _fieldLocked ? appValStr(field.fieldName) : '' %>">
@@ -741,10 +768,13 @@ var registerPageTitleSuffix = isApplicationMode
                                                                     </label>
                                                                 </div>
                                                                 <% if (option.isOther) { %>
+                                                                <% var _cbOtherPhZh = (option.otherPlaceholder && option.otherPlaceholder.zh) ? option.otherPlaceholder.zh : '請填寫'; %>
+                                                                <% var _cbOtherPhEn = (option.otherPlaceholder && option.otherPlaceholder.en) ? option.otherPlaceholder.en : 'Please specify'; %>
                                                                 <input type="text" class="form-control js-choice-other-text<%= _cbChecked ? '' : ' d-none' %>"
                                                                        id="<%= field.fieldName %>_<%= optionIndex %>_other"
-                                                                       data-placeholder-zh="請填寫"
-                                                                       data-placeholder-en="Please specify"
+                                                                       placeholder="<%= _cbOtherPhZh %>"
+                                                                       data-placeholder-zh="<%= _cbOtherPhZh %>"
+                                                                       data-placeholder-en="<%= _cbOtherPhEn %>"
                                                                        value="<%= _otherText %>"
                                                                        <%= _fieldLocked ? 'readonly' : '' %>
                                                                        <%= (_cbChecked && !_fieldLocked) ? 'required' : '' %>
@@ -817,10 +847,13 @@ var registerPageTitleSuffix = isApplicationMode
                                                                     </label>
                                                                 </div>
                                                                 <% if (option.isOther) { %>
+                                                                <% var _radioOtherPhZh = (option.otherPlaceholder && option.otherPlaceholder.zh) ? option.otherPlaceholder.zh : '請填寫'; %>
+                                                                <% var _radioOtherPhEn = (option.otherPlaceholder && option.otherPlaceholder.en) ? option.otherPlaceholder.en : 'Please specify'; %>
                                                                 <input type="text" class="form-control js-choice-other-text<%= _radioChecked ? '' : ' d-none' %>"
                                                                        id="<%= field.fieldName %>_<%= optionIndex %>_other"
-                                                                       data-placeholder-zh="請填寫"
-                                                                       data-placeholder-en="Please specify"
+                                                                       placeholder="<%= _radioOtherPhZh %>"
+                                                                       data-placeholder-zh="<%= _radioOtherPhZh %>"
+                                                                       data-placeholder-en="<%= _radioOtherPhEn %>"
                                                                        value="<%= _radioOtherText %>"
                                                                        <%= _fieldLocked ? 'readonly' : '' %>
                                                                        <%= (_radioChecked && !_fieldLocked) ? 'required' : '' %>
@@ -834,31 +867,40 @@ var registerPageTitleSuffix = isApplicationMode
                                                     <div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Data cannot be changed">已有資料，不可修改</div>
                                                     <% } %>
                                                 <% } else if (field.type === 'textarea') { %>
+                                                    <% var _ml = fieldMaxLen(field); %>
                                                     <textarea class="form-control" id="<%= field.fieldName %>" name="<%= field.fieldName %>" 
                                                               placeholder="<%= field.placeholder && field.placeholder.zh ? field.placeholder.zh : (typeof field.placeholder === 'string' ? field.placeholder : '') %>" 
                                                               data-placeholder-zh="<%= field.placeholder && field.placeholder.zh ? field.placeholder.zh : '' %>" 
                                                               data-placeholder-en="<%= field.placeholder && field.placeholder.en ? field.placeholder.en : '' %>" 
                                                               <%= _fieldLocked ? 'readonly' : '' %>
-                                                              <%= (!_fieldLocked && field.required) ? 'required' : '' %> rows="3"><%= _fieldLocked || isApplicationMode ? appValStr(field.fieldName) : '' %></textarea>
+                                                              <%= (!_fieldLocked && field.required) ? 'required' : '' %>
+                                                              <% if (_ml) { %>maxlength="<%= _ml %>"<% } %>
+                                                              rows="3"><%= _fieldLocked || isApplicationMode ? appValStr(field.fieldName) : '' %></textarea>
                                                     <% if (_fieldLocked) { %><div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Data cannot be changed">已有資料，不可修改</div><% } %>
                                                 <% } else { %>
+                                                    <% var _ml = fieldMaxLen(field); %>
                                                     <input type="<%= field.type %>" class="form-control" id="<%= field.fieldName %>" name="<%= field.fieldName %>" 
                                                            placeholder="<%= field.placeholder && field.placeholder.zh ? field.placeholder.zh : (typeof field.placeholder === 'string' ? field.placeholder : '') %>" 
                                                            data-placeholder-zh="<%= field.placeholder && field.placeholder.zh ? field.placeholder.zh : '' %>" 
                                                            data-placeholder-en="<%= field.placeholder && field.placeholder.en ? field.placeholder.en : '' %>" 
                                                            value="<%= isApplicationMode ? appValStr(field.fieldName) : '' %>"
                                                            <%= _fieldLocked ? 'readonly' : '' %>
-                                                           <%= (!_fieldLocked && field.required) ? 'required' : '' %>>
+                                                           <%= (!_fieldLocked && field.required) ? 'required' : '' %>
+                                                           <% if (_ml) { %>maxlength="<%= _ml %>"<% } %>>
                                                     <% if (_fieldLocked) { %><div class="application-locked-hint" data-zh="已有資料，不可修改" data-en="Data cannot be changed">已有資料，不可修改</div><% } %>
                                                 <% } %>
                                             </div>
                                         </div>
                                         <% if (field.type === 'email' && field.confirmEmail && !_fieldLocked) { %>
+                                        <%
+                                            var _confirmLblZh = (field.confirmEmailLabel && field.confirmEmailLabel.zh) ? field.confirmEmailLabel.zh : '確認電子郵件';
+                                            var _confirmLblEn = (field.confirmEmailLabel && field.confirmEmailLabel.en) ? field.confirmEmailLabel.en : 'Confirm Email';
+                                        %>
                                         <div class="form-row form-row-stacked email-confirm-row" data-email-field="<%= field.fieldName %>">
                                             <label class="form-label field-label" for="<%= field.fieldName %>_confirm"
-                                                   data-zh="確認電子郵件"
-                                                   data-en="Confirm Email">
-                                                確認電子郵件
+                                                   data-zh="<%= _confirmLblZh %>"
+                                                   data-en="<%= _confirmLblEn %>">
+                                                <%= _confirmLblZh %>
                                                 <% if (field.required) { %>
                                                     <span class="required">*</span>
                                                 <% } %>
@@ -1734,6 +1776,22 @@ var registerPageTitleSuffix = isApplicationMode
                     } else {
                         $title.text(enText);
                     }
+                }
+            });
+
+            // 更新區塊副標題
+            $('.section-subheader').each(function() {
+                const $sub = $(this);
+                const zhText = $sub.data('zh');
+                const enText = $sub.data('en');
+                if (currentLanguage === 'zh' && zhText) {
+                    $sub.text(zhText);
+                } else if (currentLanguage === 'en' && enText) {
+                    $sub.text(enText);
+                } else if (currentLanguage === 'en' && zhText) {
+                    $sub.text(zhText);
+                } else if (currentLanguage === 'zh' && enText) {
+                    $sub.text(enText);
                 }
             });
 
