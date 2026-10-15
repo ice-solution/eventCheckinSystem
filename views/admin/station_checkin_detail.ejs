@@ -295,12 +295,11 @@
                                                                 data-user-id="<%= u._id %>"
                                                                 data-user-name="<%= u.name || '' %>"
                                                                 <%= u.stationCheckedIn ? 'checked' : '' %>
-                                                                <%= u.isCheckIn ? '' : 'disabled' %>
                                                                 aria-label="<%= t('station_checkin.checkInBtn') %>">
                                                             <div class="user-name-wrap">
                                                                 <div class="user-name"><%= u.name || '-' %></div>
                                                                 <% if (!u.isCheckIn) { %>
-                                                                    <span class="user-sub"><%= t('station_checkin.notEntered') %></span>
+                                                                    <span class="user-sub js-not-entered"><%= t('station_checkin.notEntered') %></span>
                                                                 <% } %>
                                                             </div>
                                                         </div>
@@ -451,16 +450,18 @@ jQuery(function($) {
         showAlert('danger', body.message || 'Error');
     }
 
-    function setStationRowChecked($row, checked) {
+    function setStationRowChecked($row, checked, markEntered) {
         if (!$row || !$row.length) return;
         $row.toggleClass('row-checked-in', !!checked);
         $row.toggleClass('row-pending', !checked);
+        if (markEntered || checked) {
+            $row.attr('data-entered', '1');
+            $row.find('.js-not-entered').remove();
+        }
         var $cb = $row.find('.station-checkin-cb');
         if ($cb.length) {
             $cb.prop('checked', !!checked);
-            if ($row.attr('data-entered') === '1') {
-                $cb.prop('disabled', false);
-            }
+            $cb.prop('disabled', false);
         }
     }
 
@@ -503,16 +504,15 @@ jQuery(function($) {
 
         $cb.prop('disabled', true);
         var req = wantChecked ? doCheckIn(userId) : doUncheck(userId);
-        req.done(function() {
-            setStationRowChecked($row, wantChecked);
+        req.done(function(res) {
+            var markEntered = !!(res && (res.entryCheckInApplied || (res.user && res.user.isCheckIn)));
+            setStationRowChecked($row, wantChecked, markEntered);
             showAlert('success', wantChecked ? i18n.checkInSuccess : i18n.uncheckSuccess);
         }).fail(function(xhr) {
             $cb.prop('checked', !wantChecked);
             handleCheckInError(xhr);
         }).always(function() {
-            if ($row.attr('data-entered') === '1') {
-                $cb.prop('disabled', false);
-            }
+            $cb.prop('disabled', false);
         });
     });
 
@@ -671,7 +671,8 @@ jQuery(function($) {
                     .done(function(res) {
                         var name = (res.user && res.user.name) || userId;
                         var uid = (res.user && res.user._id) ? String(res.user._id) : userId;
-                        setStationRowChecked(findStationRow(uid), true);
+                        var markEntered = !!(res.entryCheckInApplied || (res.user && res.user.isCheckIn));
+                        setStationRowChecked(findStationRow(uid), true, markEntered);
                         $('#scanResult').html('<span class="status-ok">' + i18n.checkInSuccess + ': ' + name + '</span>');
                         showAlert('success', i18n.checkInSuccess + ': ' + name);
                     })

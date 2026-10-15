@@ -449,7 +449,7 @@ router.get('/events/:eventId/stations/:stationId/checkins', authenticateJwt, asy
   }
 });
 
-// 6c) 分站簽到（需已完成進場 isCheckIn；同一站同一人只能一次）
+// 6c) 分站簽到（同一站同一人只能一次；尚未進場時會一併寫入 isCheckIn / checkInAt）
 router.post('/events/:eventId/stations/:stationId/checkin', authenticateJwt, async (req, res) => {
   const { eventId } = req.params;
   try {

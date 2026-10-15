@@ -274,8 +274,8 @@ exports.deleteStation = async (req, res) => {
 
 /**
  * 共用：執行分站簽到
- * 規則：必須先完成進場 isCheckIn；同一站同一人只能一次；
- * 若站點有 Section List，用戶必須在名單內
+ * 規則：同一站同一人只能一次；若站點有 Section List，用戶必須在名單內。
+ * 若用戶尚未進場，會一併寫入 isCheckIn / checkInAt（不影響已進場者的原 checkInAt）。
  */
 async function performStationCheckIn(event, stationId, userId, checkedInBy) {
     const station = findStation(event, stationId);
@@ -305,15 +305,6 @@ async function performStationCheckIn(event, stationId, userId, checkedInBy) {
             },
         };
     }
-    if (!user.isCheckIn) {
-        return {
-            status: 400,
-            body: {
-                message: 'Entry check-in required before station check-in',
-                code: 'ENTRY_CHECKIN_REQUIRED',
-            },
-        };
-    }
     if (alreadyCheckedIn(event, stationId, userId)) {
         return {
             status: 400,
@@ -324,12 +315,21 @@ async function performStationCheckIn(event, stationId, userId, checkedInBy) {
         };
     }
 
+    const now = new Date();
+    let entryCheckInApplied = false;
+    if (!user.isCheckIn) {
+        user.isCheckIn = true;
+        user.checkInAt = now;
+        entryCheckInApplied = true;
+        event.markModified('users');
+    }
+
     const record = {
         stationId: station._id,
         userId: user._id,
         userName: user.name || '',
         userEmail: user.email || '',
-        checkedInAt: new Date(),
+        checkedInAt: now,
         checkedInBy: checkedInBy || '',
     };
     event.stationCheckIns = event.stationCheckIns || [];
@@ -344,11 +344,13 @@ async function performStationCheckIn(event, stationId, userId, checkedInBy) {
             message: 'Station check-in successful',
             station: { _id: station._id, name: station.name },
             record: saved,
+            entryCheckInApplied,
             user: {
                 _id: user._id,
                 name: user.name,
                 email: user.email,
-                isCheckIn: user.isCheckIn,
+                isCheckIn: !!user.isCheckIn,
+                checkInAt: user.checkInAt || null,
             },
         },
     };
