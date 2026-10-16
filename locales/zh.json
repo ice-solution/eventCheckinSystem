@@ -36,7 +36,18 @@
     "paymentSettings": "付費設定", "transactionRecord": "交易記錄", "attachments": "附件", "report": "報告",
     "emailRecords": "郵件記錄", "banner": "橫幅管理", "importUsers": "批量匯入",
     "scan": "簽到掃描",
-    "stationCheckin": "分站簽到"
+    "stationCheckin": "分站簽到",
+    "settings": "設定"
+  },
+  "event_settings": {
+    "title": "設定",
+    "senderNameLabel": "寄件人顯示名稱",
+    "senderNamePlaceholder": "例如：PMI HK Annual Dinner",
+    "senderNameHint": "收件人看到的名稱會出現在電郵地址前面，例如 PMI HK <info@nvl-hk.com>。留空則只顯示電郵地址。電郵地址本身仍使用系統寄件地址，不能在此更改。",
+    "senderEmailLabel": "寄件電郵地址",
+    "saved": "已儲存",
+    "error": "儲存失敗",
+    "saving": "儲存中…"
   },
   "station_checkin": {
     "title": "分站簽到",

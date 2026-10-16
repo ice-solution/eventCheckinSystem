@@ -142,8 +142,13 @@ function resolveUserForPaymentEmail(transaction, eventDoc, user) {
     return merged;
 }
 
+function eventEmailSenderName(event) {
+    if (!event || event.emailSenderName == null) return '';
+    return String(event.emailSenderName).replace(/[\r\n"]/g, ' ').trim();
+}
+
 /** 發送郵件並寫入 EmailRecord（invoice / payment_receipt 等） */
-async function sendEmailWithRecord({ recipient, subject, messageBody, emailTemplate, eventId, userId }) {
+async function sendEmailWithRecord({ recipient, subject, messageBody, emailTemplate, eventId, userId, senderName }) {
     let body = embedKaitiFontInEmail(messageBody);
     const trackingId = await emailTracking.createEmailRecord({
         recipient,
@@ -155,7 +160,7 @@ async function sendEmailWithRecord({ recipient, subject, messageBody, emailTempl
     if (trackingId) {
         body = emailTracking.addTrackingToEmail(body, trackingId);
     }
-    const result = await ses.sendEmail(recipient, subject, body);
+    const result = await ses.sendEmail(recipient, subject, body, senderName);
     if (trackingId) {
         if (result && result.MessageId) {
             await emailTracking.updateEmailRecordStatus(trackingId, 'sent', result.MessageId);
@@ -210,6 +215,7 @@ async function sendInvoiceEmail(transaction, event, emailTemplateId = null) {
             emailTemplate,
             eventId: eventDoc._id,
             userId,
+            senderName: eventEmailSenderName(eventDoc),
         });
         console.log('[Invoice Email] Sent to:', email);
     } catch (err) {
@@ -257,6 +263,7 @@ async function sendPaymentReceiptEmail(transaction, event, user, emailTemplateId
             emailTemplate,
             eventId: eventDoc._id,
             userId,
+            senderName: eventEmailSenderName(eventDoc),
         });
         console.log('[Payment Receipt Email] Sent to:', email);
     } catch (err) {
@@ -1700,7 +1707,7 @@ exports.sendEmail = async (user, event) => {
         }
         
         // 發送郵件
-        const result = await ses.sendEmail(user.email, subject, messageBody);
+        const result = await ses.sendEmail(user.email, subject, messageBody, eventEmailSenderName(event));
         
         // 更新郵件記錄狀態
         if (trackingId && result && result.MessageId) {
@@ -1716,7 +1723,7 @@ exports.sendEmail = async (user, event) => {
         let messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl);
         messageBody = embedKaitiFontInEmail(messageBody);
         try {
-            await ses.sendEmail(user.email, '歡迎加入我們的活動', messageBody);
+            await ses.sendEmail(user.email, '歡迎加入我們的活動', messageBody, eventEmailSenderName(event));
         } catch (sendError) {
             console.error('Error sending fallback email:', sendError);
         }
@@ -1787,7 +1794,7 @@ exports.sendEmailByTemplateId = async (user, event, emailTemplateId) => {
         messageBody = emailTracking.addTrackingToEmail(messageBody, trackingId);
     }
 
-    const result = await ses.sendEmail(user.email, subject, messageBody);
+    const result = await ses.sendEmail(user.email, subject, messageBody, eventEmailSenderName(event));
     if (trackingId && result && result.MessageId) {
         await emailTracking.updateEmailRecordStatus(trackingId, 'sent', result.MessageId);
     } else if (trackingId && result instanceof Error) {
@@ -2020,7 +2027,7 @@ exports.sendEmailByType = async (user, event, type = 'welcome', emailTemplateId 
         }
         
         // 發送郵件
-        const result = await ses.sendEmail(user.email, subject, messageBody);
+        const result = await ses.sendEmail(user.email, subject, messageBody, eventEmailSenderName(event));
         
         // 更新郵件記錄狀態
         if (trackingId && result && result.MessageId) {
@@ -2073,7 +2080,7 @@ exports.sendPaymentConfirmationEmail = async (user, event, transaction) => {
         messageBody = embedKaitiFontInEmail(messageBody);
         
         // 發送郵件
-        await ses.sendEmail(user.email, subject, messageBody);
+        await ses.sendEmail(user.email, subject, messageBody, eventEmailSenderName(event));
         console.log('Payment confirmation email sent successfully to:', user.email);
         
     } catch (error) {
@@ -2082,7 +2089,7 @@ exports.sendPaymentConfirmationEmail = async (user, event, transaction) => {
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
         let messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl);
         messageBody = embedKaitiFontInEmail(messageBody);
-        await ses.sendEmail(user.email, '歡迎加入我們的活動', messageBody);
+        await ses.sendEmail(user.email, '歡迎加入我們的活動', messageBody, eventEmailSenderName(event));
     }
 }
 // 渲染用戶登入頁面
@@ -2249,6 +2256,55 @@ exports.updateEventName = async (req, res) => {
     } catch (error) {
         console.error('Error updating event name:', error);
         res.status(500).json({ message: 'Error updating event name' });
+    }
+};
+
+function assertEventSettingsAccess(req, eventId) {
+    const user = req.session && req.session.user;
+    if (!user || !user._id) return { status: 401 };
+    const isAdmin = user.role === 'admin';
+    const allowed = (user.allowedEvents || []).map(id => id && id.toString());
+    if (!isAdmin && !allowed.includes(String(eventId))) return { status: 403 };
+    return null;
+}
+
+/** 後台：活動設定（寄件人顯示名稱） */
+exports.renderEventSettingsPage = async (req, res) => {
+    try {
+        const denied = assertEventSettingsAccess(req, req.params.eventId);
+        if (denied && denied.status === 401) return res.redirect('/login');
+        if (denied) return res.status(403).send('No access to this event');
+        const event = await Event.findById(req.params.eventId);
+        if (!event) return res.status(404).send('Event not found');
+        res.render('admin/event_settings', {
+            eventId: req.params.eventId,
+            eventName: event.name || '',
+            emailSenderName: event.emailSenderName || '',
+            senderEmail: process.env.SENDER_EMAIL || '',
+        });
+    } catch (error) {
+        console.error('Error rendering event settings page:', error);
+        res.status(500).send('Error loading page');
+    }
+};
+
+/** PATCH 更新活動寄件人顯示名稱 */
+exports.updateEventSettings = async (req, res) => {
+    try {
+        const denied = assertEventSettingsAccess(req, req.params.eventId);
+        if (denied && denied.status === 401) return res.status(401).json({ message: 'Unauthorized' });
+        if (denied) return res.status(403).json({ message: 'No access to this event' });
+        const event = await Event.findById(req.params.eventId);
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+        const raw = req.body && req.body.emailSenderName != null ? String(req.body.emailSenderName) : '';
+        const name = raw.replace(/[\r\n"]/g, ' ').trim().slice(0, 120);
+        event.emailSenderName = name;
+        event.modified_at = new Date();
+        await event.save();
+        res.status(200).json({ message: 'Settings updated', emailSenderName: event.emailSenderName });
+    } catch (error) {
+        console.error('Error updating event settings:', error);
+        res.status(500).json({ message: 'Error updating event settings' });
     }
 };
 // 獲取當前用戶的事件並渲染事件列表視圖

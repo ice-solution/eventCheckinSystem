@@ -505,6 +505,11 @@ exports.sendEmailById = async (req, res) => {
       }
       const subject = template.subject
       const body = template.content
+      let senderName = ''
+      if (template.eventId) {
+        const eventDoc = await Event.findById(template.eventId).select('emailSenderName')
+        senderName = eventDoc && eventDoc.emailSenderName ? String(eventDoc.emailSenderName).trim() : ''
+      }
 
       // send email with tracking
       console.log("send my template");
@@ -530,7 +535,7 @@ exports.sendEmailById = async (req, res) => {
             }
             
             // 發送郵件
-            const result = await ses.sendEmail(email, subject, trackedBody);
+            const result = await ses.sendEmail(email, subject, trackedBody, senderName);
             
             // 更新郵件記錄狀態
             if (trackingId && result && result.MessageId) {

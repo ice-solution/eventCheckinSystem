@@ -36,7 +36,18 @@
     "paymentSettings": "Payment Settings", "transactionRecord": "Transaction Records", "attachments": "Attachments", "report": "Report",
     "emailRecords": "Email Records", "banner": "Banner Management", "importUsers": "Bulk Import",
     "scan": "Check-in Scan",
-    "stationCheckin": "Station Check-in"
+    "stationCheckin": "Station Check-in",
+    "settings": "Settings"
+  },
+  "event_settings": {
+    "title": "Settings",
+    "senderNameLabel": "Sender display name",
+    "senderNamePlaceholder": "e.g. PMI HK Annual Dinner",
+    "senderNameHint": "Recipients see this name before the email address, for example PMI HK <info@nvl-hk.com>. Leave blank to show the address only. The sending address itself stays the system sender and cannot be changed here.",
+    "senderEmailLabel": "Sender email address",
+    "saved": "Saved",
+    "error": "Save failed",
+    "saving": "Saving…"
   },
   "station_checkin": {
     "title": "Station Check-in",

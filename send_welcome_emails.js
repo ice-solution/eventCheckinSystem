@@ -136,7 +136,7 @@ mongoose.connect(process.env.mongodb || 'mongodb://localhost:27017/checkinSystem
                 }
                 
                 // 發送郵件
-                await ses.sendEmail(user.email, subject, messageBody);
+                await ses.sendEmail(user.email, subject, messageBody, event.emailSenderName || '');
                 console.log(`  ✅ 成功發送給 ${user.email}`);
                 successCount++;
                 

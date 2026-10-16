@@ -90,6 +90,8 @@ router.get('/:eventId', eventsController.getEventUsersByEventID);
 // 編輯活動名稱（需放在 /:eventId 明細路由之前，避免被當成 user 路由）
 router.get('/:eventId/edit-name', eventsController.renderEditEventNamePage);
 router.patch('/:eventId/name', eventsController.updateEventName);
+router.get('/:eventId/settings', eventsController.renderEventSettingsPage);
+router.patch('/:eventId/settings', eventsController.updateEventSettings);
 
 router.get('/:eventId/luckydraw', eventsController.renderLuckydrawPage); // 使用控制器函數
 router.get('/:eventId/luckydraw/panel', eventsController.renderLuckydrawPanelPage); // iPad 抽獎控制面板

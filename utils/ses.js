@@ -10,7 +10,15 @@ const sesClient = new SESClient({
 
 const EMAIL_SENDER = process.env.SENDER_EMAIL // 替換為您的 SES 電子郵件地址
 
-const sendCommand = (userEmail, subject, html) => {
+/** 有顯示名稱時組成 "Name" <email>；否則只用寄件地址 */
+function buildSource(senderName) {
+  const email = (EMAIL_SENDER || '').trim()
+  const name = senderName ? String(senderName).replace(/[\r\n"]/g, '').trim() : ''
+  if (!name || !email || email.includes('<')) return email
+  return `"${name}" <${email}>`
+}
+
+const sendCommand = (userEmail, subject, html, senderName) => {
   return new SendEmailCommand({
     Destination: {
       ToAddresses: Array.isArray(userEmail) ? userEmail : [userEmail],
@@ -28,13 +36,13 @@ const sendCommand = (userEmail, subject, html) => {
         Data: subject,
       },
     },
-    Source: EMAIL_SENDER,
+    Source: buildSource(senderName),
   })
 }
 
-exports.sendEmail = async (to, subject, body) => {
+exports.sendEmail = async (to, subject, body, senderName) => {
   try {
-    const sendEmailCommand = sendCommand(to, subject, body)
+    const sendEmailCommand = sendCommand(to, subject, body, senderName)
     const result = await sesClient.send(sendEmailCommand)
     console.log("sent: ", result)
     return result

@@ -150,6 +150,8 @@ const eventSchema = new mongoose.Schema({
     treasureHuntItems: [treasureHuntItemSchema], // Treasure Hunt 項目列表
     checkInStations: [checkInStationSchema], // 分站簽到站點
     stationCheckIns: [stationCheckInSchema], // 分站簽到記錄
+    /** 寄件人顯示名稱（收件匣 From 電郵地址前面那段）；空白則只用 SENDER_EMAIL */
+    emailSenderName: { type: String, default: '' },
     // 電郵發送設置
     emailSettings: {
         sendWelcomeEmail: { type: Boolean, default: false }, // 是否立即發送歡迎電郵

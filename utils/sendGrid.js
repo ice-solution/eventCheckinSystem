@@ -11,15 +11,17 @@ const msg = {
   html: "<strong>and easy to do anywhere, even with Node.js</strong>",
 }
 
-exports.sendEmail = async (to, subject, body) => {
+exports.sendEmail = async (to, subject, body, senderName) => {
   console.log("Sending email to:", to)
   console.log("Email subject:", subject)
   console.log("Email body:", body)
   console.log(  "Email sender:", EMAIL_SENDER)
+  const name = senderName ? String(senderName).replace(/[\r\n]/g, ' ').trim() : ''
+  const from = name ? { email: EMAIL_SENDER, name } : EMAIL_SENDER
   try {
     return await sendGrid.send({
       to: {email: to},
-      from: EMAIL_SENDER,
+      from,
       subject: subject,
       html: body,
     })
