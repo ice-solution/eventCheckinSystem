@@ -461,6 +461,15 @@ exports.copyEvent = async (req, res) => {
             maxLuckydrawOrder: 0,
             luckydrawListFieldNames: source.luckydrawListFieldNames || [],
             luckydrawAwardPassword: source.luckydrawAwardPassword || '',
+            luckydrawEligibility: source.luckydrawEligibility
+                ? {
+                    enabled: !!source.luckydrawEligibility.enabled,
+                    fieldName: source.luckydrawEligibility.fieldName || '',
+                    value: source.luckydrawEligibility.value != null
+                        ? String(source.luckydrawEligibility.value)
+                        : ''
+                }
+                : { enabled: false, fieldName: '', value: '' },
             isPaymentEvent: !!source.isPaymentEvent,
             promoCodeDisplayEnabled: source.promoCodeDisplayEnabled !== false,
             PaymentTickets: Array.isArray(source.PaymentTickets)
@@ -3705,6 +3714,41 @@ exports.resetLuckydrawWinnerOrder = async (req, res) => {
     }
 };
 
+/** 正規化用戶欄位值以便與設定值比對 */
+function normalizeLuckydrawFieldValue(raw) {
+    if (raw == null) return '';
+    if (typeof raw === 'boolean') return raw ? 'true' : 'false';
+    if (Array.isArray(raw)) return raw.map((x) => String(x == null ? '' : x).trim());
+    return String(raw).trim();
+}
+
+/** 用戶指定欄位是否等於 expected（字串比對；checkbox 陣列任一項相符即可） */
+function userFieldEqualsExpected(user, fieldName, expected) {
+    if (!fieldName) return true;
+    const exp = String(expected == null ? '' : expected).trim();
+    const userObj = user && typeof user.toObject === 'function' ? user.toObject({ minimize: false }) : user;
+    const norm = normalizeLuckydrawFieldValue(userObj ? userObj[fieldName] : undefined);
+    if (Array.isArray(norm)) return norm.includes(exp);
+    return norm === exp;
+}
+
+/**
+ * 抽獎池：已簽到、未中獎；若啟用 luckydrawEligibility，再要求欄位等於設定值
+ */
+function getAvailableLuckydrawPeople(event) {
+    const winners = event.winners || [];
+    const eligibility = event.luckydrawEligibility || {};
+    const filterByField = !!(eligibility.enabled && eligibility.fieldName);
+    return (event.users || []).filter((user) => {
+        if (user.isCheckIn !== true) return false;
+        if (winners.some((winner) => winner._id && winner._id.equals(user._id))) return false;
+        if (filterByField && !userFieldEqualsExpected(user, eligibility.fieldName, eligibility.value)) {
+            return false;
+        }
+        return true;
+    });
+}
+
 /**
  * 組裝中獎者資料供 socket/前台：合併 event.user 的完整資料（FormConfig 欄位）與 winner 抽獎欄位
  * @param {Object} winner - 中獎記錄 { _id, name, company, table, prizeId, prizeName, order, wonAt }
@@ -3747,6 +3791,19 @@ exports.addLuckydrawUser = async (req, res) => {
         const alreadyWinner = event.winners.some(existingWinner => existingWinner._id.equals(_id));
         if (alreadyWinner) {
             return res.status(400).send('This user has already won.');
+        }
+
+        const userDoc = event.users.id(_id) || event.users.find(u => u && u._id && String(u._id) === String(_id));
+        if (!userDoc) {
+            return res.status(404).send('User not found.');
+        }
+        if (userDoc.isCheckIn !== true) {
+            return res.status(400).send('User is not checked in.');
+        }
+        const eligibility = event.luckydrawEligibility || {};
+        if (eligibility.enabled && eligibility.fieldName
+            && !userFieldEqualsExpected(userDoc, eligibility.fieldName, eligibility.value)) {
+            return res.status(400).send('User does not meet the lucky draw eligibility field requirement.');
         }
 
         // 檢查獎品是否存在並更新數量
@@ -3821,11 +3878,8 @@ exports.batchDrawWinners = async (req, res) => {
             return res.status(404).send('Event not found.');
         }
 
-        // 獲取所有已經簽到且未中獎的用戶
-        const availablePeople = event.users.filter(user => 
-            user.isCheckIn === true && 
-            !event.winners.some(winner => winner._id && winner._id.equals(user._id))
-        );
+        // 已簽到、未中獎；若啟用資格欄位則再過濾
+        const availablePeople = getAvailableLuckydrawPeople(event);
 
         if (availablePeople.length === 0) {
             return res.status(400).send('No available people to draw.');
@@ -3920,10 +3974,7 @@ exports.renderLuckydrawPage = async (req, res) => {
         // 日誌輸出 winners 陣列
         console.log('Winners:', event.winners);
 
-        // 獲取所有已經簽到且未中獎的用戶
-        const availablePeople = event.users.filter(user => 
-            user.isCheckIn === true && !event.winners.some(winner => winner._id && winner._id.equals(user._id)) // 確保 winner._id 存在
-        );
+        const availablePeople = getAvailableLuckydrawPeople(event);
 
         res.render('events/luckydraw', { eventId, availablePeople, prizes }); // 傳遞可用的參與者和獎品列表
     } catch (error) {
@@ -3952,10 +4003,7 @@ exports.renderLuckydrawPanelPage = async (req, res) => {
             return doc;
         });
 
-        // 獲取所有已經簽到且未中獎的用戶
-        const availablePeople = event.users.filter(user => 
-            user.isCheckIn === true && !event.winners.some(winner => winner._id && winner._id.equals(user._id)) // 確保 winner._id 存在
-        );
+        const availablePeople = getAvailableLuckydrawPeople(event);
 
         res.render('admin/luckydraw_panel', { eventId, availablePeople, prizes: prizesWithPictureUrl, baseUrl }); // 傳遞獎品（含 pictureUrl）與 baseUrl
     } catch (error) {
@@ -5045,7 +5093,22 @@ exports.renderLuckydrawSetting = async (req, res) => {
         const event = await Event.findById(eventId);
         if (!event) return res.status(404).send('Event not found');
         const awardPasswordSet = !!(event.luckydrawAwardPassword && event.luckydrawAwardPassword.trim());
-        res.render('admin/luckydraw_setting', { eventId, awardPasswordSet });
+        const FormConfig = require('../model/FormConfig');
+        const formConfigController = require('./formConfigController');
+        let formConfig = await FormConfig.findOne({ eventId });
+        if (formConfig) formConfig = formConfigController.getFormConfigForRender(formConfig);
+        const formFieldOptions = collectFormConfigFields(formConfig);
+        const eligibility = event.luckydrawEligibility || {};
+        res.render('admin/luckydraw_setting', {
+            eventId,
+            awardPasswordSet,
+            formFieldOptions,
+            luckydrawEligibility: {
+                enabled: !!eligibility.enabled,
+                fieldName: eligibility.fieldName || '',
+                value: eligibility.value != null ? String(eligibility.value) : ''
+            }
+        });
     } catch (err) {
         console.error('renderLuckydrawSetting error:', err);
         res.status(500).send('Error loading setting');
@@ -5064,6 +5127,36 @@ exports.updateLuckydrawAwardPassword = async (req, res) => {
         res.status(200).json({ message: 'Saved', awardPasswordSet: !!event.luckydrawAwardPassword });
     } catch (err) {
         console.error('updateLuckydrawAwardPassword error:', err);
+        res.status(500).json({ message: 'Error saving' });
+    }
+};
+
+/** PATCH 儲存抽獎資格額外欄位條件（已簽到 + 欄位等於某值） */
+exports.updateLuckydrawEligibility = async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        const body = req.body || {};
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).json({ message: 'Event not found.' });
+
+        const enabled = !!body.enabled;
+        const fieldName = typeof body.fieldName === 'string' ? body.fieldName.trim() : '';
+        const value = body.value != null ? String(body.value).trim() : '';
+
+        if (enabled && !fieldName) {
+            return res.status(400).json({ message: 'Please select a field.' });
+        }
+
+        event.luckydrawEligibility = {
+            enabled,
+            fieldName: enabled ? fieldName : '',
+            value: enabled ? value : ''
+        };
+        event.modified_at = new Date();
+        await event.save();
+        res.status(200).json({ message: 'Saved', luckydrawEligibility: event.luckydrawEligibility });
+    } catch (err) {
+        console.error('updateLuckydrawEligibility error:', err);
         res.status(500).json({ message: 'Error saving' });
     }
 };

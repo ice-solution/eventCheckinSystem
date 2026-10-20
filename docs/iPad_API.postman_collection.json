@@ -1,18 +1,34 @@
 {
   "info": {
     "name": "iPad API",
-    "description": "iPad 端 API：登入、活動、用戶、簽到、修改客戶個人資料等。\n\n使用前請先執行「1) 登入」取得 token，再呼叫其他需要 Authorization 的請求。",
+    "description": "iPad / kiosk JWT API（對照 routes/ipadApi.js）。\n\n使用前請先執行「1) 登入」取得 token，再填入 Collection 變數 eventId / userId / stationId。",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:3377" },
     { "key": "token", "value": "" },
     { "key": "eventId", "value": "" },
-    { "key": "userId", "value": "" }
+    { "key": "userId", "value": "" },
+    { "key": "stationId", "value": "" },
+    { "key": "elementId", "value": "" }
   ],
   "item": [
     {
       "name": "1) 登入取得 JWT",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "try {",
+              "  var j = pm.response.json();",
+              "  if (j.token) { pm.collectionVariables.set('token', j.token); }",
+              "} catch (e) {}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
       "request": {
         "method": "POST",
         "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -21,7 +37,7 @@
           "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"your_password\"\n}"
         },
         "url": "{{baseUrl}}/api/ipad/login",
-        "description": "登入後會回傳 token，請複製到 collection 變數 `token`，或使用 Tests 腳本自動儲存。"
+        "description": "登入後 token 會自動寫入 collection 變數 `token`（若 Tests 腳本有跑）。"
       }
     },
     {
@@ -30,7 +46,7 @@
         "method": "GET",
         "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
         "url": "{{baseUrl}}/api/ipad/events",
-        "description": "回傳該帳號可存取的活動 name 與 _id。請將要用的 event _id 填入 collection 變數 eventId。"
+        "description": "回傳可存取活動的 name 與 _id。請將要用的 event _id 填入 eventId。"
       }
     },
     {
@@ -39,7 +55,16 @@
         "method": "GET",
         "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
         "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/users",
-        "description": "依 eventId 取得該活動的 users 陣列。請將要用的 user _id 填入 collection 變數 userId。"
+        "description": "取得該活動 users 陣列。請將要用的 user _id 填入 userId。"
+      }
+    },
+    {
+      "name": "3b) 取得 Registration Form Config",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/registration-config",
+        "description": "取得 FormConfig，供 kiosk 動態渲染現場登記表單。"
       }
     },
     {
@@ -48,7 +73,7 @@
         "method": "GET",
         "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
         "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/users/{{userId}}",
-        "description": "取得指定活動下某位用戶的完整資料。"
+        "description": "取得指定用戶完整資料。"
       }
     },
     {
@@ -64,11 +89,11 @@
           "raw": "{\n  \"isCheckIn\": true\n}"
         },
         "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/users/{{userId}}",
-        "description": "將用戶設為已簽到。設為 false 可取消簽到。"
+        "description": "進場簽到。"
       }
     },
     {
-      "name": "4b) 更新用戶 - 修改客戶個人資料",
+      "name": "4b) 更新用戶 - 修改個人資料",
       "request": {
         "method": "PUT",
         "header": [
@@ -80,7 +105,7 @@
           "raw": "{\n  \"name\": \"新姓名\",\n  \"email\": \"new@example.com\",\n  \"phone_code\": \"+852\",\n  \"phone\": \"98765432\",\n  \"company\": \"新公司名稱\"\n}"
         },
         "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/users/{{userId}}",
-        "description": "修改客戶個人資料，只傳要更新的欄位即可。可與 isCheckIn 一併傳送。"
+        "description": "只傳要更新的欄位；可與 isCheckIn 一併傳送。"
       }
     },
     {
@@ -96,7 +121,139 @@
           "raw": "{\n  \"isCheckIn\": false\n}"
         },
         "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/users/{{userId}}",
-        "description": "將用戶設為未簽到，並清除 checkInAt。"
+        "description": "取消進場簽到並清除 checkInAt。"
+      }
+    },
+    {
+      "name": "4d) 新增用戶 (FormConfig)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"test@example.com\",\n  \"name\": \"測試用戶\",\n  \"phone_code\": \"+852\",\n  \"phone\": \"12345678\",\n  \"company\": \"測試公司\"\n}"
+        },
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/users",
+        "description": "依 registration-config 欄位現場新增用戶。"
+      }
+    },
+    {
+      "name": "4e) 刪除用戶",
+      "request": {
+        "method": "DELETE",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/users/{{userId}}",
+        "description": "刪除用戶（不可逆）。"
+      }
+    },
+    {
+      "name": "5a) 取得 Badge Config",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/badge-config",
+        "description": "取得徽章設計；不含 testImageUrl。"
+      }
+    },
+    {
+      "name": "5b) 刪除 Badge 元素",
+      "request": {
+        "method": "DELETE",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/badge-config/elements/{{elementId}}",
+        "description": "elementId 來自 badge-config 的 elements[]._id。"
+      }
+    },
+    {
+      "name": "5c) 更新 Badge Config",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Default Badge\",\n  \"width\": 100,\n  \"height\": 62,\n  \"dpi\": 300\n}"
+        },
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/badge-config",
+        "description": "可更新 name/width/height/dpi/elements；傳 elements 會整份替換。"
+      }
+    },
+    {
+      "name": "5d) 生成用戶 Badge 圖片",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/users/{{userId}}/badge",
+        "description": "回傳 { imageUrl }，完整路徑為 DOMAIN + imageUrl。"
+      }
+    },
+    {
+      "name": "6a) 取得分站列表",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/stations",
+        "description": "請將要用的 station _id 填入 stationId。"
+      }
+    },
+    {
+      "name": "6b) 取得分站簽到記錄",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/stations/{{stationId}}/checkins"
+      }
+    },
+    {
+      "name": "6c) 分站簽到",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": \"{{userId}}\"\n}"
+        },
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/stations/{{stationId}}/checkin",
+        "description": "需已完成進場 isCheckIn。"
+      }
+    },
+    {
+      "name": "6c2) 取消分站簽到 (DELETE)",
+      "request": {
+        "method": "DELETE",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/stations/{{stationId}}/checkin/{{userId}}"
+      }
+    },
+    {
+      "name": "6c3) 取消分站簽到 (POST uncheck)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": \"{{userId}}\"\n}"
+        },
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/stations/{{stationId}}/uncheck"
+      }
+    },
+    {
+      "name": "6d) 用戶各分站簽到狀態",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/users/{{userId}}/station-checkins"
       }
     }
   ]

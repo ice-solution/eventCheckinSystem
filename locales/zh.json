@@ -242,7 +242,16 @@
     "passwordLabel": "密碼", "noPasswordPlaceholder": "留空則不需密碼",
     "previewTitle": "背景圖預覽", "noImage": "尚無背景圖",
     "saved": "已儲存", "savedNoPassword": "已儲存（已取消密碼，名單頁公開）",
-    "saveFailed": "儲存失敗"
+    "saveFailed": "儲存失敗",
+    "eligibilityTitle": "抽獎資格（額外欄位）",
+    "eligibilityDesc": "預設只會抽取已簽到（isCheckIn）且未中獎的用戶。啟用後，還須指定欄位的值等於下方設定，才可進入抽獎池。",
+    "eligibilityEnabled": "啟用額外欄位條件",
+    "eligibilityField": "欄位",
+    "eligibilityFieldPlaceholder": "請選擇欄位",
+    "eligibilityValue": "須等於的值",
+    "eligibilityValuePlaceholder": "例如：Yes / VIP / true",
+    "eligibilityHint": "比對方式為字串完全相等（會去掉前後空白）。Checkbox 多選時，只要其中一個選項等於此值即可。布林值請填 true 或 false。",
+    "eligibilityNoFields": "此活動尚未設定報名表單欄位，請先到「報名頁設定」新增欄位。"
   },
   "luckydraw_game_config": {
     "title": "抽獎遊戲設定", "settingLink": "抽獎設定（背景圖）",

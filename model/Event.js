@@ -120,6 +120,15 @@ const eventSchema = new mongoose.Schema({
     luckydrawListFieldNames: [{ type: String }],
     /** 中獎名單頁（/luckydraw/award）密碼；空則不需密碼 */
     luckydrawAwardPassword: { type: String, default: '' },
+    /**
+     * 抽獎資格額外條件（在 isCheckIn 之外）：
+     * 啟用後，用戶指定欄位必須等於 value 才可進入抽獎池。
+     */
+    luckydrawEligibility: {
+        enabled: { type: Boolean, default: false },
+        fieldName: { type: String, default: '' },
+        value: { type: String, default: '' }
+    },
     isPaymentEvent: { type: Boolean, default: false }, // 是否為付費活動
     PaymentTickets: [ticketSchema], // 票券陣列
     /** 報名頁是否顯示折扣碼輸入（與個別 promoCodes[].enabled 分開） */

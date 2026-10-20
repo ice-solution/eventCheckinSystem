@@ -243,7 +243,16 @@
     "passwordLabel": "Password", "noPasswordPlaceholder": "Leave blank for no password",
     "previewTitle": "Background Image Preview", "noImage": "No background image yet",
     "saved": "Saved", "savedNoPassword": "Saved (no password, list is public)",
-    "saveFailed": "Save failed"
+    "saveFailed": "Save failed",
+    "eligibilityTitle": "Draw eligibility (extra field)",
+    "eligibilityDesc": "By default only checked-in (isCheckIn) users who have not won are eligible. When enabled, a selected field must also equal the value below to enter the draw pool.",
+    "eligibilityEnabled": "Enable extra field requirement",
+    "eligibilityField": "Field",
+    "eligibilityFieldPlaceholder": "Select a field",
+    "eligibilityValue": "Must equal",
+    "eligibilityValuePlaceholder": "e.g. Yes / VIP / true",
+    "eligibilityHint": "Exact string match after trimming. For multi-select checkboxes, any selected option equal to this value qualifies. Use true or false for boolean fields.",
+    "eligibilityNoFields": "This event has no registration form fields yet. Add fields in Registration Page Config first."
   },
   "luckydraw_game_config": {
     "title": "Lucky Draw Game Config", "settingLink": "LuckyDraw Setting (Background Image)",

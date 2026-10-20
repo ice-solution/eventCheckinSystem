@@ -307,6 +307,7 @@ router.post('/:eventId/luckydraw_setting/upload-background', uploadBackgroundMul
 // 渲染 luckydraw_setting.ejs 的 GET 路由
 router.get('/:eventId/luckydraw_setting', eventsController.renderLuckydrawSetting);
 router.patch('/:eventId/luckydraw_setting/award-password', eventsController.updateLuckydrawAwardPassword);
+router.patch('/:eventId/luckydraw_setting/eligibility', eventsController.updateLuckydrawEligibility);
 
 // Lucky Draw Game Config（後台編輯 + API 由 app.js 註冊）
 router.get('/:eventId/luckydraw-config/edit', luckydrawGameConfigController.renderConfigPage);

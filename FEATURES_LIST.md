@@ -473,30 +473,32 @@ emailRecords  - 郵件發送記錄
 
 ## 21. iPad API
 
-供 iPad / 手機 App 使用的 JWT 認證 RESTful API。
+供 iPad / kiosk / 手機 App 使用的 JWT 認證 RESTful API。詳見 `IPAD_API_DOCUMENTATION.md`。
 
 ### 認證
-- ✅ **JWT 登入** - `POST /api/ipad/login` 取得 Token
-- ✅ **Bearer Token 認證** - 所有 iPad API 需帶 `Authorization: Bearer <token>`
+- ✅ **JWT 登入** - `POST /api/ipad/login` 取得 Token（7 天）
+- ✅ **Bearer Token 認證** - 除 login 外需帶 `Authorization: Bearer <token>`
+- ✅ **權限** - admin 全部活動；非 admin 依 `allowedEvents`（相容 `owner`）
 
 ### 事件與用戶
-- ✅ **取得事件列表** - 取得登入者可存取的事件
-- ✅ **取得用戶列表** - 取得事件所有用戶
-- ✅ **取得用戶詳情** - 取得單一用戶資料
-- ✅ **新增用戶** - 透過 API 新增用戶
-- ✅ **更新用戶** - 更新用戶資料及簽到狀態
-- ✅ **刪除用戶** - 透過 API 刪除用戶
-- ✅ **取得表單配置** - 取得動態表單設定（用於 App 動態渲染表單）
+- ✅ **取得事件列表** - `GET /api/ipad/events`
+- ✅ **取得用戶列表／詳情** - `GET .../users`、`GET .../users/:userId`
+- ✅ **新增／更新／刪除用戶** - `POST` / `PUT` / `DELETE .../users`
+- ✅ **進場簽到** - `PUT .../users/:userId`（`isCheckIn`）
+- ✅ **取得表單配置** - `GET .../registration-config`（FormConfig，供 kiosk 動態表單）
 
 ### 徽章
-- ✅ **取得徽章配置** - 取得當前徽章設計
-- ✅ **建立/更新徽章配置** - 儲存徽章設計
-- ✅ **生成用戶徽章** - 觸發生成指定用戶的徽章圖片
+- ✅ **取得／更新徽章配置** - `GET` / `PUT .../badge-config`（不含 `testImageUrl`）
+- ✅ **刪除徽章元素** - `DELETE .../badge-config/elements/:elementId`
+- ✅ **生成用戶徽章** - `GET .../users/:userId/badge`
 
-### 抽獎
-- ✅ **取得中獎者列表** - 取得事件中獎記錄
-- ✅ **新增中獎者** - 透過 API 添加中獎記錄
-- ✅ **刪除中獎者** - 透過 API 移除中獎記錄
+### 分站簽到
+- ✅ **分站列表／記錄** - `GET .../stations`、`GET .../stations/:stationId/checkins`
+- ✅ **分站簽到／取消** - `POST .../checkin`、`DELETE .../checkin/:userId`（或 `POST .../uncheck`）
+- ✅ **用戶各分站狀態** - `GET .../users/:userId/station-checkins`
+
+### 不在本 API
+- 抽獎／中獎者 CRUD 使用後台頁 + Socket.IO，非 `/api/ipad`
 
 ---
 

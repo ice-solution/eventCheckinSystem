@@ -42,6 +42,46 @@
                             <span id="awardPasswordMsg" class="ml-2 small"></span>
                         </div>
                     </div>
+
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <strong class="card-title"><%= t('luckydraw_setting.eligibilityTitle') %></strong>
+                        </div>
+                        <div class="card-body">
+                            <% const eligibility = typeof luckydrawEligibility !== 'undefined' ? luckydrawEligibility : { enabled: false, fieldName: '', value: '' }; %>
+                            <% const fieldOpts = typeof formFieldOptions !== 'undefined' ? formFieldOptions : []; %>
+                            <p class="text-muted small"><%= t('luckydraw_setting.eligibilityDesc') %></p>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="eligibilityEnabled" <%= eligibility.enabled ? 'checked' : '' %>>
+                                <label class="form-check-label" for="eligibilityEnabled"><%= t('luckydraw_setting.eligibilityEnabled') %></label>
+                            </div>
+                            <div id="eligibilityFieldsWrap">
+                                <% if (!fieldOpts.length) { %>
+                                    <p class="text-warning small"><%= t('luckydraw_setting.eligibilityNoFields') %></p>
+                                <% } %>
+                                <div class="form-group">
+                                    <label for="eligibilityFieldName"><%= t('luckydraw_setting.eligibilityField') %></label>
+                                    <select id="eligibilityFieldName" class="form-control" <%= fieldOpts.length ? '' : 'disabled' %>>
+                                        <option value=""><%= t('luckydraw_setting.eligibilityFieldPlaceholder') %></option>
+                                        <% fieldOpts.forEach(function(opt) { %>
+                                            <option value="<%= opt.fieldName %>" <%= eligibility.fieldName === opt.fieldName ? 'selected' : '' %>>
+                                                <%= opt.label %> (<%= opt.fieldName %>)
+                                            </option>
+                                        <% }); %>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="eligibilityValue"><%= t('luckydraw_setting.eligibilityValue') %></label>
+                                    <input type="text" id="eligibilityValue" class="form-control"
+                                           value="<%= eligibility.value || '' %>"
+                                           placeholder="<%= t('luckydraw_setting.eligibilityValuePlaceholder') %>">
+                                </div>
+                                <p class="text-muted small mb-3"><%= t('luckydraw_setting.eligibilityHint') %></p>
+                            </div>
+                            <button type="button" id="saveEligibilityBtn" class="btn btn-primary"><i class="fa fa-save mr-1"></i><%= t('common.save') %></button>
+                            <span id="eligibilityMsg" class="ml-2 small"></span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -94,4 +134,45 @@
         })
         .finally(function() { btn.disabled = false; });
     });
+
+    (function() {
+        var enabledEl = document.getElementById('eligibilityEnabled');
+        var wrap = document.getElementById('eligibilityFieldsWrap');
+        function syncEligibilityUi() {
+            if (!wrap) return;
+            wrap.style.opacity = enabledEl && enabledEl.checked ? '1' : '0.55';
+        }
+        if (enabledEl) {
+            enabledEl.addEventListener('change', syncEligibilityUi);
+            syncEligibilityUi();
+        }
+        var saveBtn = document.getElementById('saveEligibilityBtn');
+        if (!saveBtn) return;
+        saveBtn.addEventListener('click', function() {
+            var eventId = '<%= eventId %>';
+            var btn = this;
+            var msg = document.getElementById('eligibilityMsg');
+            var enabled = !!(enabledEl && enabledEl.checked);
+            var fieldName = (document.getElementById('eligibilityFieldName') || {}).value || '';
+            var value = (document.getElementById('eligibilityValue') || {}).value || '';
+            btn.disabled = true;
+            msg.textContent = '';
+            fetch('/events/' + eventId + '/luckydraw_setting/eligibility', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled: enabled, fieldName: fieldName, value: value })
+            })
+            .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, j: j }; }); })
+            .then(function(res) {
+                if (!res.ok) throw new Error((res.j && res.j.message) || 'fail');
+                msg.textContent = '<%= t("luckydraw_setting.saved") %>';
+                msg.className = 'ml-2 small text-success';
+            })
+            .catch(function(err) {
+                msg.textContent = (err && err.message) ? err.message : '<%= t("luckydraw_setting.saveFailed") %>';
+                msg.className = 'ml-2 small text-danger';
+            })
+            .finally(function() { btn.disabled = false; });
+        });
+    })();
 </script>
