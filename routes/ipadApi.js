@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const Auth = require('../model/Auth');
 const Event = require('../model/Event');
 const BadgeConfig = require('../model/BadgeConfig');
+const Prize = require('../model/Prize');
 const { authenticateJwt, getJwtSecret } = require('../utils/jwtAuth');
 const permission = require('../middleware/permission');
 const formConfigController = require('../controllers/formConfigController');
@@ -500,6 +501,115 @@ router.get('/events/:eventId/users/:userId/station-checkins', authenticateJwt, a
     return stationCheckinController.getUserStationCheckIns(req, res);
   } catch (err) {
     console.error('iPad API user station checkins error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ── LuckyDraw Control Panel（外部 App：Socket 同步畫面 + HTTP 寫庫）──
+async function assertIpadEvent(req, res) {
+  const { eventId } = req.params;
+  const event = await Event.findById(eventId);
+  if (!event) {
+    res.status(404).json({ message: 'Event not found' });
+    return null;
+  }
+  if (!(await permission.assertJwtEventAccess(req, res, event))) return null;
+  return event;
+}
+
+// 7a) 獎品列表（供 select prize）
+router.get('/events/:eventId/prizes', authenticateJwt, async (req, res) => {
+  try {
+    const event = await assertIpadEvent(req, res);
+    if (!event) return;
+    const prizes = await Prize.find({ eventId: req.params.eventId }).sort({ created_at: 1 });
+    const list = prizes.map((p) => {
+      const doc = p.toObject ? p.toObject() : { ...p };
+      return {
+        _id: String(doc._id),
+        name: doc.name || '',
+        picture: doc.picture || '',
+        pictureUrl: eventsController.getPrizePictureUrl(doc.picture),
+        unit: Number(doc.unit) || 0,
+      };
+    });
+    return res.json(list);
+  } catch (err) {
+    console.error('iPad API get prizes error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// 7b) 可抽參與者（已簽到、未中獎、符合 eligibility）
+router.get('/events/:eventId/luckydraw/available-people', authenticateJwt, async (req, res) => {
+  try {
+    const event = await assertIpadEvent(req, res);
+    if (!event) return;
+    const people = eventsController.getAvailableLuckydrawPeople(event).map((u) => {
+      const o = u && typeof u.toObject === 'function' ? u.toObject({ minimize: false }) : (u || {});
+      return {
+        _id: String(o._id || ''),
+        name: o.name || '',
+        company: o.company || '',
+        table: o.table || '',
+        email: o.email || '',
+      };
+    });
+    return res.json({
+      count: people.length,
+      people,
+      eligibility: event.luckydrawEligibility || { enabled: false, fieldName: '', value: '' },
+    });
+  } catch (err) {
+    console.error('iPad API available people error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// 7c) 單抽／手動指定中獎（寫庫後會 emit luckydraw:winner_added）
+router.post('/events/:eventId/luckydraw', authenticateJwt, async (req, res) => {
+  try {
+    const event = await assertIpadEvent(req, res);
+    if (!event) return;
+    return eventsController.addLuckydrawUser(req, res);
+  } catch (err) {
+    console.error('iPad API add luckydraw winner error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// 7d) 連抽
+router.post('/events/:eventId/luckydraw/batch', authenticateJwt, async (req, res) => {
+  try {
+    const event = await assertIpadEvent(req, res);
+    if (!event) return;
+    return eventsController.batchDrawWinners(req, res);
+  } catch (err) {
+    console.error('iPad API batch luckydraw error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// 7e) 取消中獎
+router.delete('/events/:eventId/luckydraw', authenticateJwt, async (req, res) => {
+  try {
+    const event = await assertIpadEvent(req, res);
+    if (!event) return;
+    return eventsController.removeLuckydrawUser(req, res);
+  } catch (err) {
+    console.error('iPad API remove luckydraw winner error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// 7f) 重置 Winner No
+router.post('/events/:eventId/luckydraw/reset-winner-order', authenticateJwt, async (req, res) => {
+  try {
+    const event = await assertIpadEvent(req, res);
+    if (!event) return;
+    return eventsController.resetLuckydrawWinnerOrder(req, res);
+  } catch (err) {
+    console.error('iPad API reset winner order error:', err);
     return res.status(500).json({ message: 'Server error' });
   }
 });

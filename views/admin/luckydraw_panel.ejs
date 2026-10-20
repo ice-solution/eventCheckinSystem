@@ -37,17 +37,25 @@
                             <div class="mb-2" id="prizeImageContainer" style="display:none; text-align:center;">
                                 <img id="prizeImage" src="" alt="" style="max-width: 200px; max-height: 150px; border-radius: 8px; border: 2px solid #eee;">
                             </div>
-                            <select id="prizeSelect" class="form-control" required>
+                            <%
+                                const prizeList = Array.isArray(prizes) ? prizes : [];
+                                const selectablePrizes = prizeList.filter(function(p) { return Number(p.unit) > 0; });
+                            %>
+                            <% if (!selectablePrizes.length) { %>
+                                <div class="alert alert-warning py-2 mb-2">
+                                    <%= t('luckydraw_panel.noPrizesHint') %>
+                                    <a href="/prizes/<%= eventId %>/prizes/list"><%= t('menu.prizeManagement') %></a>
+                                </div>
+                            <% } %>
+                            <select id="prizeSelect" class="form-control" required <%= selectablePrizes.length ? '' : 'disabled' %>>
                                 <option value=""><%= t('luckydraw_panel.selectPrizeDefault') %></option>
-                                <% prizes.forEach(prize => { %>
-                                    <% if (prize.unit > 0) { %>
+                                <% selectablePrizes.forEach(prize => { %>
                                         <option value="<%= prize._id %>"
-                                                data-name="<%= prize.name %>"
-                                                data-image="<%= prize.pictureUrl || prize.picture || '' %>"
-                                                data-remaining="<%= prize.unit %>">
+                                                data-name="<%= String(prize.name || '').replace(/"/g, '&quot;') %>"
+                                                data-image="<%= String(prize.pictureUrl || prize.picture || '').replace(/"/g, '&quot;') %>"
+                                                data-remaining="<%= Number(prize.unit) || 0 %>">
                                             <%= prize.name %> (<%= t('luckydraw_panel.remaining') %>: <%= prize.unit %>)
                                         </option>
-                                    <% } %>
                                 <% }); %>
                             </select>
                         </div>
@@ -72,9 +80,13 @@
                         <div class="section-title"><%= t('luckydraw_panel.manualWinner') %></div>
                         <div class="form-group">
                             <label for="manualWinnerSelect"><%= t('luckydraw_panel.selectParticipant') %></label>
-                            <select id="manualWinnerSelect" class="form-control">
+                            <% const peopleList = Array.isArray(availablePeople) ? availablePeople : []; %>
+                            <% if (!peopleList.length) { %>
+                                <div class="alert alert-warning py-2 mb-2"><%= t('luckydraw_panel.noPeopleHint') %></div>
+                            <% } %>
+                            <select id="manualWinnerSelect" class="form-control" <%= peopleList.length ? '' : 'disabled' %>>
                                 <option value=""><%= t('luckydraw_panel.selectParticipantDefault') %></option>
-                                <% availablePeople.forEach(person => { %>
+                                <% peopleList.forEach(person => { %>
                                     <option value="<%= person._id %>">
                                         <%= person.company || '' %>
                                         <% if (person.table) { %> | <%= t('luckydraw_panel.tableLabel') %>: <%= person.table %> <% } %>
@@ -103,14 +115,25 @@
 <%- include("components/footer") %>
 
 <script src="/socket.io/socket.io.js"></script>
+<script type="application/json" id="luckydrawPanelPeopleJson"><%- JSON.stringify(Array.isArray(availablePeople) ? availablePeople : []).replace(/</g, '\\u003c') %></script>
+<script type="application/json" id="luckydrawPanelPrizesJson"><%- JSON.stringify(Array.isArray(prizes) ? prizes : []).replace(/</g, '\\u003c') %></script>
 <script>
-    const allPeople = <%- JSON.stringify(availablePeople) %>;
-    const allPrizes = <%- JSON.stringify(prizes) %>;
+    function readPanelJson(id) {
+        try {
+            const el = document.getElementById(id);
+            return el ? JSON.parse(el.textContent || '[]') : [];
+        } catch (e) {
+            console.error('[Luckydraw Panel] JSON parse failed:', id, e);
+            return [];
+        }
+    }
+    const allPeople = readPanelJson('luckydrawPanelPeopleJson');
+    const allPrizes = readPanelJson('luckydrawPanelPrizesJson');
     const eventId = '<%= eventId %>';
     const _REMAINING_LABEL = '<%= t("luckydraw_panel.remaining") %>';
     const _TABLE_LABEL = '<%= t("luckydraw_panel.tableLabel") %>';
 
-    let availablePeople = [...allPeople];
+    let availablePeople = Array.isArray(allPeople) ? allPeople.slice() : [];
     const sessionWinners = [];
 
     const prizeSelect = document.getElementById('prizeSelect');
@@ -231,10 +254,10 @@
                     const prize = allPrizes.find(p => String(p._id) === String(winner.prizeId));
                     const newOption = document.createElement('option');
                     newOption.value = winner.prizeId;
-                    newOption.dataset.name = winner.prizeName || prize?.name || '';
-                    newOption.dataset.image = prize?.pictureUrl || prize?.picture || '';
+                    newOption.dataset.name = winner.prizeName || (prize && prize.name) || '';
+                    newOption.dataset.image = (prize && (prize.pictureUrl || prize.picture)) || '';
                     newOption.dataset.remaining = '1';
-                    newOption.text = `${winner.prizeName || prize?.name || ''} (${_REMAINING_LABEL}: 1)`;
+                    newOption.text = `${winner.prizeName || (prize && prize.name) || ''} (${_REMAINING_LABEL}: 1)`;
                     if (prizeSelect.options.length > 1) prizeSelect.insertBefore(newOption, prizeSelect.options[1]);
                     else prizeSelect.appendChild(newOption);
                 }
@@ -383,10 +406,10 @@
                     const prize = allPrizes.find(p => String(p._id) === String(lastWinner.prizeId));
                     const newOption = document.createElement('option');
                     newOption.value = lastWinner.prizeId;
-                    newOption.dataset.name = lastWinner.prizeName || prize?.name || '';
-                    newOption.dataset.image = prize?.pictureUrl || prize?.picture || '';
+                    newOption.dataset.name = lastWinner.prizeName || (prize && prize.name) || '';
+                    newOption.dataset.image = (prize && (prize.pictureUrl || prize.picture)) || '';
                     newOption.dataset.remaining = '1';
-                    newOption.text = `${lastWinner.prizeName || prize?.name || ''} (${_REMAINING_LABEL}: 1)`;
+                    newOption.text = `${lastWinner.prizeName || (prize && prize.name) || ''} (${_REMAINING_LABEL}: 1)`;
                     if (prizeSelect.options.length > 1) prizeSelect.insertBefore(newOption, prizeSelect.options[1]);
                     else prizeSelect.appendChild(newOption);
                 }

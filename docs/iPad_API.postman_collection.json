@@ -10,7 +10,8 @@
     { "key": "eventId", "value": "" },
     { "key": "userId", "value": "" },
     { "key": "stationId", "value": "" },
-    { "key": "elementId", "value": "" }
+    { "key": "elementId", "value": "" },
+    { "key": "prizeId", "value": "" }
   ],
   "item": [
     {
@@ -254,6 +255,78 @@
         "method": "GET",
         "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
         "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/users/{{userId}}/station-checkins"
+      }
+    },
+    {
+      "name": "7a) LuckyDraw - 獎品列表",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/prizes",
+        "description": "外部 Control App 用。回傳 _id/name/picture/pictureUrl/unit。"
+      }
+    },
+    {
+      "name": "7b) LuckyDraw - 可抽參與者",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/luckydraw/available-people",
+        "description": "已簽到、未中獎、符合 eligibility 的名單。"
+      }
+    },
+    {
+      "name": "7c) LuckyDraw - 單抽／手動中獎",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"_id\": \"{{userId}}\",\n  \"name\": \"Chan Tai Man\",\n  \"company\": \"ABC\",\n  \"table\": \"A1\",\n  \"prizeId\": \"{{prizeId}}\"\n}"
+        },
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/luckydraw",
+        "description": "寫庫後會 socket emit luckydraw:winner_added。抽獎前建議先 emit luckydraw_panel_start。"
+      }
+    },
+    {
+      "name": "7d) LuckyDraw - 連抽 batch",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"count\": 3,\n  \"prizeId\": \"{{prizeId}}\"\n}"
+        },
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/luckydraw/batch"
+      }
+    },
+    {
+      "name": "7e) LuckyDraw - 取消中獎",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"_id\": \"{{userId}}\"\n}"
+        },
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/luckydraw"
+      }
+    },
+    {
+      "name": "7f) LuckyDraw - 重置 Winner No",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/luckydraw/reset-winner-order"
       }
     }
   ]

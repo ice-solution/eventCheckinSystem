@@ -3749,6 +3749,10 @@ function getAvailableLuckydrawPeople(event) {
     });
 }
 
+/** 供 iPad / 外部 Control App 使用 */
+exports.getAvailableLuckydrawPeople = getAvailableLuckydrawPeople;
+exports.getPrizePictureUrl = getPrizePictureUrl;
+
 /**
  * 組裝中獎者資料供 socket/前台：合併 event.user 的完整資料（FormConfig 欄位）與 winner 抽獎欄位
  * @param {Object} winner - 中獎記錄 { _id, name, company, table, prizeId, prizeName, order, wonAt }
@@ -3987,7 +3991,7 @@ exports.renderLuckydrawPage = async (req, res) => {
 exports.renderLuckydrawPanelPage = async (req, res) => {
     const { eventId } = req.params; // 獲取 eventId
     try {
-        const event = await Event.findById(eventId).populate('users'); // 獲取事件並填充用戶和中獎者
+        const event = await Event.findById(eventId);
         if (!event) {
             return res.status(404).send('Event not found.');
         }
@@ -3999,13 +4003,24 @@ exports.renderLuckydrawPanelPage = async (req, res) => {
         // 為每個獎品加上絕對 URL 的 picture，供前台 data-image 與 socket 使用
         const prizesWithPictureUrl = prizes.map(p => {
             const doc = p.toObject ? p.toObject() : { ...p };
+            doc._id = String(doc._id);
             doc.pictureUrl = getPrizePictureUrl(p.picture);
+            doc.unit = Number(doc.unit) || 0;
             return doc;
         });
 
-        const availablePeople = getAvailableLuckydrawPeople(event);
+        // 只傳 panel 需要嘅欄位，避免 FormConfig 大欄位／特殊字元弄壞頁面 script
+        const availablePeople = getAvailableLuckydrawPeople(event).map((u) => {
+            const o = u && typeof u.toObject === 'function' ? u.toObject({ minimize: false }) : (u || {});
+            return {
+                _id: String(o._id || ''),
+                name: o.name || '',
+                company: o.company || '',
+                table: o.table || ''
+            };
+        });
 
-        res.render('admin/luckydraw_panel', { eventId, availablePeople, prizes: prizesWithPictureUrl, baseUrl }); // 傳遞獎品（含 pictureUrl）與 baseUrl
+        res.render('admin/luckydraw_panel', { eventId, availablePeople, prizes: prizesWithPictureUrl, baseUrl });
     } catch (error) {
         console.error('Error rendering luckydraw panel page:', error);
         res.status(500).send('Error rendering luckydraw panel page.');

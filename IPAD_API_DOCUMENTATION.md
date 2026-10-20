@@ -25,12 +25,20 @@
 | 分站 | `DELETE` | `/api/ipad/events/:eventId/stations/:stationId/checkin/:userId` | 取消分站簽到 |
 | 分站 | `POST` | `/api/ipad/events/:eventId/stations/:stationId/uncheck` | 取消分站簽到（body 傳 `userId`） |
 | 分站 | `GET` | `/api/ipad/events/:eventId/users/:userId/station-checkins` | 某用戶各分站狀態 |
+| 抽獎 | `GET` | `/api/ipad/events/:eventId/prizes` | 獎品列表（外部 Control App） |
+| 抽獎 | `GET` | `/api/ipad/events/:eventId/luckydraw/available-people` | 可抽參與者 |
+| 抽獎 | `POST` | `/api/ipad/events/:eventId/luckydraw` | 單抽／手動中獎 |
+| 抽獎 | `POST` | `/api/ipad/events/:eventId/luckydraw/batch` | 連抽 |
+| 抽獎 | `DELETE` | `/api/ipad/events/:eventId/luckydraw` | 取消中獎 |
+| 抽獎 | `POST` | `/api/ipad/events/:eventId/luckydraw/reset-winner-order` | 重置 Winner No |
 
-**不在本 API 內**（請勿假設有這些 JWT 端點）：
+外部 Control App 完整接駁（Socket + HTTP）見 **`LUCKYDRAW_PANEL_APP.md`**。
 
-- 抽獎／中獎者 CRUD（抽獎用後台頁 + Socket.IO，非 `/api/ipad`）
+**不在本 API 內**：
+
 - 列印硬體控制（見 Printer Bridge）
 - 公開報名頁 `/web/.../register`（無需 JWT）
+- 大屏幕動畫本身仍靠 Socket（唔係 REST）
 
 ## Postman
 

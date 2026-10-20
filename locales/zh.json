@@ -325,6 +325,8 @@
     "confirmCancelWinner": "確定要取消 {name} 的中獎記錄？",
     "cancelWinnerFailed": "取消中獎失敗：", "cancelWinnerError": "取消中獎時發生錯誤",
     "noPeople": "所有人都已被抽到！", "noPrizeSelected": "請先選擇獎品！",
+    "noPrizesHint": "目前沒有可抽的獎品（未建立或庫存為 0）。請先到獎品管理新增／補庫存：",
+    "noPeopleHint": "目前沒有可抽參與者。請確認：1) 已進場簽到 2) 尚未中獎 3) 若有啟用「抽獎資格額外欄位」，該欄位值須符合設定。",
     "outOfStock": "選擇的獎品已售完！",
     "addWinnerFailed": "新增中獎者失敗：", "addWinnerError": "新增中獎者時發生錯誤",
     "insufficientStock": "獎品庫存不足，最多可抽 {n} 名。",

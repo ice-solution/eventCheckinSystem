@@ -326,6 +326,8 @@
     "confirmCancelWinner": "Are you sure you want to cancel the win for {name}?",
     "cancelWinnerFailed": "Failed to cancel winner: ", "cancelWinnerError": "Error cancelling winner",
     "noPeople": "Everyone has been drawn!", "noPrizeSelected": "Please select a prize first!",
+    "noPrizesHint": "No drawable prizes (none created or all stock is 0). Add/restock prizes here: ",
+    "noPeopleHint": "No drawable participants. Check: 1) entry check-in done 2) not already a winner 3) if eligibility field is enabled, that field must match.",
     "outOfStock": "Selected prize is out of stock!",
     "addWinnerFailed": "Failed to add winner: ", "addWinnerError": "Error adding winner",
     "insufficientStock": "Insufficient prize stock. You can only draw {n} at most.",
