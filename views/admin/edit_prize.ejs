@@ -55,19 +55,46 @@
     $(document).ready(function() {
         $('#editPrizeForm').on('submit', function(e) {
             e.preventDefault();
-            const formData = new FormData();
-            formData.append('name', $('#name').val());
-            formData.append('unit', $('#unit').val());
+            const name = String($('#name').val() || '').trim();
+            const unitRaw = String($('#unit').val() || '').trim();
+            const unit = parseInt(unitRaw, 10);
+            if (!name) { alert(t('edit_prize.updateFailed') + 'Name required'); return; }
+            if (!Number.isFinite(unit) || unit < 0) { alert(t('edit_prize.updateFailed') + 'Invalid quantity'); return; }
+
             const imageFile = $('#prizeImage')[0].files[0];
-            if (imageFile) formData.append('prizeImage', imageFile);
-            else formData.append('picture', $('#picture').val());
-            fetch(`/prizes/<%= eventId %>/prizes/<%= prize._id %>`, { method: 'PUT', body: formData })
-            .then(r => r.json())
-            .then(data => {
-                if (data._id) { alert(t('edit_prize.updateSuccess')); window.location.href = `/prizes/<%= eventId %>/prizes/list`; }
-                else alert(t('edit_prize.updateFailed') + (data.message || ''));
-            })
-            .catch(() => alert(t('edit_prize.updateFailed')));
+            const picture = String($('#picture').val() || '').trim();
+            const url = `/prizes/<%= eventId %>/prizes/<%= prize._id %>`;
+
+            // 無新圖檔時用 JSON，避免 multipart 未正確帶上 unit
+            let req;
+            if (imageFile) {
+                const formData = new FormData();
+                formData.append('name', name);
+                formData.append('unit', String(unit));
+                formData.append('prizeImage', imageFile);
+                req = fetch(url, { method: 'PUT', body: formData });
+            } else {
+                req = fetch(url, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name, unit: unit, picture: picture })
+                });
+            }
+
+            req.then(async function(r) {
+                let data = {};
+                try { data = await r.json(); } catch (err) { data = {}; }
+                if (!r.ok) {
+                    alert(t('edit_prize.updateFailed') + (data.message || (' HTTP ' + r.status)));
+                    return;
+                }
+                if (data._id) {
+                    alert(t('edit_prize.updateSuccess'));
+                    window.location.href = `/prizes/<%= eventId %>/prizes/list`;
+                } else {
+                    alert(t('edit_prize.updateFailed') + (data.message || ''));
+                }
+            }).catch(function() { alert(t('edit_prize.updateFailed')); });
         });
     });
 </script>

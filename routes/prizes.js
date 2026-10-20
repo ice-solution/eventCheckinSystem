@@ -31,6 +31,15 @@ const uploadPrizeImageMulter = multer({
     }
 });
 
+/** JSON body 唔行 multer；只有 multipart 先 parse 圖檔 */
+function optionalPrizeImageUpload(req, res, next) {
+    const ct = String(req.headers['content-type'] || '');
+    if (ct.includes('multipart/form-data')) {
+        return uploadPrizeImageMulter.single('prizeImage')(req, res, next);
+    }
+    return next();
+}
+
 // 獲取事件的獎品列表
 router.get('/:eventId/prizes', prizeController.getPrizesByEvent);
 
@@ -41,13 +50,13 @@ router.get('/:eventId/prizes/list', prizeController.renderPrizeList);
 router.get('/:eventId/prizes/create', prizeController.renderCreatePrize);
 
 // 創建獎品
-router.post('/:eventId/prizes', uploadPrizeImageMulter.single('prizeImage'), prizeController.createPrize);
+router.post('/:eventId/prizes', optionalPrizeImageUpload, prizeController.createPrize);
 
 // 渲染編輯獎品頁面
 router.get('/:eventId/prizes/:prizeId/edit', prizeController.renderEditPrize);
 
 // 更新獎品
-router.put('/:eventId/prizes/:prizeId', uploadPrizeImageMulter.single('prizeImage'), prizeController.updatePrize);
+router.put('/:eventId/prizes/:prizeId', optionalPrizeImageUpload, prizeController.updatePrize);
 
 // 刪除獎品
 router.delete('/:eventId/prizes/:prizeId', prizeController.deletePrize);
