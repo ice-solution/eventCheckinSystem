@@ -129,6 +129,7 @@ router.get('/:eventId/scan', eventsController.scanEventUsers);
 router.get('/:eventId/station-checkin', stationCheckinController.renderStationCheckinPage);
 router.post('/:eventId/station-checkin', stationCheckinController.createStation);
 router.get('/:eventId/station-checkin/:stationId', stationCheckinController.renderStationDetailPage);
+router.get('/:eventId/station-checkin/:stationId/export', stationCheckinController.exportStationCheckIns);
 router.put('/:eventId/station-checkin/:stationId', stationCheckinController.updateStation);
 router.delete('/:eventId/station-checkin/:stationId', stationCheckinController.deleteStation);
 router.get('/:eventId/station-checkin/:stationId/section-list', stationCheckinController.getStationSectionList);

@@ -105,6 +105,42 @@ exports.renderStationCheckinPage = async (req, res) => {
 };
 
 /** 後台：單一站點簽到頁（手動 + 掃 QR + Section List） */
+function buildStationCheckInRows(event, stationId) {
+    return (event.stationCheckIns || [])
+        .filter((r) => String(r.stationId) === String(stationId))
+        .slice()
+        .sort((a, b) => new Date(b.checkedInAt) - new Date(a.checkedInAt))
+        .map((r) => {
+            const user = findUser(event, r.userId);
+            return {
+                userId: r.userId,
+                name: (user && user.name) || r.userName || '',
+                email: (user && user.email) || r.userEmail || '',
+                phone: (user && user.phone) || '',
+                checkedInAt: r.checkedInAt || null,
+                checkedInBy: r.checkedInBy || '',
+            };
+        });
+}
+
+function formatHkDateTime(value) {
+    if (!value) return '';
+    try {
+        return new Date(value).toLocaleString('zh-HK', {
+            timeZone: 'Asia/Hong_Kong',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false,
+        });
+    } catch (_) {
+        return String(value);
+    }
+}
+
 exports.renderStationDetailPage = async (req, res) => {
     const { eventId, stationId } = req.params;
     try {
@@ -113,74 +149,57 @@ exports.renderStationDetailPage = async (req, res) => {
         const station = findStation(event, stationId);
         if (!station) return res.status(404).send('Station not found');
 
-        const records = (event.stationCheckIns || [])
-            .filter((r) => String(r.stationId) === String(stationId))
-            .slice()
-            .sort((a, b) => new Date(b.checkedInAt) - new Date(a.checkedInAt));
-
-        const checkedInUserIds = new Set(records.map((r) => String(r.userId)));
-        const allowedIds = getAllowedUserIds(station);
-        const hasSectionList = allowedIds.length > 0;
-        const allowedSet = new Set(allowedIds);
-
-        const sectionListUsers = allowedIds
-            .map((id) => findUser(event, id))
-            .filter(Boolean)
-            .map((u) => serializeListUser(u, checkedInUserIds.has(String(u._id))));
-
-        // 可加入 section list 的 RSVP 用戶：僅已進場、且尚未在名單內
-        const addableUsers = (event.users || [])
-            .filter((u) => !!u.isCheckIn && !allowedSet.has(String(u._id)))
-            .map((u) => ({
-                _id: u._id,
-                name: u.name || '',
-                email: u.email || '',
-                company: u.company || '',
-                table: u.table || '',
-                isCheckIn: true,
-            }))
-            .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'zh-HK'));
-
-        // 融合 Section List + 簽到記錄：名單用戶 + 僅有簽到記錄但不在名單者
-        const listIdSet = new Set(sectionListUsers.map((u) => String(u._id)));
-        const unifiedUsers = sectionListUsers.map((u) => ({
-            ...u,
-            onSectionList: true,
-        }));
-        records.forEach((r) => {
-            const uid = String(r.userId);
-            if (listIdSet.has(uid)) return;
-            unifiedUsers.push({
-                _id: r.userId,
-                name: r.userName || '',
-                email: r.userEmail || '',
-                company: '',
-                table: '',
-                isCheckIn: true,
-                stationCheckedIn: true,
-                onSectionList: false,
-            });
-        });
-        unifiedUsers.sort((a, b) => {
-            if (!!a.stationCheckedIn !== !!b.stationCheckedIn) {
-                return a.stationCheckedIn ? 1 : -1; // 未簽到在上，方便操作
-            }
-            return String(a.name || '').localeCompare(String(b.name || ''), 'zh-HK');
-        });
+        const records = buildStationCheckInRows(event, stationId);
 
         res.render('admin/station_checkin_detail', {
             event,
             eventId,
             station,
             records,
-            sectionListUsers,
-            unifiedUsers,
-            addableUsers,
-            hasSectionList,
         });
     } catch (err) {
         console.error('renderStationDetailPage:', err);
         res.status(500).send('Server error');
+    }
+};
+
+/** 匯出此分站簽到記錄（xlsx） */
+exports.exportStationCheckIns = async (req, res) => {
+    const { eventId, stationId } = req.params;
+    try {
+        const XLSX = require('xlsx');
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+        const station = findStation(event, stationId);
+        if (!station) return res.status(404).json({ message: 'Station not found' });
+
+        const rows = buildStationCheckInRows(event, stationId);
+        const aoa = [
+            ['name', 'email', 'phone', 'checkedInAt', 'checkedInBy'],
+            ...rows.map((r) => [
+                r.name,
+                r.email,
+                r.phone,
+                formatHkDateTime(r.checkedInAt),
+                r.checkedInBy,
+            ]),
+        ];
+
+        const worksheet = XLSX.utils.aoa_to_sheet(aoa);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'CheckIns');
+        const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+
+        const safeName = String(station.name || 'station').replace(/[\\/:*?"<>|]+/g, '_').slice(0, 40);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader(
+            'Content-Disposition',
+            `attachment; filename=station_checkins_${safeName}.xlsx`
+        );
+        return res.send(Buffer.from(buffer));
+    } catch (err) {
+        console.error('exportStationCheckIns:', err);
+        return res.status(500).json({ message: err.message || 'Server error' });
     }
 };
 
