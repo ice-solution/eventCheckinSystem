@@ -1,18 +1,33 @@
 {
   "info": {
     "name": "iPad API",
-    "description": "iPad 端 API：登入、活動、用戶、簽到、修改客戶個人資料等。\n\n使用前請先執行「1) 登入」取得 token，再呼叫其他需要 Authorization 的請求。",
+    "description": "iPad 端 API：登入、活動、用戶、進場簽到、分站簽到（可選 Check-in Section）、修改客戶個人資料等。\n\n使用前請先執行「1) 登入」取得 token，再呼叫其他需要 Authorization 的請求。\n\n兩個 Check-in Section：後台建立兩個分站 → 6a 拉列表 → App 選 stationId → 6c 簽到。",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:3377" },
     { "key": "token", "value": "" },
     { "key": "eventId", "value": "" },
-    { "key": "userId", "value": "" }
+    { "key": "userId", "value": "" },
+    { "key": "stationId", "value": "" }
   ],
   "item": [
     {
       "name": "1) 登入取得 JWT",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "try {",
+              "  var j = pm.response.json();",
+              "  if (j.token) { pm.collectionVariables.set('token', j.token); }",
+              "} catch (e) {}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
       "request": {
         "method": "POST",
         "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -21,7 +36,7 @@
           "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"your_password\"\n}"
         },
         "url": "{{baseUrl}}/api/ipad/login",
-        "description": "登入後會回傳 token，請複製到 collection 變數 `token`，或使用 Tests 腳本自動儲存。"
+        "description": "登入後 token 會自動寫入 collection 變數 `token`（若 Tests 腳本有跑）。"
       }
     },
     {
@@ -64,7 +79,7 @@
           "raw": "{\n  \"isCheckIn\": true\n}"
         },
         "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/users/{{userId}}",
-        "description": "將用戶設為已簽到。設為 false 可取消簽到。"
+        "description": "將用戶設為已進場簽到（全域 isCheckIn）。多個 Check-in Section 請改用下方 6c 分站簽到。"
       }
     },
     {
@@ -97,6 +112,74 @@
         },
         "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/users/{{userId}}",
         "description": "將用戶設為未簽到，並清除 checkInAt。"
+      }
+    },
+    {
+      "name": "6a) 取得分站列表 (stations)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/stations",
+        "description": "回傳該活動所有 Check-in Section／分站。請將要用的 station _id 填入 collection 變數 stationId。只顯示 enabled 的站點給操作員選擇。"
+      }
+    },
+    {
+      "name": "6b) 取得分站簽到記錄",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/stations/{{stationId}}/checkins",
+        "description": "取得指定分站的簽到記錄列表。"
+      }
+    },
+    {
+      "name": "6c) 分站簽到 (選中的 section)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": \"{{userId}}\"\n}"
+        },
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/stations/{{stationId}}/checkin",
+        "description": "對目前選中的 stationId 簽到。尚未進場時會一併寫入 isCheckIn。常見錯誤：ALREADY_CHECKED_IN、NOT_IN_STATION_LIST。"
+      }
+    },
+    {
+      "name": "6c2) 取消分站簽到 (DELETE)",
+      "request": {
+        "method": "DELETE",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/stations/{{stationId}}/checkin/{{userId}}",
+        "description": "取消該用戶在此分站的簽到；不會取消進場 isCheckIn。"
+      }
+    },
+    {
+      "name": "6c3) 取消分站簽到 (POST uncheck)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": \"{{userId}}\"\n}"
+        },
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/stations/{{stationId}}/uncheck",
+        "description": "與 6c2 相同用途，用 body 傳 userId。"
+      }
+    },
+    {
+      "name": "6d) 用戶各分站簽到狀態",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/ipad/events/{{eventId}}/users/{{userId}}/station-checkins",
+        "description": "查詢某用戶在各分站是否已簽到及時間。"
       }
     }
   ]

@@ -783,6 +783,27 @@ curl -X POST "http://localhost:3377/api/ipad/events/$EVENT_ID/stations/$STATION_
   -d "{\"userId\":\"$USER_ID\"}"
 ```
 
+### Kiosk：兩個 Check-in Section
+
+一個活動需要兩個獨立 check-in（例如 AM / PM、Gate A / Gate B）時，**後台建立兩個分站**即可，不必另做第二個全域 `isCheckIn`。
+
+**後台（非 API）**
+
+1. 開 `/events/:eventId/station-checkin`
+2. 建立兩個分站（名稱自訂），按需要設 Section List（`allowedUserIds`）
+
+**iPad App 建議流程**
+
+1. `POST /api/ipad/login` → 取得 JWT  
+2. `GET /api/ipad/events` → 選活動  
+3. `GET /api/ipad/events/:eventId/stations` → UI 列出可選 section（只顯示 `enabled !== false`）  
+4. 操作員選中一個 `stationId`（可存 local；換站時改選）  
+5. 掃 QR / 搜尋取得 `userId`  
+6. `POST .../stations/:stationId/checkin`，body `{ "userId" }`  
+7. 處理 `ALREADY_CHECKED_IN` / `NOT_IN_STATION_LIST`；可選再打 `GET .../users/:userId/station-checkins` 顯示該人各站狀態  
+
+Postman collection（`docs/iPad_API.postman_collection.json`）已含 `stationId` 變數與 6a–6d 請求。
+
 ---
 
 ## 環境變數（建議）
