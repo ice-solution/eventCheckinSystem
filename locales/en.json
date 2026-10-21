@@ -935,7 +935,7 @@
     "agreementHint": "Tip: Add multiple Title Sections; each title can contain one or more Agreements (checkbox/content). The register page groups them by title. Agreement is optional.",
 
     "thankYouHint": "Success copy and email logic are mutually exclusive: with Yes/No off, use General copy + Email Settings auto-send; with Yes/No on, use only Yes/No copy and templates — no need to fill both.",
-    "applicationCompletedHint": "Shown when the exclusive application link is opened again after submit. Matching is by user ID in the URL, not email. Message supports HTML, e.g. <a href=\"https://example.com/\" target=\"_blank\">links</a>, <br>, bold text.",
+    "applicationCompletedHint": "Shown when the exclusive application link is opened again after submit. Matching is by user ID in the URL, not email. Leave title/message blank to hide that field (no default copy). Message supports HTML, e.g. <a href=\"https://example.com/\" target=\"_blank\">links</a>, <br>, bold text.",
     "applicationCompletedTitleZh": "Title (ZH)",
     "applicationCompletedTitleEn": "Title (EN)",
     "applicationCompletedMessageZh": "Message (ZH)",

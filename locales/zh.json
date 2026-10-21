@@ -934,7 +934,7 @@
     "agreementHint": "提示：可新增多個 Title Section；每個 Title 下面可加一個或多個 Agreement（勾選框／內容）。Register 頁會依 Title 分組顯示。勾選為選填。",
 
     "thankYouHint": "成功頁文案與寄信邏輯二選一：未啟用 Yes/No 時用「一般」文案＋ Email Settings auto send；啟用後只用 Yes／No 文案與模板，唔使兩邊都填。",
-    "applicationCompletedHint": "當用戶已用專屬 Application 連結提交後，再開同一條連結會看到此頁。判斷依據是 URL 內的用戶 ID（不是 email）。說明文字支援 HTML，例如 <a href=\"https://example.com/\" target=\"_blank\">連結</a>、<br>、粗體等。",
+    "applicationCompletedHint": "當用戶已用專屬 Application 連結提交後，再開同一條連結會看到此頁。判斷依據是 URL 內的用戶 ID（不是 email）。標題／說明留空則前台唔顯示該欄（唔會套用預設文案）。說明文字支援 HTML，例如 <a href=\"https://example.com/\" target=\"_blank\">連結</a>、<br>、粗體等。",
     "applicationCompletedTitleZh": "標題 (ZH)",
     "applicationCompletedTitleEn": "Title (EN)",
     "applicationCompletedMessageZh": "說明文字 (ZH)",

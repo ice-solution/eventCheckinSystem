@@ -1263,10 +1263,9 @@ exports.renderApplicationForm = async (req, res) => {
         if (existingUser.applicationCompleted) {
             const lang = ((req.query.lang || formConfig.defaultLanguage || 'zh') + '').toLowerCase() === 'en' ? 'en' : 'zh';
             const acp = formConfig.applicationCompletedPage || {};
-            const completedTitle = (acp.title && (acp.title[lang] || acp.title.zh)) || (lang === 'en' ? 'Application completed' : '申請已完成');
-            const completedMessage = (acp.message && (acp.message[lang] || acp.message.zh)) || (lang === 'en'
-                ? 'You have already completed this application. This link cannot be used to make further changes.'
-                : '您已完成申請，此連結不可再次修改。');
+            // 空白 = 唔顯示；唔再 fallback 預設文案
+            const completedTitle = (acp.title && acp.title[lang] != null) ? String(acp.title[lang]) : '';
+            const completedMessage = (acp.message && acp.message[lang] != null) ? String(acp.message[lang]) : '';
             return res.render('exvent/application_status', {
                 event_id,
                 event,

@@ -663,24 +663,24 @@
                                         <div class="col-md-6">
                                             <label class="form-label"><%= t('form_config.applicationCompletedTitleZh') %></label>
                                             <input type="text" class="form-control" id="applicationCompletedTitleZh"
-                                                   value="<%= (acp.title && acp.title.zh) ? acp.title.zh : '申請已完成' %>">
+                                                   value="<%= (acp.title && acp.title.zh) ? acp.title.zh : '' %>">
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label"><%= t('form_config.applicationCompletedTitleEn') %></label>
                                             <input type="text" class="form-control" id="applicationCompletedTitleEn"
-                                                   value="<%= (acp.title && acp.title.en) ? acp.title.en : 'Application completed' %>">
+                                                   value="<%= (acp.title && acp.title.en) ? acp.title.en : '' %>">
                                         </div>
                                     </div>
                                     <div class="row mt-3">
                                         <div class="col-md-6">
                                             <label class="form-label"><%= t('form_config.applicationCompletedMessageZh') %></label>
                                             <textarea class="form-control" id="applicationCompletedMessageZh" rows="3"
-                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (acp.message && acp.message.zh) ? acp.message.zh : '您已完成申請，此連結不可再次修改。' %></textarea>
+                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (acp.message && acp.message.zh) ? acp.message.zh : '' %></textarea>
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label"><%= t('form_config.applicationCompletedMessageEn') %></label>
                                             <textarea class="form-control" id="applicationCompletedMessageEn" rows="3"
-                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (acp.message && acp.message.en) ? acp.message.en : 'You have already completed this application. This link cannot be used to make further changes.' %></textarea>
+                                                      placeholder="<%= t('form_config.multilinePlaceholder') %>"><%= (acp.message && acp.message.en) ? acp.message.en : '' %></textarea>
                                         </div>
                                     </div>
                                 </div>
@@ -2230,12 +2230,12 @@
             },
             applicationCompletedPage: {
                 title: {
-                    zh: trimVal('applicationCompletedTitleZh', '申請已完成'),
-                    en: trimVal('applicationCompletedTitleEn', 'Application completed')
+                    zh: trimVal('applicationCompletedTitleZh', ''),
+                    en: trimVal('applicationCompletedTitleEn', '')
                 },
                 message: {
-                    zh: val('applicationCompletedMessageZh', '您已完成申請，此連結不可再次修改。'),
-                    en: val('applicationCompletedMessageEn', 'You have already completed this application. This link cannot be used to make further changes.')
+                    zh: val('applicationCompletedMessageZh', ''),
+                    en: val('applicationCompletedMessageEn', '')
                 }
             },
             paymentTicketUi: collectPaymentTicketUiFromForm()

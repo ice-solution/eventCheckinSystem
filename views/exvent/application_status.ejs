@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= (typeof title !== 'undefined' && title) || ((typeof status !== 'undefined' && status === 'completed') ? '申請已完成' : '申請連結') %></title>
+    <title><%= (typeof title !== 'undefined' && String(title).trim()) ? title : ((typeof status !== 'undefined' && status === 'completed') ? 'Application' : '申請連結') %></title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         body { background: #f8f9fa; font-family: Arial, Helvetica, sans-serif; font-weight: 400; }
@@ -31,10 +31,16 @@
 </head>
 <body>
     <div class="box">
-        <h1 class="<%= (typeof status !== 'undefined' && status === 'completed') ? 'ok' : 'err' %>">
-            <%= (typeof title !== 'undefined' && title) || ((typeof status !== 'undefined' && status === 'completed') ? '申請已完成' : '無法開啟申請表') %>
-        </h1>
-        <div class="message"><%- typeof message !== 'undefined' && message ? message : '' %></div>
+        <% const _title = (typeof title !== 'undefined' && title != null) ? String(title).trim() : ''; %>
+        <% const _message = (typeof message !== 'undefined' && message != null) ? String(message) : ''; %>
+        <% if (_title) { %>
+        <h1 class="<%= (typeof status !== 'undefined' && status === 'completed') ? 'ok' : 'err' %>"><%= _title %></h1>
+        <% } else if (typeof status === 'undefined' || status !== 'completed') { %>
+        <h1 class="err">無法開啟申請表</h1>
+        <% } %>
+        <% if (_message.trim()) { %>
+        <div class="message"><%- _message %></div>
+        <% } %>
     </div>
 </body>
 </html>

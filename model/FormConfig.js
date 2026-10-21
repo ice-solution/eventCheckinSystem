@@ -319,15 +319,15 @@ const formConfigSchema = new mongoose.Schema({
             }
         }
     },
-    /** 專屬 Application 連結：已完成時顯示的標題／說明 */
+    /** 專屬 Application 連結：已完成時顯示的標題／說明（空白 = 前台唔顯示） */
     applicationCompletedPage: {
         title: {
-            zh: { type: String, default: '申請已完成' },
-            en: { type: String, default: 'Application completed' }
+            zh: { type: String, default: '' },
+            en: { type: String, default: '' }
         },
         message: {
-            zh: { type: String, default: '您已完成申請，此連結不可再次修改。' },
-            en: { type: String, default: 'You have already completed this application. This link cannot be used to make further changes.' }
+            zh: { type: String, default: '' },
+            en: { type: String, default: '' }
         }
     },
     /**

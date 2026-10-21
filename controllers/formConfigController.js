@@ -348,12 +348,10 @@ function applyFormConfigMetaDefaults(migratedConfig) {
         }
     }
 
+    // 空白允許：唔用 || default 覆寫空字串（用戶刻意留空 = 前台唔顯示）
     const defaultApplicationCompletedPage = {
-        title: { zh: '申請已完成', en: 'Application completed' },
-        message: {
-            zh: '您已完成申請，此連結不可再次修改。',
-            en: 'You have already completed this application. This link cannot be used to make further changes.'
-        }
+        title: { zh: '', en: '' },
+        message: { zh: '', en: '' }
     };
     if (!migratedConfig.applicationCompletedPage || typeof migratedConfig.applicationCompletedPage !== 'object') {
         migratedConfig.applicationCompletedPage = JSON.parse(JSON.stringify(defaultApplicationCompletedPage));
@@ -362,8 +360,9 @@ function applyFormConfigMetaDefaults(migratedConfig) {
             if (!migratedConfig.applicationCompletedPage[key] || typeof migratedConfig.applicationCompletedPage[key] !== 'object') {
                 migratedConfig.applicationCompletedPage[key] = { ...defaultApplicationCompletedPage[key] };
             } else {
-                migratedConfig.applicationCompletedPage[key].zh = migratedConfig.applicationCompletedPage[key].zh || defaultApplicationCompletedPage[key].zh;
-                migratedConfig.applicationCompletedPage[key].en = migratedConfig.applicationCompletedPage[key].en || defaultApplicationCompletedPage[key].en;
+                const cur = migratedConfig.applicationCompletedPage[key];
+                cur.zh = cur.zh != null ? String(cur.zh) : '';
+                cur.en = cur.en != null ? String(cur.en) : '';
             }
         });
     }
@@ -435,11 +434,8 @@ exports.getDefaultFormConfig = () => ({
         }
     },
     applicationCompletedPage: {
-        title: { zh: '申請已完成', en: 'Application completed' },
-        message: {
-            zh: '您已完成申請，此連結不可再次修改。',
-            en: 'You have already completed this application. This link cannot be used to make further changes.'
-        }
+        title: { zh: '', en: '' },
+        message: { zh: '', en: '' }
     },
     customFormEnabled: false,
     customFormHtml: '',
