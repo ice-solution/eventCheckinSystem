@@ -1028,6 +1028,7 @@
     "confirmEmailCustomLabelEn": "Confirm label (EN)",
     "confirmEmailCustomLabelHint": "留空則用預設：確認電子郵件 / Confirm Email",
     "optionsLabel": "選項設定",
+    "optionsDragHint": "拖曳左側 ⋮⋮ 可調整選項次序",
     "optionValuePh": "選項值",
     "optionLabelZhPh": "中文標籤",
     "optionLabelEnPh": "English Label",

@@ -51,6 +51,29 @@
     .collapsible-card-header[aria-expanded="true"] .collapse-icon {
         transform: rotate(45deg);
     }
+    .options-sortable-list .option-item {
+        border: 1px solid transparent;
+        border-radius: 6px;
+        padding: 6px 4px;
+        background: #fff;
+    }
+    .options-sortable-list .option-item.dragging {
+        opacity: 0.45;
+    }
+    .options-sortable-list .option-item.drag-over {
+        border-top: 2px solid #007bff;
+    }
+    .option-drag-handle {
+        cursor: grab;
+        color: #6c757d;
+        padding: 6px 8px;
+        user-select: none;
+        display: inline-flex;
+        align-items: center;
+    }
+    .option-drag-handle:active {
+        cursor: grabbing;
+    }
 </style>
 <div id="right-panel" class="right-panel">
     <%- include ("components/rightpanel_header") %>
@@ -1037,24 +1060,34 @@
                                                         
                                                         <% if ((field.type === 'select' || field.type === 'checkbox' || field.type === 'radio') && field.options) { %>
                                                             <div class="mt-2">
-                                                                <label class="form-label"><%= t('form_config.optionsLabel') %></label>
-                                                                <div id="options-<%= actualSectionIndex %>-<%= actualFieldIndex %>">
+                                                                <label class="form-label mb-0"><%= t('form_config.optionsLabel') %></label>
+                                                                <small class="text-muted d-block mb-2"><%= t('form_config.optionsDragHint') %></small>
+                                                                <div id="options-<%= actualSectionIndex %>-<%= actualFieldIndex %>"
+                                                                     class="options-sortable-list"
+                                                                     data-section-index="<%= actualSectionIndex %>"
+                                                                     data-field-index="<%= actualFieldIndex %>">
                                                                     <% field.options.forEach((option, optionIndex) => { %>
-                                                                        <div class="mb-2">
+                                                                        <div class="option-item mb-2"
+                                                                             data-option-index="<%= optionIndex %>">
                                                                         <div class="row align-items-center">
+                                                                            <div class="col-auto pr-0">
+                                                                                <span class="option-drag-handle" title="<%= t('form_config.optionsDragHint') %>" aria-label="<%= t('form_config.optionsDragHint') %>">
+                                                                                    <i class="fas fa-grip-vertical"></i>
+                                                                                </span>
+                                                                            </div>
                                                                             <div class="col-md-2">
-                                                                                <input type="text" class="form-control form-control-sm"
+                                                                                <input type="text" class="form-control form-control-sm option-input-value"
                                                                                        placeholder="<%= t('form_config.optionValuePh') %>" value="<%= option.value %>"
                                                                                        onchange="updateOption(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>, 'value', this.value)">
                                                                             </div>
                                                                             <div class="col-md-2">
-                                                                                <input type="text" class="form-control form-control-sm"
+                                                                                <input type="text" class="form-control form-control-sm option-input-label-zh"
                                                                                        placeholder="<%= t('form_config.optionLabelZhPh') %>"
                                                                                        value="<%= option.label && option.label.zh ? option.label.zh : (typeof option.label === 'string' ? option.label : '') %>"
                                                                                        onchange="updateOptionLabel(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>, 'zh', this.value)">
                                                                             </div>
                                                                             <div class="col-md-2">
-                                                                                <input type="text" class="form-control form-control-sm"
+                                                                                <input type="text" class="form-control form-control-sm option-input-label-en"
                                                                                        placeholder="<%= t('form_config.optionLabelEnPh') %>"
                                                                                        value="<%= option.label && option.label.en ? option.label.en : '' %>"
                                                                                        onchange="updateOptionLabel(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>, 'en', this.value)">
@@ -1062,7 +1095,7 @@
                                                                             <% if (field.type === 'select' || field.type === 'checkbox' || field.type === 'radio') { %>
                                                                             <div class="col-md-3">
                                                                                 <div class="form-check mb-0">
-                                                                                    <input type="checkbox" class="form-check-input" id="opt-other-<%= actualSectionIndex %>-<%= actualFieldIndex %>-<%= optionIndex %>"
+                                                                                    <input type="checkbox" class="form-check-input option-input-is-other" id="opt-other-<%= actualSectionIndex %>-<%= actualFieldIndex %>-<%= optionIndex %>"
                                                                                            <%= option.isOther ? 'checked' : '' %>
                                                                                            onchange="updateOptionFlag(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>, 'isOther', this.checked); toggleOptionOtherPlaceholderRow(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>, this.checked)">
                                                                                     <label class="form-check-label small" for="opt-other-<%= actualSectionIndex %>-<%= actualFieldIndex %>-<%= optionIndex %>"><%= t('form_config.optionIsOther') %></label>
@@ -1071,7 +1104,7 @@
                                                                             <% } else { %>
                                                                             <div class="col-md-3"></div>
                                                                             <% } %>
-                                                                            <div class="col-md-3 text-end">
+                                                                            <div class="col-md-2 text-end">
                                                                                 <button type="button" class="btn btn-outline-danger btn-sm" 
                                                                                         onclick="removeOption(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>)">
                                                                                     <i class="fas fa-trash"></i>
@@ -1079,21 +1112,21 @@
                                                                             </div>
                                                                         </div>
                                                                         <div class="row mt-1 option-other-ph-row-<%= actualSectionIndex %>-<%= actualFieldIndex %>-<%= optionIndex %>" style="<%= option.isOther ? '' : 'display:none;' %>">
-                                                                            <div class="col-md-3">
+                                                                            <div class="col-md-3 offset-md-1">
                                                                                 <label class="form-label small mb-0"><%= t('form_config.optionOtherPlaceholderZh') %></label>
-                                                                                <input type="text" class="form-control form-control-sm"
+                                                                                <input type="text" class="form-control form-control-sm option-input-other-zh"
                                                                                        value="<%= option.otherPlaceholder && option.otherPlaceholder.zh ? option.otherPlaceholder.zh : '' %>"
                                                                                        placeholder="請填寫"
                                                                                        onchange="updateOptionOtherPlaceholder(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>, 'zh', this.value)">
                                                                             </div>
                                                                             <div class="col-md-3">
                                                                                 <label class="form-label small mb-0"><%= t('form_config.optionOtherPlaceholderEn') %></label>
-                                                                                <input type="text" class="form-control form-control-sm"
+                                                                                <input type="text" class="form-control form-control-sm option-input-other-en"
                                                                                        value="<%= option.otherPlaceholder && option.otherPlaceholder.en ? option.otherPlaceholder.en : '' %>"
                                                                                        placeholder="Please specify"
                                                                                        onchange="updateOptionOtherPlaceholder(<%= actualSectionIndex %>, <%= actualFieldIndex %>, <%= optionIndex %>, 'en', this.value)">
                                                                             </div>
-                                                                            <div class="col-md-6">
+                                                                            <div class="col-md-5">
                                                                                 <small class="text-muted d-block mt-4"><%= t('form_config.optionOtherPlaceholderHint') %></small>
                                                                             </div>
                                                                         </div>
@@ -1620,6 +1653,123 @@
             console.error('保存失敗:', error);
             alert('保存失敗，請重試');
         }
+    }
+
+    /** 拖曳前把 DOM 上尚未 onchange 的輸入同步回 formConfig.options */
+    function syncOptionsInputsToConfig(sectionIndex, fieldIndex) {
+        const list = document.getElementById('options-' + sectionIndex + '-' + fieldIndex);
+        const field = formConfig.sections[sectionIndex] && formConfig.sections[sectionIndex].fields[fieldIndex];
+        if (!list || !field || !Array.isArray(field.options)) return;
+        const items = list.querySelectorAll('.option-item');
+        items.forEach(function(item, idx) {
+            if (!field.options[idx]) return;
+            const opt = field.options[idx];
+            const valueEl = item.querySelector('.option-input-value');
+            const zhEl = item.querySelector('.option-input-label-zh');
+            const enEl = item.querySelector('.option-input-label-en');
+            const otherCb = item.querySelector('.option-input-is-other');
+            const otherZh = item.querySelector('.option-input-other-zh');
+            const otherEn = item.querySelector('.option-input-other-en');
+            if (valueEl) opt.value = valueEl.value;
+            if (!opt.label || typeof opt.label !== 'object') opt.label = { zh: '', en: '' };
+            if (zhEl) opt.label.zh = zhEl.value;
+            if (enEl) opt.label.en = enEl.value;
+            if (otherCb) opt.isOther = !!otherCb.checked;
+            if (!opt.otherPlaceholder || typeof opt.otherPlaceholder !== 'object') {
+                opt.otherPlaceholder = { zh: '', en: '' };
+            }
+            if (otherZh) opt.otherPlaceholder.zh = otherZh.value;
+            if (otherEn) opt.otherPlaceholder.en = otherEn.value;
+        });
+    }
+
+    async function reorderOption(sectionIndex, fieldIndex, fromIndex, toIndex) {
+        const field = formConfig.sections[sectionIndex] && formConfig.sections[sectionIndex].fields[fieldIndex];
+        if (!field || !Array.isArray(field.options)) return;
+        if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0) return;
+        if (fromIndex >= field.options.length || toIndex >= field.options.length) return;
+
+        syncOptionsInputsToConfig(sectionIndex, fieldIndex);
+        const moved = field.options.splice(fromIndex, 1)[0];
+        field.options.splice(toIndex, 0, moved);
+        updatePreview();
+
+        try {
+            await saveConfig();
+            location.reload();
+        } catch (error) {
+            console.error('保存失敗:', error);
+            alert('保存失敗，請重試');
+        }
+    }
+
+    function initOptionsSortableLists() {
+        document.querySelectorAll('.options-sortable-list').forEach(function(list) {
+            let dragEl = null;
+
+            list.querySelectorAll('.option-item').forEach(function(item) {
+                const handle = item.querySelector('.option-drag-handle');
+                if (handle) {
+                    handle.addEventListener('mousedown', function() {
+                        item.setAttribute('draggable', 'true');
+                    });
+                    handle.addEventListener('mouseup', function() {
+                        item.setAttribute('draggable', 'false');
+                    });
+                }
+
+                item.addEventListener('dragstart', function(e) {
+                    dragEl = item;
+                    item.classList.add('dragging');
+                    try {
+                        e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.setData('text/plain', item.getAttribute('data-option-index') || '');
+                    } catch (_) {}
+                });
+
+                item.addEventListener('dragend', function() {
+                    item.classList.remove('dragging');
+                    item.setAttribute('draggable', 'false');
+                    list.querySelectorAll('.option-item').forEach(function(el) {
+                        el.classList.remove('drag-over');
+                    });
+                    dragEl = null;
+                });
+
+                item.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    if (!dragEl || dragEl === item) return;
+                    list.querySelectorAll('.option-item').forEach(function(el) {
+                        el.classList.toggle('drag-over', el === item);
+                    });
+                });
+
+                item.addEventListener('dragleave', function() {
+                    item.classList.remove('drag-over');
+                });
+
+                item.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    item.classList.remove('drag-over');
+                    if (!dragEl || dragEl === item) return;
+                    const sectionIndex = parseInt(list.getAttribute('data-section-index'), 10);
+                    const fieldIndex = parseInt(list.getAttribute('data-field-index'), 10);
+                    const items = Array.prototype.slice.call(list.querySelectorAll('.option-item'));
+                    const fromIndex = items.indexOf(dragEl);
+                    const toIndex = items.indexOf(item);
+                    if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
+                    reorderOption(sectionIndex, fieldIndex, fromIndex, toIndex);
+                });
+            });
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initOptionsSortableLists();
+    });
+    // 若 script 喺 DOMContentLoaded 之後先執行，仍要初始化一次
+    if (document.readyState !== 'loading') {
+        initOptionsSortableLists();
     }
 
     // 頂部 switch：啟用欄位（後台 RSVP 可用）；Display 另控前台申請表

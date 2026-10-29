@@ -1029,6 +1029,7 @@
     "confirmEmailCustomLabelEn": "Confirm label (EN)",
     "confirmEmailCustomLabelHint": "Leave blank for default: 確認電子郵件 / Confirm Email",
     "optionsLabel": "Options",
+    "optionsDragHint": "Drag the ⋮⋮ handle to reorder options",
     "optionValuePh": "Option value",
     "optionLabelZhPh": "Chinese label",
     "optionLabelEnPh": "English Label",
