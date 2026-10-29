@@ -5901,10 +5901,22 @@ exports.wonderWebhook = async (req, res) => {
     console.log('[Wonder Webhook] =======================================\n');
 
     // Wonder 回調格式：body 為 Invoice，reference_number 為我方訂單編號，state / correspondence_state 表示狀態
+    // 注意：refund 後 Wonder 仍可能保持 state=completed，但 correspondence_state=refunded
     const referenceNumber = body.reference_number || query.reference_number;
     const state = (body.state || '').toString().toLowerCase();
     const correspondenceState = (body.correspondence_state || '').toString().toLowerCase();
-    const isPaid = state === 'completed' || correspondenceState === 'paid';
+    const nestedTx = Array.isArray(body.transactions) ? body.transactions : [];
+    const hasSuccessfulRefund = nestedTx.some((t) => {
+        if (!t || typeof t !== 'object') return false;
+        const type = String(t.type || '').toLowerCase();
+        return type === 'refund' && t.success === true;
+    });
+    const isRefunded = correspondenceState === 'refunded'
+        || state === 'refunded'
+        || hasSuccessfulRefund;
+    const isFailed = state === 'cancelled' || state === 'voided' || state === 'failed';
+    // refund 優先：唔好因為 state=completed 再當 paid（否則會重複 create user）
+    const isPaid = !isRefunded && (state === 'completed' || correspondenceState === 'paid');
 
     try {
         let transaction = null;
@@ -5921,28 +5933,42 @@ exports.wonderWebhook = async (req, res) => {
             return res.status(200).json({ received: true, warning: 'Transaction not found' });
         }
 
+        let nextStatus = transaction.status;
+        if (isRefunded) nextStatus = 'refunded';
+        else if (isPaid) nextStatus = 'paid';
+        else if (isFailed) nextStatus = 'failed';
+
         // 一律寫回 webhook 完整 body 到 transactionData，並依 state 更新 status
         const updatedTransaction = await Transaction.findOneAndUpdate(
             { _id: transaction._id },
             {
                 transactionData: body,
-                status: isPaid ? 'paid' : (state === 'cancelled' || state === 'voided' || state === 'failed' ? 'failed' : transaction.status),
+                status: nextStatus,
                 updatedAt: new Date()
             },
             { new: true }
         );
 
-        if (isPaid) {
-            const { eventDoc, addedUser, transaction: paidTx } = await markTransactionPaidAndAddUser(transaction) || {};
-            const txForEmail = paidTx || updatedTransaction;
-            const evt = eventDoc || await Event.findById(transaction.eventId);
-            if (evt) {
-                try {
-                    await sendPaymentReceiptEmail(txForEmail, evt, addedUser || null);
-                } catch (e) { console.error('[Wonder Webhook] Payment receipt email error:', e); }
+        if (isRefunded) {
+            console.log('[Wonder Webhook] Result: transaction marked refunded (no user create). state=', state,
+                'correspondence_state=', correspondenceState, 'Transaction _id:', transaction._id);
+        } else if (isPaid) {
+            // 已 paid 且已有 userId → 只更新資料，唔再 push RSVP（防重入／重複 webhook）
+            const alreadyFulfilled = transaction.status === 'paid' && transaction.userId;
+            if (alreadyFulfilled) {
+                console.log('[Wonder Webhook] Result: already paid with userId, skip create user. Transaction _id:', transaction._id);
+            } else {
+                const { eventDoc, addedUser, transaction: paidTx } = await markTransactionPaidAndAddUser(updatedTransaction || transaction) || {};
+                const txForEmail = paidTx || updatedTransaction;
+                const evt = eventDoc || await Event.findById(transaction.eventId);
+                if (evt) {
+                    try {
+                        await sendPaymentReceiptEmail(txForEmail, evt, addedUser || null);
+                    } catch (e) { console.error('[Wonder Webhook] Payment receipt email error:', e); }
+                }
+                console.log('[Wonder Webhook] Result: transaction marked paid, user added to event. Transaction _id:', transaction._id);
             }
-            console.log('[Wonder Webhook] Result: transaction marked paid, user added to event. Transaction _id:', transaction._id);
-        } else if (state === 'cancelled' || state === 'voided' || state === 'failed') {
+        } else if (isFailed) {
             console.log('[Wonder Webhook] Result: transaction marked failed. state=', state, 'Transaction _id:', transaction._id);
         } else {
             console.log('[Wonder Webhook] Result: transactionData saved. state=', state, 'correspondence_state=', correspondenceState);
@@ -5959,13 +5985,31 @@ exports.wonderWebhook = async (req, res) => {
  *  @returns {{ eventDoc, addedUser, transaction }|undefined}
  */
 async function markTransactionPaidAndAddUser(transaction) {
+    const eventDoc = await Event.findById(transaction.eventId);
+    if (!eventDoc) return;
+
+    // 防重入：已有 userId 且 RSVP 仍在 → 唔再 push（避免 refund/重複 webhook 造出 duplicate）
+    if (transaction.userId) {
+        const existing = findEventUserById(eventDoc, transaction.userId);
+        if (existing) {
+            const paidTx = await Transaction.findOneAndUpdate(
+                { _id: transaction._id },
+                { status: 'paid', updatedAt: new Date() },
+                { new: true }
+            ) || transaction;
+            const addedUserObj = existing.toObject
+                ? existing.toObject({ minimize: false })
+                : existing;
+            console.log('[markTransactionPaidAndAddUser] skip duplicate create; reuse userId=', String(transaction.userId));
+            return { eventDoc, addedUser: addedUserObj, transaction: paidTx };
+        }
+    }
+
     await Transaction.findOneAndUpdate(
         { _id: transaction._id },
         { status: 'paid', updatedAt: new Date() },
         { new: true }
     );
-    const eventDoc = await Event.findById(transaction.eventId);
-    if (!eventDoc) return;
     const now = new Date();
     const excludedFields = ['_id', '__v', 'create_at', 'modified_at'];
     let newUser;

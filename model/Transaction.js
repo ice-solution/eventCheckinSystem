@@ -10,7 +10,7 @@ const transactionSchema = new mongoose.Schema({
     stripeSessionId: { type: String, required: true },
     /** 付款閘道：'stripe' | 'wonder' | 'none'（$0 免費票券無付款） */
     paymentGateway: { type: String, enum: ['stripe', 'wonder', 'none'], default: 'wonder' },
-    status: { type: String, enum: ['pending', 'paid', 'failed', 'free'], default: 'pending' },
+    status: { type: String, enum: ['pending', 'paid', 'failed', 'free', 'refunded'], default: 'pending' },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
     // 付款前註冊表單的完整資料（FormConfig 欄位），webhook 完成付款後用來寫入 event.users
