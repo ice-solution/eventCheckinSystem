@@ -23,6 +23,7 @@ const multer = require('multer');
 const fs = require('fs');
 const { getSocket } = require('../socket'); // 引入 socket 以發送實時更新
 const { embedKaitiFontInEmail } = require('../utils/embedEmailFonts'); // 引入字型嵌入功能
+const { safeDisplayHtml, formatDisplayHtml, stripHtml } = require('../utils/safeDisplayHtml');
 const { replaceTemplateVariables, buildEmailTemplateAdditionalVars, flattenForTemplate } = require('../utils/replaceTemplateVariables');
 const { isInvoiceEmailEnabled } = require('../utils/featureFlags');
 const { normalizeAgreementAgreed, formatAgreementAgreedLabel, agreementAgreedSortOrder, getEnabledAgreements, isAgreementMetaKey } = require('../utils/agreementFields');
@@ -1285,7 +1286,10 @@ exports.renderApplicationForm = async (req, res) => {
             existingUser,
             lockedFields,
             fieldValues,
-            applicationCompleted: false
+            applicationCompleted: false,
+            safeDisplayHtml,
+            formatDisplayHtml,
+            stripHtml
         });
     } catch (error) {
         console.error('renderApplicationForm error:', error);

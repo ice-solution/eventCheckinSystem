@@ -5,6 +5,7 @@ const { getBannerRenderData } = require('../utils/bannerCache');
 const { normalizeTicketsForView, ticketsUseCategories } = require('../utils/paymentTicket');
 const { isRegisterSlugRouteCandidate } = require('../utils/registerSlug');
 const { getCurrencySymbol, getCurrencyUpper } = require('../utils/currency');
+const { safeDisplayHtml, formatDisplayHtml, stripHtml } = require('../utils/safeDisplayHtml');
 
 async function loadOrCreateFormConfig(eventId) {
     let formConfig = await FormConfig.findOne({ eventId });
@@ -56,7 +57,10 @@ async function renderRegisterPage(req, res, eventId) {
             event,
             displayName,
             closedTitle,
-            message: formConfig.registerClosedMessage || ''
+            message: formConfig.registerClosedMessage || '',
+            safeDisplayHtml,
+            formatDisplayHtml,
+            stripHtml
         });
     }
 
@@ -68,7 +72,11 @@ async function renderRegisterPage(req, res, eventId) {
         ticketsUseCategories: ticketsUseCategories(ticketsForView),
         formConfig,
         currencySymbol: getCurrencySymbol(),
-        currencyCode: getCurrencyUpper()
+        currencyCode: getCurrencyUpper(),
+        // 顯式傳入，避免 production 未更新 app.locals 時 register.ejs 爆 stripHtml is not defined
+        safeDisplayHtml,
+        formatDisplayHtml,
+        stripHtml
     });
 }
 
