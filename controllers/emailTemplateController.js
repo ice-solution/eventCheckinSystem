@@ -1,6 +1,7 @@
 const EmailTemplate = require("../model/EmailTemplate")
 const Event = require("../model/Event")
 const Transaction = require("../model/Transaction")
+const mongoose = require("mongoose")
 const {
   replaceTemplateVariables,
   buildEmailTemplateAdditionalVars,
@@ -15,6 +16,11 @@ const emailTracking = require("../utils/emailTracking")
 const {sampleHtmlTemplate} = require("../template/sample");
 const { getBuiltinEmailTemplateSeed } = require("../utils/emailTemplateDefaults");
 const { isInvoiceEmailEnabled } = require("../utils/featureFlags");
+
+/** TinyMCE 誤打 /emailTemplate/upload 成 GET 時，id 會係 "upload" → 避免 BSON cast crash */
+function isValidObjectIdParam(id) {
+  return typeof id === "string" && /^[a-fA-F0-9]{24}$/.test(id) && mongoose.Types.ObjectId.isValid(id)
+}
 
 // 刪除電子郵件模板
 exports.deleteEmailTemplate = async (req, res) => {
@@ -34,8 +40,14 @@ exports.deleteEmailTemplate = async (req, res) => {
 }
 
 const multer = require("multer")
+const fs = require("fs")
+const path = require("path")
+const emailTemplateImageDir = path.join("public", "uploads", "email_template_images")
+if (!fs.existsSync(emailTemplateImageDir)) {
+  fs.mkdirSync(emailTemplateImageDir, { recursive: true })
+}
 const upload = multer({
-  dest: "public/uploads/email_template_images/",
+  dest: emailTemplateImageDir + path.sep,
   limits: {
     fileSize: 1024 * 1024 * 5, // 5MB
   },
@@ -230,6 +242,9 @@ exports.renderEmailTemplateDetail = async (req, res) => {
   const { eventId, id } = req.params
 
   try {
+    if (!isValidObjectIdParam(id)) {
+      return res.status(400).send("無效的郵件模板 ID")
+    }
     const template = await EmailTemplate.findById(id)
     const emailRecords =
       (await EmailRecord.find({ emailTemplate: id }).sort({
@@ -277,6 +292,9 @@ exports.exportEmailTemplateSendRecords = async (req, res) => {
       return res.status(401).json({ message: "Unauthorized" })
     }
 
+    if (!isValidObjectIdParam(id)) {
+      return res.status(400).json({ message: "無效的郵件模板 ID" })
+    }
     const template = await EmailTemplate.findById(id).lean()
     if (!template) {
       return res.status(404).json({ message: "電子郵件模板未找到！" })

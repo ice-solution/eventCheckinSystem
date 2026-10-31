@@ -4,7 +4,10 @@ const emailTemplateController = require("../controllers/emailTemplateController"
 
 router.route("/").get(emailTemplateController.renderEmailTemplateList)
 
-router.route("/upload").post(emailTemplateController.uploadEmailTemplateImage)
+// 必須在 /:id 之前：否則 GET/POST /upload 會被當成 id="upload" → ObjectId cast error
+router.route("/upload")
+  .post(emailTemplateController.uploadEmailTemplateImage)
+  .get((req, res) => res.status(405).json({ message: "Use POST to upload images" }))
 
 // 公開預覽（須在 /:id 之前註冊，避免被當成 id）
 router.get("/preview/:id", emailTemplateController.renderEmailTemplatePreview)
