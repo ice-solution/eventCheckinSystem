@@ -190,10 +190,14 @@
         setTimeout(() => $toast.fadeOut(300, function() { $(this).remove(); }), 3500);
     }
 
+    // datetime-local 要用「瀏覽器本地時間」字串；唔可用 toISOString（永遠係 UTC，HK 會少 8 小時）
     function toDatetimeLocalValue(val) {
         if (!val) return '';
         const d = new Date(val);
-        return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 16);
+        if (isNaN(d.getTime())) return '';
+        const pad = (n) => String(n).padStart(2, '0');
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+            + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
     }
 
     function getTicketRangeValues(t) {
