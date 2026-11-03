@@ -1,5 +1,5 @@
-/* Brand Activation — Theme Override
-   Matches the dark-navy sidebar + teal accent design from reference */
+/* Dotato — Theme Override
+   Purple (#743079) + gold (#FFD162) from https://dotato.hk logo / brand */
 
 /* ── Prevent sidebar flash on page load ────────────────────── */
 body.sidebar-no-transition aside#left-panel,
@@ -11,25 +11,26 @@ body.sidebar-no-transition #header { transition: none !important; }
 
 /* ── CSS Variables ─────────────────────────────────────────── */
 :root {
-  --sidebar-bg:       #0d1b2a;
-  --sidebar-bg2:      #132338;
-  --sidebar-text:     #b0bec5;
-  --sidebar-active:   #00c4b4;
-  --sidebar-hover:    rgba(0, 196, 180, 0.12);
+  --sidebar-bg:       #1a0f1f;
+  --sidebar-bg2:      #241428;
+  --sidebar-text:     #c9b8ce;
+  --sidebar-active:   #FFD162;
+  --sidebar-hover:    rgba(116, 48, 121, 0.28);
   --header-bg:        #ffffff;
   --header-shadow:    0 2px 8px rgba(0,0,0,0.08);
-  --accent:           #00c4b4;
-  --accent-dark:      #00a89a;
-  --accent-light:     rgba(0, 196, 180, 0.12);
-  --body-bg:          #f0f4f8;
+  --accent:           #743079;
+  --accent-dark:      #5c2662;
+  --accent-light:     rgba(116, 48, 121, 0.12);
+  --accent-gold:      #FFD162;
+  --body-bg:          #f7f3f8;
   --card-bg:          #ffffff;
   --card-shadow:      0 2px 12px rgba(0,0,0,0.07);
   --card-radius:      12px;
-  --text-main:        #1a2332;
-  --text-muted:       #6b7a8d;
-  --border-color:     #e4e9f0;
+  --text-main:        #1a1220;
+  --text-muted:       #6b6170;
+  --border-color:     #ebe4ed;
   --danger:           #ef4444;
-  --warning:          #f59e0b;
+  --warning:          #F2BA4C;
   --success:          #10b981;
 }
 
@@ -67,7 +68,7 @@ body {
   display: inline-block;
   width: 30px;
   height: 30px;
-  background: linear-gradient(135deg, #1976d2 0%, var(--accent) 100%);
+  background: linear-gradient(135deg, #743079 0%, #FFD162 100%);
   border-radius: 8px;
   flex-shrink: 0;
 }
@@ -367,8 +368,8 @@ aside#left-panel .navbar .navbar-nav li.menu-item-has-children .sub-menu > li > 
 .panel.bg-flat-color-1,
 .panel.bg-flat-color-2,
 .panel.bg-flat-color-3 {
-  background: linear-gradient(135deg, rgba(0,196,180,0.08) 0%, rgba(0,196,180,0.03) 100%) !important;
-  border: 1.5px solid rgba(0,196,180,0.2) !important;
+  background: linear-gradient(135deg, rgba(116,48,121,0.08) 0%, rgba(255,209,98,0.06) 100%) !important;
+  border: 1.5px solid rgba(116,48,121,0.22) !important;
   border-radius: var(--card-radius) !important;
 }
 
@@ -380,7 +381,7 @@ aside#left-panel .navbar .navbar-nav li.menu-item-has-children .sub-menu > li > 
 
 /* Override flat-color backgrounds to use teal theme */
 .bg-flat-color-1 { background: var(--accent) !important; }
-.bg-flat-color-3 { background: #1976d2 !important; }
+.bg-flat-color-3 { background: #7f287d !important; }
 .bg-flat-color-4 { background: var(--warning) !important; }
 
 /* ── Buttons ────────────────────────────────────────────────── */
@@ -400,7 +401,7 @@ aside#left-panel .navbar .navbar-nav li.menu-item-has-children .sub-menu > li > 
 .btn-success:hover {
   background: var(--accent-dark) !important;
   border-color: var(--accent-dark) !important;
-  box-shadow: 0 4px 12px rgba(0,196,180,0.3) !important;
+  box-shadow: 0 4px 12px rgba(116,48,121,0.35) !important;
 }
 
 .btn-secondary,
@@ -428,8 +429,8 @@ aside#left-panel .navbar .navbar-nav li.menu-item-has-children .sub-menu > li > 
 }
 
 .btn-info {
-  background: #1976d2 !important;
-  border-color: #1976d2 !important;
+  background: #7f287d !important;
+  border-color: #7f287d !important;
   color: #fff !important;
   border-radius: 8px !important;
   font-size: 13px !important;
@@ -475,7 +476,7 @@ aside#left-panel .navbar .navbar-nav li.menu-item-has-children .sub-menu > li > 
 }
 
 .table tbody tr:hover {
-  background: rgba(0, 196, 180, 0.04) !important;
+  background: rgba(116, 48, 121, 0.04) !important;
 }
 
 .table td {
@@ -486,7 +487,7 @@ aside#left-panel .navbar .navbar-nav li.menu-item-has-children .sub-menu > li > 
 
 /* Checked-in row highlight */
 .checkin-true {
-  background-color: rgba(0, 196, 180, 0.06) !important;
+  background-color: rgba(116, 48, 121, 0.06) !important;
 }
 
 /* Status badge */
@@ -519,7 +520,7 @@ span.badge {
 
 .form-control:focus {
   border-color: var(--accent) !important;
-  box-shadow: 0 0 0 3px rgba(0, 196, 180, 0.15) !important;
+  box-shadow: 0 0 0 3px rgba(116, 48, 121, 0.18) !important;
   outline: none !important;
 }
 
