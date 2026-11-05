@@ -1628,7 +1628,19 @@
                                                         <% const sortedFields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
                                                         <% sortedFields.forEach(field => { %>
                                                             <% if (field.visible && field.type !== 'display') { %>
-                                                        <td data-field-name="<%= field.fieldName %>"><%= userRow[field.fieldName] || '-' %></td>
+                                                        <td data-field-name="<%= field.fieldName %>"><%
+                                                            const _cellVal = userRow[field.fieldName];
+                                                            let _cellText = '-';
+                                                            if (_cellVal != null && _cellVal !== '') {
+                                                                if (Array.isArray(_cellVal)) {
+                                                                    _cellText = _cellVal.length ? _cellVal.join(', ') : '-';
+                                                                } else if (typeof _cellVal === 'object') {
+                                                                    _cellText = '-';
+                                                                } else {
+                                                                    _cellText = String(_cellVal);
+                                                                }
+                                                            }
+                                                        %><%= _cellText %></td>
                                                             <% } %>
                                                         <% }); %>
                                                     <% } %>
@@ -1819,6 +1831,25 @@ const _US = {
         if (val === true || val === 'true' || val === 1 || val === '1') return '同意';
         if (val === false || val === 'false' || val === 0 || val === '0') return '未同意';
         return '-';
+    }
+    function formatAgreementAgreedOrder(val) {
+        if (val === true || val === 'true' || val === 1 || val === '1') return 1;
+        if (val === false || val === 'false' || val === 0 || val === '0') return 0;
+        return -1;
+    }
+    function escCell(val) {
+        return String(val == null ? '' : val)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+    /** checkbox 陣列／物件唔好直接塞入 DataTables，否則會報 [object Object] */
+    function displayCellValue(val) {
+        if (val == null || val === '') return '-';
+        if (Array.isArray(val)) return val.length ? val.join(', ') : '-';
+        if (typeof val === 'object') return '-';
+        return String(val);
     }
     function formatThankYouYesNoCell(val) {
         const raw = val == null ? '' : String(val).trim().toLowerCase();
@@ -3353,27 +3384,25 @@ const _US = {
                 contentType: 'application/json',
                 data: JSON.stringify(userData),
                 success: function(response) {
-                    // Add new row to DataTable
-                    // 動態構建新行數據
-                    const newRow = [
-                        '<input type="checkbox" class="user-select" data-_id="' + response._id + '" />'
-                    ];
+                    // 用 <tr> 加入，保留 data-order（有 data-order 嘅欄 DataTables 當物件欄；純字串 row.add 會報 [object Object]）
+                    const fieldNames = [];
                     const userNameForQR = userData.name || userData.email || 'user';
                     const actionsHtml = '<div class="user-action-buttons">' +
                         '<div class="qrcode-container">' +
                         '<button type="button" class="btn btn-sm btn-info qrcode-btn" data-user-id="' + response._id + '" title="' + _US.viewQrCode + '"><i class="fa fa-qrcode"></i></button>' +
                         '<div class="qrcode-popup">' +
                         '<img src="https://api.qrserver.com/v1/create-qr-code/?data=' + response._id + '&size=200x200" alt="QR Code" class="qrcode-image" id="qrcode-' + response._id + '">' +
-                        '<button type="button" class="btn btn-primary btn-sm qrcode-download-btn" data-user-id="' + response._id + '" data-user-name="' + userNameForQR + '"><i class="fa fa-download"></i> ' + _US.downloadQrCodeBtn + '</button>' +
+                        '<button type="button" class="btn btn-primary btn-sm qrcode-download-btn" data-user-id="' + response._id + '" data-user-name="' + escCell(userNameForQR) + '"><i class="fa fa-download"></i> ' + _US.downloadQrCodeBtn + '</button>' +
                         '</div>' +
                         '</div>' +
-                        '<button type="button" class="btn btn-sm btn-primary resend-email-btn" data-_id="' + response._id + '" data-user-name="' + (userData.name || '') + '" data-user-email="' + (userData.email || '') + '"><i class="fa fa-envelope mr-1"></i> ' + _US.resendDropdown + '</button>' +
+                        '<button type="button" class="btn btn-sm btn-primary resend-email-btn" data-_id="' + response._id + '" data-user-name="' + escCell(userData.name || '') + '" data-user-email="' + escCell(userData.email || '') + '"><i class="fa fa-envelope mr-1"></i> ' + _US.resendDropdown + '</button>' +
                         '<button class="btn btn-delete-x delete-user" data-_id="' + response._id + '" title="' + _US.deleteBtn + '">✕</button>' +
                         '</div>';
-                    newRow.push(actionsHtml);
-                    
-                    // 根據formConfig添加字段數據（順序需與 table 欄位一致）
-                    const fieldNames = [];
+
+                    const cells = [
+                        '<td><input type="checkbox" class="user-select" data-_id="' + response._id + '" /></td>',
+                        '<td>' + actionsHtml + '</td>'
+                    ];
                     <% if (formConfig && formConfig.sections) { %>
                         <% const ajaxSortedSections = [...formConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0)); %>
                         <% ajaxSortedSections.forEach(section => { %>
@@ -3382,33 +3411,38 @@ const _US = {
                                 <% ajaxSortedFields.forEach(field => { %>
                                     <% if (field.visible && field.type !== 'display') { %>
                                         fieldNames.push('<%= field.fieldName %>');
-                                        newRow.push(userData['<%= field.fieldName %>'] || '-');
+                                        cells.push('<td data-field-name="<%= field.fieldName %>">' + escCell(displayCellValue(userData['<%= field.fieldName %>'])) + '</td>');
                                     <% } %>
                                 <% }); %>
                             <% } %>
                         <% }); %>
                     <% } else { %>
-                        // 預設字段
-                        fieldNames.push('email');
-                        fieldNames.push('name');
-                        fieldNames.push('company');
-                        fieldNames.push('phone');
-                        newRow.push(userData.email || '-');
-                        newRow.push(userData.name || '-');
-                        newRow.push(userData.company || '-');
-                        newRow.push(userData.phone || '-');
+                        fieldNames.push('email', 'name', 'company', 'phone');
+                        ['email', 'name', 'company', 'phone'].forEach(function(fn) {
+                            cells.push('<td data-field-name="' + fn + '">' + escCell(displayCellValue(userData[fn])) + '</td>');
+                        });
                     <% } %>
                     <% if (typeof enabledAgreements !== 'undefined' && enabledAgreements && enabledAgreements.length) { %>
                         <% enabledAgreements.forEach(function(agr) { %>
-                        newRow.push(formatAgreementAgreedCell(response['<%= agr.agreedField %>']));
-                        newRow.push(formatAgreementRecordedAtCell(response['<%= agr.recordedAtField %>']));
+                        (function() {
+                            var agreed = response['<%= agr.agreedField %>'];
+                            var recorded = response['<%= agr.recordedAtField %>'];
+                            var recOrder = recorded ? new Date(recorded).getTime() : 0;
+                            if (isNaN(recOrder)) recOrder = 0;
+                            cells.push('<td class="agreement-meta-cell" data-field-name="<%= agr.agreedField %>" data-order="' + formatAgreementAgreedOrder(agreed) + '">' + escCell(formatAgreementAgreedCell(agreed)) + '</td>');
+                            cells.push('<td class="agreement-meta-cell" data-field-name="<%= agr.recordedAtField %>" data-order="' + recOrder + '">' + escCell(formatAgreementRecordedAtCell(recorded)) + '</td>');
+                        })();
                         <% }); %>
                     <% } %>
                     <% if (formConfig && formConfig.thankYou && formConfig.thankYou.yesNoQuestion && formConfig.thankYou.yesNoQuestion.enabled) { %>
-                        newRow.push(formatThankYouYesNoCell(response.thankYouYesNo));
+                        (function() {
+                            var raw = response.thankYouYesNo == null ? '' : String(response.thankYouYesNo).trim().toLowerCase();
+                            var order = 0;
+                            if (raw) order = ['yes', 'y', '是', 'true', '1'].indexOf(raw) !== -1 ? 2 : 1;
+                            cells.push('<td data-field-name="thankYouYesNo" data-order="' + order + '">' + escCell(formatThankYouYesNoCell(response.thankYouYesNo)) + '</td>');
+                        })();
                     <% } %>
-                    
-                    // 添加 Created At 列
+
                     const now = new Date();
                     const timestamp = now.getTime();
                     const formattedDate = now.toLocaleString('zh-TW', {
@@ -3421,36 +3455,15 @@ const _US = {
                         second: '2-digit',
                         hour12: false
                     });
-                    // 直接 push 文本內容，DataTable 會自動創建 td
-                    newRow.push(formattedDate);
-                    
-                    // 添加Checked In列
-                    newRow.push('<input type="checkbox" class="checkin-toggle" data-_id="' + response._id + '" />');
-                    
-                    const rowNode = table.row.add(newRow).draw().node();
-                    $(rowNode).addClass('checkin-false').attr('data-id', response._id);
-                    
-                    // 為新行的每個數據欄位設置 data-field-name 屬性
-                    // 跳過 checkbox 列、Actions 列
-                    $(rowNode).find('td').each(function(index) {
-                        if (index > 1 && index <= fieldNames.length + 1) {
-                            $(this).attr('data-field-name', fieldNames[index - 2]);
-                        }
-                    });
-                    
-                    // 設置 Created At 列的 data-order 屬性（倒數第 2 列）
-                    const totalTds = $(rowNode).find('td').length;
-                    const createdAtTdIndex = totalTds - 2;
-                    const createdAtTd = $(rowNode).find('td').eq(createdAtTdIndex);
-                    if (createdAtTd.length) {
-                        createdAtTd.attr('data-order', timestamp);
-                    }
-                    const checkInTdIndex = totalTds - 1;
-                    const checkInTd = $(rowNode).find('td').eq(checkInTdIndex);
-                    if (checkInTd.length) {
-                        checkInTd.attr('data-order', 0);
-                    }
-                    
+                    cells.push('<td data-order="' + timestamp + '">' + escCell(formattedDate) + '</td>');
+                    cells.push('<td data-order="0"><input type="checkbox" class="checkin-toggle" data-_id="' + response._id + '" /></td>');
+
+                    const rowEl = document.createElement('tr');
+                    rowEl.className = 'checkin-false';
+                    rowEl.setAttribute('data-id', response._id);
+                    rowEl.innerHTML = cells.join('');
+                    table.row.add(rowEl).draw();
+
                     // Hide form and show button
                     $('#addUserForm').hide();
                     $('#addUserBtn').show();
