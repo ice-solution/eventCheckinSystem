@@ -774,6 +774,8 @@
     "canvasHint": "Scrollable canvas; each item has its own scale. Rows are cinema-style; props are markers only. ZIP export includes a clean layout image and table/company Excel.",
     "unfilledCategory": "(Not filled)",
     "noUnassigned": "No unassigned guests",
+    "yesNoFilterHint": "Yes/No enabled: list defaults to Yes answers only",
+    "yesNoShowAll": "Show all (including No / unanswered)",
     "unassignedStat": "Unassigned: {count} people (estimated {seats} seats remaining incl. companions)",
     "companions": "Companions",
     "tableNum": "Table {num}",

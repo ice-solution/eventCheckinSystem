@@ -7321,6 +7321,8 @@ function flattenSeatingUser(userDoc) {
     const name = (o.name || formData.name || '').toString().trim();
     const email = (o.email || formData.email || '').toString().trim();
     const company = (o.company || formData.company || '').toString().trim();
+    const thankYouYesNoRaw = (flat.thankYouYesNo != null ? flat.thankYouYesNo : (o.thankYouYesNo != null ? o.thankYouYesNo : formData.thankYouYesNo));
+    const thankYouYesNo = thankYouYesNoRaw != null ? String(thankYouYesNoRaw).trim() : '';
     const displayName = name || email || id;
     return {
         ...flat,
@@ -7329,8 +7331,18 @@ function flattenSeatingUser(userDoc) {
         email,
         company,
         displayName,
+        thankYouYesNo,
         isCheckIn: !!o.isCheckIn
     };
+}
+
+function isSeatingYesNoQuestionEnabled(formConfigDoc) {
+    if (!formConfigDoc) return false;
+    const raw = formConfigDoc && typeof formConfigDoc.toObject === 'function'
+        ? formConfigDoc.toObject()
+        : formConfigDoc;
+    const ynq = raw && raw.thankYou && raw.thankYou.yesNoQuestion;
+    return !!(ynq && ynq.enabled);
 }
 
 /** 排桌設定頁 */
@@ -7347,6 +7359,7 @@ exports.renderSeatingArrangementPage = async (req, res) => {
         }
         const fieldOptions = buildSeatingFormFieldOptions(formConfig);
         const users = (event.users || []).map(flattenSeatingUser);
+        const yesNoQuestionEnabled = isSeatingYesNoQuestionEnabled(formConfig);
 
         const seating = event.seatingArrangement
             ? (event.seatingArrangement.toObject ? event.seatingArrangement.toObject() : event.seatingArrangement)
@@ -7357,7 +7370,8 @@ exports.renderSeatingArrangementPage = async (req, res) => {
             eventName: event.name || '',
             usersJson: JSON.stringify(users),
             formFieldsJson: JSON.stringify(fieldOptions),
-            seatingJson: JSON.stringify(seating)
+            seatingJson: JSON.stringify(seating),
+            yesNoQuestionEnabled
         });
     } catch (err) {
         console.error('renderSeatingArrangementPage:', err);
@@ -7370,11 +7384,16 @@ exports.getSeatingArrangementApi = async (req, res) => {
     try {
         const event = await Event.findById(eventId).select('seatingArrangement users');
         if (!event) return res.status(404).json({ message: 'Event not found' });
+        const formConfig = await FormConfig.findOne({ eventId }).lean();
         const seating = event.seatingArrangement
             ? (event.seatingArrangement.toObject ? event.seatingArrangement.toObject() : event.seatingArrangement)
             : { categoryFieldName: 'company', companionByUserId: {}, tables: [] };
         const users = (event.users || []).map(flattenSeatingUser);
-        res.json({ seating, users });
+        res.json({
+            seating,
+            users,
+            yesNoQuestionEnabled: isSeatingYesNoQuestionEnabled(formConfig)
+        });
     } catch (err) {
         console.error('getSeatingArrangementApi:', err);
         res.status(500).json({ message: 'Server error' });

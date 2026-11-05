@@ -773,6 +773,8 @@
     "canvasHint": "畫布可捲動；每桌可獨立縮放。排座像戲院一排加減座位；擺設只作標示、不可坐人。匯出 ZIP 含乾淨枱面圖與桌名／公司 Excel。",
     "unfilledCategory": "(未填)",
     "noUnassigned": "暫無未排桌來賓",
+    "yesNoFilterHint": "已啟用 Yes/No：預設只顯示答 Yes 嘅來賓",
+    "yesNoShowAll": "顯示全部（含 No／未答）",
     "unassignedStat": "未排桌：{count} 人（左側剩餘總席次估算 {seats}，含攜眷）",
     "companions": "攜眷",
     "tableNum": "第 {num} 桌",

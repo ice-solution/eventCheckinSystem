@@ -53,9 +53,15 @@
     .guest-row.dragging { opacity: 0.5; }
     .guest-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .companion-stepper { display: inline-flex; align-items: center; border: 1px solid #ced4da; border-radius: 6px; overflow: hidden; background: #fff; }
-    .companion-stepper button { width: 28px; height: 28px; border: none; background: #f8f9fa; cursor: pointer; font-size: 16px; line-height: 1; }
+    .companion-stepper button { width: 28px; height: 28px; border: none; background: #f8f9fa; cursor: pointer; font-size: 16px; line-height: 1; flex-shrink: 0; }
     .companion-stepper button:hover { background: #e9ecef; }
-    .companion-stepper span { min-width: 28px; text-align: center; font-size: 13px; }
+    .companion-stepper input.companion-input {
+        width: 36px; min-width: 36px; height: 28px; border: none; border-left: 1px solid #ced4da; border-right: 1px solid #ced4da;
+        text-align: center; font-size: 13px; padding: 0; margin: 0; outline: none; background: #fff;
+        -moz-appearance: textfield;
+    }
+    .companion-stepper input.companion-input::-webkit-outer-spin-button,
+    .companion-stepper input.companion-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     .stat-line { font-size: 12px; color: #6c757d; margin-bottom: 10px; }
     .round-table {
         position: absolute; width: 340px; min-height: 420px;
@@ -431,6 +437,13 @@
                     <div class="toolbar-top">
                         <label class="mb-0"><%= t('seating.categoryFieldLabel') %></label>
                         <select id="categoryField" class="form-control form-control-sm"></select>
+                        <% if (typeof yesNoQuestionEnabled !== 'undefined' && yesNoQuestionEnabled) { %>
+                        <label class="mb-0 ml-2 small text-muted" id="yesNoFilterHintLabel"><%= t('seating.yesNoFilterHint') %></label>
+                        <label class="mb-0 ml-1 small">
+                            <input type="checkbox" id="yesNoShowAll" class="mr-1">
+                            <%= t('seating.yesNoShowAll') %>
+                        </label>
+                        <% } %>
                         <button type="button" class="btn btn-primary btn-sm" id="btnAddTable"><%= t('seating.addTableBtn') %></button>
                         <button type="button" class="btn btn-outline-primary btn-sm" id="btnAddSquareTable"><%= t('seating.addSquareTableBtn') %></button>
                         <button type="button" class="btn btn-outline-info btn-sm" id="btnAddRowTable"><%= t('seating.addRowTableBtn') %></button>
@@ -477,6 +490,8 @@
     const _SA = {
         unfilledCategory: '<%= t("seating.unfilledCategory") %>',
         noUnassigned: '<%= t("seating.noUnassigned") %>',
+        yesNoFilterHint: '<%= t("seating.yesNoFilterHint") %>',
+        yesNoShowAll: '<%= t("seating.yesNoShowAll") %>',
         unassignedStat: '<%= t("seating.unassignedStat") %>',
         companions: '<%= t("seating.companions") %>',
         tableNum: '<%= t("seating.tableNum") %>',
@@ -549,6 +564,8 @@
     };
     let users = <%- usersJson %>;
     let formFields = <%- formFieldsJson %>;
+    let yesNoQuestionEnabled = <%= (typeof yesNoQuestionEnabled !== 'undefined' && yesNoQuestionEnabled) ? 'true' : 'false' %>;
+    let yesNoShowAll = false;
     let state = {
         categoryFieldName: 'company',
         companionByUserId: {},
@@ -761,10 +778,20 @@
         };
     }
 
+    function isThankYouYesAnswer(user) {
+        var raw = user && user.thankYouYesNo != null ? String(user.thankYouYesNo).trim().toLowerCase() : '';
+        return ['yes', 'y', '是', 'true', '1'].indexOf(raw) !== -1;
+    }
+
     function renderGuestList() {
         const field = state.categoryFieldName || 'company';
         const inTable = assignedUserIds();
-        const unassigned = users.filter(u => !inTable[u._id]);
+        const unassigned = users.filter(function(u) {
+            if (inTable[u._id]) return false;
+            // 有 Yes/No 時預設只列 Yes；勾「顯示全部」先出 No／未答
+            if (yesNoQuestionEnabled && !yesNoShowAll && !isThankYouYesAnswer(u)) return false;
+            return true;
+        });
         const groups = {};
         unassigned.forEach(u => {
             const raw = userFieldRaw(u, field);
@@ -786,35 +813,68 @@
                     '<span class="text-muted small mr-1">' + _SA.companions + '</span>' +
                     '<div class="companion-stepper" data-user-id="' + uid + '">' +
                     '<button type="button" data-d="-1">−</button>' +
-                    '<span>' + comp + '</span>' +
+                    '<input type="number" class="companion-input" min="0" max="20" step="1" value="' + comp + '" inputmode="numeric">' +
                     '<button type="button" data-d="1">+</button>' +
                     '</div></div>';
             });
         });
         $guestMount.innerHTML = html || '<p class="text-muted small">' + _SA.noUnassigned + '</p>';
 
+        function applyCompanionValue(uid, raw) {
+            var v = parseInt(raw, 10);
+            if (!Number.isFinite(v)) v = 0;
+            v = Math.max(0, Math.min(20, v));
+            var prev = parseInt(state.companionByUserId[uid], 10) || 0;
+            if (prev === v) return v;
+            state.companionByUserId[uid] = v;
+            validateAllTables();
+            renderGuestList();
+            renderTables();
+            updateStat();
+            return v;
+        }
+
         $guestMount.querySelectorAll('.guest-row').forEach(row => {
             row.addEventListener('dragstart', function(e) {
+                if (e.target && e.target.closest && e.target.closest('.companion-stepper')) {
+                    e.preventDefault();
+                    return;
+                }
                 e.dataTransfer.setData('text/user-id', row.getAttribute('data-user-id'));
                 row.classList.add('dragging');
             });
             row.addEventListener('dragend', function() { row.classList.remove('dragging'); });
         });
         $guestMount.querySelectorAll('.companion-stepper').forEach(box => {
+            const uid = box.getAttribute('data-user-id');
+            const input = box.querySelector('input.companion-input');
             box.querySelectorAll('button').forEach(btn => {
                 btn.addEventListener('click', function(ev) {
                     ev.preventDefault(); ev.stopPropagation();
-                    const uid = box.getAttribute('data-user-id');
                     const d = parseInt(btn.getAttribute('data-d'), 10);
                     let v = parseInt(state.companionByUserId[uid], 10) || 0;
-                    v = Math.max(0, Math.min(20, v + d));
-                    state.companionByUserId[uid] = v;
-                    validateAllTables();
-                    renderGuestList();
-                    renderTables();
-                    updateStat();
+                    applyCompanionValue(uid, v + d);
                 });
             });
+            if (input) {
+                input.addEventListener('mousedown', function(ev) { ev.stopPropagation(); });
+                input.addEventListener('click', function(ev) { ev.stopPropagation(); this.select(); });
+                input.addEventListener('keydown', function(ev) {
+                    ev.stopPropagation();
+                    if (ev.key === 'Enter') {
+                        ev.preventDefault();
+                        this.blur();
+                    }
+                });
+                input.addEventListener('change', function() {
+                    var next = applyCompanionValue(uid, this.value);
+                    this.value = String(next);
+                });
+                input.addEventListener('blur', function() {
+                    var next = applyCompanionValue(uid, this.value);
+                    this.value = String(next);
+                });
+            }
         });
         updateStat();
     }
@@ -828,10 +888,21 @@
         return String(s).replace(/"/g, '&quot;');
     }
 
-    function updateStat() {
+    function visibleUnassignedUsers() {
         const inTable = assignedUserIds();
-        const unassigned = users.filter(u => !inTable[u._id]).length;
-        const totalSeats = users.reduce((sum, u) => sum + (inTable[u._id] ? 0 : seatsForUser(u._id)), 0);
+        return users.filter(function(u) {
+            if (inTable[u._id]) return false;
+            if (yesNoQuestionEnabled && !yesNoShowAll && !isThankYouYesAnswer(u)) return false;
+            return true;
+        });
+    }
+
+    function updateStat() {
+        const visible = visibleUnassignedUsers();
+        const unassigned = visible.length;
+        const totalSeats = visible.reduce(function(sum, u) {
+            return sum + seatsForUser(u._id);
+        }, 0);
         const txt = _SA.unassignedStat.replace('{count}', unassigned).replace('{seats}', totalSeats);
         const el1 = document.getElementById('statUnassignedInner');
         const el2 = document.getElementById('statUnassignedToolbar');
@@ -1950,11 +2021,24 @@
         });
     });
 
+    var $yesNoShowAll = document.getElementById('yesNoShowAll');
+    if ($yesNoShowAll) {
+        $yesNoShowAll.checked = !!yesNoShowAll;
+        $yesNoShowAll.addEventListener('change', function() {
+            yesNoShowAll = !!$yesNoShowAll.checked;
+            renderGuestList();
+            updateStat();
+        });
+    }
+
     document.getElementById('btnReloadApi').addEventListener('click', function() {
         fetch('/events/' + eventId + '/seating-arrangement/api')
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 users = data.users || users;
+                if (typeof data.yesNoQuestionEnabled === 'boolean') {
+                    yesNoQuestionEnabled = data.yesNoQuestionEnabled;
+                }
                 clearSwapPick();
                 state.categoryFieldName = data.seating.categoryFieldName || 'company';
                 var legacyPrefix = (data.seating.seatLabelPrefix != null ? String(data.seating.seatLabelPrefix) : '').trim().slice(0, 12);
