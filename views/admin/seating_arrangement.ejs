@@ -200,6 +200,20 @@
         position: absolute; left: 50%; top: 50%; transform: translate(-50%, -52%);
         font-size: 36px; font-weight: 700; color: #a67c2d;
         text-shadow: 0 1px 0 rgba(255,255,255,.9); line-height: 1;
+        pointer-events: auto; cursor: text;
+        width: 72px; max-width: 88px; height: 44px; border: none; background: transparent;
+        text-align: center; padding: 0; margin: 0; outline: none;
+        border-radius: 8px;
+    }
+    .rt-center-num:focus {
+        background: rgba(255,255,255,0.85);
+        box-shadow: 0 0 0 2px rgba(166,124,45,0.35);
+    }
+    .rt-center-num-text {
+        position: absolute; left: 50%; top: 50%; transform: translate(-50%, -52%);
+        font-size: 28px; font-weight: 700; color: #a67c2d;
+        text-shadow: 0 1px 0 rgba(255,255,255,.9); line-height: 1;
+        max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .rt-ring-svg { position: absolute; left: 0; top: 0; width: 112px; height: 112px; transform: rotate(-90deg); }
     .rt-ring-bg { fill: none; stroke: #e2e4e8; stroke-width: 8; }
@@ -1460,8 +1474,11 @@
 
             var center = document.createElement('div');
             center.className = 'rt-center';
+            // 圓／方桌中心顯示「代號」；未設代號先用桌序。可直接點擊修改（同步到 代號）。
+            var centerLabel = (t.seatLabelPrefix != null ? String(t.seatLabelPrefix) : '').trim();
+            if (!centerLabel) centerLabel = String(idx + 1);
             if (isRow) {
-                center.innerHTML = '<div class="rt-center-num" title="' + escapeAttr(tableDisplayName(t, idx)) + '">' +
+                center.innerHTML = '<div class="rt-center-num-text" title="' + escapeAttr(tableDisplayName(t, idx)) + '">' +
                     escapeHtml(tableDisplayName(t, idx)) + '</div>';
             } else {
                 center.innerHTML =
@@ -1471,7 +1488,8 @@
                     ' stroke-dasharray="' + ringC + '"' +
                     ' stroke-dashoffset="' + dashOff + '"/>' +
                     '</svg>' +
-                    '<div class="rt-center-num" title="' + escapeAttr(tableDisplayName(t, idx)) + '">' + (idx + 1) + '</div>';
+                    '<input type="text" class="rt-center-num" maxlength="12" value="' + escapeAttr(centerLabel) + '"' +
+                    ' title="' + escapeAttr(_SA.seatLabelPrefixLabel + ': ' + centerLabel) + '">';
             }
 
             var layer = document.createElement('div');
@@ -1654,25 +1672,53 @@
                     t.name = String(nameInput.value || '').trim().slice(0, 80);
                     nameInput.value = t.name;
                     var tip = tableDisplayName(t, idx);
-                    var centerNum = div.querySelector('.rt-center-num');
-                    if (centerNum) {
-                        centerNum.setAttribute('title', tip);
-                        if (isRow) centerNum.textContent = tip;
+                    var centerText = div.querySelector('.rt-center-num-text');
+                    if (centerText) {
+                        centerText.setAttribute('title', tip);
+                        centerText.textContent = tip;
                     }
                 });
                 nameInput.addEventListener('mousedown', function(e) { e.stopPropagation(); });
                 nameInput.addEventListener('click', function(e) { e.stopPropagation(); });
             }
 
+            function applySeatPrefix(raw) {
+                t.seatLabelPrefix = String(raw || '').trim().slice(0, 12);
+                renderTables();
+            }
+
             var prefixInput = div.querySelector('.tbl-seat-prefix');
             if (prefixInput) {
                 prefixInput.addEventListener('change', function() {
-                    t.seatLabelPrefix = String(prefixInput.value || '').trim().slice(0, 12);
-                    prefixInput.value = t.seatLabelPrefix;
-                    renderTables();
+                    applySeatPrefix(prefixInput.value);
                 });
                 prefixInput.addEventListener('mousedown', function(e) { e.stopPropagation(); });
                 prefixInput.addEventListener('click', function(e) { e.stopPropagation(); });
+            }
+
+            var centerInput = div.querySelector('input.rt-center-num');
+            if (centerInput) {
+                centerInput.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+                centerInput.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    this.select();
+                });
+                centerInput.addEventListener('keydown', function(e) {
+                    e.stopPropagation();
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.blur();
+                    }
+                });
+                centerInput.addEventListener('change', function() {
+                    applySeatPrefix(this.value);
+                });
+                centerInput.addEventListener('blur', function() {
+                    var next = String(this.value || '').trim().slice(0, 12);
+                    if (next !== String(t.seatLabelPrefix || '').trim()) {
+                        applySeatPrefix(next);
+                    }
+                });
             }
 
             var scaleInput = div.querySelector('.tbl-scale');
