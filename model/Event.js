@@ -156,7 +156,9 @@ const eventSchema = new mongoose.Schema({
         sendConfirmationEmail: { type: Boolean, default: false }, // 是否立即發送確認電郵
         sendReminderEmail: { type: Boolean, default: false }, // 是否立即發送提示電郵
         sendThankYouEmail: { type: Boolean, default: false }, // 是否立即發送感謝電郵
-        welcomeMessageMethod: { type: String, enum: ['email', 'sms', 'both'], default: 'email' } // 歡迎消息發送方式：email/sms/both
+        welcomeMessageMethod: { type: String, enum: ['email', 'sms', 'both'], default: 'email' }, // 歡迎消息發送方式：email/sms/both
+        /** 此活動改用 SMTP（.env SMTP_* / SENDER_EMAIL_SMTP）；預設 false = 全站 SES API */
+        useSmtp: { type: Boolean, default: false }
     },
     // 排桌：左側依 FormConfig 欄位分類、右側圓桌拖放；攜眷數 N 則佔席 (N+1)
     seatingArrangement: {

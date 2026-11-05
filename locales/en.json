@@ -652,6 +652,8 @@
     "welcomeMethodLabel": "Welcome Message Method", "methodEmail": "Email", "methodSms": "SMS", "methodBoth": "Both",
     "sendWelcomeEmailLabel": "Auto Send Welcome Email after Registered", "sendConfirmationEmailLabel": "Auto Send payment receipt email after paid",
     "sendReminderEmailLabel": "Auto Send Reminder Email (Coming soon)", "sendThankYouEmailLabel": "Auto Send Thank You Email (Coming soon)",
+    "useSmtpLabel": "Use SMTP for this event",
+    "useSmtpHint": "When checked, this event sends via .env SMTP (SENDER_EMAIL_SMTP). Other events keep the existing SES API. Uncheck when the event ends.",
     "manageSmsTemplates": "Manage SMS Templates", "closeBtn": "Close",
     "smsSentSuccess": "SMS sent successfully!",
     "fieldRequired": "This field is required", "noNameProvided": "Name not provided",

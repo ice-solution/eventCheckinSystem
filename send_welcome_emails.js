@@ -135,8 +135,8 @@ mongoose.connect(process.env.mongodb || 'mongodb://localhost:27017/checkinSystem
                     messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl);
                 }
                 
-                // 發送郵件
-                await ses.sendEmail(user.email, subject, messageBody);
+                // 發送郵件（活動 emailSettings.useSmtp 時走 SMTP）
+                await ses.sendEmail(user.email, subject, messageBody, '', ses.mailOptionsFromEvent(event));
                 console.log(`  ✅ 成功發送給 ${user.email}`);
                 successCount++;
                 

@@ -114,13 +114,31 @@ SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxx
 SENDER_EMAIL=noreply@yourdomain.com
 ```
 
-### AWS SES
+### AWS SES（API）
 ```env
-AWS_ACCESS_KEY_ID=xxxxxxxxxxxxxxxxxxxxx
-AWS_SECRET_ACCESS_KEY=xxxxxxxxxxxxxxxxxxxxx
-AWS_REGION=us-east-1
+AWS_SES_ACCESS_KEY_ID=xxxxxxxxxxxxxxxxxxxxx
+AWS_SES_SECRET_ACCESS_KEY=xxxxxxxxxxxxxxxxxxxxx
+AWS_SES_REGION=ap-southeast-1
+# 或通用名：AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_REGION
 SENDER_EMAIL=noreply@yourdomain.com
 ```
+
+### SMTP（個別活動 override；推薦）
+**預設仍然用 SES API。** 憑證放 `.env`；活動喺後台「自動電郵設定」勾 **此活動使用 SMTP 寄信**（`emailSettings.useSmtp`）先會改走 SMTP。活動完取消勾選即可。
+
+```env
+SENDER_EMAIL=info@brandactivation.hk
+SENDER_EMAIL_SMTP=nonreply@csss.hk
+SMTP_HOST=email-smtp.ap-southeast-1.amazonaws.com
+SMTP_PORT=587
+SMTP_USER=your_smtp_username
+SMTP_PASS=your_smtp_password
+# （可選後備）唔經 UI、用 id 名單：SMTP_EVENT_IDS=...
+# 強制全站 SMTP（只供測試）：EMAIL_TRANSPORT=smtp
+```
+
+- Port `587` = STARTTLS；`465` 可加 `SMTP_SECURE=true`
+- SMTP 活動用 `SENDER_EMAIL_SMTP`（冇則 fallback `SENDER_EMAIL`）
 
 ### 郵件追蹤（開信 pixel / 連結 click）
 預設全部啟用。設為 `false` 後須 **重啟 Node / pm2** 才生效。

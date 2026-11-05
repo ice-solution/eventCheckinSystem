@@ -509,7 +509,7 @@ exports.createEmailTemplate = async (req, res) => {
 }
 // to is an array of email addresses
 exports.sendEmailById = async (req, res) => {
-  const { id } = req.params
+  const { id, eventId: paramEventId } = req.params
   const { recipient } = req.body
 
   const to = recipient.split(",").map((email) => email.trim())
@@ -523,6 +523,16 @@ exports.sendEmailById = async (req, res) => {
       }
       const subject = template.subject
       const body = template.content
+      const eventIdForSend = paramEventId || (template.eventId ? String(template.eventId) : null)
+      let mailOpts = { eventId: eventIdForSend }
+      if (eventIdForSend) {
+        try {
+          const Event = require('../model/Event')
+          const ev = await Event.findById(eventIdForSend).select('emailSettings').lean()
+          mailOpts = ses.mailOptionsFromEvent(ev) || mailOpts
+          if (!mailOpts.eventId) mailOpts.eventId = eventIdForSend
+        } catch (_) { /* keep eventId */ }
+      }
 
       // send email with tracking
       console.log("send my template");
@@ -534,7 +544,7 @@ exports.sendEmailById = async (req, res) => {
               recipient: email,
               subject: subject,
               emailTemplateId: id,
-              eventId: null,
+              eventId: eventIdForSend,
               userId: null
             });
             
@@ -547,8 +557,8 @@ exports.sendEmailById = async (req, res) => {
               trackedBody = emailTracking.addTrackingToEmail(trackedBody, trackingId);
             }
             
-            // 發送郵件
-            const result = await ses.sendEmail(email, subject, trackedBody);
+            // 發送郵件（活動 emailSettings.useSmtp 時走 SMTP）
+            const result = await ses.sendEmail(email, subject, trackedBody, '', mailOpts);
             
             // 更新郵件記錄狀態
             if (trackingId && result && result.MessageId) {

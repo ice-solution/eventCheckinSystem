@@ -651,6 +651,8 @@
     "welcomeMethodLabel": "歡迎消息發送方式", "methodEmail": "電郵", "methodSms": "短信", "methodBoth": "兩者",
     "sendWelcomeEmailLabel": "自動發送歡迎電郵（報名後）", "sendConfirmationEmailLabel": "自動發送確認電郵（即將推出）",
     "sendReminderEmailLabel": "自動發送提示電郵（即將推出）", "sendThankYouEmailLabel": "自動發送感謝電郵（即將推出）",
+    "useSmtpLabel": "此活動使用 SMTP 寄信",
+    "useSmtpHint": "勾選後呢個活動改用 .env 嘅 SMTP（SENDER_EMAIL_SMTP）。其他活動繼續用舊 SES API。活動完取消勾選即可。",
     "manageSmsTemplates": "管理 SMS 模板", "closeBtn": "關閉",
     "smsSentSuccess": "SMS 發送完成！",
     "fieldRequired": "請填寫此欄位", "noNameProvided": "未提供姓名",

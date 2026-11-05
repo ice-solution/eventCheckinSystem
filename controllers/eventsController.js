@@ -157,7 +157,15 @@ async function sendEmailWithRecord({ recipient, subject, messageBody, emailTempl
     if (trackingId) {
         body = emailTracking.addTrackingToEmail(body, trackingId);
     }
-    const result = await ses.sendEmail(recipient, subject, body);
+    let mailOpts = { eventId };
+    if (eventId) {
+        try {
+            const ev = await Event.findById(eventId).select('emailSettings').lean();
+            mailOpts = ses.mailOptionsFromEvent(ev) || mailOpts;
+            if (!mailOpts.eventId) mailOpts.eventId = eventId;
+        } catch (_) { /* keep eventId only */ }
+    }
+    const result = await ses.sendEmail(recipient, subject, body, '', mailOpts);
     if (trackingId) {
         if (result && result.MessageId) {
             await emailTracking.updateEmailRecordStatus(trackingId, 'sent', result.MessageId);
@@ -1721,7 +1729,7 @@ exports.sendEmail = async (user, event) => {
         }
         
         // 發送郵件
-        const result = await ses.sendEmail(user.email, subject, messageBody);
+        const result = await ses.sendEmail(user.email, subject, messageBody, '', ses.mailOptionsFromEvent(event));
         
         // 更新郵件記錄狀態
         if (trackingId && result && result.MessageId) {
@@ -1737,7 +1745,7 @@ exports.sendEmail = async (user, event) => {
         let messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl);
         messageBody = embedKaitiFontInEmail(messageBody);
         try {
-            await ses.sendEmail(user.email, '歡迎加入我們的活動', messageBody);
+            await ses.sendEmail(user.email, '歡迎加入我們的活動', messageBody, '', ses.mailOptionsFromEvent(event));
         } catch (sendError) {
             console.error('Error sending fallback email:', sendError);
         }
@@ -1808,7 +1816,7 @@ exports.sendEmailByTemplateId = async (user, event, emailTemplateId) => {
         messageBody = emailTracking.addTrackingToEmail(messageBody, trackingId);
     }
 
-    const result = await ses.sendEmail(user.email, subject, messageBody);
+    const result = await ses.sendEmail(user.email, subject, messageBody, '', ses.mailOptionsFromEvent(event));
     if (trackingId && result && result.MessageId) {
         await emailTracking.updateEmailRecordStatus(trackingId, 'sent', result.MessageId);
     } else if (trackingId && result instanceof Error) {
@@ -2041,7 +2049,7 @@ exports.sendEmailByType = async (user, event, type = 'welcome', emailTemplateId 
         }
         
         // 發送郵件
-        const result = await ses.sendEmail(user.email, subject, messageBody);
+        const result = await ses.sendEmail(user.email, subject, messageBody, '', ses.mailOptionsFromEvent(event));
         
         // 更新郵件記錄狀態
         if (trackingId && result && result.MessageId) {
@@ -2094,7 +2102,7 @@ exports.sendPaymentConfirmationEmail = async (user, event, transaction) => {
         messageBody = embedKaitiFontInEmail(messageBody);
         
         // 發送郵件
-        await ses.sendEmail(user.email, subject, messageBody);
+        await ses.sendEmail(user.email, subject, messageBody, '', ses.mailOptionsFromEvent(event));
         console.log('Payment confirmation email sent successfully to:', user.email);
         
     } catch (error) {
@@ -2103,7 +2111,7 @@ exports.sendPaymentConfirmationEmail = async (user, event, transaction) => {
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
         let messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl);
         messageBody = embedKaitiFontInEmail(messageBody);
-        await ses.sendEmail(user.email, '歡迎加入我們的活動', messageBody);
+        await ses.sendEmail(user.email, '歡迎加入我們的活動', messageBody, '', ses.mailOptionsFromEvent(event));
     }
 }
 // 渲染用戶登入頁面
@@ -5455,7 +5463,8 @@ exports.updateEmailSettings = async (req, res) => {
                     sendConfirmationEmail: false,
                     sendReminderEmail: false,
                     sendThankYouEmail: false,
-                    welcomeMessageMethod: 'email'
+                    welcomeMessageMethod: 'email',
+                    useSmtp: false
                 };
             }
             // 更新設置
@@ -5473,6 +5482,9 @@ exports.updateEmailSettings = async (req, res) => {
             }
             if (typeof emailSettings.welcomeMessageMethod !== 'undefined') {
                 event.emailSettings.welcomeMessageMethod = emailSettings.welcomeMessageMethod;
+            }
+            if (typeof emailSettings.useSmtp !== 'undefined') {
+                event.emailSettings.useSmtp = !!emailSettings.useSmtp;
             }
         }
         await event.save();
