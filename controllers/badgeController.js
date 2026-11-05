@@ -86,6 +86,22 @@ exports.getBadgeConfig = async (req, res) => {
     }
 };
 
+/** 允許的 badge 尺寸預設（mm） */
+const BADGE_SIZE_PRESETS = [
+    { width: 100, height: 62 },
+    { width: 100, height: 140 },
+];
+
+function normalizeBadgeSizeMm(width, height) {
+    const w = Number(width);
+    const h = Number(height);
+    const match = BADGE_SIZE_PRESETS.find((p) => p.width === w && p.height === h);
+    if (match) return match;
+    // 舊資料／非預設：若高度較接近 140 則用 100×140，否則 100×62
+    if (Number.isFinite(h) && h >= 100) return BADGE_SIZE_PRESETS[1];
+    return BADGE_SIZE_PRESETS[0];
+}
+
 // 保存 badge 配置
 exports.saveBadgeConfig = async (req, res) => {
     const { eventId } = req.params;
@@ -99,9 +115,13 @@ exports.saveBadgeConfig = async (req, res) => {
         }
         
         badgeConfig.name = name || badgeConfig.name;
-        badgeConfig.width = width || badgeConfig.width;
-        badgeConfig.height = height || badgeConfig.height;
-        badgeConfig.dpi = dpi || badgeConfig.dpi;
+        const size = normalizeBadgeSizeMm(
+            width != null ? width : badgeConfig.width,
+            height != null ? height : badgeConfig.height
+        );
+        badgeConfig.width = size.width;
+        badgeConfig.height = size.height;
+        if (dpi != null && Number(dpi) > 0) badgeConfig.dpi = Number(dpi);
         badgeConfig.elements = elements || [];
         
         await badgeConfig.save();

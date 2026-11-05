@@ -49,7 +49,8 @@ const badgeConfigSchema = new mongoose.Schema({
         required: true,
         default: 'Default Badge'
     },
-    // 標籤尺寸（毫米）- 橫向：100mm x 62mm
+    // 標籤尺寸（毫米）
+    // 預設：100×62；另支援 100×140（於 Badge Design 選擇）
     width: { type: Number, default: 100 }, // 寬度（mm）
     height: { type: Number, default: 62 }, // 高度（mm）
     // DPI 設置（用於計算像素）
