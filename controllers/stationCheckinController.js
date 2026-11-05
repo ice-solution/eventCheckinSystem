@@ -104,6 +104,43 @@ exports.renderStationCheckinPage = async (req, res) => {
     }
 };
 
+/** 組裝分站簽到列（匯出／列表共用） */
+function buildStationCheckInRows(event, stationId) {
+    return (event.stationCheckIns || [])
+        .filter((r) => String(r.stationId) === String(stationId))
+        .slice()
+        .sort((a, b) => new Date(b.checkedInAt) - new Date(a.checkedInAt))
+        .map((r) => {
+            const user = findUser(event, r.userId);
+            return {
+                userId: r.userId,
+                name: (user && user.name) || r.userName || '',
+                email: (user && user.email) || r.userEmail || '',
+                phone: (user && user.phone) || '',
+                checkedInAt: r.checkedInAt || null,
+                checkedInBy: r.checkedInBy || '',
+            };
+        });
+}
+
+function formatHkDateTime(value) {
+    if (!value) return '';
+    try {
+        return new Date(value).toLocaleString('zh-HK', {
+            timeZone: 'Asia/Hong_Kong',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false,
+        });
+    } catch (_) {
+        return String(value);
+    }
+}
+
 /** 後台：單一站點簽到頁（手動 + 掃 QR + Section List） */
 exports.renderStationDetailPage = async (req, res) => {
     const { eventId, stationId } = req.params;
@@ -181,6 +218,46 @@ exports.renderStationDetailPage = async (req, res) => {
     } catch (err) {
         console.error('renderStationDetailPage:', err);
         res.status(500).send('Server error');
+    }
+};
+
+/** 匯出此分站簽到記錄（xlsx）— 由 main 補入；保留 Phoebe 原 detail UI */
+exports.exportStationCheckIns = async (req, res) => {
+    const { eventId, stationId } = req.params;
+    try {
+        const XLSX = require('xlsx');
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+        const station = findStation(event, stationId);
+        if (!station) return res.status(404).json({ message: 'Station not found' });
+
+        const rows = buildStationCheckInRows(event, stationId);
+        const aoa = [
+            ['name', 'email', 'phone', 'checkedInAt', 'checkedInBy'],
+            ...rows.map((r) => [
+                r.name,
+                r.email,
+                r.phone,
+                formatHkDateTime(r.checkedInAt),
+                r.checkedInBy,
+            ]),
+        ];
+
+        const worksheet = XLSX.utils.aoa_to_sheet(aoa);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'CheckIns');
+        const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+
+        const safeName = String(station.name || 'station').replace(/[\\/:*?"<>|]+/g, '_').slice(0, 40);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader(
+            'Content-Disposition',
+            `attachment; filename=station_checkins_${safeName}.xlsx`
+        );
+        return res.send(Buffer.from(buffer));
+    } catch (err) {
+        console.error('exportStationCheckIns:', err);
+        return res.status(500).json({ message: err.message || 'Server error' });
     }
 };
 

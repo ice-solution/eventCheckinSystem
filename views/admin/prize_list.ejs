@@ -88,7 +88,7 @@
     </div>
 </div>
 
-<%- include ("./components/footer") %>
+<%- include ("components/footer_minimal") %>
 <script src="/admin/assets/js/lib/data-table/datatables.min.js"></script>
 <script src="/admin/assets/js/lib/data-table/dataTables.bootstrap.min.js"></script>
 <script src="/admin/assets/js/lib/data-table/dataTables.buttons.min.js"></script>
@@ -100,73 +100,118 @@
 <script src="/admin/assets/js/lib/data-table/buttons.colVis.min.js"></script>
 <script src="/admin/assets/js/init/datatables-init.js"></script>
 <script>
-    $(document).ready(function () {
-        $('#bootstrap-data-table').DataTable();
-        $('.prize-date').each(function() {
-            const dateStr = $(this).text().trim();
-            if (dateStr) {
-                try {
-                    $(this).text(new Date(dateStr).toLocaleString('en-US', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }));
-                } catch (e) {}
-            }
-        });
-    });
+(function () {
+    var MSG = {
+        confirmDelete: <%- JSON.stringify(t('prize_list.confirmDelete')) %>,
+        deleteFailed: <%- JSON.stringify(t('prize_list.deleteFailed')) %>,
+        selectFile: <%- JSON.stringify(t('prize_list.selectFile')) %>,
+        uploadSuccess: <%- JSON.stringify(t('prize_list.uploadSuccess')) %>,
+        uploadFailed: <%- JSON.stringify(t('prize_list.uploadFailed')) %>,
+        noPrizes: <%- JSON.stringify(t('prize_list.noPrizes')) %>,
+        deleteAllWarn: <%- JSON.stringify(t('prize_list.deleteAllWarn')) %>,
+        deleteAllConfirm: <%- JSON.stringify(t('prize_list.deleteAllConfirm')) %>,
+        deleteAllFinal: <%- JSON.stringify(t('prize_list.deleteAllFinal')) %>,
+        deleteAllPrompt: <%- JSON.stringify(t('prize_list.deleteAllPrompt')) %>,
+        deleteAllCancelled: <%- JSON.stringify(t('prize_list.deleteAllCancelled')) %>,
+        deleteAllSuccess: <%- JSON.stringify(t('prize_list.deleteAllSuccess')) %>,
+        deleteAllFailed: <%- JSON.stringify(t('prize_list.deleteAllFailed')) %>
+    };
+    var eventId = <%- JSON.stringify(String(eventId)) %>;
+    var totalPrizes = <%= prizes.length %>;
 
-    function deletePrize(prizeId) {
-        if (confirm(t('prize_list.confirmDelete'))) {
-            fetch(`/prizes/<%= eventId %>/prizes/${prizeId}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' } })
-            .then(r => r.json())
-            .then(data => { if (data.message) { alert(data.message); location.reload(); } })
-            .catch(() => alert(t('prize_list.deleteFailed')));
-        }
+    function withCount(template, count) {
+        return String(template || '').replace('{count}', String(count));
     }
 
-    function submitBatchUpload() {
-        const file = document.getElementById('excelFile').files[0];
-        if (!file) { alert(t('prize_list.selectFile')); return; }
-        const formData = new FormData();
+    document.addEventListener('DOMContentLoaded', function () {
+        if (window.jQuery && jQuery.fn.DataTable) {
+            jQuery('#bootstrap-data-table').DataTable();
+            jQuery('.prize-date').each(function () {
+                var dateStr = jQuery(this).text().trim();
+                if (!dateStr) return;
+                try {
+                    jQuery(this).text(new Date(dateStr).toLocaleString('en-US', {
+                        timeZone: 'Asia/Taipei',
+                        year: 'numeric', month: '2-digit', day: '2-digit',
+                        hour: '2-digit', minute: '2-digit', second: '2-digit',
+                        hour12: false
+                    }));
+                } catch (e) {}
+            });
+        }
+    });
+
+    window.deletePrize = function (prizeId) {
+        if (!confirm(MSG.confirmDelete)) return;
+        fetch('/prizes/' + encodeURIComponent(eventId) + '/prizes/' + encodeURIComponent(prizeId), {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.message) { alert(data.message); location.reload(); }
+        })
+        .catch(function () { alert(MSG.deleteFailed); });
+    };
+
+    window.submitBatchUpload = function () {
+        var fileInput = document.getElementById('excelFile');
+        var file = fileInput && fileInput.files && fileInput.files[0];
+        if (!file) { alert(MSG.selectFile); return; }
+        var formData = new FormData();
         formData.append('file', file);
-        const progressDiv = document.getElementById('uploadProgress');
-        const messageDiv = document.getElementById('uploadMessage');
+        var progressDiv = document.getElementById('uploadProgress');
+        var messageDiv = document.getElementById('uploadMessage');
         progressDiv.style.display = 'block';
         messageDiv.style.display = 'none';
-        fetch(`/prizes/<%= eventId %>/prizes/batch-upload`, { method: 'POST', body: formData })
-        .then(r => r.json())
-        .then(data => {
+        fetch('/prizes/' + encodeURIComponent(eventId) + '/prizes/batch-upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
             progressDiv.style.display = 'none';
             messageDiv.style.display = 'block';
             if (data.success) {
                 messageDiv.className = 'alert alert-success';
-                messageDiv.textContent = t('prize_list.uploadSuccess').replace('{count}', data.importedCount);
-                setTimeout(() => location.reload(), 1500);
+                messageDiv.textContent = withCount(MSG.uploadSuccess, data.importedCount);
+                setTimeout(function () { location.reload(); }, 1500);
             } else {
                 messageDiv.className = 'alert alert-danger';
-                messageDiv.textContent = data.message || t('prize_list.uploadFailed');
+                messageDiv.textContent = data.message || MSG.uploadFailed;
             }
         })
-        .catch(err => {
+        .catch(function (err) {
             progressDiv.style.display = 'none';
             messageDiv.style.display = 'block';
             messageDiv.className = 'alert alert-danger';
-            messageDiv.textContent = t('prize_list.uploadFailed') + ': ' + err.message;
+            messageDiv.textContent = MSG.uploadFailed + ': ' + (err && err.message ? err.message : '');
         });
-    }
+    };
 
-    function deleteAllPrizes() {
-        const totalPrizes = <%= prizes.length %>;
-        if (totalPrizes === 0) { alert(t('prize_list.noPrizes')); return; }
-        const r = (key) => t(key).replace('{count}', totalPrizes);
-        if (!confirm(r('prize_list.deleteAllWarn'))) return;
-        if (!confirm(r('prize_list.deleteAllConfirm'))) return;
-        if (!confirm(r('prize_list.deleteAllFinal'))) return;
-        const userInput = prompt(r('prize_list.deleteAllPrompt'));
-        if (userInput !== 'confirm delete') { alert(t('prize_list.deleteAllCancelled')); return; }
-        fetch(`/prizes/<%= eventId %>/prizes`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' } })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) { alert(t('prize_list.deleteAllSuccess').replace('{count}', data.deletedCount)); location.reload(); }
-            else alert(t('prize_list.deleteAllFailed') + (data.message || ''));
+    window.deleteAllPrizes = function () {
+        if (totalPrizes === 0) { alert(MSG.noPrizes); return; }
+        if (!confirm(withCount(MSG.deleteAllWarn, totalPrizes))) return;
+        if (!confirm(withCount(MSG.deleteAllConfirm, totalPrizes))) return;
+        if (!confirm(withCount(MSG.deleteAllFinal, totalPrizes))) return;
+        var userInput = prompt(withCount(MSG.deleteAllPrompt, totalPrizes));
+        if (userInput !== 'confirm delete') { alert(MSG.deleteAllCancelled); return; }
+        fetch('/prizes/' + encodeURIComponent(eventId) + '/prizes', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
         })
-        .catch(err => alert(t('prize_list.deleteAllFailed') + err.message));
-    }
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.success) {
+                alert(withCount(MSG.deleteAllSuccess, data.deletedCount));
+                location.reload();
+            } else {
+                alert(MSG.deleteAllFailed + (data.message || ''));
+            }
+        })
+        .catch(function (err) {
+            alert(MSG.deleteAllFailed + (err && err.message ? err.message : ''));
+        });
+    };
+})();
 </script>

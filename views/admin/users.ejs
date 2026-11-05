@@ -1157,6 +1157,13 @@
                                                 <label class="form-check-label" for="sendThankYouEmail"><%= t('users.sendThankYouEmailLabel') %></label>
                                             </div>
                                         </div>
+                                        <div class="form-group">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="useSmtp">
+                                                <label class="form-check-label" for="useSmtp"><%= t('users.useSmtpLabel') %></label>
+                                            </div>
+                                            <small class="form-text text-muted"><%= t('users.useSmtpHint') %></small>
+                                        </div>
                                         <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0; display: flex; justify-content: flex-end;">
                                             <button type="button" class="btn btn-warning" id="saveEmailSettingsBtn"><i class="fa fa-envelope"></i> <%= t('users.saveEmailSettings') %></button>
                                         </div>
@@ -3128,7 +3135,7 @@ const _US = {
         // Get eventId
         const eventId = '<%= event._id %>';
         // Initialize email settings
-        const emailSettings = <%- JSON.stringify(event.emailSettings || { sendWelcomeEmail: false, sendConfirmationEmail: false, sendReminderEmail: false, sendThankYouEmail: false, welcomeMessageMethod: 'email' }) %>;
+        const emailSettings = <%- JSON.stringify(event.emailSettings || { sendWelcomeEmail: false, sendConfirmationEmail: false, sendReminderEmail: false, sendThankYouEmail: false, welcomeMessageMethod: 'email', useSmtp: false }) %>;
 
         // Email Settings functionality (Modal)
         $('#emailSettingsBtn').on('click', function() {
@@ -3138,6 +3145,7 @@ const _US = {
             $('#sendConfirmationEmail').prop('checked', emailSettings.sendConfirmationEmail);
             $('#sendReminderEmail').prop('checked', emailSettings.sendReminderEmail);
             $('#sendThankYouEmail').prop('checked', emailSettings.sendThankYouEmail);
+            $('#useSmtp').prop('checked', !!emailSettings.useSmtp);
             // Open modal with backdrop
             $('#emailSettingsModalBackdrop').css('display', 'block');
             $('#emailSettingsModal').css({ 'display': 'flex', 'flex-direction': 'column', 'height': 'auto' });
@@ -3158,7 +3166,8 @@ const _US = {
                 sendConfirmationEmail: $('#sendConfirmationEmail').is(':checked'),
                 sendReminderEmail: $('#sendReminderEmail').is(':checked'),
                 sendThankYouEmail: $('#sendThankYouEmail').is(':checked'),
-                welcomeMessageMethod: $('#welcomeMessageMethod').val()
+                welcomeMessageMethod: $('#welcomeMessageMethod').val(),
+                useSmtp: $('#useSmtp').is(':checked')
             };
             $.ajax({
                 url: `/events/${eventId}/emailSettings`,

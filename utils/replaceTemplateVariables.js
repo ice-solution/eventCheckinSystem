@@ -216,9 +216,24 @@ async function buildEmailTemplateAdditionalVars({
     return vars;
 }
 
+/**
+ * TinyMCE／Word 貼上時常喺 {{...}} 入面插入 <span style=...>，
+ * 令 {{user.englishgivenname}} 變成 {{<span...>user.englishgivenname</span>}} 而 replace 失敗。
+ * 替換前先清走 placeholder 內嘅 HTML tag。
+ */
+function normalizeTemplatePlaceholders(content) {
+    return String(content).replace(/\{\{([\s\S]*?)\}\}/g, (_, inner) => {
+        const cleaned = String(inner)
+            .replace(/<[^>]*>/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+        return `{{${cleaned}}}`;
+    });
+}
+
 function replaceTemplateVariables(content, user, event, additionalVars = {}) {
     if (!content) return '';
-    let result = String(content);
+    let result = normalizeTemplatePlaceholders(content);
 
     const userObj = user && (user.toObject ? user.toObject() : user);
     const eventObj = event && (event.toObject ? event.toObject() : event);
@@ -259,6 +274,7 @@ function replaceTemplateVariables(content, user, event, additionalVars = {}) {
 
 module.exports = {
     replaceTemplateVariables,
+    normalizeTemplatePlaceholders,
     buildEmailTemplateAdditionalVars,
     buildUserOptionLabelVars,
     resolveEventUser,

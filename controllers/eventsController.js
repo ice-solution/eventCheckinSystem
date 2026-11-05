@@ -148,7 +148,7 @@ function eventEmailSenderName(event) {
 }
 
 /** 發送郵件並寫入 EmailRecord（invoice / payment_receipt 等） */
-async function sendEmailWithRecord({ recipient, subject, messageBody, emailTemplate, eventId, userId, senderName }) {
+async function sendEmailWithRecord({ recipient, subject, messageBody, emailTemplate, eventId, userId, senderName, event }) {
     let body = embedKaitiFontInEmail(messageBody);
     const trackingId = await emailTracking.createEmailRecord({
         recipient,
@@ -160,7 +160,8 @@ async function sendEmailWithRecord({ recipient, subject, messageBody, emailTempl
     if (trackingId) {
         body = emailTracking.addTrackingToEmail(body, trackingId);
     }
-    const result = await ses.sendEmail(recipient, subject, body, senderName);
+    const mailOpts = event ? (ses.mailOptionsFromEvent(event) || {}) : (eventId ? { eventId } : {});
+    const result = await ses.sendEmail(recipient, subject, body, senderName, mailOpts);
     if (trackingId) {
         if (result && result.MessageId) {
             await emailTracking.updateEmailRecordStatus(trackingId, 'sent', result.MessageId);
@@ -216,6 +217,7 @@ async function sendInvoiceEmail(transaction, event, emailTemplateId = null) {
             eventId: eventDoc._id,
             userId,
             senderName: eventEmailSenderName(eventDoc),
+            event: eventDoc,
         });
         console.log('[Invoice Email] Sent to:', email);
     } catch (err) {
@@ -264,6 +266,7 @@ async function sendPaymentReceiptEmail(transaction, event, user, emailTemplateId
             eventId: eventDoc._id,
             userId,
             senderName: eventEmailSenderName(eventDoc),
+            event: eventDoc,
         });
         console.log('[Payment Receipt Email] Sent to:', email);
     } catch (err) {
@@ -1715,7 +1718,7 @@ exports.sendEmail = async (user, event) => {
         }
         
         // 發送郵件
-        const result = await ses.sendEmail(user.email, subject, messageBody, eventEmailSenderName(event));
+        const result = await ses.sendEmail(user.email, subject, messageBody, eventEmailSenderName(event), ses.mailOptionsFromEvent(event));
         
         // 更新郵件記錄狀態
         if (trackingId && result && result.MessageId) {
@@ -1731,7 +1734,7 @@ exports.sendEmail = async (user, event) => {
         let messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl);
         messageBody = embedKaitiFontInEmail(messageBody);
         try {
-            await ses.sendEmail(user.email, '歡迎加入我們的活動', messageBody, eventEmailSenderName(event));
+            await ses.sendEmail(user.email, '歡迎加入我們的活動', messageBody, eventEmailSenderName(event), ses.mailOptionsFromEvent(event));
         } catch (sendError) {
             console.error('Error sending fallback email:', sendError);
         }
@@ -1802,7 +1805,7 @@ exports.sendEmailByTemplateId = async (user, event, emailTemplateId) => {
         messageBody = emailTracking.addTrackingToEmail(messageBody, trackingId);
     }
 
-    const result = await ses.sendEmail(user.email, subject, messageBody, eventEmailSenderName(event));
+    const result = await ses.sendEmail(user.email, subject, messageBody, eventEmailSenderName(event), ses.mailOptionsFromEvent(event));
     if (trackingId && result && result.MessageId) {
         await emailTracking.updateEmailRecordStatus(trackingId, 'sent', result.MessageId);
     } else if (trackingId && result instanceof Error) {
@@ -2035,7 +2038,7 @@ exports.sendEmailByType = async (user, event, type = 'welcome', emailTemplateId 
         }
         
         // 發送郵件
-        const result = await ses.sendEmail(user.email, subject, messageBody, eventEmailSenderName(event));
+        const result = await ses.sendEmail(user.email, subject, messageBody, eventEmailSenderName(event), ses.mailOptionsFromEvent(event));
         
         // 更新郵件記錄狀態
         if (trackingId && result && result.MessageId) {
@@ -2088,7 +2091,7 @@ exports.sendPaymentConfirmationEmail = async (user, event, transaction) => {
         messageBody = embedKaitiFontInEmail(messageBody);
         
         // 發送郵件
-        await ses.sendEmail(user.email, subject, messageBody, eventEmailSenderName(event));
+        await ses.sendEmail(user.email, subject, messageBody, eventEmailSenderName(event), ses.mailOptionsFromEvent(event));
         console.log('Payment confirmation email sent successfully to:', user.email);
         
     } catch (error) {
@@ -2097,7 +2100,7 @@ exports.sendPaymentConfirmationEmail = async (user, event, transaction) => {
         const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${user._id}&size=250x250`;
         let messageBody = getWelcomeEmailTemplate(user, event, qrCodeUrl);
         messageBody = embedKaitiFontInEmail(messageBody);
-        await ses.sendEmail(user.email, '歡迎加入我們的活動', messageBody, eventEmailSenderName(event));
+        await ses.sendEmail(user.email, '歡迎加入我們的活動', messageBody, eventEmailSenderName(event), ses.mailOptionsFromEvent(event));
     }
 }
 // 渲染用戶登入頁面
@@ -2329,12 +2332,105 @@ exports.renderEventsList = async (req, res) => {
             const allowed = (user.allowedEvents || []).filter(Boolean);
             events = allowed.length ? await Event.find({ _id: { $in: allowed } }) : [];
         }
-        res.render('admin/events_list', { events });
+        res.render('admin/events_list', {
+            events,
+            isAdmin: user.role === 'admin'
+        });
     } catch (error) {
         console.error('Error fetching events:', error);
         res.status(500).json({ message: 'Error fetching events' });
     }
 };
+
+async function deleteEventsAndRelated(eventIds) {
+    const ids = [...new Set((eventIds || [])
+        .map((id) => (id != null ? String(id).trim() : ''))
+        .filter((id) => mongoose.Types.ObjectId.isValid(id))
+        .map((id) => new mongoose.Types.ObjectId(id)))];
+
+    if (!ids.length) {
+        return { deletedCount: 0, eventIds: [] };
+    }
+
+    const FormConfig = require('../model/FormConfig');
+    const Prize = require('../model/Prize');
+    const BadgeConfig = require('../model/BadgeConfig');
+    const LuckydrawGameConfig = require('../model/LuckydrawGameConfig');
+    const Vote = require('../model/Vote');
+
+    await Promise.all([
+        FormConfig.deleteMany({ eventId: { $in: ids } }),
+        EmailTemplate.deleteMany({ eventId: { $in: ids } }),
+        SmsTemplate.deleteMany({ eventId: { $in: ids } }),
+        EmailRecord.deleteMany({ eventId: { $in: ids } }),
+        Prize.deleteMany({ eventId: { $in: ids } }),
+        Transaction.deleteMany({ eventId: { $in: ids } }),
+        Vote.deleteMany({ eventId: { $in: ids } }),
+        BadgeConfig.deleteMany({ eventId: { $in: ids } }),
+        LuckydrawGameConfig.deleteMany({ eventId: { $in: ids } }),
+        Auth.updateMany(
+            {},
+            {
+                $pull: {
+                    allowedEvents: { $in: ids },
+                    eventPermissions: { eventId: { $in: ids } }
+                }
+            }
+        )
+    ]);
+
+    const result = await Event.deleteMany({ _id: { $in: ids } });
+    return {
+        deletedCount: result.deletedCount || 0,
+        eventIds: ids.map((id) => String(id))
+    };
+}
+
+/** DELETE /events/:eventId — 刪除單一活動（僅 admin） */
+exports.deleteEvent = async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        if (!eventId || !mongoose.Types.ObjectId.isValid(eventId)) {
+            return res.status(400).json({ success: false, message: 'Invalid event id' });
+        }
+        const event = await Event.findById(eventId).select('_id name').lean();
+        if (!event) {
+            return res.status(404).json({ success: false, message: 'Event not found' });
+        }
+        const { deletedCount } = await deleteEventsAndRelated([eventId]);
+        return res.json({
+            success: true,
+            deletedCount,
+            eventName: event.name || ''
+        });
+    } catch (error) {
+        console.error('Error deleting event:', error);
+        return res.status(500).json({ success: false, message: 'Error deleting event' });
+    }
+};
+
+/** POST /events/batch-delete — 批量刪除活動（僅 admin） body: { eventIds: [] } */
+exports.batchDeleteEvents = async (req, res) => {
+    try {
+        const rawIds = (req.body && req.body.eventIds) || [];
+        if (!Array.isArray(rawIds) || rawIds.length === 0) {
+            return res.status(400).json({ success: false, message: 'eventIds are required' });
+        }
+        if (rawIds.length > 100) {
+            return res.status(400).json({ success: false, message: 'Too many events (max 100)' });
+        }
+        const { deletedCount, eventIds } = await deleteEventsAndRelated(rawIds);
+        return res.json({
+            success: true,
+            deletedCount,
+            eventIds
+        });
+    } catch (error) {
+        console.error('Error batch deleting events:', error);
+        return res.status(500).json({ success: false, message: 'Error batch deleting events' });
+    }
+};
+
 exports.getUserById = async (req, res) => {
     const { eventId, userId } = req.params; // 從請求參數中獲取事件 ID 和用戶的 _id
 
@@ -5491,7 +5587,8 @@ exports.updateEmailSettings = async (req, res) => {
                     sendConfirmationEmail: false,
                     sendReminderEmail: false,
                     sendThankYouEmail: false,
-                    welcomeMessageMethod: 'email'
+                    welcomeMessageMethod: 'email',
+                    useSmtp: false
                 };
             }
             // 更新設置
@@ -5509,6 +5606,9 @@ exports.updateEmailSettings = async (req, res) => {
             }
             if (typeof emailSettings.welcomeMessageMethod !== 'undefined') {
                 event.emailSettings.welcomeMessageMethod = emailSettings.welcomeMessageMethod;
+            }
+            if (typeof emailSettings.useSmtp !== 'undefined') {
+                event.emailSettings.useSmtp = !!emailSettings.useSmtp;
             }
         }
         await event.save();
@@ -5941,10 +6041,22 @@ exports.wonderWebhook = async (req, res) => {
     console.log('[Wonder Webhook] =======================================\n');
 
     // Wonder 回調格式：body 為 Invoice，reference_number 為我方訂單編號，state / correspondence_state 表示狀態
+    // 注意：refund 後 Wonder 仍可能保持 state=completed，但 correspondence_state=refunded
     const referenceNumber = body.reference_number || query.reference_number;
     const state = (body.state || '').toString().toLowerCase();
     const correspondenceState = (body.correspondence_state || '').toString().toLowerCase();
-    const isPaid = state === 'completed' || correspondenceState === 'paid';
+    const nestedTx = Array.isArray(body.transactions) ? body.transactions : [];
+    const hasSuccessfulRefund = nestedTx.some((t) => {
+        if (!t || typeof t !== 'object') return false;
+        const type = String(t.type || '').toLowerCase();
+        return type === 'refund' && t.success === true;
+    });
+    const isRefunded = correspondenceState === 'refunded'
+        || state === 'refunded'
+        || hasSuccessfulRefund;
+    const isFailed = state === 'cancelled' || state === 'voided' || state === 'failed';
+    // refund 優先：唔好因為 state=completed 再當 paid（否則會重複 create user）
+    const isPaid = !isRefunded && (state === 'completed' || correspondenceState === 'paid');
 
     try {
         let transaction = null;
@@ -5961,28 +6073,42 @@ exports.wonderWebhook = async (req, res) => {
             return res.status(200).json({ received: true, warning: 'Transaction not found' });
         }
 
+        let nextStatus = transaction.status;
+        if (isRefunded) nextStatus = 'refunded';
+        else if (isPaid) nextStatus = 'paid';
+        else if (isFailed) nextStatus = 'failed';
+
         // 一律寫回 webhook 完整 body 到 transactionData，並依 state 更新 status
         const updatedTransaction = await Transaction.findOneAndUpdate(
             { _id: transaction._id },
             {
                 transactionData: body,
-                status: isPaid ? 'paid' : (state === 'cancelled' || state === 'voided' || state === 'failed' ? 'failed' : transaction.status),
+                status: nextStatus,
                 updatedAt: new Date()
             },
             { new: true }
         );
 
-        if (isPaid) {
-            const { eventDoc, addedUser, transaction: paidTx } = await markTransactionPaidAndAddUser(transaction) || {};
-            const txForEmail = paidTx || updatedTransaction;
-            const evt = eventDoc || await Event.findById(transaction.eventId);
-            if (evt) {
-                try {
-                    await sendPaymentReceiptEmail(txForEmail, evt, addedUser || null);
-                } catch (e) { console.error('[Wonder Webhook] Payment receipt email error:', e); }
+        if (isRefunded) {
+            console.log('[Wonder Webhook] Result: transaction marked refunded (no user create). state=', state,
+                'correspondence_state=', correspondenceState, 'Transaction _id:', transaction._id);
+        } else if (isPaid) {
+            // 已 paid 且已有 userId → 只更新資料，唔再 push RSVP（防重入／重複 webhook）
+            const alreadyFulfilled = transaction.status === 'paid' && transaction.userId;
+            if (alreadyFulfilled) {
+                console.log('[Wonder Webhook] Result: already paid with userId, skip create user. Transaction _id:', transaction._id);
+            } else {
+                const { eventDoc, addedUser, transaction: paidTx } = await markTransactionPaidAndAddUser(updatedTransaction || transaction) || {};
+                const txForEmail = paidTx || updatedTransaction;
+                const evt = eventDoc || await Event.findById(transaction.eventId);
+                if (evt) {
+                    try {
+                        await sendPaymentReceiptEmail(txForEmail, evt, addedUser || null);
+                    } catch (e) { console.error('[Wonder Webhook] Payment receipt email error:', e); }
+                }
+                console.log('[Wonder Webhook] Result: transaction marked paid, user added to event. Transaction _id:', transaction._id);
             }
-            console.log('[Wonder Webhook] Result: transaction marked paid, user added to event. Transaction _id:', transaction._id);
-        } else if (state === 'cancelled' || state === 'voided' || state === 'failed') {
+        } else if (isFailed) {
             console.log('[Wonder Webhook] Result: transaction marked failed. state=', state, 'Transaction _id:', transaction._id);
         } else {
             console.log('[Wonder Webhook] Result: transactionData saved. state=', state, 'correspondence_state=', correspondenceState);
@@ -5999,13 +6125,31 @@ exports.wonderWebhook = async (req, res) => {
  *  @returns {{ eventDoc, addedUser, transaction }|undefined}
  */
 async function markTransactionPaidAndAddUser(transaction) {
+    const eventDoc = await Event.findById(transaction.eventId);
+    if (!eventDoc) return;
+
+    // 防重入：已有 userId 且 RSVP 仍在 → 唔再 push（避免 refund/重複 webhook 造出 duplicate）
+    if (transaction.userId) {
+        const existing = findEventUserById(eventDoc, transaction.userId);
+        if (existing) {
+            const paidTx = await Transaction.findOneAndUpdate(
+                { _id: transaction._id },
+                { status: 'paid', updatedAt: new Date() },
+                { new: true }
+            ) || transaction;
+            const addedUserObj = existing.toObject
+                ? existing.toObject({ minimize: false })
+                : existing;
+            console.log('[markTransactionPaidAndAddUser] skip duplicate create; reuse userId=', String(transaction.userId));
+            return { eventDoc, addedUser: addedUserObj, transaction: paidTx };
+        }
+    }
+
     await Transaction.findOneAndUpdate(
         { _id: transaction._id },
         { status: 'paid', updatedAt: new Date() },
         { new: true }
     );
-    const eventDoc = await Event.findById(transaction.eventId);
-    if (!eventDoc) return;
     const now = new Date();
     const excludedFields = ['_id', '__v', 'create_at', 'modified_at'];
     let newUser;

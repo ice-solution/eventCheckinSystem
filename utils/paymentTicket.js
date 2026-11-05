@@ -42,6 +42,37 @@ function isFreePaymentTicketPrice(price) {
     return !Number.isNaN(n) && n <= 0;
 }
 
+/**
+ * 將後台 datetime-local（無時區）視為香港時間 Asia/Hong_Kong（UTC+8，無夏令時）再存 Date。
+ * 避免 production Node TZ=UTC 時把 "2026-11-01T12:00" 解成 UTC 正午（實際 = HK 20:00）。
+ */
+function parseTicketDatetime(value) {
+    if (value === undefined || value === null || value === '') return undefined;
+    if (value instanceof Date) {
+        return Number.isNaN(value.getTime()) ? undefined : value;
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        const d = new Date(value);
+        return Number.isNaN(d.getTime()) ? undefined : d;
+    }
+    const s = String(value).trim();
+    if (!s) return undefined;
+    if (/Z$/i.test(s) || /[+-]\d{2}:?\d{2}$/.test(s)) {
+        const d = new Date(s);
+        return Number.isNaN(d.getTime()) ? undefined : d;
+    }
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+    if (m) {
+        const hh = m[4] != null ? m[4] : '00';
+        const mm = m[5] != null ? m[5] : '00';
+        const ss = m[6] != null ? m[6] : '00';
+        const d = new Date(`${m[1]}-${m[2]}-${m[3]}T${hh}:${mm}:${ss}+08:00`);
+        return Number.isNaN(d.getTime()) ? undefined : d;
+    }
+    const d = new Date(s);
+    return Number.isNaN(d.getTime()) ? undefined : d;
+}
+
 function isPaymentTicketInRange(ticket, now = new Date()) {
     if (!ticket) return false;
     const from = ticket.datetimeFrom ? new Date(ticket.datetimeFrom) : null;
@@ -67,9 +98,9 @@ function getTicketDisplayLabel(ticket, lang = 'zh', currencySymbol = '$') {
 
 function normalizePaymentTicketForSave(ticket) {
     const t = { ...ticket };
-    if (t.datetimeFrom) t.datetimeFrom = new Date(t.datetimeFrom);
-    if (t.datetimeTo) t.datetimeTo = new Date(t.datetimeTo);
-    if (t.datetime) t.datetime = new Date(t.datetime);
+    if (t.datetimeFrom) t.datetimeFrom = parseTicketDatetime(t.datetimeFrom);
+    if (t.datetimeTo) t.datetimeTo = parseTicketDatetime(t.datetimeTo);
+    if (t.datetime) t.datetime = parseTicketDatetime(t.datetime);
     if (!t.datetimeTo && t.datetime) t.datetimeTo = t.datetime;
     if (t.datetimeFrom && t.datetimeTo && t.datetimeFrom > t.datetimeTo) {
         const swap = t.datetimeFrom;
@@ -102,10 +133,7 @@ function parsePaymentTicketDateCell(val) {
         const d = new Date(epoch.getTime() + val * 86400000);
         return Number.isNaN(d.getTime()) ? undefined : d;
     }
-    const s = String(val).trim();
-    if (!s) return undefined;
-    const d = new Date(s);
-    return Number.isNaN(d.getTime()) ? undefined : d;
+    return parseTicketDatetime(val);
 }
 
 function ticketToXlsxRow(ticket) {
@@ -290,6 +318,7 @@ module.exports = {
     normalizeBilingualField,
     getTicketDisplayLabel,
     normalizePaymentTicketForSave,
+    parseTicketDatetime,
     normalizeTicketsForView,
     isFreePaymentTicketPrice,
     isPaymentTicketInRange,
