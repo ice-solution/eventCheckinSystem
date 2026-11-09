@@ -7462,12 +7462,16 @@ function flattenSeatingUser(userDoc) {
     const flat = { ...formData, ...o };
     delete flat.formData;
     const id = o._id != null ? o._id.toString() : '';
-    const name = (o.name || formData.name || '').toString().trim();
     const email = (o.email || formData.email || '').toString().trim();
     const company = (o.company || formData.company || '').toString().trim();
     const thankYouYesNoRaw = (flat.thankYouYesNo != null ? flat.thankYouYesNo : (o.thankYouYesNo != null ? o.thankYouYesNo : formData.thankYouYesNo));
     const thankYouYesNo = thankYouYesNoRaw != null ? String(thankYouYesNoRaw).trim() : '';
-    const displayName = name || email || id;
+    // 唔好只睇 name：表單可能只有 First/Last Name；部分舊資料／其他流程又會寫入 name，
+    // 只睇 name 會變成「有人出姓名、有人 fallback email」。
+    const displayName = resolveUserDisplayName(flat) || email || id;
+    const name = (displayName && displayName !== email && displayName !== id)
+        ? displayName
+        : (o.name || formData.name || '').toString().trim();
     return {
         ...flat,
         _id: id,
