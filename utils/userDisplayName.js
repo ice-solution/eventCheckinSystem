@@ -6,9 +6,26 @@ function pickTruthyString(...vals) {
     return '';
 }
 
+/** name 欄有時被寫成 email（匯入／舊邏輯）；呢啲唔應當顯示姓名 */
+function looksLikeEmail(s) {
+    const t = String(s == null ? '' : s).trim();
+    if (!t || !t.includes('@')) return false;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t);
+}
+
+function isUsableDisplayName(value, email) {
+    const s = value != null ? String(value).trim() : '';
+    if (!s) return false;
+    if (looksLikeEmail(s)) return false;
+    if (email && s.toLowerCase() === String(email).trim().toLowerCase()) return false;
+    return true;
+}
+
 /** 從表單資料組出顯示用姓名（相容 name、first/last、lastname/surname） */
 function resolveUserDisplayName(data = {}) {
     if (!data || typeof data !== 'object') return '';
+
+    const email = pickTruthyString(data.email);
 
     const direct = pickTruthyString(
         data.name,
@@ -16,7 +33,7 @@ function resolveUserDisplayName(data = {}) {
         data.full_name,
         data.displayName
     );
-    if (direct) return direct;
+    if (isUsableDisplayName(direct, email)) return direct;
 
     const first = pickTruthyString(
         data.firstName,
@@ -40,7 +57,7 @@ function resolveUserDisplayName(data = {}) {
     const surname = pickTruthyString(data.surname, data.familyName, data.family_name);
     if (lastname && surname) return `${lastname} ${surname}`.trim();
 
-    return pickTruthyString(lastname, surname, first, last, data.email, data.company);
+    return pickTruthyString(lastname, surname, first, last);
 }
 
 /** 若無 name 欄，依其他姓名欄位補上（供 Transaction / event.users 使用） */
@@ -54,8 +71,8 @@ function ensureUserNameField(data = {}, options = {}) {
             return out;
         }
     }
-    if (!pickTruthyString(out.name)) {
-        out.name = resolveUserDisplayName(out) || '未提供姓名';
+    if (!isUsableDisplayName(out.name, out.email)) {
+        out.name = resolveUserDisplayName(out) || pickTruthyString(out.email, out.company) || '未提供姓名';
     }
     return out;
 }
@@ -63,4 +80,6 @@ function ensureUserNameField(data = {}, options = {}) {
 module.exports = {
     resolveUserDisplayName,
     ensureUserNameField,
+    looksLikeEmail,
+    isUsableDisplayName,
 };
