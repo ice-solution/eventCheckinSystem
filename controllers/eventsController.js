@@ -7509,9 +7509,10 @@ exports.renderSeatingArrangementPage = async (req, res) => {
         const users = (event.users || []).map(flattenSeatingUser);
         const yesNoQuestionEnabled = isSeatingYesNoQuestionEnabled(formConfig);
 
-        const seating = event.seatingArrangement
+        const seatingRaw = event.seatingArrangement
             ? (event.seatingArrangement.toObject ? event.seatingArrangement.toObject() : event.seatingArrangement)
             : { categoryFieldName: 'company', companionByUserId: {}, tables: [] };
+        const seating = pruneSeatingOrphanUserIds(seatingRaw, users);
 
         res.render('admin/seating_arrangement', {
             eventId,
@@ -7527,16 +7528,49 @@ exports.renderSeatingArrangementPage = async (req, res) => {
     }
 };
 
+/** 清走排桌入面已唔存在於 RSVP 嘅來賓 ID（刪賓客後常見） */
+function pruneSeatingOrphanUserIds(seating, users) {
+    const raw = seating && typeof seating === 'object' ? seating : {};
+    const userIdSet = new Set((users || []).map((u) => String(u && u._id != null ? u._id : u)));
+    const companionIn = (raw.companionByUserId && typeof raw.companionByUserId === 'object')
+        ? raw.companionByUserId
+        : {};
+    const companionByUserId = {};
+    Object.keys(companionIn).forEach((uid) => {
+        if (!userIdSet.has(String(uid))) return;
+        const c = Math.max(0, parseInt(companionIn[uid], 10) || 0);
+        if (c > 0) companionByUserId[String(uid)] = c;
+    });
+    const tables = Array.isArray(raw.tables)
+        ? raw.tables.map((t) => {
+            if (!t || typeof t !== 'object') return t;
+            const shape = t.shape === 'prop' ? 'prop' : t.shape;
+            const userIds = shape === 'prop'
+                ? []
+                : (Array.isArray(t.userIds) ? t.userIds : [])
+                    .map((id) => String(id))
+                    .filter((id) => userIdSet.has(id));
+            return { ...t, userIds };
+        })
+        : [];
+    return {
+        ...raw,
+        companionByUserId,
+        tables
+    };
+}
+
 exports.getSeatingArrangementApi = async (req, res) => {
     const { eventId } = req.params;
     try {
         const event = await Event.findById(eventId).select('seatingArrangement users');
         if (!event) return res.status(404).json({ message: 'Event not found' });
         const formConfig = await FormConfig.findOne({ eventId }).lean();
-        const seating = event.seatingArrangement
+        const seatingRaw = event.seatingArrangement
             ? (event.seatingArrangement.toObject ? event.seatingArrangement.toObject() : event.seatingArrangement)
             : { categoryFieldName: 'company', companionByUserId: {}, tables: [] };
         const users = (event.users || []).map(flattenSeatingUser);
+        const seating = pruneSeatingOrphanUserIds(seatingRaw, users);
         res.json({
             seating,
             users,
@@ -7580,57 +7614,74 @@ exports.saveSeatingArrangementApi = async (req, res) => {
             return allowed.includes(v) ? v : 'nameType';
         };
 
+        // RSVP 刪咗嘅來賓：排桌可能仲留住舊 ID。自動清走，唔好 400 阻住儲存。
+        const prunedCompanion = {};
+        Object.keys(safeCompanion).forEach((uid) => {
+            const id = String(uid);
+            if (!userIdSet.has(id)) return;
+            const c = Math.max(0, parseInt(safeCompanion[uid], 10) || 0);
+            if (c > 0) prunedCompanion[id] = c;
+        });
+        const droppedUserIds = [];
+
+        const normalizedTables = [];
         for (let ti = 0; ti < safeTables.length; ti++) {
             const t = safeTables[ti];
             if (!t || !t.id) return res.status(400).json({ message: '每張桌必須有 id' });
             const shape = normalizeShape(t.shape);
-            if (shape === 'prop') continue; // 擺設無座位
-            const cap = Math.max(1, parseInt(t.capacity, 10) || 10);
-            const uids = Array.isArray(t.userIds) ? t.userIds : [];
-            let seats = 0;
-            for (let i = 0; i < uids.length; i++) {
-                const uid = String(uids[i]);
+            const isProp = shape === 'prop';
+            const rawUids = isProp ? [] : (Array.isArray(t.userIds) ? t.userIds : []);
+            const uids = [];
+            for (let i = 0; i < rawUids.length; i++) {
+                const uid = String(rawUids[i]);
                 if (!userIdSet.has(uid)) {
-                    return res.status(400).json({ message: `無效的來賓 ID: ${uid}` });
+                    droppedUserIds.push(uid);
+                    continue;
                 }
                 if (assigned.has(uid)) {
                     return res.status(400).json({ message: '同一位來賓不可重複分配到多桌' });
                 }
                 assigned.add(uid);
-                const c = Math.max(0, parseInt(safeCompanion[uid], 10) || 0);
-                seats += 1 + c;
+                uids.push(uid);
             }
-            if (seats > cap) {
-                return res.status(400).json({ message: `第 ${ti + 1} 桌人數（含攜眷）超過該桌上限 ${cap}` });
+            if (!isProp) {
+                const cap = Math.max(1, parseInt(t.capacity, 10) || 10);
+                let seats = 0;
+                uids.forEach((uid) => {
+                    seats += 1 + (Math.max(0, parseInt(prunedCompanion[uid], 10) || 0));
+                });
+                if (seats > cap) {
+                    return res.status(400).json({ message: `第 ${ti + 1} 桌人數（含攜眷）超過該桌上限 ${cap}` });
+                }
             }
+            normalizedTables.push({
+                id: String(t.id),
+                name: (t.name != null ? String(t.name) : '').trim().slice(0, 80),
+                seatLabelPrefix: isProp ? '' : (t.seatLabelPrefix != null ? String(t.seatLabelPrefix) : '').trim().slice(0, 12),
+                shape,
+                scale: normalizeScale(t.scale),
+                length: Math.max(80, Math.min(1200, parseInt(t.length, 10) || (shape === 'row' ? 520 : shape === 'prop' ? 160 : 360))),
+                propType: isProp ? normalizePropType(t.propType) : '',
+                propExportFormat: isProp ? normalizePropExportFormat(t.propExportFormat) : '',
+                propExportText: isProp ? (t.propExportText != null ? String(t.propExportText) : '').trim().slice(0, 120) : '',
+                x: typeof t.x === 'number' ? t.x : parseFloat(t.x) || 48,
+                y: typeof t.y === 'number' ? t.y : parseFloat(t.y) || 48,
+                capacity: isProp ? 0 : Math.max(1, parseInt(t.capacity, 10) || 10),
+                userIds: uids
+            });
         }
 
         event.seatingArrangement = {
             categoryFieldName: (categoryFieldName && String(categoryFieldName).trim()) || 'company',
-            companionByUserId: safeCompanion,
-            tables: safeTables.map(t => {
-                const shape = normalizeShape(t.shape);
-                const isProp = shape === 'prop';
-                return {
-                    id: String(t.id),
-                    name: (t.name != null ? String(t.name) : '').trim().slice(0, 80),
-                    seatLabelPrefix: isProp ? '' : (t.seatLabelPrefix != null ? String(t.seatLabelPrefix) : '').trim().slice(0, 12),
-                    shape,
-                    scale: normalizeScale(t.scale),
-                    length: Math.max(80, Math.min(1200, parseInt(t.length, 10) || (shape === 'row' ? 520 : shape === 'prop' ? 160 : 360))),
-                    propType: isProp ? normalizePropType(t.propType) : '',
-                    propExportFormat: isProp ? normalizePropExportFormat(t.propExportFormat) : '',
-                    propExportText: isProp ? (t.propExportText != null ? String(t.propExportText) : '').trim().slice(0, 120) : '',
-                    x: typeof t.x === 'number' ? t.x : parseFloat(t.x) || 48,
-                    y: typeof t.y === 'number' ? t.y : parseFloat(t.y) || 48,
-                    capacity: isProp ? 0 : Math.max(1, parseInt(t.capacity, 10) || 10),
-                    userIds: isProp ? [] : (Array.isArray(t.userIds) ? t.userIds : []).map(id => String(id))
-                };
-            })
+            companionByUserId: prunedCompanion,
+            tables: normalizedTables
         };
         event.markModified('seatingArrangement');
         await event.save();
-        res.json({ success: true });
+        res.json({
+            success: true,
+            prunedInvalidGuestIds: [...new Set(droppedUserIds)]
+        });
     } catch (err) {
         console.error('saveSeatingArrangementApi:', err);
         res.status(500).json({ message: err.message || 'Server error' });

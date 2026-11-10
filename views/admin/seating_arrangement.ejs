@@ -421,9 +421,43 @@
     }
     .seating-canvas.export-clean .rt-prop .rt-prop-title {
         font-size: 16px;
+        text-shadow: none !important;
     }
     .seating-canvas.export-clean .rt-prop .rt-prop-tag {
         font-size: 12px;
+        text-shadow: none !important;
+    }
+    /* html2canvas 對 input + transform/text-shadow 常會倒轉／重影；匯出改用純文字 */
+    .seating-canvas.export-clean .rt-center-num,
+    .seating-canvas.export-clean .rt-center-num-text {
+        text-shadow: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        border: none !important;
+        -webkit-text-fill-color: #a67c2d;
+        color: #a67c2d;
+        font-size: 36px !important;
+        font-weight: 700 !important;
+        line-height: 1 !important;
+    }
+    .seating-canvas.export-clean .rt-plate.rt-shape-square .rt-center-num,
+    .seating-canvas.export-clean .rt-plate.rt-shape-square .rt-center-num-text {
+        font-size: 28px !important;
+    }
+    .seating-canvas.export-clean .rt-plate.rt-shape-row .rt-center-num-text {
+        font-size: 16px !important;
+        position: static !important;
+        transform: none !important;
+    }
+    .seating-canvas.export-clean .rt-slot .rt-name,
+    .seating-canvas.export-clean .rt-slot .rt-comp-label,
+    .seating-canvas.export-clean .rt-slot .rt-seat-no {
+        text-shadow: none !important;
+        transform: none !important;
+    }
+    .seating-canvas.export-clean .rt-slot .rt-seat-no {
+        left: 50%;
+        transform: translateX(-50%) !important;
     }
     #seating-export-host {
         position: fixed;
@@ -2020,7 +2054,20 @@
                     scrollX: 0,
                     scrollY: 0,
                     windowWidth: exportHost.scrollWidth,
-                    windowHeight: exportHost.scrollHeight
+                    windowHeight: exportHost.scrollHeight,
+                    onclone: function(clonedDoc) {
+                        var root = clonedDoc.getElementById('seatingCanvasExportClone') ||
+                            clonedDoc.getElementById('seating-export-host');
+                        if (!root) return;
+                        // 桌號用 input 時 html2canvas 容易倒轉／花字 → 換成 div 純文字
+                        root.querySelectorAll('input.rt-center-num').forEach(function(inp) {
+                            var d = clonedDoc.createElement('div');
+                            d.className = 'rt-center-num-text';
+                            d.textContent = inp.value != null ? String(inp.value) : '';
+                            if (inp.title) d.title = inp.title;
+                            if (inp.parentNode) inp.parentNode.replaceChild(d, inp);
+                        });
+                    }
                 }).then(function(canvas) {
                     return canvasToBlob(canvas);
                 }).then(function(pngBlob) {
