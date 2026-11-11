@@ -2319,19 +2319,40 @@ exports.updateEventSettings = async (req, res) => {
     }
 };
 // 獲取當前用戶的事件並渲染事件列表視圖
+// 注意：唔好 Event.find 連埋 users[]——人多時會非常慢；列表只需人數／簽到數。
 exports.renderEventsList = async (req, res) => {
     try {
         if (!req.session || !req.session.user || !req.session.user._id) {
             return res.redirect('/login');
         }
         const user = req.session.user;
-        let events;
-        if (user.role === 'admin') {
-            events = await Event.find({}).sort({ created_at: -1 });
-        } else {
-            const allowed = (user.allowedEvents || []).filter(Boolean);
-            events = allowed.length ? await Event.find({ _id: { $in: allowed } }) : [];
-        }
+        const match = (user.role === 'admin')
+            ? {}
+            : { _id: { $in: (user.allowedEvents || []).filter(Boolean) } };
+
+        const events = await Event.aggregate([
+            { $match: match },
+            {
+                $project: {
+                    name: 1,
+                    from: 1,
+                    to: 1,
+                    created_at: 1,
+                    userCount: { $size: { $ifNull: ['$users', []] } },
+                    checkedInCount: {
+                        $size: {
+                            $filter: {
+                                input: { $ifNull: ['$users', []] },
+                                as: 'u',
+                                cond: { $eq: ['$$u.isCheckIn', true] }
+                            }
+                        }
+                    }
+                }
+            },
+            { $sort: { created_at: -1 } }
+        ]);
+
         res.render('admin/events_list', {
             events,
             isAdmin: user.role === 'admin'

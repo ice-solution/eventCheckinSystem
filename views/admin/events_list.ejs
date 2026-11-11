@@ -236,9 +236,8 @@
                 let totalGuests = 0;
                 let checkedInGuests = 0;
                 (events || []).forEach(function(ev) {
-                    const users = ev.users || [];
-                    totalGuests += users.length;
-                    checkedInGuests += users.filter(function(u) { return u.isCheckIn; }).length;
+                    totalGuests += Number(ev.userCount) || 0;
+                    checkedInGuests += Number(ev.checkedInCount) || 0;
                 });
                 const checkInRate = totalGuests > 0
                     ? ((checkedInGuests / totalGuests) * 100).toFixed(2)
@@ -347,7 +346,7 @@
                                                 <td><%= new Date(event.from).toLocaleString() %></td>
                                                 <td><%= new Date(event.to).toLocaleString() %></td>
                                                 <td data-order="<%= new Date(event.created_at).getTime() %>"><%= new Date(event.created_at).toLocaleString() %></td>
-                                                <td><%= event.users.length %></td>
+                                                <td><%= Number(event.userCount) || 0 %></td>
                                                 <td>
                                                     <button type="button" class="btn btn-sm btn-outline-secondary copy-event-btn"
                                                             data-event-id="<%= event._id %>"
