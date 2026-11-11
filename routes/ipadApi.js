@@ -92,13 +92,14 @@ function injectIpadSeatingFieldsIntoFormConfig(formConfig) {
     ? formConfig.toObject({ minimize: false })
     : { ...(formConfig || {}) };
   const sections = Array.isArray(raw.sections) ? raw.sections.map((s) => ({ ...s, fields: Array.isArray(s.fields) ? [...s.fields] : [] })) : [];
+  // display/visible 都要 true：iPad App 通常跟呢兩個決定係咪 show 欄位
   const seatingFields = [
     {
       fieldName: IPAD_SEATING_FIELD_TABLE,
       type: 'text',
       required: false,
       visible: true,
-      display: false,
+      display: true,
       label: { zh: 'Seating Table', en: 'Seating Table' },
       placeholder: { zh: '', en: '' },
       options: [],
@@ -109,7 +110,7 @@ function injectIpadSeatingFieldsIntoFormConfig(formConfig) {
       type: 'text',
       required: false,
       visible: true,
-      display: false,
+      display: true,
       label: { zh: 'Seating Number', en: 'Seating Number' },
       placeholder: { zh: '', en: '' },
       options: [],
