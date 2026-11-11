@@ -2326,9 +2326,21 @@ exports.renderEventsList = async (req, res) => {
             return res.redirect('/login');
         }
         const user = req.session.user;
-        const match = (user.role === 'admin')
-            ? {}
-            : { _id: { $in: (user.allowedEvents || []).filter(Boolean) } };
+        let match = {};
+        if (user.role !== 'admin') {
+            // session / DB 可能存 string；aggregation 唔會自動 cast，要轉 ObjectId
+            const allowedIds = (user.allowedEvents || [])
+                .map((id) => (id != null ? String(id).trim() : ''))
+                .filter((id) => mongoose.Types.ObjectId.isValid(id))
+                .map((id) => new mongoose.Types.ObjectId(id));
+            if (!allowedIds.length) {
+                return res.render('admin/events_list', {
+                    events: [],
+                    isAdmin: false
+                });
+            }
+            match = { _id: { $in: allowedIds } };
+        }
 
         const events = await Event.aggregate([
             { $match: match },
