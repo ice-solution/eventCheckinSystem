@@ -15,6 +15,11 @@ const badgeController = require('../controllers/badgeController');
 
 const router = express.Router();
 
+/** iPad 聯絡人顯示用：由排桌即時計算，唔持久化到 users */
+const IPAD_SEATING_FIELD_TABLE = 'seating_table';
+const IPAD_SEATING_FIELD_NUMBER = 'seating_number';
+const IPAD_SEATING_FIELD_NAMES = [IPAD_SEATING_FIELD_TABLE, IPAD_SEATING_FIELD_NUMBER];
+
 /** iPad 不應拿到後台預覽用的 testImageUrl，避免誤印同一張 test image */
 function serializeBadgeConfigForIpad(badgeConfig) {
   const obj = badgeConfig && badgeConfig.toObject
@@ -22,6 +27,117 @@ function serializeBadgeConfigForIpad(badgeConfig) {
     : { ...(badgeConfig || {}) };
   delete obj.testImageUrl;
   return obj;
+}
+
+function userDocToObject(user) {
+  if (!user) return {};
+  return user.toObject ? user.toObject({ minimize: false }) : { ...user };
+}
+
+/** userId → { seating_table, seating_number }（座位號格式同排桌畫面：prefix + seatNo） */
+function buildSeatingLookup(seatingArrangement) {
+  const map = new Map();
+  const tables = (seatingArrangement && seatingArrangement.tables) || [];
+  const companionByUserId = (seatingArrangement && seatingArrangement.companionByUserId) || {};
+  let tableIndex = 0;
+  for (let ti = 0; ti < tables.length; ti++) {
+    const t = tables[ti] || {};
+    if (String(t.shape || 'round') === 'prop') continue;
+    tableIndex += 1;
+    const tableName = (t.name != null ? String(t.name).trim() : '') || `Table ${tableIndex}`;
+    const prefix = (t.seatLabelPrefix != null ? String(t.seatLabelPrefix) : '').trim().slice(0, 12);
+    const cap = Math.max(1, parseInt(t.capacity, 10) || 10);
+    const uids = Array.isArray(t.userIds) ? t.userIds : [];
+    let pos = 0;
+    for (let i = 0; i < uids.length; i++) {
+      const id = String(uids[i] || '');
+      if (!id) continue;
+      const companions = Math.max(0, parseInt(companionByUserId[id], 10) || 0);
+      const need = companions + 1;
+      if (pos + need > cap) break;
+      const seatNo = pos + 1;
+      map.set(id, {
+        [IPAD_SEATING_FIELD_TABLE]: tableName,
+        [IPAD_SEATING_FIELD_NUMBER]: `${prefix}${seatNo}`,
+      });
+      pos += need;
+    }
+  }
+  return map;
+}
+
+function attachSeatingFields(userObj, seatingLookup) {
+  const id = userObj && userObj._id != null ? String(userObj._id) : '';
+  const seat = (seatingLookup && seatingLookup.get(id)) || {
+    [IPAD_SEATING_FIELD_TABLE]: '',
+    [IPAD_SEATING_FIELD_NUMBER]: '',
+  };
+  return {
+    ...userObj,
+    [IPAD_SEATING_FIELD_TABLE]: seat[IPAD_SEATING_FIELD_TABLE] || '',
+    [IPAD_SEATING_FIELD_NUMBER]: seat[IPAD_SEATING_FIELD_NUMBER] || '',
+  };
+}
+
+function stripSeatingFieldsFromBody(body) {
+  if (!body || typeof body !== 'object') return body || {};
+  const out = { ...body };
+  IPAD_SEATING_FIELD_NAMES.forEach((k) => { delete out[k]; });
+  return out;
+}
+
+/** 喺聯絡人資料 section 最頂注入 seating 欄位（只影響 iPad API response，唔改 DB） */
+function injectIpadSeatingFieldsIntoFormConfig(formConfig) {
+  const raw = formConfig && formConfig.toObject
+    ? formConfig.toObject({ minimize: false })
+    : { ...(formConfig || {}) };
+  const sections = Array.isArray(raw.sections) ? raw.sections.map((s) => ({ ...s, fields: Array.isArray(s.fields) ? [...s.fields] : [] })) : [];
+  const seatingFields = [
+    {
+      fieldName: IPAD_SEATING_FIELD_TABLE,
+      type: 'text',
+      required: false,
+      visible: true,
+      display: false,
+      label: { zh: 'Seating Table', en: 'Seating Table' },
+      placeholder: { zh: '', en: '' },
+      options: [],
+      order: -2,
+    },
+    {
+      fieldName: IPAD_SEATING_FIELD_NUMBER,
+      type: 'text',
+      required: false,
+      visible: true,
+      display: false,
+      label: { zh: 'Seating Number', en: 'Seating Number' },
+      placeholder: { zh: '', en: '' },
+      options: [],
+      order: -1,
+    },
+  ];
+
+  let contactIdx = sections.findIndex((s) => String(s.sectionName || '') === 'contact_info');
+  if (contactIdx < 0) {
+    contactIdx = sections.findIndex((s) => s.visible !== false);
+  }
+  if (contactIdx < 0) {
+    sections.unshift({
+      sectionName: 'contact_info',
+      sectionTitle: { zh: '聯絡人資料', en: 'Contact Information' },
+      visible: true,
+      fields: seatingFields,
+      order: 0,
+    });
+  } else {
+    const section = { ...sections[contactIdx] };
+    const existing = Array.isArray(section.fields) ? section.fields : [];
+    const withoutDup = existing.filter((f) => !IPAD_SEATING_FIELD_NAMES.includes(String(f.fieldName || '')));
+    section.fields = [...seatingFields, ...withoutDup];
+    sections[contactIdx] = section;
+  }
+
+  return { ...raw, sections };
 }
 
 // 1) iPad API 登入：回傳 JWT（供後續 API 使用）
@@ -82,11 +198,11 @@ router.get('/events', authenticateJwt, async (req, res) => {
   }
 });
 
-// 3) 透過 event _id 拿到 users（回傳該 Event.users）
+// 3) 透過 event _id 拿到 users（回傳該 Event.users + seating_table / seating_number）
 router.get('/events/:eventId/users', authenticateJwt, async (req, res) => {
   const { eventId } = req.params;
   try {
-    const event = await Event.findById(eventId).select({ users: 1, owner: 1 });
+    const event = await Event.findById(eventId).select({ users: 1, owner: 1, seatingArrangement: 1 });
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
@@ -95,7 +211,9 @@ router.get('/events/:eventId/users', authenticateJwt, async (req, res) => {
       return;
     }
 
-    return res.json(event.users || []);
+    const seatingLookup = buildSeatingLookup(event.seatingArrangement);
+    const users = (event.users || []).map((u) => attachSeatingFields(userDocToObject(u), seatingLookup));
+    return res.json(users);
   } catch (err) {
     console.error('iPad API get users by event error:', err);
     return res.status(500).json({ message: 'Server error' });
@@ -103,6 +221,7 @@ router.get('/events/:eventId/users', authenticateJwt, async (req, res) => {
 });
 
 // 3b) 取得 registration page 用的表單配置（FormConfig）
+// iPad：喺聯絡人資料最頂注入 seating_table / seating_number（唔寫入 FormConfig DB）
 router.get('/events/:eventId/registration-config', authenticateJwt, async (req, res) => {
   const { eventId } = req.params;
 
@@ -116,6 +235,17 @@ router.get('/events/:eventId/registration-config', authenticateJwt, async (req, 
     if (!(await permission.assertJwtEventAccess(req, res, event))) {
       return;
     }
+
+    const originalJson = res.json.bind(res);
+    res.json = (payload) => {
+      if (payload && payload.success && payload.formConfig) {
+        return originalJson({
+          ...payload,
+          formConfig: injectIpadSeatingFieldsIntoFormConfig(payload.formConfig),
+        });
+      }
+      return originalJson(payload);
+    };
 
     // 直接重用 formConfigController 的邏輯（會自動建立 default config & 做資料遷移）
     return formConfigController.getFormConfig(req, res);
@@ -131,7 +261,7 @@ router.get('/events/:eventId/users/:userId', authenticateJwt, async (req, res) =
 
   try {
     // 檢查權限：確認 event 存在且用戶有權限
-    const event = await Event.findById(eventId).select({ users: 1, owner: 1 });
+    const event = await Event.findById(eventId).select({ users: 1, owner: 1, seatingArrangement: 1 });
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
@@ -146,9 +276,8 @@ router.get('/events/:eventId/users/:userId', authenticateJwt, async (req, res) =
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // 返回用戶完整資料（包括所有動態字段）
-    const userObject = user.toObject ? user.toObject({ minimize: false }) : user;
-    return res.json(userObject);
+    const seatingLookup = buildSeatingLookup(event.seatingArrangement);
+    return res.json(attachSeatingFields(userDocToObject(user), seatingLookup));
   } catch (err) {
     console.error('iPad API get user by id error:', err);
     return res.status(500).json({ message: 'Server error' });
@@ -158,11 +287,12 @@ router.get('/events/:eventId/users/:userId', authenticateJwt, async (req, res) =
 // 4) 更新用戶 checkin 狀態（和 users.ejs 中的功能一樣）
 router.put('/events/:eventId/users/:userId', authenticateJwt, async (req, res) => {
   const { eventId, userId } = req.params;
-  const updateData = req.body || {};
+  // seating_* 係即時計算欄，唔好寫入 users
+  const updateData = stripSeatingFieldsFromBody(req.body || {});
 
   try {
     // 檢查權限：確認 event 存在且用戶有權限
-    const event = await Event.findById(eventId).select({ users: 1, owner: 1 });
+    const event = await Event.findById(eventId).select({ users: 1, owner: 1, seatingArrangement: 1 });
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
@@ -192,7 +322,7 @@ router.put('/events/:eventId/users/:userId', authenticateJwt, async (req, res) =
     }
 
     // 更新其他字段（排除內部字段）
-    const excludedFields = ['_id', '__v', 'isCheckIn', 'checkInAt', 'create_at', 'modified_at'];
+    const excludedFields = ['_id', '__v', 'isCheckIn', 'checkInAt', 'create_at', 'modified_at', ...IPAD_SEATING_FIELD_NAMES];
     Object.keys(updateData).forEach(key => {
       if (!excludedFields.includes(key) && updateData[key] !== undefined) {
         user[key] = updateData[key];
@@ -212,9 +342,8 @@ router.put('/events/:eventId/users/:userId', authenticateJwt, async (req, res) =
 
     await event.save();
 
-    // 返回更新後的完整用戶資料（供簽到與修改個人資料共用）
-    const userObject = user.toObject ? user.toObject({ minimize: false }) : user;
-    return res.json(userObject);
+    const seatingLookup = buildSeatingLookup(event.seatingArrangement);
+    return res.json(attachSeatingFields(userDocToObject(user), seatingLookup));
   } catch (err) {
     console.error('iPad API update user checkin error:', err);
     return res.status(500).json({ message: 'Server error' });
@@ -228,7 +357,7 @@ router.post('/events/:eventId/users', authenticateJwt, async (req, res) => {
 
   try {
     // 檢查權限：確認 event 存在且用戶有權限
-    const event = await Event.findById(eventId).select({ owner: 1 });
+    const event = await Event.findById(eventId).select({ owner: 1, seatingArrangement: 1 });
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
@@ -236,6 +365,18 @@ router.post('/events/:eventId/users', authenticateJwt, async (req, res) => {
     if (!(await permission.assertJwtEventAccess(req, res, event))) {
       return;
     }
+
+    req.body = stripSeatingFieldsFromBody(req.body || {});
+
+    const originalJson = res.json.bind(res);
+    res.json = (payload) => {
+      // addUserToEvent 成功時通常直接回傳 user object
+      if (payload && payload._id && !payload.message) {
+        const seatingLookup = buildSeatingLookup(event.seatingArrangement);
+        return originalJson(attachSeatingFields(payload, seatingLookup));
+      }
+      return originalJson(payload);
+    };
 
     // 直接重用 eventsController.addUserToEvent 的邏輯
     return eventsController.addUserToEvent(req, res);
