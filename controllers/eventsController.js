@@ -6396,6 +6396,7 @@ function listEventReportColumns(formConfig) {
         { header: 'Transaction Status (交易狀態)', key: 'transactionStatus', width: 16 },
         { header: 'Payment Gateway (付款閘道)', key: 'paymentGateway', width: 16 },
         { header: 'Transaction Date (交易日期)', key: 'transactionDate', width: 22 },
+        { header: 'Created At (建立時間)', key: 'created_at', width: 22 },
         { header: 'CheckInAt', key: 'checkInAt', width: 15 },
         { header: '已簽到', key: 'isCheckIn', width: 10 },
     ].forEach((col) => columnDefs.push(col));
@@ -6462,6 +6463,9 @@ async function buildEventCheckInReportData(event, options = {}) {
         fieldKeys.forEach((key) => {
             if (key === '_id') {
                 row[key] = userObj._id != null ? String(userObj._id) : '';
+            } else if (key === 'created_at') {
+                // Schema 主要用 create_at；舊資料／嚴格 false 可能有 created_at
+                row[key] = checkInAtFormat(userObj.create_at || userObj.created_at);
             } else if (key === 'checkInAt') {
                 row[key] = checkInAtFormat(userObj.checkInAt);
             } else if (key === 'isCheckIn') {

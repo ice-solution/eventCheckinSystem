@@ -569,7 +569,7 @@
     "title": "賓客列表", "checkedInStat": "已簽到賓客", "totalStat": "總賓客數",
     "checkInRateStat": "簽到率", "cardTitle": "賓客列表",
     "userListBtn": "賓客列表", "scanBtn": "掃描 QR Code", "importBtn": "匯入資料",
-    "bannerBtn": "Banner 管理", "reportBtn": "下載報告", "reportModalTitle": "選擇匯出欄位", "reportModalHint": "取消勾選不想出現在 Excel 的欄位。預設全選。", "reportSelectAll": "全選", "reportDeselectAll": "全不選", "reportDownload": "下載 Excel", "reportNoFields": "請至少選擇一個欄位。", "reportFieldId": "賓客 ID", "reportFieldTicketTitle": "票券", "reportFieldTicketPrice": "票價", "reportFieldTransactionId": "交易 ID", "reportFieldTransactionStatus": "交易狀態", "reportFieldPaymentGateway": "付款閘道", "reportFieldTransactionDate": "交易日期", "reportFieldCheckInAt": "簽到時間", "transactionBtn": "交易記錄", "emailRecordsBtn": "郵件記錄",
+    "bannerBtn": "Banner 管理", "reportBtn": "下載報告", "reportModalTitle": "選擇匯出欄位", "reportModalHint": "取消勾選不想出現在 Excel 的欄位。預設全選。", "reportSelectAll": "全選", "reportDeselectAll": "全不選", "reportDownload": "下載 Excel", "reportNoFields": "請至少選擇一個欄位。", "reportFieldId": "賓客 ID", "reportFieldTicketTitle": "票券", "reportFieldTicketPrice": "票價", "reportFieldTransactionId": "交易 ID", "reportFieldTransactionStatus": "交易狀態", "reportFieldPaymentGateway": "付款閘道", "reportFieldTransactionDate": "交易日期", "reportFieldCreatedAt": "建立時間", "reportFieldCheckInAt": "簽到時間", "transactionBtn": "交易記錄", "emailRecordsBtn": "郵件記錄",
     "selectAllBtn": "全選賓客", "deselectAllBtn": "取消全選",
     "batchDeleteBtn": "批量刪除選中", "batchCheckInBtn": "批量全部簽到",
     "batchSendEmailBtn": "批量發送郵件", "batchSendSmsBtn": "批量發送 SMS", "addUserBtn": "新增賓客",
