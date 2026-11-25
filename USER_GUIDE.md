@@ -11,15 +11,16 @@
 ## 目錄
 
 1. [側欄地圖（先識路）](#1-側欄地圖先識路)
-2. [建立／管理活動](#2-建立管理活動)
-3. [報名表（最常改）](#3-報名表最常改)
-4. [電郵模板與自動寄信](#4-電郵模板與自動寄信)
-5. [付費票券](#5-付費票券)
-6. [來賓／簽到／報告](#6-來賓簽到報告)
-7. [抽獎 Lucky Draw](#7-抽獎-lucky-draw)
-8. [徽章 Badge](#8-徽章-badge)
-9. [排桌 Seating](#9-排桌-seating)
-10. [速查表：想改 X → 去邊](#10-速查表想改-x--去邊)
+2. [帳號與權限（/auth/users）](#2-帳號與權限authusers)
+3. [建立／管理活動](#3-建立管理活動)
+4. [報名表（最常改）](#4-報名表最常改)
+5. [電郵模板與自動寄信](#5-電郵模板與自動寄信)
+6. [付費票券](#6-付費票券)
+7. [來賓／簽到／報告](#7-來賓簽到報告)
+8. [抽獎 Lucky Draw](#8-抽獎-lucky-draw)
+9. [徽章 Badge](#9-徽章-badge)
+10. [排桌 Seating](#10-排桌-seating)
+11. [速查表：想改 X → 去邊](#11-速查表想改-x--去邊)
 
 ---
 
@@ -67,7 +68,63 @@
 
 ---
 
-## 2. 建立／管理活動
+## 2. 帳號與權限（/auth/users）
+
+> 只有 **admin** 先睇到呢頁。用來加後台帳號，同 assign 邊啲活動／功能俾人用。
+
+### 入口
+
+**位置**：活動列表 `/events/list` → 右上 **Login Account Management**（用戶圖示）→ `/auth/users`  
+或直接開 `/auth/users`
+
+![帳號列表](docs/user-guide-screenshots/18-auth-users-list.png)
+
+| 想做 | 撳邊 |
+|------|------|
+| 加新後台帳號 | **+ Add User** |
+| 設定該人可進邊啲活動＋功能 | 該列 **Set Permissions** |
+
+### 加帳號
+
+**位置**：`/auth/users` → **+ Add User**
+
+![Add User](docs/user-guide-screenshots/21-auth-add-user.png)
+
+填 Username、Password → **Create User**。  
+建立後要再去 **Set Permissions**，否則仲未有活動權限。
+
+### Set Permissions（兩步）
+
+**位置**：帳號列表 → **Set Permissions**
+
+**① 先勾 Allowed Events**（可進入邊啲活動）
+
+![Allowed Events](docs/user-guide-screenshots/19-auth-set-permissions-events.png)
+
+**② 再喺 Functions per Event 勾功能**（每個已勾活動一張卡）
+
+![Functions per Event](docs/user-guide-screenshots/20-auth-set-permissions-functions.png)
+
+常見要開嘅功能（按需要勾）：
+
+| 想俾人做 | 勾邊啲 |
+|----------|--------|
+| 睇／管來賓名單 | RSVP / User List |
+| 改報名表 | Registration Page Config（+ Website / Register） |
+| 電郵模板 | Email Template（+ Email Records） |
+| 下載報告 | Download Report |
+| 分站簽到 | Station Check-in |
+| 掃 QR | Scan QR Code |
+| 排桌 | 排桌 Seating |
+| 徽章 | Badge Design |
+| 抽獎 | Prize Management + 相關 LuckyDraw… |
+| 付費／交易 | Transaction Records（建議連 RSVP 一齊開） |
+
+改完撳 **Save Permissions** → **Back to User List**。
+
+---
+
+## 3. 建立／管理活動
 
 ### 活動列表
 
@@ -82,6 +139,7 @@
 | 複製活動 | 該列 **Copy** |
 | 刪除活動 | 該列 **Delete**（需權限） |
 | 批量下載報告 | **Batch Download Report** |
+| 管理後台帳號／權限 | 右上 **Login Account Management** → `/auth/users` |
 
 ### 建立活動
 
@@ -99,7 +157,7 @@
 
 ---
 
-## 3. 報名表（最常改）
+## 4. 報名表（最常改）
 
 **入口**：側欄 **Website → Reg Page Config**
 
@@ -111,7 +169,7 @@
 
 ---
 
-### 3.1 開關報名／關閉文案／短網址
+### 4.1 開關報名／關閉文案／短網址
 
 **展開卡片**：`Registration Page`
 
@@ -126,7 +184,7 @@
 
 ---
 
-### 3.2 報名頁大標題、副標
+### 4.2 報名頁大標題、副標
 
 **展開卡片**：`Register Header Event Name`
 
@@ -142,13 +200,13 @@
 
 ---
 
-### 3.3 Banner 圖
+### 4.3 Banner 圖
 
 **展開卡片**：`Event Banner Management` → 上傳／刪除圖片。
 
 ---
 
-### 3.4 條款／同意書
+### 4.4 條款／同意書
 
 | 想改 | 展開卡片 |
 |------|----------|
@@ -157,7 +215,7 @@
 
 ---
 
-### 3.5 成功頁文案、Yes/No 題
+### 4.5 成功頁文案、Yes/No 題
 
 **展開卡片**：`Thank You (success page)`
 
@@ -171,7 +229,7 @@
 
 ---
 
-### 3.6 表單分區標題、欄位內容
+### 4.6 表單分區標題、欄位內容
 
 **位置**：同一頁**向下捲**到 Section／Field 區（Form Preview 上面）
 
@@ -190,13 +248,13 @@
 
 ---
 
-### 3.7 語言切換
+### 4.7 語言切換
 
 **展開卡片**：`Language Settings`（預設語言、是否顯示中英掣）。
 
 ---
 
-### 3.8 預覽公開報名頁
+### 4.8 預覽公開報名頁
 
 **位置**：側欄 **Website → Registration Page**（只睇、唔喺度改）
 
@@ -206,9 +264,9 @@
 
 ---
 
-## 4. 電郵模板與自動寄信
+## 5. 電郵模板與自動寄信
 
-### 4.1 電郵模板
+### 5.1 電郵模板
 
 **位置**：側欄 **Event Template Email**
 
@@ -224,7 +282,7 @@
 
 ---
 
-### 4.2 自動寄信開關
+### 5.2 自動寄信開關
 
 **位置**：側欄 **RSVP** → 工具列 **Auto Email Setting**
 
@@ -234,7 +292,7 @@
 
 喺彈窗勾選 Welcome／付款收據等 → **Save Email Settings**。
 
-### 4.3 手動寄信／紀錄
+### 5.3 手動寄信／紀錄
 
 | 想做 | 位置 |
 |------|------|
@@ -244,7 +302,7 @@
 
 ---
 
-## 5. 付費票券
+## 6. 付費票券
 
 **位置**：側欄 **Payment Settings**
 
@@ -265,9 +323,9 @@
 
 ---
 
-## 6. 來賓／簽到／報告
+## 7. 來賓／簽到／報告
 
-### 6.1 來賓名單（RSVP）
+### 7.1 來賓名單（RSVP）
 
 **位置**：側欄 **RSVP**
 
@@ -282,7 +340,7 @@
 | 搜尋 | **Search** |
 | 顯示欄位 | 齒輪／**Column Visibility** |
 
-### 6.2 分站簽到
+### 7.2 分站簽到
 
 **位置**：側欄 **Station Check-in**
 
@@ -292,7 +350,7 @@
 
 ---
 
-## 7. 抽獎 Lucky Draw
+## 8. 抽獎 Lucky Draw
 
 **位置**：側欄 **Lucky Draw**（展開子選單）
 
@@ -332,7 +390,7 @@
 
 ---
 
-## 8. 徽章 Badge
+## 9. 徽章 Badge
 
 **位置**：側欄 **Badge Design**
 
@@ -348,7 +406,7 @@
 
 ---
 
-## 9. 排桌 Seating
+## 10. 排桌 Seating
 
 **位置**：側欄 **排桌 Seating**
 
@@ -366,10 +424,13 @@
 
 ---
 
-## 10. 速查表：想改 X → 去邊
+## 11. 速查表：想改 X → 去邊
 
 | 想改／想做 | 去邊 |
 |------------|------|
+| 加後台帳號／設權限 | 活動列表 → **Login Account Management** → `/auth/users` |
+| 指定可進邊啲活動 | `/auth/users` → **Set Permissions** → Allowed Events |
+| 指定活動內可做邊啲功能 | Set Permissions → Functions per Event → **Save Permissions** |
 | 開新活動 | 活動列表 → **Create Event** |
 | 後台活動名稱 | RSVP → **Edit Event Name** |
 | **報名頁大標題／副標** | Website → **Reg Page Config** → **Register Header Event Name** |

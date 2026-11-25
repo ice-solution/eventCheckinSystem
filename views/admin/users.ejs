@@ -1559,13 +1559,10 @@
                                                                 let displayLabel = '';
                                                                 if (typeof field.label === 'string') {
                                                                     displayLabel = field.label;
-                                                                } else if (field.label && field.label[lang]) {
-                                                                    displayLabel = field.label[lang];
-                                                                } else if (field.label && field.label.zh) {
-                                                                    displayLabel = field.label.zh;
-                                                                } else {
-                                                                    displayLabel = field.fieldName || '';
+                                                                } else if (field.label && typeof field.label === 'object') {
+                                                                    displayLabel = field.label[lang] || field.label.zh || field.label.en || '';
                                                                 }
+                                                                if (!displayLabel) displayLabel = field.fieldName || '';
                                                                 %>
                                                                 <%= displayLabel %>
                                                             </th>
@@ -1636,7 +1633,10 @@
                                                             const _cellVal = userRow[field.fieldName];
                                                             let _cellText = '-';
                                                             if (_cellVal != null && _cellVal !== '') {
-                                                                if (Array.isArray(_cellVal)) {
+                                                                if (typeof resolveFieldDisplayValue === 'function' && typeof fieldOptionIndex !== 'undefined') {
+                                                                    const mapped = resolveFieldDisplayValue(_cellVal, field.fieldName, fieldOptionIndex);
+                                                                    _cellText = mapped !== '' ? mapped : '-';
+                                                                } else if (Array.isArray(_cellVal)) {
                                                                     _cellText = _cellVal.length ? _cellVal.join(', ') : '-';
                                                                 } else if (typeof _cellVal === 'object') {
                                                                     _cellText = '-';

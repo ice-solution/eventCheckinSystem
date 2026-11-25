@@ -30,6 +30,7 @@ const { normalizeAgreementAgreed, formatAgreementAgreedLabel, agreementAgreedSor
 const { resolveUserDisplayName, ensureUserNameField } = require('../utils/userDisplayName');
 const { assertPayloadMaxLength } = require('../utils/formFieldMaxLength');
 const { getCurrencyUpper, getCurrencyLower } = require('../utils/currency');
+const { buildFieldOptionIndex, resolveFieldDisplayValue } = require('../utils/formOptionLabel');
 
 /** 取得對外 base URL（依 DOMAIN/domain，缺協議時自動補 https://） */
 function getPublicBaseUrl() {
@@ -1039,6 +1040,9 @@ exports.getEventUsersByEventID = async (req, res) => {
             formatAgreementAgreedLabel,
             agreementAgreedSortOrder,
             enabledAgreements: getEnabledAgreements(formConfig),
+            // 跟後台頁面 CN/EN（res.locals.lang），唔係只跟 formConfig.defaultLanguage
+            fieldOptionIndex: buildFieldOptionIndex(formConfig, res.locals.lang || formConfig.defaultLanguage || 'zh'),
+            resolveFieldDisplayValue,
         });
     } catch (error) {
         console.error('Error fetching event:', error);
@@ -6413,7 +6417,7 @@ function parseSelectedReportFields(raw) {
 
 /**
  * 建立單一 event 的報表欄位與列資料（與 users 頁 Download Report 相同格式）
- * options.selectedKeys: 只匯出這些欄位（順序跟清單）；未傳則全部
+ * options.selectedKeys: 只匯出這些欄位；欄位次序永遠跟 FormConfig section/field.order（唔跟 checkbox 點選次序）
  */
 async function buildEventCheckInReportData(event, options = {}) {
     const eventId = event._id;
@@ -6426,18 +6430,16 @@ async function buildEventCheckInReportData(event, options = {}) {
 
     const FormConfig = require('../model/FormConfig');
     const formConfig = await FormConfig.findOne({ eventId });
+    const reportLang = (formConfig && formConfig.defaultLanguage) || 'zh';
+    // select/radio/checkbox 匯出用 label，唔用內部 value
+    const fieldOptionIndex = buildFieldOptionIndex(formConfig, reportLang);
 
     let columnDefs = listEventReportColumns(formConfig);
     const selectedKeys = options.selectedKeys;
     if (Array.isArray(selectedKeys) && selectedKeys.length) {
         const allow = new Set(selectedKeys);
-        const filtered = [];
-        selectedKeys.forEach((key) => {
-            const col = columnDefs.find((c) => c.key === key);
-            if (col && allow.has(key) && !filtered.some((f) => f.key === key)) {
-                filtered.push(col);
-            }
-        });
+        // 保留 listEventReportColumns 嘅 FormConfig order，只 filter 有冇被選
+        const filtered = columnDefs.filter((col) => col && col.key && allow.has(col.key));
         if (filtered.length) {
             columnDefs = filtered;
         }
@@ -6487,9 +6489,12 @@ async function buildEventCheckInReportData(event, options = {}) {
                 row[key] = ticketInfo[key] !== undefined && ticketInfo[key] !== null ? String(ticketInfo[key]) : '';
             } else {
                 const val = userObj[key];
-                row[key] = val !== undefined && val !== null
-                    ? (Array.isArray(val) ? val.join(', ') : String(val))
-                    : '';
+                if (val === undefined || val === null) {
+                    row[key] = '';
+                } else {
+                    const mapped = resolveFieldDisplayValue(val, key, fieldOptionIndex);
+                    row[key] = mapped !== '' ? mapped : (Array.isArray(val) ? val.join(', ') : String(val));
+                }
             }
         });
         return row;

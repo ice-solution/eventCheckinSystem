@@ -82,15 +82,79 @@ Webhook：
 - Stripe：`POST {DOMAIN}/web/webhook/stripe`
 - Wonder：`{DOMAIN}/web/webhook/wonder`
 
-### 2.4 角色與權限
+### 2.4 角色與權限（`/auth/users`）
 
 | 角色 | 說明 |
 |------|------|
-| `admin` | 全站無限制 |
-| `staff` / `reception` | 依 `allowedEvents` + `eventPermissions.functions` |
-| `user` | 前台用戶 |
+| `admin` | 全站無限制；**只能經 server／DB 建立**，後台 Add User 不可用名 `admin` |
+| 一般後台帳號（列表顯示為 `user` 等） | 依 **Allowed Events** + 每活動 **Functions**（`eventPermissions`） |
+| 前台來賓 | 唔經呢頁；係 Event RSVP users |
 
-Staff 常用功能鍵：
+> **只有 admin** 可進入 `/auth/users`。權限改完會經 `refreshUserPermissions` 重載，對方**唔使重新登入**即生效。
+
+#### 入口
+
+活動列表 `/events/list` 右上用戶／齒輪區有 **Login Account Management** 連結 → `/auth/users`  
+（或直接開 `{DOMAIN}/auth/users`）
+
+![Login Account Management](docs/sop-screenshots/18-auth-users-list.png)
+
+| 操作 | 位置 |
+|------|------|
+| 新增後台帳號 | **+ Add User** → `/auth/users/add` |
+| 設定可進入邊啲活動＋功能 | 該列 **Set Permissions** → `/auth/users/:id/edit` |
+
+#### 新增帳號
+
+![Add User](docs/sop-screenshots/21-auth-add-user.png)
+
+1. 填 Username、Password → **Create User**  
+2. 頁面提示：建立後要再去 **Set Permissions** 先有活動／功能權限（新建帳號預設無活動）
+
+#### Set Permissions：兩層設定
+
+**① Allowed Events** — 勾選此帳號可進入嘅活動；未勾＝完全睇唔到該活動。
+
+![Allowed Events](docs/sop-screenshots/19-auth-set-permissions-events.png)
+
+**② Functions per Event** — 只對已勾選嘅活動顯示卡片；喺卡片內勾選功能鍵。
+
+![Functions per Event](docs/sop-screenshots/20-auth-set-permissions-functions.png)
+
+改完撳 **Save Permissions**。
+
+#### 功能鍵一覽（`middleware/permission.js`）
+
+| key | UI 標籤（約） |
+|-----|----------------|
+| `rsvp` | RSVP / User List、Copy Event、Edit／Update Event Name |
+| `stationCheckin` | Station Check-in |
+| `seating` | 排桌 Seating |
+| `guestList` | Guest List |
+| `emailTemplate` | Email Template |
+| `smsTemplate` | SMS Template |
+| `badges` | Badge Design |
+| `qrcodeLogin` | QR Code Login |
+| `scanPointUsers` | Scan Point Management |
+| `treasureHunt` | Treasure Hunt |
+| `luckydrawList` | Luckydraw List／Columns |
+| `luckydrawPanel` | LuckyDraw Panel |
+| `luckydrawAward` | LuckyDraw Award |
+| `luckydrawOpen` | LuckyDraw Open |
+| `luckydrawSetting` | LuckyDraw Setting |
+| `prizes` | Prize Management |
+| `votes` | Vote Management |
+| `website` | Website / Register 預覽 |
+| `formConfig` | Registration Page Config |
+| `transactions` | Transaction Records |
+| `attachments` | Attachments |
+| `scan` | Scan QR Code |
+| `import` | Import Data |
+| `banner` | Banner Management |
+| `report` | Download Report |
+| `emailRecords` | Email Records |
+
+Staff 常用組合：
 
 | 工作 | 最少需要的 keys |
 |------|----------------|
@@ -102,9 +166,16 @@ Staff 常用功能鍵：
 | 徽章 | `badges` |
 | 排桌 | `seating` |
 
-> **注意**：側欄「付費設定」用 `transactions` 顯示，但路由 `/events/:eventId/payment-settings` 實際權限檢查走 `rsvp`。Staff 建議兩個都開。
+> **注意**：側欄「Payment Settings」顯示條件用 `transactions`，但路由 `/events/:eventId/payment-settings` 實際權限檢查走 `rsvp`。Staff 做付費設定建議 **兩個都開**。
 
-權限設定：`/auth/users/:id/edit`（admin）
+路徑速查：
+
+```
+/auth/users                 # 帳號列表（admin）
+/auth/users/add             # 新增帳號
+/auth/users/:id/edit        # Set Permissions
+POST /auth/users/:id/permissions
+```
 
 ---
 
@@ -596,7 +667,7 @@ RSVP 頁同時顯示 Checked In / Total / Check-in Rate，並可 **Download Repo
 - [ ] FormConfig：H1／Section／Field／成功頁／關閉頁 OK（已 Save Config）  
 - [ ] Welcome／Yes-No／payment_receipt 模板內容已審  
 - [ ] 自動電郵開關符合客戶要求（記住 Yes/No 會壓過 welcome）  
-- [ ] Staff 帳號 `allowedEvents` + 功能鍵正確  
+- [ ] Staff 帳號已喺 `/auth/users` 設定 `allowedEvents` + Functions（Save Permissions）  
 - [ ] 報名連結（slug 或 eventId）已交給客戶  
 
 ### 活動當日
@@ -616,6 +687,11 @@ RSVP 頁同時顯示 Checked In / Total / Check-in Rate，並可 **Download Repo
 ## 13. 路徑速查
 
 ```
+# 帳號權限（admin）
+/auth/users
+/auth/users/add
+/auth/users/:id/edit
+
 # 主線
 /events/list
 /events/create
@@ -691,6 +767,10 @@ RSVP 頁同時顯示 Checked In / Total / Check-in Rate，並可 **Download Repo
 | `15-seating.png` | 排桌 |
 | `16-prizes-list.png` | 獎品管理 |
 | `17-luckydraw-setting.png` | 抽獎頁面設定 |
+| `18-auth-users-list.png` | `/auth/users` 帳號列表 |
+| `19-auth-set-permissions-events.png` | Set Permissions：Allowed Events |
+| `20-auth-set-permissions-functions.png` | Set Permissions：Functions per Event |
+| `21-auth-add-user.png` | Add User |
 
 ---
 
