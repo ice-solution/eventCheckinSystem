@@ -52,25 +52,31 @@ async function getImportFieldDefinitions(eventId) {
     );
 
     const language = migratedConfig.defaultLanguage || 'zh';
-    const fieldMap = new Map();
+    // 次序跟註冊表單一致：section.order → field.order（同 report / RSVP）
+    const fieldDetails = [];
+    const seen = new Set();
 
     if (migratedConfig.sections) {
-        migratedConfig.sections.forEach(section => {
+        const sections = [...migratedConfig.sections].sort((a, b) => (a.order || 0) - (b.order || 0));
+        sections.forEach(section => {
             if (!section || section.visible === false || !Array.isArray(section.fields)) return;
-            section.fields.forEach(field => {
+            const fields = [...section.fields].sort((a, b) => (a.order || 0) - (b.order || 0));
+            fields.forEach(field => {
                 if (!field || field.visible === false || !field.fieldName) return;
-                if (fieldMap.has(field.fieldName)) return; // 避免重複欄位
+                if (field.type === 'display') return; // 顯示用欄位唔匯入
+                if (seen.has(field.fieldName)) return;
 
                 let label = '';
                 if (typeof field.label === 'string') {
                     label = field.label;
-                } else if (field.label && (field.label[language] || field.label.zh)) {
-                    label = field.label[language] || field.label.zh;
+                } else if (field.label && (field.label[language] || field.label.zh || field.label.en)) {
+                    label = field.label[language] || field.label.zh || field.label.en;
                 } else {
                     label = field.fieldName;
                 }
 
-                fieldMap.set(field.fieldName, {
+                seen.add(field.fieldName);
+                fieldDetails.push({
                     fieldName: field.fieldName,
                     label
                 });
@@ -78,7 +84,18 @@ async function getImportFieldDefinitions(eventId) {
         });
     }
 
-    const fieldDetails = Array.from(fieldMap.values());
+    // Thank You Yes/No：import／export 一律帶上（唔論 enabled），方便 bulk 填答
+    if (!seen.has('thankYouYesNo')) {
+        const ynq = migratedConfig.thankYou && migratedConfig.thankYou.yesNoQuestion;
+        const ynqLabel = (ynq && ynq.question && (ynq.question[language] || ynq.question.zh || ynq.question.en))
+            || 'Yes/No Question';
+        seen.add('thankYouYesNo');
+        fieldDetails.push({
+            fieldName: 'thankYouYesNo',
+            label: String(ynqLabel).trim() || 'Yes/No Question'
+        });
+    }
+
     const fields = fieldDetails.map(field => field.fieldName);
 
     return { fields, fieldDetails };
@@ -110,6 +127,76 @@ function findUserByIncomingId(users, incomingId) {
         const currentId = u && u._id ? String(u._id).trim().toLowerCase() : '';
         return currentId === normalizedIncoming;
     }) || null;
+}
+
+/** Excel 雙列標題：row1 = fieldName，row2 = label（畀客人睇） */
+const SYSTEM_COLUMN_LABELS = {
+    _id: 'Guest ID',
+    isCheckIn: 'Checked In (1/0)'
+};
+
+function buildImportHeaderRows(fieldDetails) {
+    const fieldNames = ['_id', ...fieldDetails.map(f => f.fieldName), 'isCheckIn'];
+    const labels = [
+        SYSTEM_COLUMN_LABELS._id,
+        ...fieldDetails.map(f => f.label || f.fieldName),
+        SYSTEM_COLUMN_LABELS.isCheckIn
+    ];
+    return { fieldNames, labels };
+}
+
+/**
+ * 判斷第 2 列是否 label 列（新格式）；舊檔只有 1 列 fieldName 則資料由第 2 列起。
+ */
+function detectDataStartIndex(rows, headerIndexMap, fieldDetails) {
+    if (!rows || rows.length < 2) return 1;
+    const labelRow = rows[1] || [];
+    let checked = 0;
+    let matches = 0;
+
+    const idIdx = headerIndexMap.get('_id');
+    if (idIdx !== undefined) {
+        checked += 1;
+        const cell = labelRow[idIdx] != null ? String(labelRow[idIdx]).trim() : '';
+        if (
+            !cell ||
+            cell === '_id' ||
+            cell === SYSTEM_COLUMN_LABELS._id ||
+            /^id$/i.test(cell) ||
+            /guest\s*id/i.test(cell) ||
+            /賓客/.test(cell)
+        ) {
+            matches += 1;
+        }
+    }
+
+    const checkInIdx = headerIndexMap.get('isCheckIn');
+    if (checkInIdx !== undefined) {
+        checked += 1;
+        const cell = labelRow[checkInIdx] != null ? String(labelRow[checkInIdx]).trim() : '';
+        if (
+            !cell ||
+            cell === 'isCheckIn' ||
+            cell === SYSTEM_COLUMN_LABELS.isCheckIn ||
+            /check.?in/i.test(cell) ||
+            /簽到|已簽到/.test(cell)
+        ) {
+            matches += 1;
+        }
+    }
+
+    (fieldDetails || []).forEach((fd) => {
+        const idx = headerIndexMap.get(fd.fieldName);
+        if (idx === undefined) return;
+        checked += 1;
+        const cell = labelRow[idx] != null ? String(labelRow[idx]).trim() : '';
+        if (cell && (cell === fd.label || cell === fd.fieldName)) {
+            matches += 1;
+        }
+    });
+
+    if (checked > 0 && matches / checked >= 0.5) return 2;
+    return 1;
 }
 
 exports.getImportUserPage = async (req, res) => {
@@ -146,7 +233,7 @@ exports.importUsers = async (req, res) => {
             return res.status(404).send('Event not found');
         }
 
-        const { fields: expectedFields } = await getImportFieldDefinitions(eventId);
+        const { fields: expectedFields, fieldDetails } = await getImportFieldDefinitions(eventId);
         if (!expectedFields || expectedFields.length === 0) {
             return res.status(400).send('No form fields available for this event. Please configure the registration form first.');
         }
@@ -161,6 +248,7 @@ exports.importUsers = async (req, res) => {
             return res.status(400).send('Uploaded file is empty.');
         }
 
+        // Row 1 = fieldName（系統用）；Row 2 = label（可選，畀客人睇）
         const headerRow = rows[0].map(header => (header !== null && header !== undefined ? String(header).trim() : ''));
         const headerIndexMap = new Map();
         headerRow.forEach((header, index) => {
@@ -174,7 +262,8 @@ exports.importUsers = async (req, res) => {
             return res.status(400).send(`Missing required column(s): ${missingColumns.join(', ')}`);
         }
 
-        const dataRows = rows.slice(1).filter(row => {
+        const dataStartIndex = detectDataStartIndex(rows, headerIndexMap, fieldDetails);
+        const dataRows = rows.slice(dataStartIndex).filter(row => {
             return row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== '');
         });
 
@@ -200,7 +289,7 @@ exports.importUsers = async (req, res) => {
 
         for (let i = 0; i < dataRows.length; i += 1) {
             const row = dataRows[i];
-            const excelRowNo = i + 2; // 第 1 列是 header
+            const excelRowNo = i + dataStartIndex + 1; // Excel 1-based（已跳過 header / label 列）
             const incomingId = idColumnIndex !== undefined
                 ? (row[idColumnIndex] !== undefined && row[idColumnIndex] !== null ? String(row[idColumnIndex]).trim() : '')
                 : '';
@@ -386,8 +475,8 @@ exports.downloadSampleFile = async (req, res) => {
             return res.status(400).send('No form fields available to generate sample file. Please configure the registration form first.');
         }
 
-        const titlesRow = ['_id', ...fieldDetails.map(field => `${field.fieldName}`), 'isCheckIn'];
-        const worksheet = XLSX.utils.aoa_to_sheet([titlesRow]);
+        const { fieldNames, labels } = buildImportHeaderRows(fieldDetails);
+        const worksheet = XLSX.utils.aoa_to_sheet([fieldNames, labels]);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Sample');
 
@@ -409,13 +498,13 @@ exports.downloadCurrentUsersFile = async (req, res) => {
         const event = await Event.findById(eventId);
         if (!event) return res.status(404).send('Event not found');
 
-        const { fields: expectedFields } = await getImportFieldDefinitions(eventId);
+        const { fields: expectedFields, fieldDetails } = await getImportFieldDefinitions(eventId);
         if (!expectedFields || expectedFields.length === 0) {
             return res.status(400).send('No form fields available for this event.');
         }
 
-        const header = ['_id', ...expectedFields, 'isCheckIn'];
-        const rows = [header];
+        const { fieldNames, labels } = buildImportHeaderRows(fieldDetails);
+        const rows = [fieldNames, labels];
 
         (event.users || []).forEach(user => {
             const row = [];

@@ -139,11 +139,11 @@
                                 </div>
                             </div>
 
-                            <!-- Filter by Email Type -->
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label class="mr-2"><%= t('email_records.filterByType') %>:</label>
-                                    <select id="filterEmailType" class="form-control form-control-sm d-inline-block" style="width: auto;">
+                            <!-- Filter by Email Type + Global Search -->
+                            <div class="row mb-3 align-items-end">
+                                <div class="col-md-auto mb-2 mb-md-0">
+                                    <label class="mr-2 mb-1 d-block"><%= t('email_records.filterByType') %>:</label>
+                                    <select id="filterEmailType" class="form-control form-control-sm" style="width: auto; min-width: 160px;">
                                         <option value=""><%= t('email_records.filterAll') %></option>
                                         <% if (typeof emailTypes !== 'undefined' && emailTypes.length) { %>
                                             <% emailTypes.forEach(function(type) { %>
@@ -152,6 +152,22 @@
                                         <% } %>
                                         <option value="__none__"><%= t('email_records.filterNoType') %></option>
                                     </select>
+                                </div>
+                                <div class="col-md mb-2 mb-md-0">
+                                    <label class="mb-1 d-block" for="emailRecordsGlobalSearch"><%= t('email_records.globalSearch') %>:</label>
+                                    <div class="input-group input-group-sm" style="max-width: 420px;">
+                                        <input type="text" id="emailRecordsGlobalSearch" class="form-control"
+                                            placeholder="<%= t('email_records.globalSearchPlaceholder') %>"
+                                            autocomplete="off">
+                                        <div class="input-group-append">
+                                            <button type="button" id="emailRecordsSearchBtn" class="btn btn-secondary">
+                                                <i class="fa fa-search"></i> <%= t('email_records.searchBtn') %>
+                                            </button>
+                                            <button type="button" id="emailRecordsSearchClear" class="btn btn-outline-secondary" title="<%= t('email_records.clearSearch') %>">
+                                                <i class="fa fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -346,6 +362,8 @@
                     }
                     return data;
                 }
+            }, {
+                targets: -1, searchable: false, orderable: false
             }]
         });
 
@@ -363,6 +381,26 @@
             table.draw();
         });
 
+        function applyEmailRecordsGlobalSearch() {
+            var term = ($('#emailRecordsGlobalSearch').val() || '').trim();
+            table.search(term).draw();
+        }
+
+        $('#emailRecordsSearchBtn').on('click', function() {
+            applyEmailRecordsGlobalSearch();
+        });
+
+        $('#emailRecordsGlobalSearch').on('keydown', function(e) {
+            if (e.key === 'Enter' || e.keyCode === 13) {
+                e.preventDefault();
+                applyEmailRecordsGlobalSearch();
+            }
+        });
+
+        $('#emailRecordsSearchClear').on('click', function() {
+            $('#emailRecordsGlobalSearch').val('');
+            table.search('').draw();
+        });
 
         setTimeout(function() {
             $('.view-email-details').each(function(index) {

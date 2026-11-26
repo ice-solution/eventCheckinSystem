@@ -355,13 +355,17 @@ async function drawText(ctx, element, data, dimensions) {
     ctx.font = formatCanvasFont(element, actualFontSize);
     ctx.fillStyle = element.color || '#000000';
     
-    // 處理 fullWidth：如果 fullWidth，則元素寬度為整個 canvas 寬度，x 為 0
+    // 處理 fullWidth：佔滿可用寬度，但左右各留約 5mm，避免列印裁字
     let elementX = element.x;
     let elementWidth = element.width || 300;
     
     if (element.fullWidth) {
-        elementX = 0;
-        elementWidth = dimensions.width;
+        // badge 寬度固定 100mm；用比例換算，唔依賴 DPI
+        const badgeWidthMm = 100;
+        const sideMarginMm = 5;
+        const marginPx = Math.round(dimensions.width * (sideMarginMm / badgeWidthMm));
+        elementX = marginPx;
+        elementWidth = Math.max(1, dimensions.width - marginPx * 2);
     }
     
     // 設定文字對齊方式
@@ -380,8 +384,8 @@ async function drawText(ctx, element, data, dimensions) {
         x = elementX;
     }
     
-    // 處理文字換行
-    const maxWidth = elementWidth - 10; // 留一點邊距
+    // 處理文字換行（fullWidth 已有 5mm 邊，唔使再大幅縮）
+    const maxWidth = Math.max(1, elementWidth - (element.fullWidth ? 0 : 10));
     const lines = wrapText(ctx, content, maxWidth);
     
     // 繪製多行文字

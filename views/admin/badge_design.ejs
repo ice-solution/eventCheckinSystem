@@ -288,10 +288,20 @@
         // Canvas 尺寸：可選 100×62 或 100×140（mm）@ 300 DPI
         const BADGE_DPI = 300;
         const MM_TO_PX = BADGE_DPI / 25.4;
+        /** Full Width 左右各留約 5mm，避免 printer 裁邊睇唔到字 */
+        const FULL_WIDTH_SIDE_MARGIN_MM = 5;
         const BADGE_SIZE_PRESETS = {
             '100x62': { widthMm: 100, heightMm: 62 },
             '100x140': { widthMm: 100, heightMm: 140 }
         };
+
+        function getFullWidthLayoutBox() {
+            const marginPx = Math.round(CANVAS_WIDTH * (FULL_WIDTH_SIDE_MARGIN_MM / badgeWidthMm));
+            return {
+                x: marginPx,
+                width: Math.max(1, CANVAS_WIDTH - marginPx * 2)
+            };
+        }
 
         function resolvePresetKey(widthMm, heightMm) {
             const w = Number(widthMm) || 100;
@@ -358,12 +368,13 @@
             updateCanvasDisplaySize();
             updateCanvasSizeLabel();
 
-            // 全寬元素跟隨新寬度；超出邊界的元素輕微 clamp
+            // 全寬元素跟隨新寬度（左右留 5mm）；超出邊界的元素輕微 clamp
             (elements || []).forEach(function (el) {
                 if (!el) return;
                 if (el.fullWidth) {
-                    el.x = 0;
-                    el.width = CANVAS_WIDTH;
+                    const box = getFullWidthLayoutBox();
+                    el.x = box.x;
+                    el.width = box.width;
                 }
                 const elW = el.width || (el.type === 'qrcode' ? 100 : 100);
                 const elH = el.height || (el.type === 'qrcode' ? 100 : 50);
@@ -473,13 +484,14 @@
                 ctx.font = formatBadgeCanvasFont(element, actualFontSize);
                 ctx.fillStyle = element.color || '#000000';
 
-                // 處理 fullWidth：如果 fullWidth，則元素寬度為整個 canvas 寬度，x 為 0
+                // 處理 fullWidth：可用寬度，左右各留約 5mm
                 let elementX = element.x;
                 let elementWidth = element.width || 300;
 
                 if (element.fullWidth) {
-                    elementX = 0;
-                    elementWidth = CANVAS_WIDTH;
+                    const box = getFullWidthLayoutBox();
+                    elementX = box.x;
+                    elementWidth = box.width;
                 }
 
                 // 設定文字對齊方式
@@ -500,7 +512,7 @@
 
                 // 處理文字換行
                 const content = element.content || '';
-                const maxWidth = elementWidth - 10; // 留一點邊距
+                const maxWidth = Math.max(1, elementWidth - (element.fullWidth ? 0 : 10));
                 const lines = wrapText(ctx, content, maxWidth);
 
                 // 繪製多行文字
@@ -528,21 +540,24 @@
 
             // 選中時繪製邊框
             if (isSelected) {
-                // 計算實際寬度（fullWidth 時使用 canvas 寬度）
+                // 計算實際寬度（fullWidth 時用左右留邊後的可用寬度）
+                let boxX = element.x;
                 let boxWidth = element.width || (element.type === 'qrcode' ? 100 : 100);
                 if (element.fullWidth && element.type === 'text') {
-                    boxWidth = CANVAS_WIDTH;
+                    const box = getFullWidthLayoutBox();
+                    boxX = box.x;
+                    boxWidth = box.width;
                 }
                 const boxHeight = element.height || (element.type === 'qrcode' ? 100 : 50);
 
                 ctx.strokeStyle = '#007bff';
                 ctx.lineWidth = 2;
                 ctx.setLineDash([5, 5]);
-                ctx.strokeRect(element.x - 2, element.y - 2, boxWidth + 4, boxHeight + 4);
+                ctx.strokeRect(boxX - 2, element.y - 2, boxWidth + 4, boxHeight + 4);
                 ctx.setLineDash([]);
 
                 // 繪製右下角拉伸點
-                const handleX = element.x + boxWidth - RESIZE_HANDLE_SIZE / 2;
+                const handleX = boxX + boxWidth - RESIZE_HANDLE_SIZE / 2;
                 const handleY = element.y + boxHeight - RESIZE_HANDLE_SIZE / 2;
                 ctx.fillStyle = '#ffffff';
                 ctx.strokeStyle = '#007bff';
@@ -643,10 +658,11 @@
                 let elX = el.x;
                 let elWidth = el.width || (el.type === 'qrcode' ? 100 : 100);
 
-                // 處理 fullWidth
+                // 處理 fullWidth（左右留 5mm）
                 if (el.fullWidth && el.type === 'text') {
-                    elX = 0;
-                    elWidth = CANVAS_WIDTH;
+                    const box = getFullWidthLayoutBox();
+                    elX = box.x;
+                    elWidth = box.width;
                 }
 
                 const height = el.height || (el.type === 'qrcode' ? 100 : 50);
@@ -678,10 +694,11 @@
             let elX = el.x;
             let boxWidth = el.width || (el.type === 'qrcode' ? 100 : 100);
 
-            // 處理 fullWidth
+            // 處理 fullWidth（左右留 5mm）
             if (el.fullWidth && el.type === 'text') {
-                elX = 0;
-                boxWidth = CANVAS_WIDTH;
+                const box = getFullWidthLayoutBox();
+                elX = box.x;
+                boxWidth = box.width;
             }
 
             const boxHeight = el.height || (el.type === 'qrcode' ? 100 : 50);
@@ -707,7 +724,7 @@
             if (x >= elX && x <= elX + boxWidth && y >= el.y && y <= el.y + boxHeight) {
                 isDragging = true;
                 // dragOffset 記錄滑鼠相對於元素左上角的偏移
-                // fullWidth 的元素 x 是 0，所以 dragOffset.x 就是滑鼠的 x 座標
+                // fullWidth 只允許垂直拖動，水平偏移用滑鼠 x 即可
                 dragOffset.x = el.fullWidth ? x : (x - elX);
                 dragOffset.y = y - el.y;
             }
@@ -745,9 +762,12 @@
 
             // 拖動位置（含「磁吸」到中線）
             if (isDragging) {
-                // fullWidth 的元素只能垂直拖動（水平位置固定在 x=0）
+                // fullWidth 的元素只能垂直拖動（水平位置由 5mm 邊距決定）
                 if (el.fullWidth && el.type === 'text') {
-                    // 只允許垂直拖動
+                    // 只允許垂直拖動；同步左右邊距
+                    const box = getFullWidthLayoutBox();
+                    el.x = box.x;
+                    el.width = box.width;
                     let newY = y - dragOffset.y;
                     const boxHeight = el.height || 50;
                     const canvasCenterY = CANVAS_HEIGHT / 2;
@@ -954,10 +974,11 @@
 
             elements[selectedElement][property] = value;
 
-            // 如果更新了 fullWidth，需要調整元素位置和寬度
+            // 如果更新了 fullWidth，需要調整元素位置和寬度（左右留 5mm）
             if (property === 'fullWidth' && value === true) {
-                elements[selectedElement].x = 0;
-                elements[selectedElement].width = CANVAS_WIDTH;
+                const box = getFullWidthLayoutBox();
+                elements[selectedElement].x = box.x;
+                elements[selectedElement].width = box.width;
             }
 
             initCanvas();
