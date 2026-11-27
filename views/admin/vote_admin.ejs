@@ -4,64 +4,91 @@
 <link rel="stylesheet" href="/admin/assets/css/cs-skin-elastic.css">
 <link rel="stylesheet" href="/admin/assets/css/style.css">
 <style>
-    .vote-option {
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 15px;
-        background: white;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .vote-option img {
-        max-width: 200px;
-        max-height: 150px;
-        object-fit: cover;
-        border-radius: 4px;
-    }
-    .option-form {
-        background: #f8f9fa;
-        padding: 20px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-    }
-    .results-section {
-        background: #e9ecef;
-        padding: 20px;
-        border-radius: 8px;
-        margin-top: 20px;
-    }
-    .progress-bar {
-        height: 25px;
+    .vote-q-list { display: flex; flex-direction: column; gap: 14px; }
+    .vote-q-card {
+        border: 1px solid #e2e8f0;
         border-radius: 12px;
-        overflow: hidden;
-        background: #e9ecef;
+        padding: 18px;
+        background: #fff;
+        position: relative;
     }
-    .progress-fill {
-        height: 100%;
-        background: linear-gradient(45deg, #007bff, #0056b3);
-        transition: width 0.3s ease;
+    .vote-q-card.is-dragging {
+        opacity: 0.85;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
+    }
+    .vote-q-handle {
+        cursor: grab;
+        user-select: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: #64748b;
+        font-size: 13px;
+        font-weight: 600;
+        margin-right: 10px;
+    }
+    .vote-q-handle:active { cursor: grabbing; }
+    .vote-kv-preview {
+        width: 100%;
+        max-height: 220px;
+        object-fit: contain;
+        background: #0b0618;
+        border-radius: 8px;
+        border: 1px solid #334155;
+    }
+    .vote-kv-empty {
+        height: 140px;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: white;
-        font-weight: bold;
+        background: #f1f5f9;
+        border-radius: 8px;
+        color: #64748b;
+        font-size: 13px;
+    }
+    .results-block {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 16px;
+        margin-top: 8px;
+    }
+    .slot-bar {
+        height: 10px;
+        background: #e2e8f0;
+        border-radius: 999px;
+        overflow: hidden;
+    }
+    .slot-bar > span {
+        display: block;
+        height: 100%;
+        background: linear-gradient(90deg, #7c3aed, #22d3ee);
+    }
+    .settings-box {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 20px;
     }
 </style>
 
 <div id="right-panel" class="right-panel">
-    <%- include ("components/rightpanel_header") %>
+    <%- include ("components/rightpanel_header", { backUrl: '/events/' + eventId }) %>
     <div class="content">
         <div class="animated fadeIn">
             <div class="row">
                 <div class="col-md-12">
                     <div class="card">
-                        <div class="card-header">
-                            <strong class="card-title"><%= t('vote_admin.title') %> - <%= event.name %></strong>
+                        <div class="card-header d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
+                            <strong class="card-title"><%= t('vote_admin.title') %> — <%= event.name %></strong>
+                            <a href="/votes/<%= eventId %>" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="fa fa-external-link"></i> <%= t('vote_admin.viewVotePage') %>
+                            </a>
                         </div>
                         <div class="card-body">
-                            <!-- 投票設置 -->
-                            <div class="option-form">
-                                <h5><%= t('vote_admin.settingsTitle') %></h5>
+                            <div class="settings-box">
+                                <h5 class="mb-3"><%= t('vote_admin.settingsTitle') %></h5>
                                 <form id="voteSettingsForm">
                                     <div class="form-group">
                                         <label for="title"><%= t('vote_admin.voteTitle') %></label>
@@ -69,7 +96,7 @@
                                     </div>
                                     <div class="form-group">
                                         <label for="description"><%= t('vote_admin.voteDescription') %></label>
-                                        <textarea class="form-control" id="description" rows="3"><%= vote.description %></textarea>
+                                        <textarea class="form-control" id="description" rows="2"><%= vote.description %></textarea>
                                     </div>
                                     <div class="form-group">
                                         <div class="custom-control custom-switch">
@@ -81,84 +108,79 @@
                                 </form>
                             </div>
 
-                            <!-- 添加選項 -->
-                            <div class="option-form">
-                                <h5><%= t('vote_admin.addOptionTitle') %></h5>
-                                <form id="addOptionForm">
-                                    <div class="form-group">
-                                        <label for="optionName"><%= t('vote_admin.optionName') %></label>
-                                        <input type="text" class="form-control" id="optionName" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="optionDescription"><%= t('vote_admin.optionDescription') %></label>
-                                        <textarea class="form-control" id="optionDescription" rows="2"></textarea>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="optionImage"><%= t('vote_admin.optionImage') %></label>
-                                        <input type="file" class="form-control-file" id="optionImage" accept="image/*">
-                                        <small class="form-text text-muted"><%= t('vote_admin.imageHint') %></small>
-                                    </div>
-                                    <button type="submit" class="btn btn-success"><i class="fa fa-plus mr-1"></i><%= t('vote_admin.addOption') %></button>
-                                </form>
-                            </div>
+                            <h5 class="mb-2"><%= t('vote_admin.questionsTitle') %></h5>
+                            <p class="text-muted small mb-3"><%= t('vote_admin.questionsHint') %> · <%= t('vote_admin.dragHint') %></p>
 
-                            <!-- 投票選項列表 -->
-                            <h5><%= t('vote_admin.optionListTitle') %> (<span id="optionCount"><%= vote.options.length %></span>/5)</h5>
-                            <div id="optionsList">
-                                <% vote.options.forEach((option, index) => { %>
-                                    <div class="vote-option" data-id="<%= option._id %>">
-                                        <div class="row">
-                                            <div class="col-md-3">
-                                                <% if (option.image) { %>
-                                                    <img src="<%= option.image %>" alt="<%= option.name %>" class="img-fluid">
-                                                <% } else { %>
-                                                    <div class="bg-light text-center py-4">
-                                                        <i class="fa fa-image fa-3x text-muted"></i>
-                                                    </div>
-                                                <% } %>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <h6><%= option.name %></h6>
-                                                <p class="text-muted"><%= option.description || t('vote_admin.noDescription') %></p>
-                                                <small class="text-muted"><%= t('vote_admin.votesCount') %>: <%= option.votes %></small>
-                                            </div>
-                                            <div class="col-md-3 text-right">
-                                                <button class="btn btn-danger btn-sm" onclick="deleteOption('<%= option._id %>')">
-                                                    <i class="fa fa-trash"></i> <%= t('common.delete') %>
-                                                </button>
+                            <div class="vote-q-list" id="voteQuestionList">
+                            <% (vote.questions || []).forEach(function(q, qi) { %>
+                                <div class="vote-q-card" data-question-id="<%= q._id %>">
+                                    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap" style="gap:8px;">
+                                        <div>
+                                            <span class="vote-q-handle" draggable="true" title="<%= t('vote_admin.dragHint') %>">
+                                                <i class="fa fa-bars"></i> <%= t('vote_admin.dragHandle') %>
+                                            </span>
+                                            <strong class="js-q-order-label"><%= t('vote_admin.questionN') %> <%= qi + 1 %></strong>
+                                        </div>
+                                        <span class="badge badge-secondary"><%= (q.slots || []).length %> slots</span>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <% if (q.kvImage) { %>
+                                                <img class="vote-kv-preview" src="<%= q.kvImage %>" alt="KV">
+                                            <% } else { %>
+                                                <div class="vote-kv-empty"><%= t('vote_admin.kvEmpty') %></div>
+                                            <% } %>
+                                            <div class="mt-2">
+                                                <label class="small mb-1"><%= t('vote_admin.uploadKv') %></label>
+                                                <input type="file" class="form-control-file js-kv-upload" accept="image/*" data-qid="<%= q._id %>">
                                             </div>
                                         </div>
-                                    </div>
-                                <% }); %>
-                            </div>
-
-                            <!-- 投票結果 -->
-                            <div class="results-section">
-                                <h5><%= t('vote_admin.resultsTitle') %></h5>
-                                <div id="voteResults">
-                                    <%
-                                    const totalVotes = vote.records.length;
-                                    vote.options.forEach(option => {
-                                        const percentage = totalVotes > 0 ? Math.round((option.votes / totalVotes) * 100) : 0;
-                                    %>
-                                        <div class="mb-3">
-                                            <div class="d-flex justify-content-between">
-                                                <span><%= option.name %></span>
-                                                <span><%= option.votes %> <%= t('vote_admin.voteUnit') %> (<%= percentage %>%)</span>
+                                        <div class="col-md-6 mb-3">
+                                            <div class="form-group">
+                                                <label><%= t('vote_admin.questionTitle') %></label>
+                                                <input type="text" class="form-control js-q-title" value="<%= q.title || '' %>" data-qid="<%= q._id %>">
                                             </div>
-                                            <div class="progress-bar">
-                                                <div class="progress-fill" style="width: <%= percentage %>%">
-                                                    <%= percentage %>%
-                                                </div>
+                                            <div class="form-group">
+                                                <label><%= t('vote_admin.slotCount') %></label>
+                                                <input type="number" min="1" max="10" class="form-control js-q-slots" value="<%= (q.slots || []).length %>" data-qid="<%= q._id %>">
+                                                <small class="text-muted"><%= t('vote_admin.slotCountHint') %></small>
                                             </div>
+                                            <div class="form-group">
+                                                <label><%= t('vote_admin.slotLabels') %></label>
+                                                <input type="text" class="form-control js-q-labels" data-qid="<%= q._id %>"
+                                                    value="<%= (q.slots || []).map(function(s){ return s.label; }).join(', ') %>"
+                                                    placeholder="1, 2, 3">
+                                                <small class="text-muted"><%= t('vote_admin.slotLabelsHint') %></small>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-success js-save-q" data-qid="<%= q._id %>">
+                                                <i class="fa fa-save"></i> <%= t('vote_admin.saveQuestion') %>
+                                            </button>
                                         </div>
-                                    <% }); %>
+                                    </div>
                                 </div>
-                                <p class="text-muted"><%= t('vote_admin.totalVotes') %>: <span id="totalVotes"><%= totalVotes %></span></p>
+                            <% }) %>
                             </div>
 
-                            <div class="mt-3">
-                                <a href="/votes/<%= eventId %>" target="_blank" class="btn btn-info"><i class="fa fa-external-link mr-1"></i><%= t('vote_admin.viewVotePage') %></a>
+                            <div class="results-block mt-4">
+                                <h5 class="mb-1"><%= t('vote_admin.resultsTitle') %></h5>
+                                <p class="text-muted small mb-3">
+                                    <%= t('vote_admin.totalBallots') %>: <strong><%= results.ballotCount %></strong>
+                                    · <%= t('vote_admin.resultsStaticHint') %>
+                                </p>
+                                <% (results.questions || []).forEach(function(q, qi) { %>
+                                    <div class="mb-4">
+                                        <h6 class="mb-2"><%= qi + 1 %>. <%= q.title || ('Q' + (qi + 1)) %></h6>
+                                        <% (q.slots || []).forEach(function(s) { %>
+                                            <div class="mb-2">
+                                                <div class="d-flex justify-content-between small">
+                                                    <span><%= s.label %></span>
+                                                    <span><%= s.votes %> <%= t('vote_admin.voteUnit') %> (<%= s.percentage %>%)</span>
+                                                </div>
+                                                <div class="slot-bar"><span style="width:<%= s.percentage %>%"></span></div>
+                                            </div>
+                                        <% }) %>
+                                    </div>
+                                <% }) %>
                             </div>
                         </div>
                     </div>
@@ -168,132 +190,135 @@
     </div>
 </div>
 
-<%- include ("./components/footer") %>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.js"></script>
+<%- include ("components/footer") %>
 <script>
-    const _VA = {
-        updateFailed: '<%= t("vote_admin.updateFailed") %>',
-        addFailed: '<%= t("vote_admin.addFailed") %>',
-        deleteFailed: '<%= t("vote_admin.deleteFailed") %>',
-        deleteConfirm: '<%= t("vote_admin.deleteConfirm") %>',
-        voteUnit: '<%= t("vote_admin.voteUnit") %>'
+jQuery(function ($) {
+    var eventId = '<%= eventId %>';
+    var msg = {
+        updateFailed: <%- JSON.stringify(t('vote_admin.updateFailed')) %>,
+        saveFailed: <%- JSON.stringify(t('vote_admin.saveFailed')) %>,
+        uploadFailed: <%- JSON.stringify(t('vote_admin.uploadFailed')) %>,
+        saved: <%- JSON.stringify(t('vote_admin.saved')) %>,
+        reorderFailed: <%- JSON.stringify(t('vote_admin.reorderFailed')) %>
     };
 
-    $(document).ready(function() {
-        // 更新投票設置
-        $('#voteSettingsForm').on('submit', function(e) {
-            e.preventDefault();
-
-            const formData = {
+    $('#voteSettingsForm').on('submit', function (e) {
+        e.preventDefault();
+        $.ajax({
+            url: '/votes/' + eventId + '/settings',
+            method: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({
                 title: $('#title').val(),
                 description: $('#description').val(),
                 isActive: $('#isActive').is(':checked')
-            };
-
-            fetch(`/votes/<%= eventId %>/settings`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.message) {
-                    alert(data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert(_VA.updateFailed);
-            });
-        });
-
-        // 添加投票選項
-        $('#addOptionForm').on('submit', function(e) {
-            e.preventDefault();
-
-            const formData = new FormData();
-            formData.append('name', $('#optionName').val());
-            formData.append('description', $('#optionDescription').val());
-
-            const imageFile = $('#optionImage')[0].files[0];
-            if (imageFile) {
-                formData.append('image', imageFile);
+            }),
+            success: function () { alert(msg.saved); },
+            error: function (xhr) {
+                alert((xhr.responseJSON && xhr.responseJSON.message) || msg.updateFailed);
             }
-
-            fetch(`/votes/<%= eventId %>/options`, {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.message) {
-                    alert(data.message);
-                    location.reload();
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert(_VA.addFailed);
-            });
         });
     });
 
-    function deleteOption(optionId) {
-        if (confirm(_VA.deleteConfirm)) {
-            fetch(`/votes/<%= eventId %>/options/${optionId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.message) {
-                    alert(data.message);
-                    location.reload();
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert(_VA.deleteFailed);
-            });
-        }
-    }
+    $(document).on('click', '.js-save-q', function () {
+        var qid = $(this).data('qid');
+        var $card = $('[data-question-id="' + qid + '"]');
+        var title = $card.find('.js-q-title').val();
+        var slotCount = Number($card.find('.js-q-slots').val()) || 1;
+        var labelsRaw = ($card.find('.js-q-labels').val() || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+        var payload = { title: title, slotCount: slotCount };
+        if (labelsRaw.length) payload.slotLabels = labelsRaw;
 
-    // Socket.IO 實時更新
-    const socket = io();
+        $.ajax({
+            url: '/votes/' + eventId + '/questions/' + qid,
+            method: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: function () { location.reload(); },
+            error: function (xhr) {
+                alert((xhr.responseJSON && xhr.responseJSON.message) || msg.saveFailed);
+            }
+        });
+    });
 
-    socket.on('vote_update', function(data) {
-        if (data.eventId === '<%= eventId %>') {
-            updateResults(data.results, data.totalVotes);
+    $(document).on('change', '.js-kv-upload', function () {
+        var qid = $(this).data('qid');
+        var file = this.files && this.files[0];
+        if (!file) return;
+        var fd = new FormData();
+        fd.append('kv', file);
+        $.ajax({
+            url: '/votes/' + eventId + '/questions/' + qid + '/kv',
+            method: 'POST',
+            data: fd,
+            processData: false,
+            contentType: false,
+            success: function () { location.reload(); },
+            error: function (xhr) {
+                alert((xhr.responseJSON && xhr.responseJSON.message) || msg.uploadFailed);
+            }
+        });
+    });
+
+    // Drag & drop reorder — only from handle (avoid breaking file/text inputs)
+    var $list = $('#voteQuestionList');
+    var dragEl = null;
+
+    $list.on('dragstart', '.vote-q-handle', function (e) {
+        dragEl = $(this).closest('.vote-q-card')[0];
+        if (!dragEl) return;
+        $(dragEl).addClass('is-dragging');
+        if (e.originalEvent && e.originalEvent.dataTransfer) {
+            e.originalEvent.dataTransfer.effectAllowed = 'move';
+            e.originalEvent.dataTransfer.setData('text/plain', $(dragEl).data('question-id'));
         }
     });
 
-    function updateResults(results, totalVotes) {
-        const resultsDiv = $('#voteResults');
-        resultsDiv.empty();
+    $list.on('dragend', '.vote-q-handle', function () {
+        if (dragEl) $(dragEl).removeClass('is-dragging');
+        dragEl = null;
+        persistOrder();
+    });
 
-        results.forEach(option => {
-            const percentage = option.percentage;
-            const optionHtml = `
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between">
-                        <span>${option.name}</span>
-                        <span>${option.votes} ${_VA.voteUnit} (${percentage}%)</span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${percentage}%">
-                            ${percentage}%
-                        </div>
-                    </div>
-                </div>
-            `;
-            resultsDiv.append(optionHtml);
+    $list.on('dragover', '.vote-q-card', function (e) {
+        e.preventDefault();
+        if (!dragEl || dragEl === this) return;
+        var $target = $(this);
+        var mid = $target.offset().top + $target.outerHeight() / 2;
+        var y = e.originalEvent.clientY;
+        if (y < mid) $target.before(dragEl);
+        else $target.after(dragEl);
+        refreshOrderLabels();
+    });
+
+    $list.on('drop', '.vote-q-card', function (e) {
+        e.preventDefault();
+    });
+
+    function refreshOrderLabels() {
+        $list.find('.vote-q-card').each(function (i) {
+            $(this).find('.js-q-order-label').text('<%= t("vote_admin.questionN") %> ' + (i + 1));
         });
-
-        $('#totalVotes').text(totalVotes);
     }
+
+    var reorderTimer = null;
+    function persistOrder() {
+        clearTimeout(reorderTimer);
+        reorderTimer = setTimeout(function () {
+            var order = [];
+            $list.find('.vote-q-card').each(function () {
+                order.push(String($(this).data('question-id')));
+            });
+            $.ajax({
+                url: '/votes/' + eventId + '/questions/reorder',
+                method: 'PUT',
+                contentType: 'application/json',
+                data: JSON.stringify({ order: order }),
+                error: function (xhr) {
+                    alert((xhr.responseJSON && xhr.responseJSON.message) || msg.reorderFailed);
+                }
+            });
+        }, 200);
+    }
+});
 </script>

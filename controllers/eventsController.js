@@ -632,6 +632,21 @@ exports.copyEvent = async (req, res) => {
                     return o;
                 });
             }
+            if (Array.isArray(v.questions)) {
+                v.questions = v.questions.map((q) => {
+                    const qq = { ...q };
+                    delete qq._id;
+                    qq.slots = Array.isArray(qq.slots)
+                        ? qq.slots.map((s) => {
+                            const ss = { ...s };
+                            delete ss._id;
+                            ss.votes = 0;
+                            return ss;
+                        })
+                        : [];
+                    return qq;
+                });
+            }
             await Vote.create({
                 ...v,
                 eventId: newEvent._id,
