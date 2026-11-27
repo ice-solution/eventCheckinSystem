@@ -39,6 +39,11 @@
                     <div class="card">
                         <div class="card-header card-header-with-action">
                             <strong class="card-title"><%= t('station_checkin.title') %> - <%= event.name %></strong>
+                            <% if (stations && stations.length) { %>
+                                <a href="/events/<%= eventId %>/station-checkin/export-all" class="btn btn-info btn-sm">
+                                    <i class="fa fa-download"></i> <%= t('station_checkin.exportAllBtn') %>
+                                </a>
+                            <% } %>
                         </div>
                         <div class="card-body">
                             <div class="alert-container" id="alertContainer"></div>

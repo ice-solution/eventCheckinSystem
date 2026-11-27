@@ -99,8 +99,10 @@ router.get('/:eventId/luckydraw/panel', eventsController.renderLuckydrawPanelPag
 // award 改在 app.js 註冊為公開路由（密碼保護）
 router.get('/:eventId/import', importController.getImportUserPage);
 router.post('/:eventId/import', upload, importController.importUsers);
+router.post('/:eventId/import/locate', upload, importController.importLocateUsers);
 router.get('/:eventId/import/sample', importController.downloadSampleFile);
 router.get('/:eventId/import/export-current', importController.downloadCurrentUsersFile);
+router.get('/:eventId/import/export-locate', importController.downloadLocateUsersFile);
 
 router.post('/:eventId/users', eventsController.addUserToEvent);
 // router.put('/:eventId/users/:userEmail', eventsController.updateUserInEvent);
@@ -128,6 +130,7 @@ router.get('/:eventId/scan', eventsController.scanEventUsers);
 // Station Check-in（分站簽到）
 router.get('/:eventId/station-checkin', stationCheckinController.renderStationCheckinPage);
 router.post('/:eventId/station-checkin', stationCheckinController.createStation);
+router.get('/:eventId/station-checkin/export-all', stationCheckinController.exportAllStationCheckIns);
 router.get('/:eventId/station-checkin/:stationId', stationCheckinController.renderStationDetailPage);
 router.get('/:eventId/station-checkin/:stationId/export', stationCheckinController.exportStationCheckIns);
 router.put('/:eventId/station-checkin/:stationId', stationCheckinController.updateStation);

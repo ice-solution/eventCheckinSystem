@@ -163,6 +163,38 @@ exports.renderStationDetailPage = async (req, res) => {
     }
 };
 
+function sanitizeStationSheetName(name, usedNames) {
+    let base = String(name || 'Station')
+        .replace(/[\\/?*[\]:]/g, '_')
+        .replace(/'/g, '')
+        .trim();
+    if (!base) base = 'Station';
+    base = base.substring(0, 31);
+    let candidate = base;
+    let i = 2;
+    const used = usedNames || new Set();
+    while (used.has(candidate.toLowerCase())) {
+        const suffix = ` (${i})`;
+        candidate = (base.substring(0, Math.max(1, 31 - suffix.length)) + suffix).trim();
+        i += 1;
+    }
+    used.add(candidate.toLowerCase());
+    return candidate;
+}
+
+function stationCheckInsToAoa(rows) {
+    return [
+        ['name', 'email', 'phone', 'checkedInAt', 'checkedInBy'],
+        ...rows.map((r) => [
+            r.name,
+            r.email,
+            r.phone,
+            formatHkDateTime(r.checkedInAt),
+            r.checkedInBy,
+        ]),
+    ];
+}
+
 /** 匯出此分站簽到記錄（xlsx） */
 exports.exportStationCheckIns = async (req, res) => {
     const { eventId, stationId } = req.params;
@@ -174,18 +206,7 @@ exports.exportStationCheckIns = async (req, res) => {
         if (!station) return res.status(404).json({ message: 'Station not found' });
 
         const rows = buildStationCheckInRows(event, stationId);
-        const aoa = [
-            ['name', 'email', 'phone', 'checkedInAt', 'checkedInBy'],
-            ...rows.map((r) => [
-                r.name,
-                r.email,
-                r.phone,
-                formatHkDateTime(r.checkedInAt),
-                r.checkedInBy,
-            ]),
-        ];
-
-        const worksheet = XLSX.utils.aoa_to_sheet(aoa);
+        const worksheet = XLSX.utils.aoa_to_sheet(stationCheckInsToAoa(rows));
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'CheckIns');
         const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
@@ -199,6 +220,46 @@ exports.exportStationCheckIns = async (req, res) => {
         return res.send(Buffer.from(buffer));
     } catch (err) {
         console.error('exportStationCheckIns:', err);
+        return res.status(500).json({ message: err.message || 'Server error' });
+    }
+};
+
+/** 一次匯出全部站點：一個 station = 一個 sheet */
+exports.exportAllStationCheckIns = async (req, res) => {
+    const { eventId } = req.params;
+    try {
+        const XLSX = require('xlsx');
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+
+        const stations = (event.checkInStations || [])
+            .slice()
+            .sort((a, b) => (a.order || 0) - (b.order || 0) || String(a.name).localeCompare(String(b.name)));
+
+        if (!stations.length) {
+            return res.status(400).json({ message: 'No stations to export' });
+        }
+
+        const workbook = XLSX.utils.book_new();
+        const usedNames = new Set();
+
+        stations.forEach((station) => {
+            const rows = buildStationCheckInRows(event, station._id);
+            const worksheet = XLSX.utils.aoa_to_sheet(stationCheckInsToAoa(rows));
+            const sheetName = sanitizeStationSheetName(station.name, usedNames);
+            XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+        });
+
+        const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+        const stamp = new Date().toISOString().slice(0, 10);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader(
+            'Content-Disposition',
+            `attachment; filename=all_station_checkins_${stamp}.xlsx`
+        );
+        return res.send(Buffer.from(buffer));
+    } catch (err) {
+        console.error('exportAllStationCheckIns:', err);
         return res.status(500).json({ message: err.message || 'Server error' });
     }
 };

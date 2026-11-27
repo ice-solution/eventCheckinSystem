@@ -34,7 +34,8 @@
                                 <div class="alert alert-warning" style="word-break:break-word;"><%= t('import_users.noFields') %></div>
                             <% } %>
 
-                            <form action="/events/<%= event._id %>/import" method="POST" enctype="multipart/form-data">
+                            <h6 class="mb-2"><%= t('import_users.standardSection') %></h6>
+                            <form action="/events/<%= event._id %>/import" method="POST" enctype="multipart/form-data" class="mb-4">
                                 <div class="form-group">
                                     <label for="fileInput"><%= t('import_users.fileInput') %></label>
                                     <input type="file" class="form-control" id="fileInput" name="file" accept=".xlsx" <%= (importFields && importFields.length > 0) ? 'required' : 'disabled' %>>
@@ -50,6 +51,27 @@
                                         <% } %>
                                     </div>
                                     <button type="submit" class="btn btn-primary" <%= (importFields && importFields.length > 0) ? '' : 'disabled' %>><i class="fas fa-upload"></i> <%= t('import_users.importBtn') %></button>
+                                </div>
+                            </form>
+
+                            <hr class="my-4">
+
+                            <h6 class="mb-2"><%= t('import_users.locateSection') %></h6>
+                            <p class="text-muted small mb-3" style="word-break:break-word;"><%- t('import_users.locateDesc') %></p>
+                            <form action="/events/<%= event._id %>/import/locate" method="POST" enctype="multipart/form-data">
+                                <div class="form-group">
+                                    <label for="locateFileInput"><%= t('import_users.locateFileInput') %></label>
+                                    <input type="file" class="form-control" id="locateFileInput" name="file" accept=".xlsx" <%= (importFields && importFields.length > 0) ? 'required' : 'disabled' %>>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
+                                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                        <% if (importFields && importFields.length > 0) { %>
+                                            <a href="/events/<%= event._id %>/import/export-locate" class="btn btn-outline-info"><i class="fas fa-download"></i> <%= t('import_users.downloadLocate') %></a>
+                                        <% } else { %>
+                                            <span class="btn btn-outline-info disabled" aria-disabled="true"><i class="fas fa-download"></i> <%= t('import_users.downloadLocate') %></span>
+                                        <% } %>
+                                    </div>
+                                    <button type="submit" class="btn btn-success" <%= (importFields && importFields.length > 0) ? '' : 'disabled' %>><i class="fas fa-upload"></i> <%= t('import_users.importLocateBtn') %></button>
                                 </div>
                             </form>
                         </div>

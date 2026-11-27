@@ -4,6 +4,11 @@ const Event = require('../model/Event'); // 確保引入 User 模型
 const FormConfig = require('../model/FormConfig');
 const formConfigController = require('./formConfigController');
 const { ensureUserNameField } = require('../utils/userDisplayName');
+const {
+    buildFieldOptionIndex,
+    resolveFieldDisplayValue,
+    optionDisplayLabel,
+} = require('../utils/formOptionLabel');
 
 /** Event.users.name 仍為 schema 必填；表單若改用 firstname/lastname 需自動組回 name */
 function applyImportDisplayName(userData, expectedFields) {
@@ -98,7 +103,169 @@ async function getImportFieldDefinitions(eventId) {
 
     const fields = fieldDetails.map(field => field.fieldName);
 
-    return { fields, fieldDetails };
+    return { fields, fieldDetails, migratedConfig, language };
+}
+
+/** Locate：option value → 可讀 label；import 時 label → value */
+function buildLocateValueMaps(migratedConfig, language) {
+    const fieldIndex = buildFieldOptionIndex(migratedConfig, language);
+    /** fieldName -> Map(normalizedLabelOrValue -> storedValue) */
+    const labelToValueByField = new Map();
+
+    if (migratedConfig && Array.isArray(migratedConfig.sections)) {
+        migratedConfig.sections.forEach((section) => {
+            (section.fields || []).forEach((field) => {
+                if (!field || !field.fieldName) return;
+                if (!['select', 'radio', 'checkbox'].includes(field.type)) return;
+                const map = new Map();
+                (field.options || []).forEach((opt) => {
+                    if (!opt || opt.value == null) return;
+                    const stored = String(opt.value);
+                    const add = (raw) => {
+                        const k = String(raw || '').trim().toLowerCase();
+                        if (k && !map.has(k)) map.set(k, stored);
+                    };
+                    add(stored);
+                    add(optionDisplayLabel(opt, language));
+                    add(optionDisplayLabel(opt, 'zh'));
+                    add(optionDisplayLabel(opt, 'en'));
+                    if (opt.label && typeof opt.label === 'object') {
+                        add(opt.label.zh);
+                        add(opt.label.en);
+                    }
+                });
+                labelToValueByField.set(field.fieldName, map);
+            });
+        });
+    }
+
+    // thankYouYesNo
+    const ynq = migratedConfig && migratedConfig.thankYou && migratedConfig.thankYou.yesNoQuestion;
+    const ynMap = new Map();
+    const addYn = (raw, stored) => {
+        const k = String(raw || '').trim().toLowerCase();
+        if (k && !ynMap.has(k)) ynMap.set(k, stored);
+    };
+    ['yes', 'y', 'true', '1', '是'].forEach((k) => addYn(k, 'yes'));
+    ['no', 'n', 'false', '0', '否'].forEach((k) => addYn(k, 'no'));
+    if (ynq) {
+        addYn(ynq.yesLabel && (ynq.yesLabel[language] || ynq.yesLabel.zh || ynq.yesLabel.en), 'yes');
+        addYn(ynq.noLabel && (ynq.noLabel[language] || ynq.noLabel.zh || ynq.noLabel.en), 'no');
+        addYn(ynq.yesLabel && ynq.yesLabel.zh, 'yes');
+        addYn(ynq.yesLabel && ynq.yesLabel.en, 'yes');
+        addYn(ynq.noLabel && ynq.noLabel.zh, 'no');
+        addYn(ynq.noLabel && ynq.noLabel.en, 'no');
+    }
+    labelToValueByField.set('thankYouYesNo', ynMap);
+
+    return { fieldIndex, labelToValueByField };
+}
+
+function toLocateDisplayValue(rawValue, fieldName, fieldIndex) {
+    if (fieldName === 'thankYouYesNo') {
+        const raw = rawValue != null ? String(rawValue).trim().toLowerCase() : '';
+        if (!raw) return '';
+        if (['yes', 'y', 'true', '1', '是'].includes(raw)) return 'Yes';
+        if (['no', 'n', 'false', '0', '否'].includes(raw)) return 'No';
+        return String(rawValue);
+    }
+    return resolveFieldDisplayValue(rawValue, fieldName, fieldIndex);
+}
+
+function fromLocateInputValue(rawValue, fieldName, labelToValueByField) {
+    if (rawValue == null) return '';
+    const raw = String(rawValue).trim();
+    if (!raw) return '';
+    const map = labelToValueByField && labelToValueByField.get(fieldName);
+    if (!map) return raw;
+
+    // checkbox 可能係逗號分隔多個 label
+    if (raw.includes(',')) {
+        return raw.split(',')
+            .map((part) => {
+                const p = part.trim();
+                if (!p) return '';
+                const hit = map.get(p.toLowerCase());
+                return hit != null ? hit : p;
+            })
+            .filter(Boolean)
+            .join(', ');
+    }
+
+    const hit = map.get(raw.toLowerCase());
+    return hit != null ? hit : raw;
+}
+
+function renderImportResultPage({
+    eventId,
+    createdCount,
+    updatedCount,
+    unchangedCount,
+    idNotFoundSkippedCount,
+    details,
+    modeLabel
+}) {
+    const title = modeLabel ? `${modeLabel} Successful!` : 'Import Successful!';
+    return `
+            <html>
+                <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                    <title>${title}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; max-width: 960px; margin: 24px auto; padding: 0 16px; color: #1e293b; }
+                        h1 { font-size: 1.5rem; }
+                        .summary { background: #f1f5f9; border-radius: 8px; padding: 12px 14px; }
+                        .table-wrap { max-height: 420px; overflow: auto; border: 1px solid #ddd; padding: 8px; margin-top: 12px; }
+                        table { border-collapse: collapse; width: 100%; font-size: 12px; }
+                        th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+                        th { background: #f8fafc; position: sticky; top: 0; }
+                        .actions { margin-top: 20px; }
+                        .btn-next {
+                            display: inline-block; background: #2563eb; color: #fff; text-decoration: none;
+                            padding: 12px 22px; border-radius: 8px; font-weight: 700;
+                        }
+                        .hint { margin-top: 8px; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    <h1>${title}</h1>
+                    <div class="summary">
+                        Created: ${createdCount},
+                        Updated: ${updatedCount},
+                        Unchanged: ${unchangedCount},
+                        _id Not Found -> Skipped: ${idNotFoundSkippedCount}
+                    </div>
+                    <p>Below are import details to help diagnose why a row was not updated.</p>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Excel Row</th>
+                                    <th>Action</th>
+                                    <th>Guest _id</th>
+                                    <th>Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${details.map(d => `
+                                    <tr>
+                                        <td>${d.row}</td>
+                                        <td>${d.action}</td>
+                                        <td>${d.userId || '-'}</td>
+                                        <td>${d.reason}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="hint">If a row shows "unchanged", uploaded values match the database.</p>
+                    <div class="actions">
+                        <a class="btn-next" href="/events/${eventId}">Next → Back to guest list</a>
+                    </div>
+                </body>
+            </html>
+        `;
 }
 
 function parseBooleanCell(rawValue) {
@@ -218,7 +385,7 @@ exports.getImportUserPage = async (req, res) => {
     }
 };
 
-exports.importUsers = async (req, res) => {
+async function runUserImport(req, res, { locateMode = false } = {}) {
     const { eventId } = req.params; // 獲取事件 ID
 
     try {
@@ -233,10 +400,14 @@ exports.importUsers = async (req, res) => {
             return res.status(404).send('Event not found');
         }
 
-        const { fields: expectedFields, fieldDetails } = await getImportFieldDefinitions(eventId);
+        const { fields: expectedFields, fieldDetails, migratedConfig, language } = await getImportFieldDefinitions(eventId);
         if (!expectedFields || expectedFields.length === 0) {
             return res.status(400).send('No form fields available for this event. Please configure the registration form first.');
         }
+
+        const locateMaps = locateMode
+            ? buildLocateValueMaps(migratedConfig, language)
+            : null;
 
         // 解析 Excel 文件
         const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
@@ -298,7 +469,10 @@ exports.importUsers = async (req, res) => {
             expectedFields.forEach(fieldName => {
                 const columnIndex = headerIndexMap.get(fieldName);
                 const rawValue = columnIndex !== undefined ? row[columnIndex] : '';
-                const value = rawValue !== undefined && rawValue !== null ? String(rawValue).trim() : '';
+                let value = rawValue !== undefined && rawValue !== null ? String(rawValue).trim() : '';
+                if (locateMode) {
+                    value = fromLocateInputValue(value, fieldName, locateMaps.labelToValueByField);
+                }
                 mappedData[fieldName] = value;
             });
 
@@ -413,49 +587,15 @@ exports.importUsers = async (req, res) => {
         }
         await event.save(); // 保存事件
 
-        // 返回導入成功的響應
-        res.status(201).send(`
-            <html>
-                <body>
-                    <h1>Import Successful!</h1>
-                    <p>
-                        Created: ${createdCount},
-                        Updated: ${updatedCount},
-                        Unchanged: ${unchangedCount},
-                        _id Not Found -> Skipped: ${idNotFoundSkippedCount}
-                    </p>
-                    <p>Below are import details to help diagnose why a row was not updated.</p>
-                    <div style="max-height:420px; overflow:auto; border:1px solid #ddd; padding:8px;">
-                        <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; width:100%; font-family:Arial, sans-serif; font-size:12px;">
-                            <thead>
-                                <tr>
-                                    <th>Excel Row</th>
-                                    <th>Action</th>
-                                    <th>Guest _id</th>
-                                    <th>Reason</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${details.map(d => `
-                                    <tr>
-                                        <td>${d.row}</td>
-                                        <td>${d.action}</td>
-                                        <td>${d.userId || '-'}</td>
-                                        <td>${d.reason}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                    <p style="margin-top:8px; color:#666;">If a row shows "unchanged", it means uploaded values are identical to current database values.</p>
-                    <script>
-                        setTimeout(function() {
-                            window.location.href = '/events/${eventId}';
-                        }, 2000); // 2秒後重定向
-                    </script>
-                </body>
-            </html>
-        `);
+        res.status(201).send(renderImportResultPage({
+            eventId,
+            createdCount,
+            updatedCount,
+            unchangedCount,
+            idNotFoundSkippedCount,
+            details,
+            modeLabel: locateMode ? 'Locate Import' : 'Import'
+        }));
     } catch (error) {
         console.error(error);
         const detail = error && error.message ? String(error.message) : '';
@@ -463,7 +603,10 @@ exports.importUsers = async (req, res) => {
             ? `Error during import process: ${detail}`
             : 'Error during import process!');
     }
-};
+}
+
+exports.importUsers = async (req, res) => runUserImport(req, res, { locateMode: false });
+exports.importLocateUsers = async (req, res) => runUserImport(req, res, { locateMode: true });
 
 exports.downloadSampleFile = async (req, res) => {
     const { eventId } = req.params;
@@ -491,32 +634,51 @@ exports.downloadSampleFile = async (req, res) => {
     }
 };
 
+async function buildCurrentUsersExportRows(eventId, { locateMode = false } = {}) {
+    const event = await Event.findById(eventId);
+    if (!event) {
+        const err = new Error('Event not found');
+        err.status = 404;
+        throw err;
+    }
+
+    const { fields: expectedFields, fieldDetails, migratedConfig, language } = await getImportFieldDefinitions(eventId);
+    if (!expectedFields || expectedFields.length === 0) {
+        const err = new Error('No form fields available for this event.');
+        err.status = 400;
+        throw err;
+    }
+
+    const locateMaps = locateMode
+        ? buildLocateValueMaps(migratedConfig, language)
+        : null;
+
+    const { fieldNames, labels } = buildImportHeaderRows(fieldDetails);
+    const rows = [fieldNames, labels];
+
+    (event.users || []).forEach(user => {
+        const row = [];
+        row.push(user && user._id ? String(user._id) : '');
+        expectedFields.forEach(fieldName => {
+            const raw = user && user[fieldName] !== undefined && user[fieldName] !== null ? user[fieldName] : '';
+            if (locateMode) {
+                row.push(toLocateDisplayValue(raw, fieldName, locateMaps.fieldIndex));
+            } else {
+                row.push(raw !== '' ? String(raw) : '');
+            }
+        });
+        row.push(user && user.isCheckIn ? '1' : '0');
+        rows.push(row);
+    });
+
+    return { rows, eventId };
+}
+
 exports.downloadCurrentUsersFile = async (req, res) => {
     const { eventId } = req.params;
 
     try {
-        const event = await Event.findById(eventId);
-        if (!event) return res.status(404).send('Event not found');
-
-        const { fields: expectedFields, fieldDetails } = await getImportFieldDefinitions(eventId);
-        if (!expectedFields || expectedFields.length === 0) {
-            return res.status(400).send('No form fields available for this event.');
-        }
-
-        const { fieldNames, labels } = buildImportHeaderRows(fieldDetails);
-        const rows = [fieldNames, labels];
-
-        (event.users || []).forEach(user => {
-            const row = [];
-            row.push(user && user._id ? String(user._id) : '');
-            expectedFields.forEach(fieldName => {
-                const v = user && user[fieldName] !== undefined && user[fieldName] !== null ? String(user[fieldName]) : '';
-                row.push(v);
-            });
-            row.push(user && user.isCheckIn ? '1' : '0');
-            rows.push(row);
-        });
-
+        const { rows } = await buildCurrentUsersExportRows(eventId, { locateMode: false });
         const worksheet = XLSX.utils.aoa_to_sheet(rows);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Users');
@@ -527,6 +689,28 @@ exports.downloadCurrentUsersFile = async (req, res) => {
         res.send(buffer);
     } catch (error) {
         console.error('Error generating users export file:', error);
-        res.status(500).send('Failed to generate users export file.');
+        const status = error.status || 500;
+        res.status(status).send(error.message || 'Failed to generate users export file.');
+    }
+};
+
+/** 匯出目前賓客：select/radio 等欄位用 Label（Locate 資料，方便客人改） */
+exports.downloadLocateUsersFile = async (req, res) => {
+    const { eventId } = req.params;
+
+    try {
+        const { rows } = await buildCurrentUsersExportRows(eventId, { locateMode: true });
+        const worksheet = XLSX.utils.aoa_to_sheet(rows);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Locate');
+        const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+
+        res.setHeader('Content-Disposition', `attachment; filename=users_locate_export_${eventId}.xlsx`);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.send(buffer);
+    } catch (error) {
+        console.error('Error generating locate export file:', error);
+        const status = error.status || 500;
+        res.status(status).send(error.message || 'Failed to generate locate export file.');
     }
 };

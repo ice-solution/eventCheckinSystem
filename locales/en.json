@@ -71,6 +71,7 @@
     "recordsTitle": "Check-in Records",
     "recordsEmpty": "No station check-in records yet",
     "exportRecordsBtn": "Export Excel",
+    "exportAllBtn": "Export all stations (one sheet each)",
     "checkedInAt": "Checked-in At",
     "checkedInBy": "Operator",
     "sectionListTitle": "Section List",
@@ -230,10 +231,16 @@
     "importRule": "Import rule: if a row has <code>_id</code> and matches an existing guest, that guest will be updated; if <code>_id</code> is empty, a new guest will be created. Do not edit Row 1 field names.",
     "requiredColumns": "Columns (same order as registration form)",
     "noFields": "This event does not have any visible form fields. Please configure the registration form before importing guests.",
+    "standardSection": "Standard Import / Export (stored values)",
     "fileInput": "Select xlsx File:", "importBtn": "Import",
     "backToUsers": "Return to Guest List",
     "downloadCurrent": "Download Current Guest List for Modify",
-    "downloadSample": "Download Empty Sample File"
+    "downloadSample": "Download Empty Sample File",
+    "locateSection": "Locate data (options as labels)",
+    "locateDesc": "Export shows <strong>readable labels</strong> for select/radio/checkbox (not internal values). On import, labels are <strong>matched back to values</strong> before saving. Same _id update / empty-_id create rules as standard import.",
+    "locateFileInput": "Select Locate xlsx file:",
+    "downloadLocate": "Download current guests (Locate / Label)",
+    "importLocateBtn": "Import Locate data"
   },
   "luckydraw_setting": {
     "title": "Lucky Draw Settings", "uploadLabel": "Upload background image (.jpg only):",

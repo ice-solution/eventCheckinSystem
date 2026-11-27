@@ -71,6 +71,7 @@
     "recordsTitle": "簽到記錄",
     "recordsEmpty": "尚未有分站簽到記錄",
     "exportRecordsBtn": "匯出 Excel",
+    "exportAllBtn": "匯出全部站點（分 Sheet）",
     "checkedInAt": "簽到時間",
     "checkedInBy": "操作者",
     "sectionListTitle": "Section List",
@@ -229,10 +230,16 @@
     "importRule": "匯入規則：若行內有 <code>_id</code> 且符合現有賓客，則更新；若 <code>_id</code> 為空，則新增賓客。請勿改動第 1 列 fieldName。",
     "requiredColumns": "欄位一覽（順序同報名表）",
     "noFields": "此活動未設定可見表單欄位，請先設定報名表再匯入賓客。",
+    "standardSection": "標準 Import / Export（儲存 Value）",
     "fileInput": "選擇 xlsx 檔案：", "importBtn": "匯入",
     "backToUsers": "返回賓客列表",
     "downloadCurrent": "下載目前賓客列表（供修改）",
-    "downloadSample": "下載空白範例檔案"
+    "downloadSample": "下載空白範例檔案",
+    "locateSection": "Locate 資料（選項顯示 Label）",
+    "locateDesc": "匯出時 select／radio／checkbox 等會顯示<strong>可讀 Label</strong>（唔係內部 value）。匯入時系統會將 Label <strong>對應返 value</strong> 再寫入。其餘規則（_id 更新／空 _id 新增）同標準匯入一樣。",
+    "locateFileInput": "選擇 Locate xlsx 檔案：",
+    "downloadLocate": "下載目前賓客（Locate / Label）",
+    "importLocateBtn": "匯入 Locate 資料"
   },
   "luckydraw_setting": {
     "title": "抽獎設定", "uploadLabel": "上傳背景圖片（只限 .jpg）：",
