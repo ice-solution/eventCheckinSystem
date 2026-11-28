@@ -22,6 +22,7 @@ router.post(
     voteController.uploadQuestionKv
 );
 router.get('/:eventId/results', requireAdminSession, permission.requireVotesPermission, voteController.getVoteResults);
+router.post('/:eventId/ballots/clear', requireAdminSession, permission.requireVotesPermission, voteController.clearBallot);
 
 // 前台
 router.get('/:eventId', voteController.renderVotePage);

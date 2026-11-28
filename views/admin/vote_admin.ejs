@@ -181,6 +181,46 @@
                                         <% }) %>
                                     </div>
                                 <% }) %>
+
+                                <hr>
+                                <h6 class="mb-2"><%= t('vote_admin.clearBallotTitle') %></h6>
+                                <p class="text-muted small mb-3"><%= t('vote_admin.clearBallotHint') %></p>
+                                <div class="form-inline mb-3" style="gap:8px; flex-wrap:wrap;">
+                                    <input type="email" id="clearBallotEmail" class="form-control form-control-sm" style="min-width:240px;" placeholder="guest@example.com">
+                                    <button type="button" class="btn btn-sm btn-warning" id="clearBallotByEmailBtn">
+                                        <i class="fa fa-undo"></i> <%= t('vote_admin.clearBallotBtn') %>
+                                    </button>
+                                </div>
+                                <% if (typeof ballots !== 'undefined' && ballots && ballots.length) { %>
+                                    <div class="table-responsive" style="max-height:280px; overflow:auto;">
+                                        <table class="table table-sm table-bordered mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Email</th>
+                                                    <th>Name</th>
+                                                    <th>Voted at</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <% ballots.forEach(function(b) { %>
+                                                    <tr>
+                                                        <td><%= b.userEmail || '-' %></td>
+                                                        <td><%= b.userName || '-' %></td>
+                                                        <td><%= b.votedAt ? new Date(b.votedAt).toLocaleString('en-HK', { timeZone: 'Asia/Hong_Kong', hour12: false }) : '-' %></td>
+                                                        <td>
+                                                            <button type="button" class="btn btn-xs btn-outline-danger js-clear-ballot" data-ballot-id="<%= b._id %>" data-email="<%= b.userEmail %>">
+                                                                <%= t('vote_admin.clearBallotBtn') %>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                <% }) %>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                <% } else { %>
+                                    <p class="text-muted small mb-0"><%= t('vote_admin.noBallots') %></p>
+                                <% } %>
                             </div>
                         </div>
                     </div>
@@ -199,8 +239,52 @@ jQuery(function ($) {
         saveFailed: <%- JSON.stringify(t('vote_admin.saveFailed')) %>,
         uploadFailed: <%- JSON.stringify(t('vote_admin.uploadFailed')) %>,
         saved: <%- JSON.stringify(t('vote_admin.saved')) %>,
-        reorderFailed: <%- JSON.stringify(t('vote_admin.reorderFailed')) %>
+        reorderFailed: <%- JSON.stringify(t('vote_admin.reorderFailed')) %>,
+        clearConfirm: <%- JSON.stringify(t('vote_admin.clearBallotConfirm')) %>,
+        clearFailed: <%- JSON.stringify(t('vote_admin.clearBallotFailed')) %>,
+        clearOk: <%- JSON.stringify(t('vote_admin.clearBallotOk')) %>,
+        clearNeedEmail: <%- JSON.stringify(t('vote_admin.clearNeedEmail')) %>
     };
+
+    function clearBallot(payload) {
+        return $.ajax({
+            url: '/votes/' + eventId + '/ballots/clear',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(payload)
+        });
+    }
+
+    $('#clearBallotByEmailBtn').on('click', function () {
+        var email = ($('#clearBallotEmail').val() || '').trim();
+        if (!email) {
+            alert(msg.clearNeedEmail);
+            return;
+        }
+        if (!confirm(msg.clearConfirm)) return;
+        clearBallot({ email: email })
+            .done(function () {
+                alert(msg.clearOk);
+                location.reload();
+            })
+            .fail(function (xhr) {
+                alert((xhr.responseJSON && xhr.responseJSON.message) || msg.clearFailed);
+            });
+    });
+
+    $(document).on('click', '.js-clear-ballot', function () {
+        if (!confirm(msg.clearConfirm)) return;
+        var ballotId = $(this).data('ballot-id');
+        var email = $(this).data('email');
+        clearBallot({ ballotId: ballotId, email: email })
+            .done(function () {
+                alert(msg.clearOk);
+                location.reload();
+            })
+            .fail(function (xhr) {
+                alert((xhr.responseJSON && xhr.responseJSON.message) || msg.clearFailed);
+            });
+    });
 
     $('#voteSettingsForm').on('submit', function (e) {
         e.preventDefault();

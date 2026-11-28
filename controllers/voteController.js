@@ -163,15 +163,81 @@ exports.renderVoteAdmin = async (req, res) => {
         await vote.save();
 
         const results = buildStaticResults(vote);
+        const ballots = (vote.records || [])
+            .slice()
+            .sort((a, b) => new Date(b.votedAt || 0) - new Date(a.votedAt || 0))
+            .map((r) => ({
+                _id: r._id,
+                userEmail: r.userEmail || '',
+                userName: r.userName || '',
+                votedAt: r.votedAt || null
+            }));
         res.render('admin/vote_admin', {
             eventId,
             vote,
             event,
-            results
+            results,
+            ballots
         });
     } catch (error) {
         console.error('Error rendering vote admin:', error);
         res.status(500).send('Error rendering vote admin');
+    }
+};
+
+function normalizeVoteEmail(email) {
+    return String(email || '').trim().toLowerCase();
+}
+
+/** 取消某份選票（扣減對應 slot 票數），之後該 email 可重投 */
+exports.clearBallot = async (req, res) => {
+    const { eventId } = req.params;
+    const email = normalizeVoteEmail(req.body && req.body.email);
+    const ballotId = req.body && req.body.ballotId ? String(req.body.ballotId) : '';
+
+    try {
+        const vote = await Vote.findOne({ eventId });
+        if (!vote) return res.status(404).json({ message: 'Vote not found' });
+        await ensureThreeQuestions(vote);
+
+        let idx = -1;
+        if (ballotId) {
+            idx = (vote.records || []).findIndex((r) => String(r._id) === ballotId);
+        } else if (email) {
+            idx = (vote.records || []).findIndex(
+                (r) => normalizeVoteEmail(r.userEmail) === email
+            );
+        } else {
+            return res.status(400).json({ message: 'Provide email or ballotId' });
+        }
+
+        if (idx < 0) {
+            return res.status(404).json({ message: 'Ballot not found' });
+        }
+
+        const record = vote.records[idx];
+        (record.answers || []).forEach((ans) => {
+            const question = vote.questions.id(ans.questionId);
+            if (!question) return;
+            const slot = question.slots.id(ans.slotId);
+            if (!slot) return;
+            slot.votes = Math.max(0, (slot.votes || 0) - 1);
+        });
+
+        vote.records.splice(idx, 1);
+        vote.markModified('questions');
+        vote.markModified('records');
+        vote.modified_at = Date.now();
+        await vote.save();
+
+        res.json({
+            message: 'Ballot cleared; guest can vote again',
+            email: record.userEmail || email,
+            results: buildStaticResults(vote)
+        });
+    } catch (error) {
+        console.error('Error clearing ballot:', error);
+        res.status(500).json({ message: 'Failed to clear ballot' });
     }
 };
 
@@ -406,8 +472,18 @@ exports.authVoteEmail = async (req, res) => {
 };
 
 exports.logoutVote = async (req, res) => {
-    if (req.session) delete req.session.voteAuth;
-    res.json({ message: 'Logged out' });
+    try {
+        if (req.session) {
+            delete req.session.voteAuth;
+            await new Promise((resolve, reject) => {
+                req.session.save((err) => (err ? reject(err) : resolve()));
+            });
+        }
+        res.json({ message: 'Logged out' });
+    } catch (error) {
+        console.error('Error logging out vote session:', error);
+        res.status(500).json({ message: 'Logout failed' });
+    }
 };
 
 exports.submitVote = async (req, res) => {
