@@ -30,8 +30,14 @@ const voteBallotSchema = new mongoose.Schema({
 
 const voteSchema = new mongoose.Schema({
     eventId: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', required: true },
-    title: { type: String, required: true },
-    description: { type: String, default: '' },
+    title: { type: String, required: true }, // 左上 Vote Title
+    description: { type: String, default: '' }, // gate short description（可空）
+    /** 前台文案（可空 = 唔顯示／唔用預設字） */
+    headerRight: { type: String, default: '' }, // 右上
+    gateTitle: { type: String, default: '' }, // email 登入標題
+    pickHint: { type: String, default: '' }, // Tap one option…
+    submitLabel: { type: String, default: '' }, // Submit 按鈕
+    doneTitle: { type: String, default: '' }, // 提交成功標題
     questions: [voteQuestionSchema],
     records: [voteBallotSchema],
     isActive: { type: Boolean, default: true },

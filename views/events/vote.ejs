@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title><%= voteTitle || 'Vote' %> — PMI HK Annual Dinner 2026</title>
+    <title><%= [voteTitle, headerRight].filter(Boolean).join(' — ') || 'Vote' %></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
@@ -308,12 +308,19 @@
 <%
   const questionsJson = JSON.stringify(questions || []);
   const hasVoter = !!voter;
+  const _title = typeof voteTitle !== 'undefined' ? String(voteTitle || '') : '';
+  const _headerRight = typeof headerRight !== 'undefined' ? String(headerRight || '') : '';
+  const _gateTitle = typeof gateTitle !== 'undefined' ? String(gateTitle || '') : '';
+  const _desc = typeof voteDescription !== 'undefined' ? String(voteDescription || '') : '';
+  const _pickHint = typeof pickHint !== 'undefined' ? String(pickHint || '') : '';
+  const _submitLabel = typeof submitLabel !== 'undefined' ? String(submitLabel || '') : '';
+  const _doneTitle = typeof doneTitle !== 'undefined' ? String(doneTitle || '') : '';
 %>
 <div class="shell">
     <div class="topbar">
-        <h1 class="brand"><%= voteTitle || 'Vote' %></h1>
+        <h1 class="brand"><%= _title %></h1>
         <div class="meta" id="voterMeta">
-            <p class="meta-event">PMI HK Annual Dinner 2026</p>
+            <% if (_headerRight) { %><p class="meta-event"><%= _headerRight %></p><% } %>
             <% if (hasVoter) { %>
                 <span class="meta-email"><%= voter.email %></span>
                 <button type="button" class="btn btn-ghost" id="logoutBtn" style="margin-top:6px;">Sign out</button>
@@ -323,13 +330,14 @@
 
     <% if (hasVoted) { %>
         <div class="done" id="doneView">
-            <h2>Ballot submitted</h2>
+            <% if (_doneTitle) { %><h2><%= _doneTitle %></h2><% } %>
         </div>
     <% } else { %>
         <div id="gateView" class="<%= hasVoter ? 'hidden' : '' %>">
             <div class="gate">
                 <div class="gate-panel">
-                    <h1>Please insert your PMI email address</h1>
+                    <% if (_gateTitle) { %><h1><%= _gateTitle %></h1><% } %>
+                    <% if (_desc) { %><p><%= _desc %></p><% } %>
                     <form id="emailForm">
                         <label for="emailInput">Email</label>
                         <input id="emailInput" type="email" autocomplete="email" inputmode="email" required placeholder="name@pmi.com">
@@ -347,7 +355,7 @@
                 <div class="kv-missing" id="kvMissing">KV image not uploaded yet</div>
                 <img id="kvImg" alt="KV" class="hidden" width="1600" height="600" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
             </div>
-            <div class="pick-label" id="pickLabel">Tap one option below: Please vote one</div>
+            <% if (_pickHint) { %><div class="pick-label" id="pickLabel"><%= _pickHint %></div><% } %>
             <div class="slot-picks" id="slotPicks" role="listbox" aria-label="Options"></div>
             <div class="footer-bar">
                 <div class="hint" id="progressHint">Select one option for each question</div>
@@ -355,13 +363,13 @@
                     <button type="button" class="btn btn-ghost" id="prevBtn">Previous</button>
                     <button type="button" class="btn btn-ghost" id="nextBtn">Next</button>
                 </div>
-                <button type="button" class="btn btn-primary" id="submitBtn" disabled>Submit vote</button>
+                <button type="button" class="btn btn-primary" id="submitBtn" disabled><%= _submitLabel %></button>
             </div>
             <p class="err" id="submitErr" aria-live="polite"></p>
         </div>
 
         <div class="done hidden" id="doneView">
-            <h2>Vote submitted</h2>
+            <% if (_doneTitle) { %><h2><%= _doneTitle %></h2><% } %>
         </div>
     <% } %>
 </div>
@@ -377,10 +385,24 @@
     var ballotView = document.getElementById('ballotView');
     var doneView = document.getElementById('doneView');
 
+    function setVoterMeta(email) {
+        var meta = document.getElementById('voterMeta');
+        if (!meta) return;
+        var eventLine = meta.querySelector('.meta-event');
+        var html = '';
+        if (eventLine) html += eventLine.outerHTML;
+        if (email) {
+            html += '<span class="meta-email">' + escapeHtml(email) + '</span>' +
+                '<button type="button" class="btn btn-ghost" id="logoutBtn" style="margin-top:6px;">Sign out</button>';
+        }
+        meta.innerHTML = html;
+        bindLogout();
+    }
+
     function bindLogout() {
         var logoutBtn = document.getElementById('logoutBtn');
         if (!logoutBtn) return;
-        logoutBtn.addEventListener('click', function () {
+        logoutBtn.onclick = function () {
             logoutBtn.disabled = true;
             fetch('/votes/' + eventId + '/logout', {
                 method: 'POST',
@@ -388,12 +410,23 @@
                 headers: { 'Content-Type': 'application/json' }
             }).then(function (r) {
                 if (!r.ok) throw new Error('logout failed');
+                // 有 gate／ballot 就唔使 reload；已投完頁（只有 done）先 reload
+                if (gateView && ballotView) {
+                    answers = {};
+                    current = 0;
+                    setVoterMeta(null);
+                    if (doneView) doneView.classList.add('hidden');
+                    ballotView.classList.add('hidden');
+                    gateView.classList.remove('hidden');
+                    logoutBtn.disabled = false;
+                    return;
+                }
                 location.reload();
             }).catch(function () {
                 logoutBtn.disabled = false;
                 alert('Sign out failed. Please try again.');
             });
-        });
+        };
     }
     bindLogout();
 
@@ -498,6 +531,7 @@
         btn.disabled = true;
         fetch('/votes/' + eventId + '/auth', {
             method: 'POST',
+            credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: email })
         }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
@@ -507,13 +541,22 @@
                 err.textContent = (res.j && res.j.message) || 'Sign-in failed';
                 return;
             }
+            var voterEmail = (res.j.voter && res.j.voter.email) || email;
+            setVoterMeta(voterEmail);
             if (res.j.hasVoted) {
                 gateView.classList.add('hidden');
                 ballotView.classList.add('hidden');
                 doneView.classList.remove('hidden');
                 return;
             }
-            location.reload();
+            // 唔 reload：ballot 本來已喺 DOM
+            gateView.classList.add('hidden');
+            ballotView.classList.remove('hidden');
+            if (doneView) doneView.classList.add('hidden');
+            answers = {};
+            current = 0;
+            renderQuestion();
+            updateProgress();
         }).catch(function () {
             btn.disabled = false;
             err.textContent = 'Network error. Please try again.';

@@ -93,10 +93,33 @@
                                     <div class="form-group">
                                         <label for="title"><%= t('vote_admin.voteTitle') %></label>
                                         <input type="text" class="form-control" id="title" value="<%= vote.title %>" required>
+                                        <small class="form-text text-muted"><%= t('vote_admin.voteTitleHint') %></small>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="headerRight"><%= t('vote_admin.headerRight') %></label>
+                                        <input type="text" class="form-control" id="headerRight" value="<%= vote.headerRight || '' %>" placeholder="<%= t('vote_admin.emptyPlaceholder') %>">
+                                        <small class="form-text text-muted"><%= t('vote_admin.headerRightHint') %></small>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="gateTitle"><%= t('vote_admin.gateTitle') %></label>
+                                        <input type="text" class="form-control" id="gateTitle" value="<%= vote.gateTitle || '' %>" placeholder="<%= t('vote_admin.emptyPlaceholder') %>">
                                     </div>
                                     <div class="form-group">
                                         <label for="description"><%= t('vote_admin.voteDescription') %></label>
-                                        <textarea class="form-control" id="description" rows="2"><%= vote.description %></textarea>
+                                        <textarea class="form-control" id="description" rows="2" placeholder="<%= t('vote_admin.emptyPlaceholder') %>"><%= vote.description || '' %></textarea>
+                                        <small class="form-text text-muted"><%= t('vote_admin.voteDescriptionHint') %></small>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="pickHint"><%= t('vote_admin.pickHint') %></label>
+                                        <input type="text" class="form-control" id="pickHint" value="<%= vote.pickHint || '' %>" placeholder="<%= t('vote_admin.emptyPlaceholder') %>">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="submitLabel"><%= t('vote_admin.submitLabel') %></label>
+                                        <input type="text" class="form-control" id="submitLabel" value="<%= vote.submitLabel || '' %>" placeholder="<%= t('vote_admin.emptyPlaceholder') %>">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="doneTitle"><%= t('vote_admin.doneTitle') %></label>
+                                        <input type="text" class="form-control" id="doneTitle" value="<%= vote.doneTitle || '' %>" placeholder="<%= t('vote_admin.emptyPlaceholder') %>">
                                     </div>
                                     <div class="form-group">
                                         <div class="custom-control custom-switch">
@@ -295,6 +318,11 @@ jQuery(function ($) {
             data: JSON.stringify({
                 title: $('#title').val(),
                 description: $('#description').val(),
+                headerRight: $('#headerRight').val(),
+                gateTitle: $('#gateTitle').val(),
+                pickHint: $('#pickHint').val(),
+                submitLabel: $('#submitLabel').val(),
+                doneTitle: $('#doneTitle').val(),
                 isActive: $('#isActive').is(':checked')
             }),
             success: function () { alert(msg.saved); },

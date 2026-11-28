@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Vote = require('../model/Vote');
 const Event = require('../model/Event');
 const multer = require('multer');
@@ -48,6 +49,46 @@ function findRsvpUserByEmail(event, email) {
     return (event.users || []).find((u) => normalizeEmail(u.email) === target) || null;
 }
 
+/** 只拎匹配 email 嘅一位 RSVP user，唔拉成份 Event（users/guestList 好大） */
+async function findRsvpUserByEmailFast(eventId, email) {
+    const target = normalizeEmail(email);
+    if (!target || !mongoose.Types.ObjectId.isValid(eventId)) {
+        return { ok: false, reason: 'invalid' };
+    }
+    const oid = new mongoose.Types.ObjectId(eventId);
+    const rows = await Event.aggregate([
+        { $match: { _id: oid } },
+        {
+            $project: {
+                user: {
+                    $arrayElemAt: [
+                        {
+                            $filter: {
+                                input: { $ifNull: ['$users', []] },
+                                as: 'u',
+                                cond: {
+                                    $eq: [
+                                        {
+                                            $toLower: {
+                                                $trim: { input: { $ifNull: ['$$u.email', ''] } }
+                                            }
+                                        },
+                                        target
+                                    ]
+                                }
+                            }
+                        },
+                        0
+                    ]
+                }
+            }
+        }
+    ]);
+    if (!rows.length) return { ok: false, reason: 'event_missing' };
+    if (!rows[0].user) return { ok: false, reason: 'not_in_rsvp' };
+    return { ok: true, user: rows[0].user };
+}
+
 function buildSlots(count) {
     const n = Math.max(1, Math.min(10, Number(count) || 1));
     return Array.from({ length: n }, (_, i) => ({
@@ -56,12 +97,13 @@ function buildSlots(count) {
     }));
 }
 
-/** 確保永遠有 3 條題目（舊 vote 會遷移） */
+/** 確保永遠有 3 條題目（舊 vote 會遷移）；只喺真係有改動先 markModified */
 async function ensureThreeQuestions(vote) {
     if (!vote.questions) vote.questions = [];
+    let changed = false;
 
     // 舊版 options → 當作第 1 題 slots（一次性遷移）
-    if ((!vote.questions || vote.questions.length === 0) && Array.isArray(vote.options) && vote.options.length) {
+    if (vote.questions.length === 0 && Array.isArray(vote.options) && vote.options.length) {
         vote.questions.push({
             title: vote.title || DEFAULT_TITLES[0],
             kvImage: '',
@@ -73,6 +115,7 @@ async function ensureThreeQuestions(vote) {
         });
         vote.options = undefined;
         vote.markModified('options');
+        changed = true;
     }
 
     while (vote.questions.length < QUESTION_COUNT) {
@@ -83,21 +126,30 @@ async function ensureThreeQuestions(vote) {
             order: idx,
             slots: buildSlots(DEFAULT_SLOT_COUNTS[idx] || 5)
         });
+        changed = true;
     }
     if (vote.questions.length > QUESTION_COUNT) {
         vote.questions.splice(QUESTION_COUNT);
+        changed = true;
     }
 
     // 依 order 排（admin drag & drop）
+    const orderBefore = vote.questions.map((q) => String(q._id)).join(',');
     vote.questions.sort((a, b) => (a.order || 0) - (b.order || 0));
     vote.questions.forEach((q, i) => {
-        q.order = i;
+        if ((q.order || 0) !== i) {
+            q.order = i;
+            changed = true;
+        }
         if (!Array.isArray(q.slots) || q.slots.length === 0) {
             q.slots = buildSlots(DEFAULT_SLOT_COUNTS[i] || 5);
+            changed = true;
         }
     });
+    const orderAfter = vote.questions.map((q) => String(q._id)).join(',');
+    if (orderBefore !== orderAfter) changed = true;
 
-    vote.markModified('questions');
+    if (changed) vote.markModified('questions');
     return vote;
 }
 
@@ -243,13 +295,27 @@ exports.clearBallot = async (req, res) => {
 
 exports.updateVoteSettings = async (req, res) => {
     const { eventId } = req.params;
-    const { title, description, isActive } = req.body;
+    const {
+        title,
+        description,
+        isActive,
+        headerRight,
+        gateTitle,
+        pickHint,
+        submitLabel,
+        doneTitle
+    } = req.body;
     try {
         const vote = await Vote.findOne({ eventId });
         if (!vote) return res.status(404).json({ message: 'Vote not found' });
 
         if (title != null) vote.title = String(title);
         if (description != null) vote.description = String(description);
+        if (headerRight != null) vote.headerRight = String(headerRight);
+        if (gateTitle != null) vote.gateTitle = String(gateTitle);
+        if (pickHint != null) vote.pickHint = String(pickHint);
+        if (submitLabel != null) vote.submitLabel = String(submitLabel);
+        if (doneTitle != null) vote.doneTitle = String(doneTitle);
         if (typeof isActive === 'boolean') vote.isActive = isActive;
         else if (isActive != null) vote.isActive = String(isActive) === 'true';
 
@@ -389,8 +455,9 @@ exports.uploadQuestionKv = async (req, res) => {
 exports.renderVotePage = async (req, res) => {
     const { eventId } = req.params;
     try {
-        const event = await Event.findById(eventId);
-        if (!event) return res.status(404).send('Event not found');
+        // 前台唔使整份 Event（含 users[]），exists 夠用
+        const eventExists = await Event.exists({ _id: eventId });
+        if (!eventExists) return res.status(404).send('Event not found');
 
         let vote = await Vote.findOne({ eventId });
         if (!vote || !vote.isActive) {
@@ -412,12 +479,16 @@ exports.renderVotePage = async (req, res) => {
         res.render('events/vote', {
             eventId,
             vote,
-            event,
             voter,
             hasVoted,
             questions: (vote.questions || []).map(publicQuestionPayload),
-            voteTitle: vote.title,
-            voteDescription: vote.description || ''
+            voteTitle: vote.title || '',
+            voteDescription: vote.description || '',
+            headerRight: vote.headerRight || '',
+            gateTitle: vote.gateTitle || '',
+            pickHint: vote.pickHint || '',
+            submitLabel: vote.submitLabel || '',
+            doneTitle: vote.doneTitle || ''
         });
     } catch (error) {
         console.error('Error rendering vote page:', error);
@@ -429,26 +500,27 @@ exports.authVoteEmail = async (req, res) => {
     const { eventId } = req.params;
     const email = normalizeEmail(req.body.email);
     try {
-        const event = await Event.findById(eventId);
-        if (!event) return res.status(404).json({ message: 'Event not found' });
-
-        const vote = await Vote.findOne({ eventId });
-        if (!vote || !vote.isActive) {
-            return res.status(404).json({ message: 'Vote not found or inactive' });
-        }
-
         if (!email) {
             return res.status(400).json({ message: 'Please enter your email' });
         }
 
-        const user = findRsvpUserByEmail(event, email);
-        if (!user) {
+        const vote = await Vote.findOne({ eventId }).select('isActive records');
+        if (!vote || !vote.isActive) {
+            return res.status(404).json({ message: 'Vote not found or inactive' });
+        }
+
+        const found = await findRsvpUserByEmailFast(eventId, email);
+        if (!found.ok && found.reason === 'event_missing') {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+        if (!found.ok) {
             return res.status(403).json({
                 message: 'This email is not on the RSVP list for this event',
                 code: 'NOT_IN_RSVP'
             });
         }
 
+        const user = found.user;
         req.session.voteAuth = {
             eventId: String(eventId),
             userId: String(user._id),
@@ -459,6 +531,11 @@ exports.authVoteEmail = async (req, res) => {
         const hasVoted = (vote.records || []).some(
             (r) => String(r.userId) === String(user._id) || normalizeEmail(r.userEmail) === normalizeEmail(user.email)
         );
+
+        // 等 session 寫入完成先回應用，避免 reload 時仲未登入
+        await new Promise((resolve, reject) => {
+            req.session.save((err) => (err ? reject(err) : resolve()));
+        });
 
         res.json({
             message: 'OK',
