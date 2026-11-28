@@ -460,8 +460,39 @@ exports.renderVotePage = async (req, res) => {
         if (!eventExists) return res.status(404).send('Event not found');
 
         let vote = await Vote.findOne({ eventId });
-        if (!vote || !vote.isActive) {
-            return res.status(404).send('Vote not found or inactive');
+        if (!vote) {
+            return res.status(404).render('events/vote', {
+                eventId,
+                inactive: true,
+                inactiveMessage: 'Vote not found or inactive',
+                voter: null,
+                hasVoted: false,
+                questions: [],
+                voteTitle: '',
+                voteDescription: '',
+                headerRight: '',
+                gateTitle: '',
+                pickHint: '',
+                submitLabel: '',
+                doneTitle: ''
+            });
+        }
+        if (!vote.isActive) {
+            return res.status(403).render('events/vote', {
+                eventId,
+                inactive: true,
+                inactiveMessage: 'Voting is not open yet',
+                voter: null,
+                hasVoted: false,
+                questions: [],
+                voteTitle: vote.title || '',
+                voteDescription: '',
+                headerRight: vote.headerRight || '',
+                gateTitle: '',
+                pickHint: '',
+                submitLabel: '',
+                doneTitle: ''
+            });
         }
         await ensureThreeQuestions(vote);
         if (vote.isModified('questions')) await vote.save();
@@ -478,6 +509,8 @@ exports.renderVotePage = async (req, res) => {
 
         res.render('events/vote', {
             eventId,
+            inactive: false,
+            inactiveMessage: '',
             vote,
             voter,
             hasVoted,
