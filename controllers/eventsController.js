@@ -344,6 +344,17 @@ exports.createEvent = async (req, res) => {
 
         await newEvent.save();
 
+        // 新建活動時一併建立 Vote，寫入文案 default（之後 admin 清走唔會自動加返）
+        try {
+            const { buildNewVoteDoc } = require('./voteController');
+            const Vote = require('../model/Vote');
+            await Vote.create(buildNewVoteDoc(newEvent._id, {
+                headerRight: trimmedName
+            }));
+        } catch (voteErr) {
+            console.warn('createEvent vote seed skipped:', voteErr.message);
+        }
+
         if (sessionUser.role !== 'admin') {
             await grantCreatorEventAccess(sessionUser._id, newEvent._id, sessionUser);
         }

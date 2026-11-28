@@ -353,7 +353,9 @@
   const _pickHint = typeof pickHint !== 'undefined' ? String(pickHint || '') : '';
   const _submitLabel = typeof submitLabel !== 'undefined' ? String(submitLabel || '') : '';
   const _doneTitle = typeof doneTitle !== 'undefined' ? String(doneTitle || '') : '';
-  const _inactiveMsg = typeof inactiveMessage !== 'undefined' ? String(inactiveMessage || '') : 'Voting is not open yet';
+  const _closedBadge = typeof closedBadge !== 'undefined' ? String(closedBadge || '') : '';
+  const _closedTitle = typeof closedTitle !== 'undefined' ? String(closedTitle || '') : '';
+  const _closedMessage = typeof closedMessage !== 'undefined' ? String(closedMessage || '') : '';
 %>
 <div class="shell">
     <div class="topbar">
@@ -369,9 +371,9 @@
 
     <% if (isInactive) { %>
         <div class="inactive-panel" role="status">
-            <div class="inactive-badge">Closed</div>
-            <h2><%= _inactiveMsg %></h2>
-            <p>Please check back later when voting is enabled.</p>
+            <% if (_closedBadge) { %><div class="inactive-badge"><%= _closedBadge %></div><% } %>
+            <% if (_closedTitle) { %><h2><%= _closedTitle %></h2><% } %>
+            <% if (_closedMessage) { %><p><%= _closedMessage %></p><% } %>
         </div>
     <% } else if (hasVoted) { %>
         <div class="done" id="doneView">

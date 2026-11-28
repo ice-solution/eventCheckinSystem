@@ -32,12 +32,16 @@ const voteSchema = new mongoose.Schema({
     eventId: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', required: true },
     title: { type: String, required: true }, // 左上 Vote Title
     description: { type: String, default: '' }, // gate short description（可空）
-    /** 前台文案（可空 = 唔顯示／唔用預設字） */
+    /** 前台文案（可空 = 唔顯示／唔用預設字；default 只喺 create 時寫入，之後清走唔會自動加返） */
     headerRight: { type: String, default: '' }, // 右上
     gateTitle: { type: String, default: '' }, // email 登入標題
     pickHint: { type: String, default: '' }, // Tap one option…
     submitLabel: { type: String, default: '' }, // Submit 按鈕
     doneTitle: { type: String, default: '' }, // 提交成功標題
+    /** 未啟用投票時關閉頁文案（可空 = 唔顯示該行） */
+    closedBadge: { type: String, default: '' },
+    closedTitle: { type: String, default: '' },
+    closedMessage: { type: String, default: '' },
     questions: [voteQuestionSchema],
     records: [voteBallotSchema],
     isActive: { type: Boolean, default: true },

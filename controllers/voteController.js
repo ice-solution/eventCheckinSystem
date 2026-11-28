@@ -13,6 +13,34 @@ const DEFAULT_TITLES = [
     'Best Dressed Queen'
 ];
 
+/** 只喺新建 Vote 時寫入；之後 admin 清走就維持空白，唔再自動補 */
+const DEFAULT_VOTE_COPY = {
+    title: 'Best Dressed Awards',
+    description: 'Please complete all three questions before submitting',
+    headerRight: '',
+    gateTitle: 'Please enter your RSVP email',
+    pickHint: 'Tap one option',
+    submitLabel: 'Submit',
+    doneTitle: 'Thank you for voting',
+    closedBadge: 'Closed',
+    closedTitle: 'Voting is not open yet',
+    closedMessage: 'Please check back later when voting is enabled.'
+};
+
+function buildNewVoteDoc(eventId, overrides = {}) {
+    return {
+        eventId,
+        ...DEFAULT_VOTE_COPY,
+        questions: [],
+        records: [],
+        isActive: true,
+        ...overrides
+    };
+}
+
+exports.DEFAULT_VOTE_COPY = DEFAULT_VOTE_COPY;
+exports.buildNewVoteDoc = buildNewVoteDoc;
+
 const uploadDir = path.join(__dirname, '..', 'public', 'votes', 'img');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
@@ -202,14 +230,9 @@ exports.renderVoteAdmin = async (req, res) => {
 
         let vote = await Vote.findOne({ eventId });
         if (!vote) {
-            vote = new Vote({
-                eventId,
-                title: 'Best Dressed Awards',
-                description: '請完成三條題目後提交',
-                questions: [],
-                records: [],
-                isActive: true
-            });
+            vote = new Vote(buildNewVoteDoc(eventId, {
+                headerRight: event.name || ''
+            }));
         }
         await ensureThreeQuestions(vote);
         await vote.save();
@@ -303,7 +326,10 @@ exports.updateVoteSettings = async (req, res) => {
         gateTitle,
         pickHint,
         submitLabel,
-        doneTitle
+        doneTitle,
+        closedBadge,
+        closedTitle,
+        closedMessage
     } = req.body;
     try {
         const vote = await Vote.findOne({ eventId });
@@ -316,6 +342,9 @@ exports.updateVoteSettings = async (req, res) => {
         if (pickHint != null) vote.pickHint = String(pickHint);
         if (submitLabel != null) vote.submitLabel = String(submitLabel);
         if (doneTitle != null) vote.doneTitle = String(doneTitle);
+        if (closedBadge != null) vote.closedBadge = String(closedBadge);
+        if (closedTitle != null) vote.closedTitle = String(closedTitle);
+        if (closedMessage != null) vote.closedMessage = String(closedMessage);
         if (typeof isActive === 'boolean') vote.isActive = isActive;
         else if (isActive != null) vote.isActive = String(isActive) === 'true';
 
@@ -464,7 +493,6 @@ exports.renderVotePage = async (req, res) => {
             return res.status(404).render('events/vote', {
                 eventId,
                 inactive: true,
-                inactiveMessage: 'Vote not found or inactive',
                 voter: null,
                 hasVoted: false,
                 questions: [],
@@ -474,14 +502,16 @@ exports.renderVotePage = async (req, res) => {
                 gateTitle: '',
                 pickHint: '',
                 submitLabel: '',
-                doneTitle: ''
+                doneTitle: '',
+                closedBadge: DEFAULT_VOTE_COPY.closedBadge,
+                closedTitle: DEFAULT_VOTE_COPY.closedTitle,
+                closedMessage: DEFAULT_VOTE_COPY.closedMessage
             });
         }
         if (!vote.isActive) {
             return res.status(403).render('events/vote', {
                 eventId,
                 inactive: true,
-                inactiveMessage: 'Voting is not open yet',
                 voter: null,
                 hasVoted: false,
                 questions: [],
@@ -491,7 +521,10 @@ exports.renderVotePage = async (req, res) => {
                 gateTitle: '',
                 pickHint: '',
                 submitLabel: '',
-                doneTitle: ''
+                doneTitle: '',
+                closedBadge: vote.closedBadge || '',
+                closedTitle: vote.closedTitle || '',
+                closedMessage: vote.closedMessage || ''
             });
         }
         await ensureThreeQuestions(vote);
@@ -510,7 +543,6 @@ exports.renderVotePage = async (req, res) => {
         res.render('events/vote', {
             eventId,
             inactive: false,
-            inactiveMessage: '',
             vote,
             voter,
             hasVoted,
@@ -521,7 +553,10 @@ exports.renderVotePage = async (req, res) => {
             gateTitle: vote.gateTitle || '',
             pickHint: vote.pickHint || '',
             submitLabel: vote.submitLabel || '',
-            doneTitle: vote.doneTitle || ''
+            doneTitle: vote.doneTitle || '',
+            closedBadge: '',
+            closedTitle: '',
+            closedMessage: ''
         });
     } catch (error) {
         console.error('Error rendering vote page:', error);

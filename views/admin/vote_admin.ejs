@@ -121,6 +121,21 @@
                                         <label for="doneTitle"><%= t('vote_admin.doneTitle') %></label>
                                         <input type="text" class="form-control" id="doneTitle" value="<%= vote.doneTitle || '' %>" placeholder="<%= t('vote_admin.emptyPlaceholder') %>">
                                     </div>
+                                    <hr>
+                                    <h6 class="mb-2"><%= t('vote_admin.closedSectionTitle') %></h6>
+                                    <p class="text-muted small mb-3"><%= t('vote_admin.closedSectionHint') %></p>
+                                    <div class="form-group">
+                                        <label for="closedBadge"><%= t('vote_admin.closedBadge') %></label>
+                                        <input type="text" class="form-control" id="closedBadge" value="<%= vote.closedBadge || '' %>" placeholder="<%= t('vote_admin.emptyPlaceholder') %>">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="closedTitle"><%= t('vote_admin.closedTitle') %></label>
+                                        <input type="text" class="form-control" id="closedTitle" value="<%= vote.closedTitle || '' %>" placeholder="<%= t('vote_admin.emptyPlaceholder') %>">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="closedMessage"><%= t('vote_admin.closedMessage') %></label>
+                                        <textarea class="form-control" id="closedMessage" rows="2" placeholder="<%= t('vote_admin.emptyPlaceholder') %>"><%= vote.closedMessage || '' %></textarea>
+                                    </div>
                                     <div class="form-group">
                                         <div class="custom-control custom-switch">
                                             <input type="checkbox" class="custom-control-input" id="isActive" <%= vote.isActive ? 'checked' : '' %>>
@@ -323,6 +338,9 @@ jQuery(function ($) {
                 pickHint: $('#pickHint').val(),
                 submitLabel: $('#submitLabel').val(),
                 doneTitle: $('#doneTitle').val(),
+                closedBadge: $('#closedBadge').val(),
+                closedTitle: $('#closedTitle').val(),
+                closedMessage: $('#closedMessage').val(),
                 isActive: $('#isActive').is(':checked')
             }),
             success: function () { alert(msg.saved); },
